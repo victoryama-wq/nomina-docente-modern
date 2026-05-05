@@ -1,0 +1,23 @@
+{
+  "name": "nomina-docente-modern",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "npm --workspace apps/api run dev",
+    "dev:web": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/api run build && npm --workspace apps/web run build",
+    "build:api": "npm --workspace apps/api run build",
+    "build:web": "npm --workspace apps/web run build",
+    "lint": "npm --workspace apps/api run lint && npm --workspace apps/web run lint",
+    "typecheck": "npm --workspace apps/api run typecheck && npm --workspace apps/web run typecheck",
+    "legacy:csv-to-sql": "node tools/legacy-csv-to-sql.mjs",
+    "legacy:schedules-to-sql": "node tools/legacy-schedules-csv-to-sql.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
