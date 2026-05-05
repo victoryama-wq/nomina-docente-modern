@@ -7,8 +7,10 @@ import {
   deleteCalendarPeriod,
   fetchCalendarContext,
   updateCalendarPeriod,
+  updateCycleModuleDates,
   type CalendarPeriod,
   type CalendarPeriodPayload,
+  type CycleModuleDatesPayload,
   type CycleOption
 } from '../api';
 
@@ -21,8 +23,10 @@ const periods = ref<CalendarPeriod[]>([]);
 const editingId = ref<string | null>(null);
 const pageBusy = ref(false);
 const saving = ref(false);
+const savingModules = ref(false);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 const formError = ref('');
+const moduleError = ref('');
 const blackoutDraft = ref({ blackoutDate: '', reason: '' });
 
 function dateKey(date: Date) {
@@ -64,6 +68,12 @@ function blankForm(): CalendarPeriodPayload {
 }
 
 const form = ref<CalendarPeriodPayload>(blankForm());
+const moduleForm = ref<CycleModuleDatesPayload>({
+  module1Start: '',
+  module1End: '',
+  module2Start: '',
+  module2End: ''
+});
 
 const summary = computed(() => {
   const blackoutTotal = periods.value.reduce((sum, period) => sum + period.blackoutDates.length, 0);
@@ -95,6 +105,16 @@ function refreshPeriodLabel() {
   form.value.periodLabel = `${form.value.payrollStart} a ${form.value.payrollEnd}`;
 }
 
+function syncModuleForm(cycle: CycleOption | null) {
+  moduleForm.value = {
+    module1Start: dateOnly(cycle?.module1Start),
+    module1End: dateOnly(cycle?.module1End),
+    module2Start: dateOnly(cycle?.module2Start),
+    module2End: dateOnly(cycle?.module2End)
+  };
+  moduleError.value = '';
+}
+
 async function loadCalendar(cycleId = selectedCycleId.value || undefined) {
   if (!authStore.canManageCalendar) return;
   pageBusy.value = true;
@@ -104,6 +124,7 @@ async function loadCalendar(cycleId = selectedCycleId.value || undefined) {
     activeCycle.value = data.activeCycle;
     selectedCycleId.value = data.activeCycle.id;
     cycles.value = data.cycles;
+    syncModuleForm(data.activeCycle);
     periods.value = data.periods.map((period) => ({
       ...period,
       payrollStart: dateOnly(period.payrollStart),
@@ -188,6 +209,39 @@ function validateForm() {
   return '';
 }
 
+function validateModuleForm() {
+  const modules = moduleForm.value;
+  if (!modules.module1Start || !modules.module1End || !modules.module2Start || !modules.module2End) {
+    return 'Captura inicio y cierre de ambos modulos.';
+  }
+  if (modules.module1Start > modules.module1End) return 'El modulo 1 tiene fechas invertidas.';
+  if (modules.module2Start > modules.module2End) return 'El modulo 2 tiene fechas invertidas.';
+  if (modules.module1End > modules.module2End) return 'El cierre de modulo 1 no puede ser posterior al cierre de modulo 2.';
+  return '';
+}
+
+async function saveModuleDates() {
+  if (!activeCycle.value) return;
+  moduleError.value = validateModuleForm();
+  if (moduleError.value) return;
+  savingModules.value = true;
+  clearNotice();
+  try {
+    const response = await updateCycleModuleDates(activeCycle.value.id, {
+      module1Start: dateOnly(moduleForm.value.module1Start),
+      module1End: dateOnly(moduleForm.value.module1End),
+      module2Start: dateOnly(moduleForm.value.module2Start),
+      module2End: dateOnly(moduleForm.value.module2End)
+    });
+    await loadCalendar(response.activeCycle.id);
+    setNotice('ok', response.message);
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible guardar las fechas modulares.');
+  } finally {
+    savingModules.value = false;
+  }
+}
+
 async function savePeriod() {
   formError.value = validateForm();
   if (formError.value) return;
@@ -206,9 +260,9 @@ async function savePeriod() {
     const response = editingId.value
       ? await updateCalendarPeriod(editingId.value, payload)
       : await createCalendarPeriod(payload);
-    setNotice('ok', response.message);
     editingId.value = null;
     await loadCalendar(payload.cycleId);
+    setNotice('ok', response.message);
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible guardar la quincena.');
   } finally {
@@ -223,9 +277,9 @@ async function removePeriod(period: CalendarPeriod) {
   clearNotice();
   try {
     const response = await deleteCalendarPeriod(period.id);
-    setNotice('ok', response.message);
     if (editingId.value === period.id) newPeriod();
     await loadCalendar(selectedCycleId.value);
+    setNotice('ok', response.message);
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible eliminar la quincena.');
   }
@@ -269,6 +323,52 @@ onMounted(() => {
       <article class="metric-card mini"><p>Dias inhabiles</p><strong>{{ summary.blackoutTotal }}</strong><small>Dentro de quincenas</small></article>
       <article class="metric-card mini"><p>Proxima base</p><strong>{{ summary.nextPeriod }}</strong><small>Fuente para Nomina</small></article>
       <article class="metric-card mini"><p>Acceso</p><strong>Admin</strong><small>Calendario centralizado</small></article>
+    </section>
+
+    <section class="data-panel module-editor-panel">
+      <div class="section-title compact">
+        <div>
+          <p class="eyebrow">Cuatrimestre</p>
+          <h3>Fechas modulares</h3>
+        </div>
+        <CalendarDays :size="22" />
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>Inicio modulo 1</span>
+          <input v-model="moduleForm.module1Start" type="date" />
+        </label>
+        <label>
+          <span>Cierre modulo 1</span>
+          <input v-model="moduleForm.module1End" type="date" />
+        </label>
+        <label>
+          <span>Inicio modulo 2</span>
+          <input v-model="moduleForm.module2Start" type="date" />
+        </label>
+        <label>
+          <span>Cierre modulo 2</span>
+          <input v-model="moduleForm.module2End" type="date" />
+        </label>
+      </div>
+
+      <div class="module-period-note editable">
+        <strong>{{ activeCycle?.periodLabel || 'Ciclo operativo' }}</strong>
+        <span>Estas fechas aplican a todas las quincenas del cuatrimestre seleccionado.</span>
+      </div>
+
+      <div v-if="moduleError" class="error-box wide">{{ moduleError }}</div>
+
+      <div class="form-actions">
+        <button class="secondary-action" type="button" :disabled="savingModules" @click="syncModuleForm(activeCycle)">
+          Descartar
+        </button>
+        <button class="primary-inline" type="button" :disabled="savingModules || !activeCycle" @click="saveModuleDates">
+          <Save :size="17" />
+          Guardar modulos
+        </button>
+      </div>
     </section>
 
     <section class="split-grid calendar">

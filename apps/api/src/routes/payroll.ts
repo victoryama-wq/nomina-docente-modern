@@ -652,22 +652,23 @@ async function listCalendarConfigs(client: PoolClient, cycleId: string): Promise
   const result = await client.query<Omit<PayrollCalendarConfigRow, 'blackoutDates'>>(
     `
       SELECT
-        id,
-        cycle_id AS "cycleId",
-        period_label AS "periodLabel",
-        payroll_start::text AS "payrollStart",
-        payroll_end::text AS "payrollEnd",
-        module1_start::text AS "module1Start",
-        module1_end::text AS "module1End",
-        module2_start::text AS "module2Start",
-        module2_end::text AS "module2End",
-        incidences_access_days AS "incidencesAccessDays",
-        extras_access_days AS "extrasAccessDays",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
-      FROM payroll_calendar_config
-      WHERE cycle_id = $1
-      ORDER BY payroll_start DESC, created_at DESC
+        pcc.id,
+        pcc.cycle_id AS "cycleId",
+        pcc.period_label AS "periodLabel",
+        pcc.payroll_start::text AS "payrollStart",
+        pcc.payroll_end::text AS "payrollEnd",
+        ac.module1_start::text AS "module1Start",
+        ac.module1_end::text AS "module1End",
+        ac.module2_start::text AS "module2Start",
+        ac.module2_end::text AS "module2End",
+        pcc.incidences_access_days AS "incidencesAccessDays",
+        pcc.extras_access_days AS "extrasAccessDays",
+        pcc.created_at AS "createdAt",
+        pcc.updated_at AS "updatedAt"
+      FROM payroll_calendar_config pcc
+      JOIN academic_cycles ac ON ac.id = pcc.cycle_id
+      WHERE pcc.cycle_id = $1
+      ORDER BY pcc.payroll_start DESC, pcc.created_at DESC
     `,
     [cycleId]
   );
@@ -702,21 +703,22 @@ async function loadCalendarConfig(client: PoolClient, id: string): Promise<Payro
   const result = await client.query<Omit<PayrollCalendarConfigRow, 'blackoutDates'>>(
     `
       SELECT
-        id,
-        cycle_id AS "cycleId",
-        period_label AS "periodLabel",
-        payroll_start::text AS "payrollStart",
-        payroll_end::text AS "payrollEnd",
-        module1_start::text AS "module1Start",
-        module1_end::text AS "module1End",
-        module2_start::text AS "module2Start",
-        module2_end::text AS "module2End",
-        incidences_access_days AS "incidencesAccessDays",
-        extras_access_days AS "extrasAccessDays",
-        created_at AS "createdAt",
-        updated_at AS "updatedAt"
-      FROM payroll_calendar_config
-      WHERE id = $1
+        pcc.id,
+        pcc.cycle_id AS "cycleId",
+        pcc.period_label AS "periodLabel",
+        pcc.payroll_start::text AS "payrollStart",
+        pcc.payroll_end::text AS "payrollEnd",
+        ac.module1_start::text AS "module1Start",
+        ac.module1_end::text AS "module1End",
+        ac.module2_start::text AS "module2Start",
+        ac.module2_end::text AS "module2End",
+        pcc.incidences_access_days AS "incidencesAccessDays",
+        pcc.extras_access_days AS "extrasAccessDays",
+        pcc.created_at AS "createdAt",
+        pcc.updated_at AS "updatedAt"
+      FROM payroll_calendar_config pcc
+      JOIN academic_cycles ac ON ac.id = pcc.cycle_id
+      WHERE pcc.id = $1
       LIMIT 1
     `,
     [id]

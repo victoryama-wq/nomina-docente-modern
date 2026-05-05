@@ -439,6 +439,13 @@ export interface CalendarPeriodPayload {
   blackoutDates: Array<Pick<CalendarBlackoutDate, 'blackoutDate' | 'reason'>>;
 }
 
+export interface CycleModuleDatesPayload {
+  module1Start: string;
+  module1End: string;
+  module2Start: string;
+  module2End: string;
+}
+
 export interface PayrollContext {
   activeCycle: CycleOption;
   cycles: CycleOption[];
@@ -761,6 +768,16 @@ export async function fetchCalendarContext(cycleId?: string): Promise<{
 }> {
   const queryString = cycleId ? `?cycleId=${encodeURIComponent(cycleId)}` : '';
   return request(`/calendar/context${queryString}`);
+}
+
+export async function updateCycleModuleDates(
+  cycleId: string,
+  payload: CycleModuleDatesPayload
+): Promise<{ activeCycle: CycleOption; message: string }> {
+  return request(`/calendar/cycles/${cycleId}/modules`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function createCalendarPeriod(

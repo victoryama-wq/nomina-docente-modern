@@ -5,6 +5,7 @@ import { requirePermission } from '../auth.js';
 import { withTransaction } from '../db.js';
 import {
   ensureWorkingCycle,
+  loadCycleById,
   listCycles,
   type CycleRow
 } from './academic-context.js';
@@ -83,6 +84,27 @@ const calendarPeriodBodySchema = z
   });
 
 type CalendarPeriodBody = z.infer<typeof calendarPeriodBodySchema>;
+
+const cycleModuleDatesBodySchema = z
+  .object({
+    module1Start: z.string().date(),
+    module1End: z.string().date(),
+    module2Start: z.string().date(),
+    module2End: z.string().date()
+  })
+  .superRefine((body, ctx) => {
+    if (body.module1Start > body.module1End) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de modulo 1 debe ser menor o igual al cierre.' });
+    }
+    if (body.module2Start > body.module2End) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de modulo 2 debe ser menor o igual al cierre.' });
+    }
+    if (body.module1End > body.module2End) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El cierre de modulo 1 no puede ser posterior al cierre de modulo 2.' });
+    }
+  });
+
+type CycleModuleDatesBody = z.infer<typeof cycleModuleDatesBodySchema>;
 
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
@@ -295,6 +317,67 @@ async function periodHasPayrollRun(client: PoolClient, period: CalendarPeriodRow
   return Number(result.rows[0]?.total || 0) > 0;
 }
 
+async function updateCycleModuleDates(
+  client: PoolClient,
+  actorId: string,
+  actorEmail: string,
+  cycleId: string,
+  body: CycleModuleDatesBody
+): Promise<CycleRow> {
+  const before = await loadCycleById(client, cycleId);
+  if (!before) throw new Error('El ciclo seleccionado no existe.');
+  if (before.status === 'CERRADO') throw new Error('No se pueden modificar fechas modulares de un ciclo cerrado.');
+
+  const updated = await client.query<CycleRow>(
+    `
+      UPDATE academic_cycles
+      SET
+        module1_start = $1,
+        module1_end = $2,
+        module2_start = $3,
+        module2_end = $4
+      WHERE id = $5
+      RETURNING
+        id,
+        period_label AS "periodLabel",
+        quarter_code AS "quarterCode",
+        module1_start::text AS "module1Start",
+        module1_end::text AS "module1End",
+        module2_start::text AS "module2Start",
+        module2_end::text AS "module2End",
+        status
+    `,
+    [body.module1Start, body.module1End, body.module2Start, body.module2End, cycleId]
+  );
+
+  const cycle = updated.rows[0];
+  if (!cycle) throw new Error('No fue posible actualizar las fechas modulares.');
+
+  await client.query(
+    `
+      UPDATE payroll_calendar_config
+      SET
+        module1_start = $1,
+        module1_end = $2,
+        module2_start = $3,
+        module2_end = $4,
+        updated_at = now()
+      WHERE cycle_id = $5
+    `,
+    [body.module1Start, body.module1End, body.module2Start, body.module2End, cycleId]
+  );
+
+  await client.query(
+    `
+      INSERT INTO audit_log (actor_user_id, actor_email, action, entity_type, entity_id, before_data, after_data)
+      VALUES ($1, $2, 'CYCLE_MODULE_DATES_UPDATED', 'academic_cycle', $3, $4::jsonb, $5::jsonb)
+    `,
+    [actorId, actorEmail, cycle.id, JSON.stringify(before), JSON.stringify(cycle)]
+  );
+
+  return cycle;
+}
+
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505';
 }
@@ -320,6 +403,25 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
       cycles,
       periods: context.periods
     };
+  });
+
+  app.patch('/calendar/cycles/:id/modules', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
+    const params = paramsSchema.safeParse(request.params as CalendarParams);
+    const parsed = cycleModuleDatesBodySchema.safeParse(request.body);
+    if (!params.success) {
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Ciclo invalido.' });
+      return;
+    }
+    if (!parsed.success) {
+      sendValidation(reply, parsed.error);
+      return;
+    }
+
+    const cycle = await withTransaction((client) =>
+      updateCycleModuleDates(client, request.user!.id, request.user!.email, params.data.id, parsed.data)
+    );
+
+    return { activeCycle: cycle, message: 'Fechas modulares actualizadas correctamente.' };
   });
 
   app.post('/calendar/periods', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
