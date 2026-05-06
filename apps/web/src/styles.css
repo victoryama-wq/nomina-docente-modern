@@ -793,6 +793,11 @@ h3 {
   align-items: center;
 }
 
+.filters-row.finance {
+  grid-template-columns: minmax(280px, 1fr) 150px auto;
+  align-items: center;
+}
+
 .toggle-filter {
   min-height: 40px;
   display: inline-flex !important;
@@ -1335,6 +1340,151 @@ td span {
 .payroll-detail-table.extras th:nth-child(3),
 .payroll-detail-table.extras th:nth-child(4) {
   width: 18%;
+}
+
+.finance-header-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.finance-run-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.finance-run-summary h3 {
+  font-size: 20px;
+}
+
+.finance-run-summary span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.finance-table {
+  min-width: 1280px;
+  table-layout: fixed;
+}
+
+.finance-table th:nth-child(1) {
+  width: 20%;
+}
+
+.finance-table th:nth-child(2) {
+  width: 20%;
+}
+
+.finance-table th:nth-child(3),
+.finance-table th:nth-child(4),
+.finance-table th:nth-child(5),
+.finance-table th:nth-child(6) {
+  width: 13%;
+}
+
+.finance-table th:nth-child(7) {
+  width: 8%;
+}
+
+.finance-coordination-table,
+.finance-fiscal-table {
+  min-width: 920px;
+  table-layout: fixed;
+}
+
+.finance-history-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.finance-run-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.finance-run-card:hover,
+.finance-run-card.active {
+  border-color: #0f766e;
+  background: #f0fdfa;
+}
+
+.finance-run-card strong,
+.finance-run-card span,
+.finance-run-card b,
+.finance-run-card small {
+  display: block;
+}
+
+.finance-run-card strong {
+  overflow: hidden;
+  color: #0f172a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-run-card span,
+.finance-run-card small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.finance-run-card-total {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  color: #0f766e;
+}
+
+.finance-run-card-total b {
+  color: #0f172a;
+  font-size: 17px;
+}
+
+.finance-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.finance-signal-grid .data-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.finance-signal-grid svg {
+  color: #0f766e;
+}
+
+.finance-signal-grid strong,
+.finance-signal-grid span {
+  display: block;
+}
+
+.finance-signal-grid strong {
+  color: #0f172a;
+  font-size: 24px;
+}
+
+.finance-signal-grid span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .alert-list {
@@ -1924,7 +2074,8 @@ td span {
 
   .metric-grid,
   .main-grid,
-  .module-grid {
+  .module-grid,
+  .finance-signal-grid {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -1939,7 +2090,8 @@ td span {
   }
 
   .payroll-control-grid,
-  .run-list {
+  .run-list,
+  .finance-history-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -1972,9 +2124,12 @@ td span {
     .filters-row.incidences,
     .filters-row.extras,
     .filters-row.payroll,
+    .filters-row.finance,
     .payroll-control-grid,
     .payroll-detail-metrics,
     .run-list,
+    .finance-history-grid,
+    .finance-signal-grid,
     .form-grid {
     grid-template-columns: 1fr;
   }
@@ -1987,6 +2142,7 @@ td span {
   .toolbar-actions,
   .toolbar-actions button,
   .toolbar-actions select,
+  .finance-header-panel,
   .payroll-history-actions,
   .payroll-history-actions button,
   .segmented-control,

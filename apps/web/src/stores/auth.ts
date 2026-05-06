@@ -26,6 +26,13 @@ export const useAuthStore = defineStore('auth', () => {
     () => session.value?.isProtectedSuperAdmin || session.value?.permissions?.includes('payroll.finalize') || false
   );
   const canManageCalendar = computed(() => session.value?.permissions?.includes('calendar.manage') || false);
+  const canViewFinanceReports = computed(
+    () =>
+      session.value?.isProtectedSuperAdmin ||
+      session.value?.permissions?.includes('finance.view') ||
+      session.value?.permissions?.includes('reports.view') ||
+      false
+  );
   const canExportTeacherHistory = computed(() => session.value?.permissions?.includes('audit.view') || false);
   const canViewTeachers = computed(() => 
     canManageTeachers.value || 
@@ -107,6 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
     canCalculatePayroll,
     canFinalizePayroll,
     canManageCalendar,
+    canViewFinanceReports,
     canExportTeacherHistory,
     canViewTeachers,
     login,

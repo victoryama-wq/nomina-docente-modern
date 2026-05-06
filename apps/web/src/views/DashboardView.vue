@@ -63,7 +63,7 @@ const modules: ModuleItem[] = [
   {
     name: 'Reportes',
     description: 'Exportaciones, historicos y vista financiera.',
-    status: 'Migracion',
+    status: 'Disponible',
     icon: FileSpreadsheet,
     accent: 'cyan'
   }

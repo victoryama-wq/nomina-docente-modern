@@ -519,6 +519,88 @@ export interface PayrollPreview {
   message?: string;
 }
 
+export interface FinanceSummary {
+  lines: number;
+  teachers: number;
+  coordinations: number;
+  baseHours: number;
+  grossBaseAmount: number;
+  discountAmount: number;
+  totalExtraHours: number;
+  totalExtraAmount: number;
+  totalAmount: number;
+  alerts: number;
+  fiscalPending: number;
+  readyPayments: number;
+}
+
+export interface FinanceRun {
+  id: string;
+  cycleId: string;
+  cycleLabel: string;
+  periodLabel: string;
+  status: PayrollRun['status'];
+  summary: FinanceSummary;
+  calculatedAt: string | null;
+  calculatedByEmail: string;
+  createdAt: string;
+}
+
+export interface FinanceLine {
+  id: string;
+  teacherId: string;
+  coordinationId: string;
+  teacherName: string;
+  coordinationName: string;
+  paymentType: string;
+  category: string;
+  rfc: string;
+  email: string;
+  bankDetail: string;
+  hasConstancia: boolean;
+  baseHours: number;
+  grossBaseAmount: number;
+  absences: number;
+  delays: number;
+  absenceDiscountAmount: number;
+  delayDiscountAmount: number;
+  baseNetAmount: number;
+  scheduleExtraHours: number;
+  scheduleExtraAmount: number;
+  loggedExtraHours: number;
+  loggedExtraAmount: number;
+  totalExtraHours: number;
+  totalExtraAmount: number;
+  totalAmount: number;
+  alerts: string[];
+  fiscalMissing: string[];
+  paymentStatus: 'LISTO' | 'PENDIENTE';
+}
+
+export interface FinanceCoordinationSummary {
+  coordinationId: string;
+  coordinationName: string;
+  teachers: number;
+  lines: number;
+  baseHours: number;
+  totalExtraHours: number;
+  discountAmount: number;
+  totalAmount: number;
+  fiscalPending: number;
+  alerts: number;
+}
+
+export interface FinanceContext {
+  activeCycle: CycleOption | null;
+  cycles: CycleOption[];
+  actorCoordination: CoordinationOption | null;
+  runs: FinanceRun[];
+  selectedRun: FinanceRun | null;
+  summary: FinanceSummary;
+  lines: FinanceLine[];
+  coordinationSummary: FinanceCoordinationSummary[];
+}
+
 export interface TeacherPayload {
   firstNames: string;
   paternalLastName: string;
@@ -839,6 +921,48 @@ export async function downloadPayrollExport(runId: string, kind: 'summary' | 'sc
   const disposition = response.headers.get('Content-Disposition') || '';
   const match = /filename="([^"]+)"/.exec(disposition);
   const fileName = match?.[1] || `nomina-${kind}.csv`;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+export async function fetchFinanceContext(cycleId?: string, runId?: string): Promise<FinanceContext> {
+  const params = new URLSearchParams();
+  if (cycleId) params.set('cycleId', cycleId);
+  if (runId) params.set('runId', runId);
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  return request(`/reports/finance/context${queryString}`);
+}
+
+export async function downloadFinanceExport(kind: 'payments' | 'fiscal' | 'coordinations', runId?: string, cycleId?: string): Promise<void> {
+  const token = await getIdToken();
+  const params = new URLSearchParams();
+  if (cycleId) params.set('cycleId', cycleId);
+  if (runId) params.set('runId', runId);
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const response = await fetch(`${apiBaseUrl}/reports/finance/export/${kind}${queryString}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    let body: ApiErrorBody = {};
+    try {
+      body = (await response.json()) as ApiErrorBody;
+    } catch {
+      body = {};
+    }
+    throw new Error(body.message || 'No fue posible generar la exportacion financiera.');
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const fileName = match?.[1] || `finanzas-${kind}.csv`;
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

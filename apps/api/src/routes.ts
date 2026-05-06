@@ -5,6 +5,7 @@ import { registerCalendarRoutes } from './routes/calendar.js';
 import { registerExtraRoutes } from './routes/extras.js';
 import { registerIncidenceRoutes } from './routes/incidences.js';
 import { registerPayrollRoutes } from './routes/payroll.js';
+import { registerReportRoutes } from './routes/reports.js';
 import { registerScheduleRoutes } from './routes/schedules.js';
 import { registerTeacherRoutes } from './routes/teachers.js';
 import { registerUserRoutes } from './routes/users.js';
@@ -58,5 +59,6 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await registerIncidenceRoutes(app);
   await registerExtraRoutes(app);
   await registerPayrollRoutes(app);
+  await registerReportRoutes(app);
   await registerCalendarRoutes(app);
 }

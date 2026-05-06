@@ -13,6 +13,7 @@ import {
   ClipboardCheck,
   BadgePlus,
   CircleDollarSign,
+  FileSpreadsheet,
   Database,
   Menu,
   LogOut
@@ -46,6 +47,7 @@ const pageTitle = computed(() => {
   if (route.name === 'incidences') return 'Capturar Incidencias';
   if (route.name === 'extras') return 'Capturar Extras';
   if (route.name === 'payroll') return 'Nomina';
+  if (route.name === 'financeReports') return 'Reportes y Finanzas';
   if (route.name === 'calendar') return 'Calendario Operativo';
   if (route.name === 'access') return 'Control de Accesos';
   return 'Centro de control';
@@ -149,6 +151,17 @@ async function handleLogout() {
         >
           <CircleDollarSign :size="18" />
           Nomina
+        </router-link>
+
+        <router-link
+          v-if="authStore.canViewFinanceReports"
+          :to="{ name: 'financeReports' }"
+          class="nav-item"
+          active-class="active"
+          @click="menuOpen = false"
+        >
+          <FileSpreadsheet :size="18" />
+          Finanzas
         </router-link>
 
         <router-link
