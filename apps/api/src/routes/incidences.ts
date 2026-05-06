@@ -67,6 +67,10 @@ function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   });
 }
 
+function isSystemAdmin(actor: SessionUser): boolean {
+  return actor.role === 'admin' || actor.isProtectedSuperAdmin;
+}
+
 function incidenceSelectSql(whereClause = ''): string {
   return `
     SELECT
@@ -110,7 +114,7 @@ function applyEditability(
 ): IncidenceScheduleRow[] {
   return rows.map((row) => ({
     ...row,
-    canEdit: actor.role === 'admin' || (!!actorCoordination && actorCoordination.id === row.coordinationId)
+    canEdit: isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId)
   }));
 }
 

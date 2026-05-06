@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
-import { requireAnyPermission, requirePermission } from '../auth.js';
+import { requireAnyPermission, requirePermissionOrProtectedSuperAdmin } from '../auth.js';
 import { withTransaction } from '../db.js';
 import type { SessionUser } from '../types.js';
 import {
@@ -1473,7 +1473,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
     return publicCalculation(calculation);
   });
 
-  app.post('/payroll/runs', { preHandler: requirePermission('payroll.calculate') }, async (request, reply) => {
+  app.post('/payroll/runs', { preHandler: requirePermissionOrProtectedSuperAdmin('payroll.finalize') }, async (request, reply) => {
     const parsed = payrollBodySchema.safeParse(request.body);
     if (!parsed.success) {
       sendValidation(reply, parsed.error);
@@ -1490,7 +1490,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       await reply.code(201).send({
         run: result.run,
         ...publicCalculation(result.calculation),
-        message: 'Corrida de nomina guardada correctamente.'
+        message: 'Nomina guardada correctamente.'
       });
     } catch (error) {
       if (isUniqueViolation(error)) {

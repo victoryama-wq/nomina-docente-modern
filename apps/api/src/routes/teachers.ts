@@ -154,6 +154,10 @@ function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   });
 }
 
+function isSystemAdmin(actor: SessionUser): boolean {
+  return actor.role === 'admin' || actor.isProtectedSuperAdmin;
+}
+
 function buildSummary(teachers: TeacherRow[]) {
   return {
     total: teachers.length,
@@ -643,7 +647,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     }
 
     const actor = request.user!;
-    if (actor.role !== 'admin') {
+    if (!isSystemAdmin(actor)) {
       await reply.code(403).send({ error: 'FORBIDDEN', message: 'Solo un administrador puede eliminar docentes.' });
       return;
     }

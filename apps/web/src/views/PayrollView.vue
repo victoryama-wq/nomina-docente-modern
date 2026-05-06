@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { AlertTriangle, Calculator, Clock3, Eye, History, RefreshCw, Save, Search } from 'lucide-vue-next';
+import { AlertTriangle, Clock3, Eye, History, RefreshCw, Save, Search } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import {
   fetchPayrollContext,
@@ -103,7 +103,7 @@ const calendarLabel = computed(() => {
 
 const canSaveRun = computed(
   () =>
-    authStore.canCalculatePayroll &&
+    authStore.canFinalizePayroll &&
     !!form.value.payrollStart &&
     !!form.value.payrollEnd &&
     !!form.value.module1Start &&
@@ -232,7 +232,7 @@ function applyContext(data: {
   currentPreview.value = null;
 }
 
-function applyCalendarPeriod() {
+async function applyCalendarPeriod() {
   const period = selectedCalendarPeriod.value;
   if (!period) return;
   form.value = {
@@ -248,6 +248,7 @@ function applyCalendarPeriod() {
   };
   currentPreview.value = null;
   selectedRunId.value = '';
+  await calculatePreview(true);
 }
 
 async function loadContext(cycleId = selectedCycleId.value || undefined) {
@@ -257,6 +258,7 @@ async function loadContext(cycleId = selectedCycleId.value || undefined) {
   try {
     const data = await fetchPayrollContext(cycleId);
     applyContext(data);
+    await calculatePreview(true);
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar nomina.');
   } finally {
@@ -264,13 +266,14 @@ async function loadContext(cycleId = selectedCycleId.value || undefined) {
   }
 }
 
-async function calculatePreview() {
+async function calculatePreview(silent = false) {
+  if (!form.value.payrollStart || !form.value.payrollEnd) return;
   calculating.value = true;
-  clearNotice();
+  if (!silent) clearNotice();
   try {
     currentPreview.value = await previewPayroll(payloadFromForm());
     selectedRunId.value = '';
-    setNotice('ok', 'Vista previa de nomina calculada.');
+    if (!silent) setNotice('ok', 'Vista previa de nomina actualizada.');
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible calcular la nomina.');
   } finally {
@@ -278,8 +281,16 @@ async function calculatePreview() {
   }
 }
 
+async function refreshPreview() {
+  await calculatePreview(false);
+}
+
 async function saveCurrentRun() {
   if (!canSaveRun.value) return;
+  const confirmed = window.confirm(
+    'Guardar la nomina definitiva de esta quincena? Esta accion conserva el historico y libera incidencias/extras operativos para la siguiente quincena.'
+  );
+  if (!confirmed) return;
   saving.value = true;
   clearNotice();
   try {
@@ -287,9 +298,9 @@ async function saveCurrentRun() {
     currentPreview.value = result;
     selectedRunId.value = result.run.id;
     recentRuns.value = [result.run, ...recentRuns.value.filter((run) => run.id !== result.run.id)].slice(0, 12);
-    setNotice('ok', result.message);
+    setNotice('ok', result.message || 'Nomina guardada correctamente.');
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible guardar la corrida.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible guardar la nomina.');
   } finally {
     saving.value = false;
   }
@@ -345,7 +356,7 @@ onMounted(() => {
         </select>
         <button class="secondary-action" type="button" @click="loadContext(selectedCycleId)">
           <RefreshCw :size="17" :class="{ spin: pageBusy }" />
-          Actualizar
+          Actualizar datos
         </button>
       </div>
     </section>
@@ -394,19 +405,19 @@ onMounted(() => {
           <input v-model="form.module2End" type="date" :disabled="!!selectedCalendarPeriod" />
         </label>
         <div class="payroll-actions">
-          <button class="secondary-action" type="button" :disabled="calculating" @click="calculatePreview">
-            <Calculator :size="17" :class="{ spin: calculating }" />
-            Calcular
+          <button class="secondary-action" type="button" :disabled="calculating" @click="refreshPreview">
+            <RefreshCw :size="17" :class="{ spin: calculating }" />
+            Actualizar calculo
           </button>
           <button
-            v-if="authStore.canCalculatePayroll"
+            v-if="authStore.canFinalizePayroll"
             class="primary-inline"
             type="button"
             :disabled="!canSaveRun"
             @click="saveCurrentRun"
           >
             <Save :size="17" />
-            Guardar corrida
+            Guardar nomina
           </button>
         </div>
       </div>
@@ -488,7 +499,7 @@ onMounted(() => {
             <tbody>
               <tr v-if="!filteredLines.length">
                 <td colspan="7" class="empty-cell">
-                  {{ currentPreview ? 'No hay lineas con el filtro actual.' : 'Calcula una vista previa para ver la nomina.' }}
+                  {{ currentPreview ? 'No hay lineas con el filtro actual.' : 'Selecciona una quincena para ver la nomina.' }}
                 </td>
               </tr>
               <tr v-for="line in filteredLines" :key="line.key">

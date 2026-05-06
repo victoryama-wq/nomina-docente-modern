@@ -153,6 +153,10 @@ function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   });
 }
 
+function isSystemAdmin(actor: SessionUser): boolean {
+  return actor.role === 'admin' || actor.isProtectedSuperAdmin;
+}
+
 function categoryMaxHours(category: string): number {
   if (category === 'V') return 35;
   if (category === 'M') return 25;
@@ -436,7 +440,7 @@ async function resolveScheduleCoordination(
   teacher: TeacherScheduleRow,
   body: ScheduleBody
 ): Promise<string> {
-  if (actor.role !== 'admin') {
+  if (!isSystemAdmin(actor)) {
     const actorCoordination = await loadActorCoordination(client, actor, true);
     if (!actorCoordination) throw new Error('No se pudo resolver la coordinacion del usuario logeado.');
     return actorCoordination.id;
@@ -450,7 +454,7 @@ async function assertScheduleWritableByActor(
   actor: SessionUser,
   schedule: ScheduleRow
 ): Promise<void> {
-  if (actor.role === 'admin') return;
+  if (isSystemAdmin(actor)) return;
 
   const actorCoordination = await loadActorCoordination(client, actor, false);
   if (!actorCoordination || actorCoordination.id !== schedule.coordinationId) {
@@ -656,7 +660,7 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
     listContextOptions()
   ]);
   const coordinations =
-    actor.role === 'admin'
+    isSystemAdmin(actor)
       ? options.coordinations
       : setup.actorCoordination
         ? [setup.actorCoordination]

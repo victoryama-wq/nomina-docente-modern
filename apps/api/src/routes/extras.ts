@@ -113,6 +113,10 @@ function loadStatus(week: number, mod1: number, mod2: number, maxHours: number):
   return 'DISPONIBLE';
 }
 
+function isSystemAdmin(actor: SessionUser): boolean {
+  return actor.role === 'admin' || actor.isProtectedSuperAdmin;
+}
+
 async function resolveTabulatorAmount(client: PoolClient, body: ExtraBody): Promise<number> {
   if (!body.tabulatorId) return body.tabulatorAmount;
 
@@ -163,7 +167,7 @@ async function resolveExtraCoordination(
   body: ExtraBody,
   teacher: ExtraTeacherRow
 ): Promise<string> {
-  if (actor.role !== 'admin') {
+  if (!isSystemAdmin(actor)) {
     const actorCoordination = await loadActorCoordination(client, actor, true);
     if (!actorCoordination) throw new Error('No se pudo resolver la coordinacion del usuario logeado.');
     return actorCoordination.id;
@@ -223,13 +227,13 @@ function applyExtraEditability(
 ): ExtraRow[] {
   return rows.map((row) => ({
     ...row,
-    canEdit: actor.role === 'admin' || (!!actorCoordination && actorCoordination.id === row.coordinationId)
+    canEdit: isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId)
   }));
 }
 
 async function listExtraRows(cycleId: string, actor: SessionUser, actorCoordination: CoordinationRow | null): Promise<ExtraRow[]> {
   const params: unknown[] = [cycleId];
-  const visibility = actor.role === 'admin' ? '' : 'AND eh.coordination_id = $2';
+  const visibility = isSystemAdmin(actor) ? '' : 'AND eh.coordination_id = $2';
   if (visibility) params.push(actorCoordination?.id || null);
 
   const rows = await query<Omit<ExtraRow, 'canEdit'>>(
@@ -389,7 +393,7 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
     activeCycle: setup.cycle,
     cycles,
     actorCoordination: setup.actorCoordination,
-    coordinations: actor.role === 'admin' ? coordinations : setup.actorCoordination ? [setup.actorCoordination] : [],
+    coordinations: isSystemAdmin(actor) ? coordinations : setup.actorCoordination ? [setup.actorCoordination] : [],
     teachers,
     extras,
     tabulators,

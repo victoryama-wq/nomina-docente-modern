@@ -128,6 +128,19 @@ export function requirePermission(permission: string) {
   };
 }
 
+export function requirePermissionOrProtectedSuperAdmin(permission: string) {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    await authenticate(request, reply);
+    if (reply.sent) return;
+
+    const user = request.user;
+    const permissions = user?.permissions || [];
+    if (!user?.isProtectedSuperAdmin && !permissions.includes(permission)) {
+      await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para esta accion.' });
+    }
+  };
+}
+
 export function requireAnyPermission(allowedPermissions: string[]) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     await authenticate(request, reply);

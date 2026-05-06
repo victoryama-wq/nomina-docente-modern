@@ -12,7 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref('');
 
   const isAuthenticated = computed(() => !!session.value && !!firebaseUser.value);
-  const isAdmin = computed(() => session.value?.role === 'admin');
+  const isAdmin = computed(() => session.value?.role === 'admin' || session.value?.isProtectedSuperAdmin || false);
   
   // Computed permissions helpers
   const canManageAccess = computed(() => session.value?.permissions?.includes('access.manage') || false);
@@ -22,6 +22,9 @@ export const useAuthStore = defineStore('auth', () => {
   const canManageExtras = computed(() => session.value?.permissions?.includes('extras.manage') || false);
   const canViewPayroll = computed(() => session.value?.permissions?.includes('payroll.view') || false);
   const canCalculatePayroll = computed(() => session.value?.permissions?.includes('payroll.calculate') || false);
+  const canFinalizePayroll = computed(
+    () => session.value?.isProtectedSuperAdmin || session.value?.permissions?.includes('payroll.finalize') || false
+  );
   const canManageCalendar = computed(() => session.value?.permissions?.includes('calendar.manage') || false);
   const canExportTeacherHistory = computed(() => session.value?.permissions?.includes('audit.view') || false);
   const canViewTeachers = computed(() => 
@@ -102,6 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
     canManageExtras,
     canViewPayroll,
     canCalculatePayroll,
+    canFinalizePayroll,
     canManageCalendar,
     canExportTeacherHistory,
     canViewTeachers,
