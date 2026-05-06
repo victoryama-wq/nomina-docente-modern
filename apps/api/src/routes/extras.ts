@@ -105,6 +105,12 @@ function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   });
 }
 
+function dateOnly(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+}
+
 function loadStatus(week: number, mod1: number, mod2: number, maxHours: number): ExtraTeacherRow['loadStatus'] {
   const highest = Math.max(week, mod1, mod2);
   if (highest > maxHours) return 'EXCEDE';
@@ -203,7 +209,7 @@ function extraSelectSql(whereClause = ''): string {
       eh.tabulator_amount::float8 AS "tabulatorAmount",
       (eh.hours * eh.tabulator_amount)::float8 AS "totalAmount",
       eh.reason,
-      eh.activity_date AS "activityDate",
+      eh.activity_date::text AS "activityDate",
       eh.reference,
       eh.observations,
       eh.captured_at AS "capturedAt",
@@ -548,7 +554,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
       await assertExtraPeriodOpen(
         client,
         cycle.id,
-        parsed.data.activityDate || before.activityDate?.slice(0, 10) || before.capturedAt.slice(0, 10)
+        parsed.data.activityDate || dateOnly(before.activityDate) || dateOnly(before.capturedAt)
       );
 
       await client.query(
@@ -605,7 +611,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
       if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden eliminar extras de un ciclo cerrado.');
       if (!before.canEdit) throw new Error('Solo la coordinacion que capturo este extra puede eliminarlo.');
 
-      await assertExtraPeriodOpen(client, before.cycleId, before.activityDate?.slice(0, 10) || before.capturedAt.slice(0, 10));
+      await assertExtraPeriodOpen(client, before.cycleId, dateOnly(before.activityDate) || dateOnly(before.capturedAt));
       await ensureNoPayrollDependency(client, before.id);
       await auditExtra(client, actor, 'EXTRA_DELETED', before.id, before, null);
       await client.query('DELETE FROM extra_hours WHERE id = $1', [before.id]);
