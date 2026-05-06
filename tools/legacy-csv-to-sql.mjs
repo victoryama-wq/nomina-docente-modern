@@ -268,7 +268,7 @@ VALUES (
 )
 ON CONFLICT (normalized_name) DO UPDATE
 SET legacy_row_number = EXCLUDED.legacy_row_number,
-    legacy_teacher_id = EXCLUDED.legacy_teacher_id,
+    legacy_teacher_id = COALESCE(EXCLUDED.legacy_teacher_id, teachers.legacy_teacher_id),
     full_name = EXCLUDED.full_name,
     first_names = EXCLUDED.first_names,
     paternal_last_name = EXCLUDED.paternal_last_name,
