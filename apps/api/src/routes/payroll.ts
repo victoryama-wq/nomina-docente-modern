@@ -573,13 +573,14 @@ function getLine(lineMap: Map<string, InternalPayrollLine>, row: PayrollSchedule
 async function listPayrollSchedules(
   client: PoolClient,
   cycleId: string,
+  calendarConfigId: string | null,
   coordinationId: string | null
 ): Promise<PayrollScheduleRow[]> {
-  const params: unknown[] = [cycleId];
+  const params: unknown[] = [cycleId, calendarConfigId];
   let visibility = '';
   if (coordinationId) {
     params.push(coordinationId);
-    visibility = 'AND s.coordination_id = $2';
+    visibility = 'AND s.coordination_id = $3';
   } else if (coordinationId === '') {
     visibility = 'AND false';
   }
@@ -621,7 +622,7 @@ async function listPayrollSchedules(
       FROM schedules s
       JOIN coordinations c ON c.id = s.coordination_id
       JOIN teachers t ON t.id = s.teacher_id
-      LEFT JOIN schedule_incidences si ON si.schedule_id = s.id
+      LEFT JOIN schedule_incidences si ON si.schedule_id = s.id AND si.calendar_config_id = $2::uuid
       WHERE s.cycle_id = $1
         ${visibility}
       ORDER BY c.name ASC, t.full_name ASC, s.subject_name ASC, s.group_code ASC
@@ -962,7 +963,7 @@ async function calculatePayroll(client: PoolClient, actor: SessionUser, body: Pa
   const resolved = await resolvePayrollBody(client, cycle, body);
   const input = normalizePayrollInput(resolved.body, cycle);
   const calendar = buildPayrollCalendar(resolved.body, resolved.blackoutDates);
-  const schedules = await listPayrollSchedules(client, cycle.id, coordinationScope);
+  const schedules = await listPayrollSchedules(client, cycle.id, resolved.body.calendarConfigId || null, coordinationScope);
   const extras = await listPayrollExtras(
     client,
     cycle.id,
@@ -1390,6 +1391,10 @@ function weightsForRun(calculation: PayrollCalculation) {
 }
 
 async function savePayrollRun(client: PoolClient, actor: SessionUser, calculation: PayrollCalculation): Promise<PayrollRunRow> {
+  if (!calculation.input.calendarConfigId) {
+    throw new Error('Selecciona una quincena de calendario valida antes de guardar nomina.');
+  }
+
   const created = await client.query<{ id: string }>(
     `
       INSERT INTO payroll_runs (
@@ -1584,8 +1589,9 @@ async function savePayrollRun(client: PoolClient, actor: SessionUser, calculatio
       USING schedules s
       WHERE si.schedule_id = s.id
         AND s.cycle_id = $1
+        AND si.calendar_config_id = $2
     `,
-    [calculation.activeCycle.id]
+    [calculation.activeCycle.id, calculation.input.calendarConfigId]
   );
 
   await client.query(

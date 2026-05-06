@@ -287,7 +287,15 @@ async function listExtraTeachers(cycleId: string): Promise<ExtraTeacherRow[]> {
           COALESCE(SUM(si.extra_hours_in_schedule), 0)::float8 AS incidence_extra_hours
         FROM schedules s
         JOIN schedule_incidences si ON si.schedule_id = s.id
+        JOIN payroll_calendar_config pcc ON pcc.id = si.calendar_config_id
         WHERE s.cycle_id = $1
+          AND NOT EXISTS (
+            SELECT 1
+            FROM payroll_runs pr
+            WHERE pr.cycle_id = pcc.cycle_id
+              AND pr.period_label = pcc.period_label
+              AND pr.status <> 'CANCELADA'
+          )
         GROUP BY s.teacher_id
       ),
       suggested AS (
@@ -416,6 +424,31 @@ async function ensureNoPayrollDependency(client: PoolClient, extraId: string): P
   }
 }
 
+async function assertExtraPeriodOpen(client: PoolClient, cycleId: string, activityDate?: string | null): Promise<void> {
+  const result = await client.query<{ periodLabel: string }>(
+    `
+      SELECT pcc.period_label AS "periodLabel"
+      FROM payroll_calendar_config pcc
+      WHERE pcc.cycle_id = $1
+        AND COALESCE($2::date, CURRENT_DATE) BETWEEN pcc.payroll_start AND pcc.payroll_end
+        AND EXISTS (
+          SELECT 1
+          FROM payroll_runs pr
+          WHERE pr.cycle_id = pcc.cycle_id
+            AND pr.period_label = pcc.period_label
+            AND pr.status <> 'CANCELADA'
+        )
+      LIMIT 1
+    `,
+    [cycleId, activityDate || null]
+  );
+
+  const lockedPeriod = result.rows[0];
+  if (lockedPeriod) {
+    throw new Error(`La quincena ${lockedPeriod.periodLabel} ya tiene nomina guardada. No se pueden capturar ni modificar extras.`);
+  }
+}
+
 export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
   app.get('/extras/context', { preHandler: requirePermission('extras.manage') }, async (request, reply) => {
     const parsed = contextQuerySchema.safeParse(request.query);
@@ -443,6 +476,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
 
       const coordinationId = await resolveExtraCoordination(client, actor, parsed.data, teacher);
       const tabulatorAmount = await resolveTabulatorAmount(client, parsed.data);
+      await assertExtraPeriodOpen(client, cycle.id, parsed.data.activityDate || null);
       const created = await client.query<{ id: string }>(
         `
           INSERT INTO extra_hours (
@@ -511,6 +545,11 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
 
       const coordinationId = await resolveExtraCoordination(client, actor, parsed.data, teacher);
       const tabulatorAmount = await resolveTabulatorAmount(client, parsed.data);
+      await assertExtraPeriodOpen(
+        client,
+        cycle.id,
+        parsed.data.activityDate || before.activityDate?.slice(0, 10) || before.capturedAt.slice(0, 10)
+      );
 
       await client.query(
         `
@@ -566,6 +605,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
       if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden eliminar extras de un ciclo cerrado.');
       if (!before.canEdit) throw new Error('Solo la coordinacion que capturo este extra puede eliminarlo.');
 
+      await assertExtraPeriodOpen(client, before.cycleId, before.activityDate?.slice(0, 10) || before.capturedAt.slice(0, 10));
       await ensureNoPayrollDependency(client, before.id);
       await auditExtra(client, actor, 'EXTRA_DELETED', before.id, before, null);
       await client.query('DELETE FROM extra_hours WHERE id = $1', [before.id]);

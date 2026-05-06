@@ -217,16 +217,20 @@ CREATE INDEX IF NOT EXISTS schedules_teacher_idx ON schedules(teacher_id);
 CREATE INDEX IF NOT EXISTS schedules_coordination_idx ON schedules(coordination_id);
 
 CREATE TABLE IF NOT EXISTS schedule_incidences (
-  schedule_id uuid PRIMARY KEY REFERENCES schedules(id) ON DELETE CASCADE,
+  schedule_id uuid NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+  calendar_config_id uuid NOT NULL REFERENCES payroll_calendar_config(id) ON DELETE CASCADE,
   absences numeric(6, 2) NOT NULL DEFAULT 0,
   delays numeric(6, 2) NOT NULL DEFAULT 0,
   extra_hours_in_schedule numeric(6, 2) NOT NULL DEFAULT 0,
   updated_at timestamptz NOT NULL DEFAULT now(),
   updated_by uuid REFERENCES app_users(id),
+  PRIMARY KEY (schedule_id, calendar_config_id),
   CONSTRAINT schedule_incidences_nonnegative_chk CHECK (
     absences >= 0 AND delays >= 0 AND extra_hours_in_schedule >= 0
   )
 );
+
+CREATE INDEX IF NOT EXISTS schedule_incidences_calendar_idx ON schedule_incidences(calendar_config_id);
 
 CREATE TABLE IF NOT EXISTS extra_hours (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

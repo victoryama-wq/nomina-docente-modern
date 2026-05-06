@@ -211,6 +211,9 @@ export interface IncidenceSchedule {
   periodLabel: string;
   quarterCode: string;
   cycleStatus: CycleOption['status'];
+  calendarConfigId: string;
+  calendarPeriodLabel: string;
+  payrollLocked: boolean;
   coordinationId: string;
   coordinationName: string;
   teacherId: string;
@@ -244,9 +247,19 @@ export interface IncidenceSummary {
 
 export interface IncidencePayload {
   scheduleId?: string;
+  calendarConfigId: string;
   absences: number;
   delays: number;
   extraHoursInSchedule: number;
+}
+
+export interface IncidenceCalendarPeriod {
+  id: string;
+  cycleId: string;
+  periodLabel: string;
+  payrollStart: string;
+  payrollEnd: string;
+  hasPayrollRun: boolean;
 }
 
 export interface ExtraTeacher {
@@ -714,14 +727,19 @@ export async function deleteSchedule(id: string): Promise<{ message: string }> {
   });
 }
 
-export async function fetchIncidencesContext(cycleId?: string): Promise<{
+export async function fetchIncidencesContext(cycleId?: string, calendarConfigId?: string): Promise<{
   activeCycle: CycleOption;
   cycles: CycleOption[];
+  calendarPeriods: IncidenceCalendarPeriod[];
+  activeCalendarPeriod: IncidenceCalendarPeriod | null;
   actorCoordination: CoordinationOption | null;
   schedules: IncidenceSchedule[];
   summary: IncidenceSummary;
 }> {
-  const queryString = cycleId ? `?cycleId=${encodeURIComponent(cycleId)}` : '';
+  const params = new URLSearchParams();
+  if (cycleId) params.set('cycleId', cycleId);
+  if (calendarConfigId) params.set('calendarConfigId', calendarConfigId);
+  const queryString = params.toString() ? `?${params.toString()}` : '';
   return request(`/incidences/context${queryString}`);
 }
 

@@ -18,6 +18,9 @@ interface IncidenceScheduleRow {
   periodLabel: string;
   quarterCode: string;
   cycleStatus: CycleRow['status'];
+  calendarConfigId: string;
+  calendarPeriodLabel: string;
+  payrollLocked: boolean;
   coordinationId: string;
   coordinationName: string;
   teacherId: string;
@@ -39,8 +42,18 @@ interface IncidenceScheduleRow {
   canEdit: boolean;
 }
 
+interface IncidenceCalendarPeriodRow {
+  id: string;
+  cycleId: string;
+  periodLabel: string;
+  payrollStart: string;
+  payrollEnd: string;
+  hasPayrollRun: boolean;
+}
+
 const contextQuerySchema = z.object({
-  cycleId: z.string().uuid().optional()
+  cycleId: z.string().uuid().optional(),
+  calendarConfigId: z.string().uuid().optional()
 });
 
 const incidenceParamsSchema = z.object({
@@ -49,6 +62,7 @@ const incidenceParamsSchema = z.object({
 
 const incidencePayloadSchema = z.object({
   scheduleId: z.string().uuid().optional(),
+  calendarConfigId: z.string().uuid(),
   absences: z.coerce.number().min(0).max(999).default(0),
   delays: z.coerce.number().min(0).max(999).default(0),
   extraHoursInSchedule: z.coerce.number().min(0).max(999).default(0)
@@ -79,6 +93,15 @@ function incidenceSelectSql(whereClause = ''): string {
       ac.period_label AS "periodLabel",
       ac.quarter_code AS "quarterCode",
       ac.status AS "cycleStatus",
+      pcc.id AS "calendarConfigId",
+      pcc.period_label AS "calendarPeriodLabel",
+      EXISTS (
+        SELECT 1
+        FROM payroll_runs pr
+        WHERE pr.cycle_id = pcc.cycle_id
+          AND pr.period_label = pcc.period_label
+          AND pr.status <> 'CANCELADA'
+      ) AS "payrollLocked",
       s.coordination_id AS "coordinationId",
       c.name AS "coordinationName",
       s.teacher_id AS "teacherId",
@@ -99,9 +122,10 @@ function incidenceSelectSql(whereClause = ''): string {
       COALESCE(updated.email, '') AS "incidenceUpdatedByEmail"
     FROM schedules s
     JOIN academic_cycles ac ON ac.id = s.cycle_id
+    JOIN payroll_calendar_config pcc ON pcc.id = $2 AND pcc.cycle_id = s.cycle_id
     JOIN coordinations c ON c.id = s.coordination_id
     JOIN teachers t ON t.id = s.teacher_id
-    LEFT JOIN schedule_incidences si ON si.schedule_id = s.id
+    LEFT JOIN schedule_incidences si ON si.schedule_id = s.id AND si.calendar_config_id = pcc.id
     LEFT JOIN app_users updated ON updated.id = si.updated_by
     ${whereClause}
   `;
@@ -114,12 +138,40 @@ function applyEditability(
 ): IncidenceScheduleRow[] {
   return rows.map((row) => ({
     ...row,
-    canEdit: isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId)
+    canEdit:
+      !row.payrollLocked &&
+      row.cycleStatus !== 'CERRADO' &&
+      (isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId))
   }));
+}
+
+async function listIncidenceCalendarPeriods(cycleId: string): Promise<IncidenceCalendarPeriodRow[]> {
+  return query<IncidenceCalendarPeriodRow>(
+    `
+      SELECT
+        pcc.id,
+        pcc.cycle_id AS "cycleId",
+        pcc.period_label AS "periodLabel",
+        pcc.payroll_start::text AS "payrollStart",
+        pcc.payroll_end::text AS "payrollEnd",
+        EXISTS (
+          SELECT 1
+          FROM payroll_runs pr
+          WHERE pr.cycle_id = pcc.cycle_id
+            AND pr.period_label = pcc.period_label
+            AND pr.status <> 'CANCELADA'
+        ) AS "hasPayrollRun"
+      FROM payroll_calendar_config pcc
+      WHERE pcc.cycle_id = $1
+      ORDER BY pcc.payroll_start DESC, pcc.created_at DESC
+    `,
+    [cycleId]
+  );
 }
 
 async function listIncidenceSchedules(
   cycleId: string,
+  calendarConfigId: string,
   actor: SessionUser,
   actorCoordination: CoordinationRow | null
 ): Promise<IncidenceScheduleRow[]> {
@@ -128,7 +180,7 @@ async function listIncidenceSchedules(
       ${incidenceSelectSql('WHERE s.cycle_id = $1')}
       ORDER BY t.full_name ASC, c.name ASC, s.subject_name ASC, s.group_code ASC
     `,
-    [cycleId]
+    [cycleId, calendarConfigId]
   );
   return applyEditability(rows, actor, actorCoordination);
 }
@@ -136,12 +188,13 @@ async function listIncidenceSchedules(
 async function loadIncidenceScheduleById(
   client: PoolClient,
   scheduleId: string,
+  calendarConfigId: string,
   actor: SessionUser,
   actorCoordination: CoordinationRow | null
 ): Promise<IncidenceScheduleRow | null> {
   const result = await client.query<Omit<IncidenceScheduleRow, 'canEdit'>>(
     `${incidenceSelectSql('WHERE s.id = $1')} LIMIT 1`,
-    [scheduleId]
+    [scheduleId, calendarConfigId]
   );
   const row = result.rows[0];
   return row ? applyEditability([row], actor, actorCoordination)[0] : null;
@@ -171,33 +224,35 @@ async function saveIncidenceRow(
   scheduleId: string,
   payload: IncidencePayload
 ): Promise<IncidenceScheduleRow> {
-  const before = await loadIncidenceScheduleById(client, scheduleId, actor, actorCoordination);
+  const before = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, actorCoordination);
   if (!before) throw new Error('No se encontro el horario seleccionado.');
   if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar incidencias de un ciclo cerrado.');
+  if (before.payrollLocked) throw new Error('Esta quincena ya tiene nomina guardada. Las incidencias quedaron cerradas.');
   if (!before.canEdit) throw new Error('Solo la coordinacion que capturo este horario puede editar sus incidencias.');
 
   await client.query(
     `
       INSERT INTO schedule_incidences (
         schedule_id,
+        calendar_config_id,
         absences,
         delays,
         extra_hours_in_schedule,
         updated_by
       )
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (schedule_id) DO UPDATE
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (schedule_id, calendar_config_id) DO UPDATE
       SET absences = EXCLUDED.absences,
           delays = EXCLUDED.delays,
           extra_hours_in_schedule = EXCLUDED.extra_hours_in_schedule,
           updated_at = now(),
           updated_by = EXCLUDED.updated_by
     `,
-    [scheduleId, payload.absences, payload.delays, payload.extraHoursInSchedule, actor.id]
+    [scheduleId, payload.calendarConfigId, payload.absences, payload.delays, payload.extraHoursInSchedule, actor.id]
   );
 
-  const after = await loadIncidenceScheduleById(client, scheduleId, actor, actorCoordination);
-  await auditIncidence(client, actor, 'INCIDENCE_UPDATED', scheduleId, before, after);
+  const after = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, actorCoordination);
+  await auditIncidence(client, actor, 'INCIDENCE_UPDATED', `${scheduleId}:${payload.calendarConfigId}`, before, after);
   if (!after) throw new Error('No fue posible leer la incidencia actualizada.');
   return after;
 }
@@ -215,20 +270,28 @@ function buildSummary(rows: IncidenceScheduleRow[]) {
   };
 }
 
-async function buildContext(actor: SessionUser, preferredCycleId?: string) {
+async function buildContext(actor: SessionUser, preferredCycleId?: string, preferredCalendarConfigId?: string) {
   const setup = await withTransaction(async (client) => ({
     cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
     actorCoordination: await loadActorCoordination(client, actor, false)
   }));
 
+  const calendarPeriods = await listIncidenceCalendarPeriods(setup.cycle.id);
+  const activeCalendarPeriod =
+    calendarPeriods.find((period) => period.id === preferredCalendarConfigId) || calendarPeriods[0] || null;
+
   const [cycles, schedules] = await Promise.all([
     listCycles(),
-    listIncidenceSchedules(setup.cycle.id, actor, setup.actorCoordination)
+    activeCalendarPeriod
+      ? listIncidenceSchedules(setup.cycle.id, activeCalendarPeriod.id, actor, setup.actorCoordination)
+      : Promise.resolve([])
   ]);
 
   return {
     activeCycle: setup.cycle,
     cycles,
+    calendarPeriods,
+    activeCalendarPeriod,
     actorCoordination: setup.actorCoordination,
     schedules,
     summary: buildSummary(schedules)
@@ -243,7 +306,7 @@ export async function registerIncidenceRoutes(app: FastifyInstance): Promise<voi
       return;
     }
 
-    return buildContext(request.user!, parsed.data.cycleId);
+    return buildContext(request.user!, parsed.data.cycleId, parsed.data.calendarConfigId);
   });
 
   app.patch(

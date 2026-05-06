@@ -6,6 +6,7 @@ import {
   fetchIncidencesContext,
   updateIncidence,
   updateIncidencesBatch,
+  type IncidenceCalendarPeriod,
   type CycleOption,
   type IncidencePayload,
   type IncidenceSchedule,
@@ -21,8 +22,11 @@ type IncidenceDraft = Required<Pick<IncidencePayload, IncidenceField>>;
 
 const schedules = ref<IncidenceSchedule[]>([]);
 const cycles = ref<CycleOption[]>([]);
+const calendarPeriods = ref<IncidenceCalendarPeriod[]>([]);
 const activeCycle = ref<CycleOption | null>(null);
+const activeCalendarPeriod = ref<IncidenceCalendarPeriod | null>(null);
 const selectedCycleId = ref('');
+const selectedCalendarConfigId = ref('');
 const summary = ref<IncidenceSummary>({
   total: 0,
   teachers: 0,
@@ -159,6 +163,7 @@ function rowHasIncidences(schedule: IncidenceSchedule) {
 }
 
 function rowBadge(schedule: IncidenceSchedule) {
+  if (schedule.payrollLocked) return { label: 'Nomina guardada', className: 'muted' };
   if (!schedule.canEdit) return { label: 'Bloqueado', className: 'muted' };
   if (rowIsModified(schedule)) return { label: 'Sin guardar', className: 'warning' };
   if (rowHasIncidences(schedule)) return { label: 'Con incidencia', className: 'danger' };
@@ -188,15 +193,18 @@ function mergeSchedules(updated: IncidenceSchedule[]) {
   refreshSummary();
 }
 
-async function loadIncidences(cycleId = selectedCycleId.value || undefined) {
+async function loadIncidences(cycleId = selectedCycleId.value || undefined, calendarConfigId = selectedCalendarConfigId.value || undefined) {
   if (!authStore.canManageIncidences) return;
   pageBusy.value = true;
   clearNotice();
   try {
-    const data = await fetchIncidencesContext(cycleId);
+    const data = await fetchIncidencesContext(cycleId, calendarConfigId);
     activeCycle.value = data.activeCycle;
     selectedCycleId.value = data.activeCycle.id;
     cycles.value = data.cycles;
+    calendarPeriods.value = data.calendarPeriods;
+    activeCalendarPeriod.value = data.activeCalendarPeriod;
+    selectedCalendarConfigId.value = data.activeCalendarPeriod?.id || '';
     schedules.value = data.schedules;
     summary.value = data.summary;
     edits.value = {};
@@ -207,12 +215,28 @@ async function loadIncidences(cycleId = selectedCycleId.value || undefined) {
   }
 }
 
+function loadSelectedCycle() {
+  selectedCalendarConfigId.value = '';
+  return loadIncidences(selectedCycleId.value, undefined);
+}
+
+function loadSelectedCalendar() {
+  return loadIncidences(selectedCycleId.value, selectedCalendarConfigId.value);
+}
+
 async function saveRow(schedule: IncidenceSchedule) {
   if (!schedule.canEdit || !rowIsModified(schedule)) return;
+  if (!selectedCalendarConfigId.value) {
+    setNotice('error', 'Selecciona una quincena de calendario antes de guardar incidencias.');
+    return;
+  }
   savingRows.value = { ...savingRows.value, [schedule.id]: true };
   clearNotice();
   try {
-    const response = await updateIncidence(schedule.id, draftFor(schedule));
+    const response = await updateIncidence(schedule.id, {
+      ...draftFor(schedule),
+      calendarConfigId: selectedCalendarConfigId.value
+    });
     mergeSchedules([response.schedule]);
     const next = { ...edits.value };
     delete next[schedule.id];
@@ -228,7 +252,15 @@ async function saveRow(schedule: IncidenceSchedule) {
 }
 
 async function saveRows(rowsToSave: IncidenceSchedule[]) {
-  const rows = rowsToSave.map((schedule) => ({ scheduleId: schedule.id, ...draftFor(schedule) }));
+  if (!selectedCalendarConfigId.value) {
+    setNotice('error', 'Selecciona una quincena de calendario antes de guardar incidencias.');
+    return;
+  }
+  const rows = rowsToSave.map((schedule) => ({
+    scheduleId: schedule.id,
+    calendarConfigId: selectedCalendarConfigId.value,
+    ...draftFor(schedule)
+  }));
   if (!rows.length) return;
 
   savingBatch.value = true;
@@ -287,21 +319,35 @@ onMounted(() => {
         <h3>Faltas, retardos y extras por horario</h3>
       </div>
       <div class="toolbar-actions">
-        <select v-if="cycles.length" v-model="selectedCycleId" @change="loadIncidences(selectedCycleId)">
+        <select v-if="cycles.length" v-model="selectedCycleId" @change="loadSelectedCycle">
           <option v-for="cycle in cycles" :key="cycle.id" :value="cycle.id">
             {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycle.status }}
           </option>
         </select>
-        <button class="secondary-action" type="button" @click="loadIncidences(selectedCycleId)">
+        <select v-if="calendarPeriods.length" v-model="selectedCalendarConfigId" @change="loadSelectedCalendar">
+          <option v-for="period in calendarPeriods" :key="period.id" :value="period.id">
+            {{ period.periodLabel }} / {{ period.hasPayrollRun ? 'Nomina guardada' : 'Abierta' }}
+          </option>
+        </select>
+        <button class="secondary-action" type="button" @click="loadIncidences(selectedCycleId, selectedCalendarConfigId)">
           <RefreshCw :size="17" :class="{ spin: pageBusy }" />
           Actualizar
         </button>
-        <button class="primary-inline" type="button" :disabled="!allPendingRows.length || savingBatch" @click="saveAllPendingRows">
+        <button
+          class="primary-inline"
+          type="button"
+          :disabled="!selectedCalendarConfigId || !allPendingRows.length || savingBatch"
+          @click="saveAllPendingRows"
+        >
           <Save :size="17" />
           Guardar todo
         </button>
       </div>
     </section>
+
+    <div v-if="activeCalendarPeriod?.hasPayrollRun" class="notice warning" style="margin-bottom: 1rem;">
+      Esta quincena ya tiene nomina guardada. Las incidencias estan cerradas y solo se muestran para consulta.
+    </div>
 
     <section class="metric-grid compact">
       <article class="metric-card mini"><p>Registros</p><strong>{{ summary.total }}</strong></article>
@@ -334,7 +380,7 @@ onMounted(() => {
           </select>
           <span class="subtle-pill">
             <Clock3 :size="16" />
-            {{ activeCycle?.periodLabel || 'Ciclo operativo' }}
+            {{ activeCalendarPeriod?.periodLabel || activeCycle?.periodLabel || 'Quincena operativa' }}
           </span>
         </div>
 
@@ -344,11 +390,16 @@ onMounted(() => {
             <span v-if="visiblePendingRows.length !== allPendingRows.length">/ {{ visiblePendingRows.length }} visible{{ visiblePendingRows.length === 1 ? '' : 's' }}</span>
           </strong>
           <div class="pending-actions">
-            <button class="primary-inline" type="button" :disabled="savingBatch" @click="saveAllPendingRows">
+            <button class="primary-inline" type="button" :disabled="!selectedCalendarConfigId || savingBatch" @click="saveAllPendingRows">
               <Save :size="16" />
               Guardar todo
             </button>
-            <button class="secondary-action" type="button" :disabled="!visiblePendingRows.length" @click="saveVisibleRows">
+            <button
+              class="secondary-action"
+              type="button"
+              :disabled="!selectedCalendarConfigId || !visiblePendingRows.length"
+              @click="saveVisibleRows"
+            >
               <Save :size="16" />
               Guardar visibles
             </button>
@@ -448,7 +499,7 @@ onMounted(() => {
                     class="icon-button"
                     type="button"
                     :disabled="!schedule.canEdit || !rowIsModified(schedule) || savingRows[schedule.id]"
-                    title="Guardar"
+                    :title="schedule.payrollLocked ? 'La quincena ya tiene nomina guardada' : 'Guardar'"
                     @click="saveRow(schedule)"
                   >
                     <Save :size="16" />
