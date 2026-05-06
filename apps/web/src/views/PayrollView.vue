@@ -79,6 +79,7 @@ const selectedRun = computed(() => currentPreview.value?.run || recentRuns.value
 const selectedCalendarPeriod = computed(
   () => calendarPeriods.value.find((period) => period.id === form.value.calendarConfigId) || null
 );
+const hasCalendarSelection = computed(() => !!form.value.calendarConfigId);
 
 const filteredLines = computed(() => {
   const text = searchText.value.toLowerCase().trim();
@@ -142,6 +143,7 @@ const calendarLabel = computed(() => {
 const canSaveRun = computed(
   () =>
     authStore.canFinalizePayroll &&
+    !!form.value.calendarConfigId &&
     !!form.value.payrollStart &&
     !!form.value.payrollEnd &&
     !!form.value.module1Start &&
@@ -233,7 +235,8 @@ function defaultPeriodLabel() {
 function payloadFromForm(): PayrollInput {
   return {
     ...form.value,
-    cycleId: selectedCycleId.value || form.value.cycleId,
+    calendarConfigId: form.value.calendarConfigId || undefined,
+    cycleId: selectedCycleId.value || form.value.cycleId || undefined,
     periodLabel: form.value.periodLabel.trim() || defaultPeriodLabel(),
     payrollStart: dateOnly(form.value.payrollStart),
     payrollEnd: dateOnly(form.value.payrollEnd),
@@ -254,7 +257,7 @@ function applyContext(data: {
   activeCycle.value = data.activeCycle;
   selectedCycleId.value = data.activeCycle.id;
   cycles.value = data.cycles;
-  calendarPeriods.value = data.calendarPeriods.map((period) => ({
+  const normalizedPeriods = data.calendarPeriods.map((period) => ({
     ...period,
     payrollStart: dateOnly(period.payrollStart),
     payrollEnd: dateOnly(period.payrollEnd),
@@ -262,16 +265,36 @@ function applyContext(data: {
     module1End: dateOnly(period.module1End),
     module2Start: dateOnly(period.module2Start),
     module2End: dateOnly(period.module2End),
-    blackoutDates: period.blackoutDates.map((blackout) => ({
-      ...blackout,
-      blackoutDate: dateOnly(blackout.blackoutDate)
-    }))
+    blackoutDates: (period.blackoutDates as Array<CalendarPeriod['blackoutDates'][number] | string>).map((blackout) =>
+      typeof blackout === 'string'
+        ? { blackoutDate: dateOnly(blackout), reason: 'Dia inhabil' }
+        : {
+            ...blackout,
+            blackoutDate: dateOnly(blackout.blackoutDate)
+          }
+    )
   }));
+  calendarPeriods.value = normalizedPeriods;
   recentRuns.value = data.recentRuns;
-  form.value = {
-    ...data.defaults,
-    cycleId: data.activeCycle.id
-  };
+  const defaultPeriod =
+    normalizedPeriods.find((period) => period.id === data.defaults.calendarConfigId) || normalizedPeriods[0] || null;
+  form.value = defaultPeriod
+    ? {
+        calendarConfigId: defaultPeriod.id,
+        cycleId: defaultPeriod.cycleId,
+        periodLabel: defaultPeriod.periodLabel,
+        payrollStart: defaultPeriod.payrollStart,
+        payrollEnd: defaultPeriod.payrollEnd,
+        module1Start: defaultPeriod.module1Start,
+        module1End: defaultPeriod.module1End,
+        module2Start: defaultPeriod.module2Start,
+        module2End: defaultPeriod.module2End
+      }
+    : {
+        ...data.defaults,
+        calendarConfigId: data.defaults.calendarConfigId || '',
+        cycleId: data.activeCycle.id
+      };
   form.value.payrollStart = dateOnly(form.value.payrollStart);
   form.value.payrollEnd = dateOnly(form.value.payrollEnd);
   form.value.module1Start = dateOnly(form.value.module1Start);
@@ -285,7 +308,12 @@ function applyContext(data: {
 
 async function applyCalendarPeriod() {
   const period = selectedCalendarPeriod.value;
-  if (!period) return;
+  if (!period) {
+    currentPreview.value = null;
+    selectedRunId.value = '';
+    selectedLineKey.value = '';
+    return;
+  }
   form.value = {
     calendarConfigId: period.id,
     cycleId: period.cycleId,
@@ -319,6 +347,11 @@ async function loadContext(cycleId = selectedCycleId.value || undefined) {
 }
 
 async function calculatePreview(silent = false) {
+  if (!hasCalendarSelection.value) {
+    currentPreview.value = null;
+    if (!silent) setNotice('error', 'Selecciona una quincena del calendario para calcular la nomina.');
+    return;
+  }
   if (!form.value.payrollStart || !form.value.payrollEnd) return;
   calculating.value = true;
   if (!silent) clearNotice();
@@ -479,7 +512,7 @@ onMounted(() => {
           <input v-model="form.module2End" type="date" :disabled="!!selectedCalendarPeriod" />
         </label>
         <div class="payroll-actions">
-          <button class="secondary-action" type="button" :disabled="calculating" @click="refreshPreview">
+          <button class="secondary-action" type="button" :disabled="calculating || !hasCalendarSelection" @click="refreshPreview">
             <RefreshCw :size="17" :class="{ spin: calculating }" />
             Actualizar calculo
           </button>

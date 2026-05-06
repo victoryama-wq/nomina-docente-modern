@@ -286,10 +286,16 @@ const dateSchema = z.preprocess((value) => {
   return trimmed.slice(0, 10);
 }, z.string().date().optional());
 
+const optionalUuidSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}, z.string().uuid().optional());
+
 const payrollBodySchema = z
   .object({
-    calendarConfigId: z.string().uuid().optional(),
-    cycleId: z.string().uuid().optional(),
+    calendarConfigId: optionalUuidSchema,
+    cycleId: optionalUuidSchema,
     periodLabel: z.string().trim().max(120).optional().default(''),
     payrollStart: dateSchema,
     payrollEnd: dateSchema,
