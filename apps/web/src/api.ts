@@ -638,13 +638,17 @@ async function getIdToken(): Promise<string> {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = await getIdToken();
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    ...((options.headers as Record<string, string> | undefined) || {})
+  };
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {})
-    }
+    headers
   });
 
   if (!response.ok) {

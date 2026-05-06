@@ -165,6 +165,12 @@ h3 {
   border: 1px solid #0f766e;
 }
 
+.primary-inline.danger-action {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #ffffff;
+}
+
 .secondary-action {
   color: #334155;
   background: #ffffff;
@@ -1940,6 +1946,32 @@ td span {
   justify-content: flex-end;
   gap: 10px;
   padding-top: 4px;
+}
+
+.delete-confirm-card {
+  display: grid;
+  gap: 16px;
+}
+
+.delete-confirm-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.delete-confirm-copy {
+  margin: 10px 0 0;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.delete-confirm-copy strong {
+  color: #0f172a;
 }
 
 .main-grid {

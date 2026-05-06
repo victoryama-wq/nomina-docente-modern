@@ -24,6 +24,8 @@ const editingId = ref<string | null>(null);
 const pageBusy = ref(false);
 const saving = ref(false);
 const savingModules = ref(false);
+const deletingPeriod = ref(false);
+const pendingDeletePeriod = ref<CalendarPeriod | null>(null);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 const formError = ref('');
 const moduleError = ref('');
@@ -270,18 +272,38 @@ async function savePeriod() {
   }
 }
 
-async function removePeriod(period: CalendarPeriod) {
-  const confirmed = window.confirm(`Eliminar la quincena ${period.periodLabel}?`);
-  if (!confirmed) return;
+function requestRemovePeriod(period: CalendarPeriod) {
+  pendingDeletePeriod.value = period;
+  clearNotice();
+}
 
+function closeDeleteModal() {
+  if (deletingPeriod.value) return;
+  pendingDeletePeriod.value = null;
+}
+
+async function confirmRemovePeriod() {
+  const period = pendingDeletePeriod.value;
+  if (!period) return;
+
+  deletingPeriod.value = true;
   clearNotice();
   try {
     const response = await deleteCalendarPeriod(period.id);
-    if (editingId.value === period.id) newPeriod();
+    pendingDeletePeriod.value = null;
+    if (editingId.value === period.id) {
+      editingId.value = null;
+      form.value = blankForm();
+      blackoutDraft.value = { blackoutDate: '', reason: '' };
+      formError.value = '';
+    }
     await loadCalendar(selectedCycleId.value);
     setNotice('ok', response.message);
   } catch (err) {
+    pendingDeletePeriod.value = null;
     setNotice('error', err instanceof Error ? err.message : 'No fue posible eliminar la quincena.');
+  } finally {
+    deletingPeriod.value = false;
   }
 }
 
@@ -493,7 +515,7 @@ onMounted(() => {
                   <button class="icon-button" type="button" title="Editar" @click="editPeriod(period)">
                     <Edit3 :size="16" />
                   </button>
-                  <button class="icon-button danger" type="button" title="Eliminar" @click="removePeriod(period)">
+                  <button class="icon-button danger" type="button" title="Eliminar" @click="requestRemovePeriod(period)">
                     <Trash2 :size="16" />
                   </button>
                 </td>
@@ -503,5 +525,30 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
+    <div v-if="pendingDeletePeriod" class="modal-backdrop" @click.self="closeDeleteModal">
+      <section class="modal-card delete-confirm-card" role="dialog" aria-modal="true">
+        <div class="delete-confirm-icon">
+          <Trash2 :size="22" />
+        </div>
+        <div>
+          <p class="eyebrow">Confirmar eliminacion</p>
+          <h3>Eliminar quincena</h3>
+          <p class="delete-confirm-copy">
+            Se eliminara <strong>{{ pendingDeletePeriod.periodLabel }}</strong> del calendario operativo. Esta accion no debe usarse si la
+            quincena ya forma parte de una revision real de nomina.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-action" type="button" :disabled="deletingPeriod" @click="closeDeleteModal">
+            Cancelar
+          </button>
+          <button class="primary-inline danger-action" type="button" :disabled="deletingPeriod" @click="confirmRemovePeriod">
+            <Trash2 :size="16" />
+            Eliminar quincena
+          </button>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
