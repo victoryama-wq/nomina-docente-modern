@@ -388,6 +388,46 @@ export interface PayrollLine {
   loggedExtraCount: number;
 }
 
+export interface PayrollScheduleDetail {
+  lineKey: string;
+  scheduleId: string;
+  teacherId: string;
+  coordinationId: string;
+  teacherName: string;
+  coordinationName: string;
+  subjectName: string;
+  groupCode: string;
+  tabulatorName: string;
+  tabulatorAmount: number;
+  weekdayHours: number;
+  module1Hours: number;
+  module2Hours: number;
+  baseHours: number;
+  grossBaseAmount: number;
+  absences: number;
+  delays: number;
+  delayDiscountHours: number;
+  absenceDiscountAmount: number;
+  delayDiscountAmount: number;
+  scheduleExtraHours: number;
+  scheduleExtraAmount: number;
+  baseNetAmount: number;
+}
+
+export interface PayrollExtraDetail {
+  lineKey: string;
+  extraId: string;
+  teacherId: string;
+  coordinationId: string;
+  teacherName: string;
+  coordinationName: string;
+  reason: string;
+  activityDate: string | null;
+  hours: number;
+  tabulatorAmount: number;
+  totalAmount: number;
+}
+
 export interface PayrollRun {
   id: string;
   cycleId: string;
@@ -460,8 +500,8 @@ export interface PayrollPreview {
   calendar: PayrollCalendar;
   summary: PayrollSummary;
   lines: PayrollLine[];
-  details: unknown[];
-  extraDetails: unknown[];
+  details: PayrollScheduleDetail[];
+  extraDetails: PayrollExtraDetail[];
   run?: PayrollRun;
   message?: string;
 }
@@ -759,6 +799,36 @@ export async function savePayrollRun(payload: PayrollInput): Promise<PayrollPrev
 
 export async function fetchPayrollRun(id: string): Promise<PayrollPreview & { run: PayrollRun }> {
   return request(`/payroll/runs/${id}`);
+}
+
+export async function downloadPayrollExport(runId: string, kind: 'summary' | 'schedules' | 'extras'): Promise<void> {
+  const token = await getIdToken();
+  const response = await fetch(`${apiBaseUrl}/payroll/runs/${runId}/export/${kind}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    let body: ApiErrorBody = {};
+    try {
+      body = (await response.json()) as ApiErrorBody;
+    } catch {
+      body = {};
+    }
+    throw new Error(body.message || 'No fue posible generar la exportacion de nomina.');
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const fileName = match?.[1] || `nomina-${kind}.csv`;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 export async function fetchCalendarContext(cycleId?: string): Promise<{

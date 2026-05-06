@@ -1,22 +1,26 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { AlertTriangle, Clock3, Eye, History, RefreshCw, Save, Search } from 'lucide-vue-next';
+import { AlertTriangle, Clock3, Download, Eye, History, RefreshCw, Save, Search } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import {
+  downloadPayrollExport,
   fetchPayrollContext,
   fetchPayrollRun,
   previewPayroll,
   savePayrollRun,
   type CalendarPeriod,
   type CycleOption,
+  type PayrollExtraDetail,
   type PayrollInput,
   type PayrollLine,
   type PayrollPreview,
   type PayrollRun,
+  type PayrollScheduleDetail,
   type PayrollSummary
 } from '../api';
 
 type AlertFilter = 'TODOS' | 'CON_ALERTAS' | 'SIN_ALERTAS';
+type PayrollViewMode = 'RESUMEN' | 'DETALLE';
 
 const authStore = useAuthStore();
 
@@ -60,14 +64,18 @@ const currentPreview = ref<PayrollPreview | null>(null);
 const form = ref<PayrollInput>(blankInput());
 const searchText = ref('');
 const alertFilter = ref<AlertFilter>('TODOS');
+const viewMode = ref<PayrollViewMode>('RESUMEN');
+const selectedLineKey = ref('');
 const pageBusy = ref(false);
 const calculating = ref(false);
 const saving = ref(false);
+const exporting = ref<'summary' | 'schedules' | 'extras' | ''>('');
 const loadingRunId = ref('');
 const selectedRunId = ref('');
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
 const summary = computed(() => currentPreview.value?.summary || zeroSummary());
+const selectedRun = computed(() => currentPreview.value?.run || recentRuns.value.find((run) => run.id === selectedRunId.value) || null);
 const selectedCalendarPeriod = computed(
   () => calendarPeriods.value.find((period) => period.id === form.value.calendarConfigId) || null
 );
@@ -92,6 +100,36 @@ const filteredLines = computed(() => {
       (alertFilter.value === 'SIN_ALERTAS' && !hasAlerts);
     return matchesText && matchesAlert;
   });
+});
+
+const selectedLine = computed(() => {
+  if (!filteredLines.value.length) return null;
+  return filteredLines.value.find((line) => line.key === selectedLineKey.value) || filteredLines.value[0];
+});
+
+const selectedScheduleDetails = computed<PayrollScheduleDetail[]>(() => {
+  const line = selectedLine.value;
+  if (!line) return [];
+  return (currentPreview.value?.details || []).filter((detail) => detail.lineKey === line.key);
+});
+
+const selectedExtraDetails = computed<PayrollExtraDetail[]>(() => {
+  const line = selectedLine.value;
+  if (!line) return [];
+  return (currentPreview.value?.extraDetails || []).filter((detail) => detail.lineKey === line.key);
+});
+
+const selectedLineDetailTotals = computed(() => {
+  const schedules = selectedScheduleDetails.value;
+  const extras = selectedExtraDetails.value;
+  return {
+    schedules: schedules.length,
+    extras: extras.length,
+    scheduleBaseHours: schedules.reduce((sum, detail) => sum + numberValue(detail.baseHours), 0),
+    scheduleBaseAmount: schedules.reduce((sum, detail) => sum + numberValue(detail.baseNetAmount), 0),
+    extraHours: extras.reduce((sum, detail) => sum + numberValue(detail.hours), 0),
+    extraAmount: extras.reduce((sum, detail) => sum + numberValue(detail.totalAmount), 0)
+  };
 });
 
 const calendarLabel = computed(() => {
@@ -141,6 +179,13 @@ function formatDateTime(value: string | null | undefined) {
   });
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return '-';
+  const [year, month, day] = dateOnly(value).split('-');
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
 function categoryLabel(category: string) {
   if (category === 'V') return 'VIP';
   if (category === 'M') return 'Medio tiempo';
@@ -164,6 +209,11 @@ function statusClass(run: PayrollRun) {
 function lineBadge(line: PayrollLine) {
   if (line.alerts.length) return { label: `${line.alerts.length} alerta${line.alerts.length === 1 ? '' : 's'}`, className: 'warning' };
   return { label: 'Completa', className: 'ok' };
+}
+
+function runSourceLabel() {
+  if (selectedRun.value) return `Historico guardado / ${selectedRun.value.status}`;
+  return 'Vista previa viva';
 }
 
 function setNotice(type: 'ok' | 'error', text: string) {
@@ -229,6 +279,7 @@ function applyContext(data: {
   form.value.module2Start = dateOnly(form.value.module2Start);
   form.value.module2End = dateOnly(form.value.module2End);
   selectedRunId.value = '';
+  selectedLineKey.value = '';
   currentPreview.value = null;
 }
 
@@ -248,6 +299,7 @@ async function applyCalendarPeriod() {
   };
   currentPreview.value = null;
   selectedRunId.value = '';
+  selectedLineKey.value = '';
   await calculatePreview(true);
 }
 
@@ -273,6 +325,7 @@ async function calculatePreview(silent = false) {
   try {
     currentPreview.value = await previewPayroll(payloadFromForm());
     selectedRunId.value = '';
+    selectedLineKey.value = '';
     if (!silent) setNotice('ok', 'Vista previa de nomina actualizada.');
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible calcular la nomina.');
@@ -297,7 +350,8 @@ async function saveCurrentRun() {
     const result = await savePayrollRun(payloadFromForm());
     currentPreview.value = result;
     selectedRunId.value = result.run.id;
-    recentRuns.value = [result.run, ...recentRuns.value.filter((run) => run.id !== result.run.id)].slice(0, 12);
+    selectedLineKey.value = '';
+    recentRuns.value = [result.run, ...recentRuns.value.filter((run) => run.id !== result.run.id)].slice(0, 36);
     setNotice('ok', result.message || 'Nomina guardada correctamente.');
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible guardar la nomina.');
@@ -313,6 +367,7 @@ async function loadRun(run: PayrollRun) {
     const result = await fetchPayrollRun(run.id);
     currentPreview.value = result;
     selectedRunId.value = run.id;
+    selectedLineKey.value = '';
     selectedCycleId.value = result.run.cycleId;
     form.value = {
       ...result.input,
@@ -329,6 +384,25 @@ async function loadRun(run: PayrollRun) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible abrir la corrida.');
   } finally {
     loadingRunId.value = '';
+  }
+}
+
+function selectLine(line: PayrollLine) {
+  selectedLineKey.value = line.key;
+}
+
+async function exportRun(kind: 'summary' | 'schedules' | 'extras') {
+  const run = selectedRun.value;
+  if (!run) return;
+  exporting.value = kind;
+  clearNotice();
+  try {
+    await downloadPayrollExport(run.id, kind);
+    setNotice('ok', 'Exportacion de nomina generada.');
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar la nomina.');
+  } finally {
+    exporting.value = '';
   }
 }
 
@@ -434,9 +508,38 @@ onMounted(() => {
       <div class="section-title compact">
         <div>
           <p class="eyebrow">Historial</p>
-          <h3>Corridas recientes</h3>
+          <h3>Nominas guardadas</h3>
         </div>
-        <span class="subtle-pill"><History :size="16" /> {{ recentRuns.length }} guardadas</span>
+        <div class="payroll-history-actions">
+          <span class="subtle-pill"><History :size="16" /> {{ recentRuns.length }} guardadas</span>
+          <button
+            class="secondary-action"
+            type="button"
+            :disabled="!selectedRun || exporting === 'summary'"
+            @click="exportRun('summary')"
+          >
+            <Download :size="16" />
+            Resumen CSV
+          </button>
+          <button
+            class="secondary-action"
+            type="button"
+            :disabled="!selectedRun || exporting === 'schedules'"
+            @click="exportRun('schedules')"
+          >
+            <Download :size="16" />
+            Horarios CSV
+          </button>
+          <button
+            class="secondary-action"
+            type="button"
+            :disabled="!selectedRun || exporting === 'extras'"
+            @click="exportRun('extras')"
+          >
+            <Download :size="16" />
+            Extras CSV
+          </button>
+        </div>
       </div>
       <div class="run-list">
         <button
@@ -474,7 +577,19 @@ onMounted(() => {
           </span>
         </div>
 
-        <div class="table-shell">
+        <div class="payroll-view-switch">
+          <div class="segmented-control" aria-label="Vista de nomina">
+            <button type="button" :class="{ active: viewMode === 'RESUMEN' }" @click="viewMode = 'RESUMEN'">
+              Resumen
+            </button>
+            <button type="button" :class="{ active: viewMode === 'DETALLE' }" @click="viewMode = 'DETALLE'">
+              Detalle por docente
+            </button>
+          </div>
+          <span class="subtle-pill">{{ runSourceLabel() }}</span>
+        </div>
+
+        <div v-if="viewMode === 'RESUMEN'" class="table-shell">
           <table class="payroll-table">
             <colgroup>
               <col class="col-teacher" />
@@ -502,7 +617,13 @@ onMounted(() => {
                   {{ currentPreview ? 'No hay lineas con el filtro actual.' : 'Selecciona una quincena para ver la nomina.' }}
                 </td>
               </tr>
-              <tr v-for="line in filteredLines" :key="line.key">
+              <tr
+                v-for="line in filteredLines"
+                :key="line.key"
+                class="selectable-row"
+                :class="{ active: selectedLine?.key === line.key }"
+                @click="selectLine(line)"
+              >
                 <td>
                   <strong>{{ line.teacherName }}</strong>
                   <span>{{ categoryLabel(line.category) }}</span>
@@ -544,6 +665,128 @@ onMounted(() => {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div v-else class="payroll-detail-grid">
+          <div class="payroll-line-list">
+            <button
+              v-for="line in filteredLines"
+              :key="line.key"
+              class="payroll-line-card"
+              :class="{ active: selectedLine?.key === line.key }"
+              type="button"
+              @click="selectLine(line)"
+            >
+              <strong>{{ line.teacherName }}</strong>
+              <span>{{ line.coordinationName }}</span>
+              <small>{{ formatHours(line.baseHours) }} h base / {{ formatHours(line.totalExtraHours) }} h extras</small>
+              <em>{{ moneyLabel(line.totalAmount) }}</em>
+            </button>
+            <div v-if="!filteredLines.length" class="empty-cell">No hay lineas con el filtro actual.</div>
+          </div>
+
+          <div class="payroll-detail-panel" v-if="selectedLine">
+            <div class="payroll-detail-header">
+              <div>
+                <p class="eyebrow">Detalle historico</p>
+                <h3>{{ selectedLine.teacherName }}</h3>
+                <span>{{ selectedLine.coordinationName }} / {{ categoryLabel(selectedLine.category) }}</span>
+              </div>
+              <strong>{{ moneyLabel(selectedLine.totalAmount) }}</strong>
+            </div>
+
+            <div class="payroll-detail-metrics">
+              <span><b>{{ selectedLineDetailTotals.schedules }}</b> horarios</span>
+              <span><b>{{ formatHours(selectedLineDetailTotals.scheduleBaseHours) }}</b> h base</span>
+              <span><b>{{ moneyLabel(selectedLineDetailTotals.scheduleBaseAmount) }}</b> neto base</span>
+              <span><b>{{ selectedLineDetailTotals.extras }}</b> extras externos</span>
+              <span><b>{{ formatHours(selectedLineDetailTotals.extraHours) }}</b> h extra</span>
+              <span><b>{{ moneyLabel(selectedLineDetailTotals.extraAmount) }}</b> monto extra</span>
+            </div>
+
+            <div class="detail-subsection">
+              <div class="section-title compact">
+                <div>
+                  <p class="eyebrow">Horarios e incidencias</p>
+                  <h3>Base calculada</h3>
+                </div>
+              </div>
+              <div class="table-shell compact">
+                <table class="payroll-detail-table">
+                  <thead>
+                    <tr>
+                      <th>Asignatura</th>
+                      <th>Horas</th>
+                      <th>Incidencias</th>
+                      <th>Importe</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="!selectedScheduleDetails.length">
+                      <td colspan="4" class="empty-cell">Sin horarios base para esta linea.</td>
+                    </tr>
+                    <tr v-for="detail in selectedScheduleDetails" :key="detail.scheduleId">
+                      <td>
+                        <strong>{{ detail.subjectName }}</strong>
+                        <span>Grupo {{ detail.groupCode }} / {{ detail.tabulatorName }} {{ moneyLabel(detail.tabulatorAmount) }}</span>
+                      </td>
+                      <td>
+                        <strong>{{ formatHours(detail.baseHours) }} h</strong>
+                        <span>L-V {{ formatHours(detail.weekdayHours) }} / M1 {{ formatHours(detail.module1Hours) }} / M2 {{ formatHours(detail.module2Hours) }}</span>
+                      </td>
+                      <td>
+                        <strong>F {{ formatHours(detail.absences) }} h / R {{ formatHours(detail.delays) }}</strong>
+                        <span>Extras incidencia {{ formatHours(detail.scheduleExtraHours) }} h</span>
+                      </td>
+                      <td>
+                        <strong>{{ moneyLabel(detail.baseNetAmount) }}</strong>
+                        <span>Bruto {{ moneyLabel(detail.grossBaseAmount) }}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="detail-subsection">
+              <div class="section-title compact">
+                <div>
+                  <p class="eyebrow">Extras externos</p>
+                  <h3>Capturas adicionales</h3>
+                </div>
+              </div>
+              <div class="table-shell compact">
+                <table class="payroll-detail-table extras">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Motivo</th>
+                      <th>Horas</th>
+                      <th>Importe</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="!selectedExtraDetails.length">
+                      <td colspan="4" class="empty-cell">Sin extras externos para esta linea.</td>
+                    </tr>
+                    <tr v-for="detail in selectedExtraDetails" :key="detail.extraId">
+                      <td>{{ formatDate(detail.activityDate) }}</td>
+                      <td>
+                        <strong>{{ detail.reason }}</strong>
+                        <span>{{ moneyLabel(detail.tabulatorAmount) }} por hora</span>
+                      </td>
+                      <td><strong>{{ formatHours(detail.hours) }} h</strong></td>
+                      <td><strong>{{ moneyLabel(detail.totalAmount) }}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="payroll-detail-panel empty">
+            <div class="empty-cell">Selecciona una linea de nomina para ver el detalle.</div>
+          </div>
         </div>
       </div>
     </section>

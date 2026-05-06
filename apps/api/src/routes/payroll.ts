@@ -20,6 +20,11 @@ interface PayrollRunParams {
   id: string;
 }
 
+interface PayrollExportParams {
+  id: string;
+  kind: 'summary' | 'schedules' | 'extras';
+}
+
 interface PayrollCalendarDefaults {
   calendarConfigId: string;
   periodLabel: string;
@@ -270,6 +275,10 @@ const runParamsSchema = z.object({
   id: z.string().uuid()
 });
 
+const exportParamsSchema = runParamsSchema.extend({
+  kind: z.enum(['summary', 'schedules', 'extras'])
+});
+
 const dateSchema = z.preprocess((value) => {
   if (typeof value !== 'string') return value;
   const trimmed = value.trim();
@@ -468,6 +477,36 @@ function canViewAllPayroll(actor: SessionUser): boolean {
 
 function publicAlerts(alerts: string[]): string[] {
   return alerts.filter((alert) => !alert.startsWith('extra:'));
+}
+
+function csvValue(value: unknown): string {
+  const text = value === null || value === undefined ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildCsv(headers: string[], rows: unknown[][]): string {
+  const lines = [headers.map(csvValue).join(',')];
+  for (const row of rows) {
+    lines.push(row.map(csvValue).join(','));
+  }
+  return `\uFEFF${lines.join('\r\n')}\r\n`;
+}
+
+function sendCsv(reply: FastifyReply, fileName: string, content: string): void {
+  void reply
+    .header('Content-Type', 'text/csv; charset=utf-8')
+    .header('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '')}"`)
+    .send(content);
+}
+
+function exportFileName(run: PayrollRunRow, suffix: string): string {
+  const safePeriod = run.periodLabel
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `nomina-${safePeriod || run.id}-${suffix}.csv`;
 }
 
 function round2(value: number): number {
@@ -1000,7 +1039,7 @@ async function listRecentRuns(client: PoolClient, cycleId: string): Promise<Payr
       LEFT JOIN app_users u ON u.id = pr.calculated_by
       WHERE pr.cycle_id = $1
       ORDER BY pr.created_at DESC
-      LIMIT 12
+      LIMIT 36
     `,
     [cycleId]
   );
@@ -1186,6 +1225,146 @@ async function loadPayrollExtraDetails(
     params
   );
   return result.rows;
+}
+
+function payrollLineExportHeaders(): string[] {
+  return [
+    'Ciclo',
+    'Quincena',
+    'Estatus',
+    'Docente',
+    'Coordinacion',
+    'Categoria',
+    'Tipo pago',
+    'Horas base',
+    'Bruto base',
+    'Faltas h',
+    'Retardos',
+    'Retardos h',
+    'Descuento faltas',
+    'Descuento retardos',
+    'Neto base',
+    'Extras incidencias h',
+    'Extras incidencias monto',
+    'Extras externos h',
+    'Extras externos monto',
+    'Total extras h',
+    'Total extras monto',
+    'Total',
+    'Alertas'
+  ];
+}
+
+function payrollLineExportRows(run: PayrollRunRow, lines: PayrollLine[]): unknown[][] {
+  return lines.map((line) => [
+    run.cycleLabel,
+    run.periodLabel,
+    run.status,
+    line.teacherName,
+    line.coordinationName,
+    line.category,
+    line.paymentType,
+    line.baseHours,
+    line.grossBaseAmount,
+    line.absences,
+    line.delays,
+    line.delayDiscountHours,
+    line.absenceDiscountAmount,
+    line.delayDiscountAmount,
+    line.baseNetAmount,
+    line.scheduleExtraHours,
+    line.scheduleExtraAmount,
+    line.loggedExtraHours,
+    line.loggedExtraAmount,
+    line.totalExtraHours,
+    line.totalExtraAmount,
+    line.totalAmount,
+    line.alerts.join(' | ')
+  ]);
+}
+
+function scheduleDetailExportHeaders(): string[] {
+  return [
+    'Ciclo',
+    'Quincena',
+    'Estatus',
+    'Docente',
+    'Coordinacion',
+    'Asignatura',
+    'Grupo',
+    'Tabulador',
+    'Monto tabulador',
+    'Horas L-V',
+    'Horas modulo 1',
+    'Horas modulo 2',
+    'Horas base',
+    'Bruto base',
+    'Faltas h',
+    'Retardos',
+    'Retardos h',
+    'Descuento faltas',
+    'Descuento retardos',
+    'Extras incidencias h',
+    'Extras incidencias monto',
+    'Neto base'
+  ];
+}
+
+function scheduleDetailExportRows(run: PayrollRunRow, details: PayrollScheduleDetail[]): unknown[][] {
+  return details.map((detail) => [
+    run.cycleLabel,
+    run.periodLabel,
+    run.status,
+    detail.teacherName,
+    detail.coordinationName,
+    detail.subjectName,
+    detail.groupCode,
+    detail.tabulatorName,
+    detail.tabulatorAmount,
+    detail.weekdayHours,
+    detail.module1Hours,
+    detail.module2Hours,
+    detail.baseHours,
+    detail.grossBaseAmount,
+    detail.absences,
+    detail.delays,
+    detail.delayDiscountHours,
+    detail.absenceDiscountAmount,
+    detail.delayDiscountAmount,
+    detail.scheduleExtraHours,
+    detail.scheduleExtraAmount,
+    detail.baseNetAmount
+  ]);
+}
+
+function extraDetailExportHeaders(): string[] {
+  return [
+    'Ciclo',
+    'Quincena',
+    'Estatus',
+    'Docente',
+    'Coordinacion',
+    'Fecha actividad',
+    'Motivo',
+    'Horas',
+    'Monto tabulador',
+    'Total'
+  ];
+}
+
+function extraDetailExportRows(run: PayrollRunRow, details: PayrollExtraDetail[]): unknown[][] {
+  return details.map((detail) => [
+    run.cycleLabel,
+    run.periodLabel,
+    run.status,
+    detail.teacherName,
+    detail.coordinationName,
+    detail.activityDate,
+    detail.reason,
+    detail.hours,
+    detail.tabulatorAmount,
+    detail.totalAmount
+  ]);
 }
 
 function summaryFromLines(lines: PayrollLine[]): PayrollSummary {
@@ -1553,4 +1732,56 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       extraDetails: result.extraDetails
     };
   });
+
+  app.get(
+    '/payroll/runs/:id/export/:kind',
+    { preHandler: requireAnyPermission(['payroll.view', 'payroll.calculate', 'reports.view', 'finance.view']) },
+    async (request, reply) => {
+      const parsed = exportParamsSchema.safeParse(request.params as PayrollExportParams);
+      if (!parsed.success) {
+        sendValidation(reply, parsed.error);
+        return;
+      }
+
+      const actor = request.user!;
+      const result = await withTransaction(async (client) => {
+        const run = await loadPayrollRun(client, parsed.data.id);
+        if (!run) return null;
+        const actorCoordination = await loadActorCoordination(client, actor, false);
+        const lines = await loadPayrollLines(client, run.id, actor, actorCoordination);
+        const details = await loadPayrollScheduleDetails(client, run.id, actor, actorCoordination);
+        const extraDetails = await loadPayrollExtraDetails(client, run.id, actor, actorCoordination);
+        return { run, lines, details, extraDetails };
+      });
+
+      if (!result) {
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+        return;
+      }
+
+      if (parsed.data.kind === 'summary') {
+        sendCsv(
+          reply,
+          exportFileName(result.run, 'resumen'),
+          buildCsv(payrollLineExportHeaders(), payrollLineExportRows(result.run, result.lines))
+        );
+        return;
+      }
+
+      if (parsed.data.kind === 'schedules') {
+        sendCsv(
+          reply,
+          exportFileName(result.run, 'horarios'),
+          buildCsv(scheduleDetailExportHeaders(), scheduleDetailExportRows(result.run, result.details))
+        );
+        return;
+      }
+
+      sendCsv(
+        reply,
+        exportFileName(result.run, 'extras'),
+        buildCsv(extraDetailExportHeaders(), extraDetailExportRows(result.run, result.extraDetails))
+      );
+    }
+  );
 }
