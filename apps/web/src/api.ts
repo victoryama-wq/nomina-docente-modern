@@ -1028,6 +1028,37 @@ export async function downloadFinanceExport(kind: 'payments' | 'fiscal' | 'coord
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
+export async function downloadFinancePdf(kind: 'summary' | 'coordinations', runId: string): Promise<void> {
+  const token = await getIdToken();
+  const endpoint = kind === 'summary' ? 'summary-pdf' : 'coordinations-pdf';
+  const response = await fetch(`${apiBaseUrl}/reports/finance/runs/${runId}/${endpoint}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    let body: ApiErrorBody = {};
+    try {
+      body = (await response.json()) as ApiErrorBody;
+    } catch {
+      body = {};
+    }
+    throw new Error(body.message || 'No fue posible generar el PDF financiero.');
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const fileName = match?.[1] || `finanzas-${kind}.pdf`;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
 export async function updateFinanceRunStatus(
   runId: string,
   status: Extract<PayrollRun['status'], 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CANCELADA'>

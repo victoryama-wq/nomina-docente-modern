@@ -5,7 +5,6 @@ import {
   Banknote,
   Building2,
   CheckCircle2,
-  Download,
   Eye,
   FileText,
   FileSpreadsheet,
@@ -19,6 +18,7 @@ import {
 import { useAuthStore } from '../stores/auth';
 import {
   downloadFinanceExport,
+  downloadFinancePdf,
   downloadCashReceipts,
   fetchFinanceContext,
   updateFinanceRunStatus,
@@ -33,6 +33,7 @@ type FinanceTab = 'PAGOS' | 'COORDINACIONES' | 'FISCALES' | 'HISTORICO';
 type PaymentFilter = 'TODOS' | 'LISTO' | 'PENDIENTE';
 type PaymentTypeFilter = 'TODOS' | 'E' | '1' | '2';
 type ExportKind = 'payments' | 'fiscal' | 'coordinations';
+type PdfExportKind = 'summary' | 'coordinations';
 type CoordinationRow = FinanceContext['coordinationSummary'][number];
 type WorkflowTargetStatus = 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CANCELADA';
 type RunStatusFilter = 'TODOS' | FinanceRun['status'];
@@ -63,6 +64,7 @@ const paymentTypeFilter = ref<PaymentTypeFilter>('TODOS');
 const runStatusFilter = ref<RunStatusFilter>('TODOS');
 const pageBusy = ref(false);
 const exporting = ref<ExportKind | ''>('');
+const exportingPdf = ref<PdfExportKind | ''>('');
 const exportingReceipts = ref(false);
 const updatingStatus = ref(false);
 const selectedLineId = ref('');
@@ -520,6 +522,20 @@ async function exportReport(kind: ExportKind) {
   }
 }
 
+async function exportPdf(kind: PdfExportKind) {
+  if (!selectedRun.value) return;
+  exportingPdf.value = kind;
+  notice.value = null;
+  try {
+    await downloadFinancePdf(kind, selectedRun.value.id);
+    setNotice('ok', 'PDF financiero generado.');
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible generar el PDF financiero.');
+  } finally {
+    exportingPdf.value = '';
+  }
+}
+
 async function exportCashReceipts() {
   if (!selectedRun.value) return;
   exportingReceipts.value = true;
@@ -600,53 +616,88 @@ onMounted(() => {
         </div>
         <span v-if="selectedRun" class="badge" :class="statusClass(selectedRun)">{{ statusLabel(selectedRun.status) }}</span>
       </div>
-      <div class="export-actions">
-        <button
-          v-if="nextWorkflowAction"
-          class="primary-inline"
-          type="button"
-          :disabled="updatingStatus"
-          @click="openStatusConfirm()"
-        >
-          <CheckCircle2 :size="16" />
-          {{ nextWorkflowAction.label }}
-        </button>
-        <button
-          v-if="cancelWorkflowAction"
-          class="primary-inline danger-action"
-          type="button"
-          :disabled="updatingStatus"
-          @click="openStatusConfirm('CANCELADA')"
-        >
-          <AlertTriangle :size="16" />
-          {{ cancelWorkflowAction.label }}
-        </button>
-        <button class="secondary-action" type="button" :disabled="!selectedRun || exporting === 'payments'" @click="exportReport('payments')">
-          <Download :size="16" />
-          Pagos CSV
-        </button>
-        <button class="secondary-action" type="button" :disabled="!selectedRun || exporting === 'fiscal'" @click="exportReport('fiscal')">
-          <Download :size="16" />
-          Pendientes CSV
-        </button>
-        <button
-          class="secondary-action"
-          type="button"
-          :disabled="!selectedRun || exporting === 'coordinations'"
-          @click="exportReport('coordinations')"
-        >
-          <Download :size="16" />
-          Coordinaciones CSV
-        </button>
-        <button
-          class="secondary-action"
-          type="button"
-          :disabled="!selectedRun || !cashLines.length || exportingReceipts"
-          @click="exportCashReceipts"
-        >
-          <FileText :size="16" />
-          Comprobantes efectivo
-        </button>
+      <div class="finance-actions-board">
+        <div v-if="nextWorkflowAction || cancelWorkflowAction" class="finance-action-group workflow">
+          <span>Flujo</span>
+          <div class="finance-action-row">
+            <button
+              v-if="nextWorkflowAction"
+              class="primary-inline"
+              type="button"
+              :disabled="updatingStatus"
+              @click="openStatusConfirm()"
+            >
+              <CheckCircle2 :size="16" />
+              {{ nextWorkflowAction.label }}
+            </button>
+            <button
+              v-if="cancelWorkflowAction"
+              class="primary-inline danger-action"
+              type="button"
+              :disabled="updatingStatus"
+              @click="openStatusConfirm('CANCELADA')"
+            >
+              <AlertTriangle :size="16" />
+              {{ cancelWorkflowAction.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="finance-action-group">
+          <span>PDF</span>
+          <div class="finance-action-row">
+            <button
+              class="secondary-action"
+              type="button"
+              :disabled="!selectedRun || exportingPdf === 'summary'"
+              @click="exportPdf('summary')"
+            >
+              <FileText :size="16" />
+              Resumen
+            </button>
+            <button
+              class="secondary-action"
+              type="button"
+              :disabled="!selectedRun || exportingPdf === 'coordinations'"
+              @click="exportPdf('coordinations')"
+            >
+              <FileText :size="16" />
+              Coordinaciones
+            </button>
+            <button
+              class="secondary-action"
+              type="button"
+              :disabled="!selectedRun || !cashLines.length || exportingReceipts"
+              @click="exportCashReceipts"
+            >
+              <FileText :size="16" />
+              Efectivo
+            </button>
+          </div>
+        </div>
+
+        <div class="finance-action-group">
+          <span>CSV</span>
+          <div class="finance-action-row">
+            <button class="secondary-action" type="button" :disabled="!selectedRun || exporting === 'payments'" @click="exportReport('payments')">
+              <FileSpreadsheet :size="16" />
+              Pagos
+            </button>
+            <button class="secondary-action" type="button" :disabled="!selectedRun || exporting === 'fiscal'" @click="exportReport('fiscal')">
+              <FileSpreadsheet :size="16" />
+              Pendientes
+            </button>
+            <button
+              class="secondary-action"
+              type="button"
+              :disabled="!selectedRun || exporting === 'coordinations'"
+              @click="exportReport('coordinations')"
+            >
+              <FileSpreadsheet :size="16" />
+              Coordinaciones
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 

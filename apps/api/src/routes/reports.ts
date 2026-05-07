@@ -162,6 +162,22 @@ interface ReportRunHeader {
   cycleId: string;
 }
 
+interface LoadedFinanceRun {
+  run: FinanceRun;
+  lines: FinanceLine[];
+  coordinationSummary: CoordinationSummary[];
+}
+
+interface PaymentTypeSummary {
+  code: string;
+  label: string;
+  lines: number;
+  teachers: number;
+  ready: number;
+  pending: number;
+  totalAmount: number;
+}
+
 const querySchema = z.object({
   cycleId: z.string().uuid().optional(),
   runId: z.string().uuid().optional()
@@ -873,6 +889,24 @@ async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
   });
 }
 
+async function loadVisibleFinanceRun(client: PoolClient, actor: SessionUser, runId: string): Promise<LoadedFinanceRun | null> {
+  const runHeader = await loadReportRunHeader(client, runId);
+  if (!runHeader) return null;
+
+  const actorCoordination = await loadActorCoordination(client, actor, false);
+  const runs = await listFinanceRuns(client, runHeader.cycleId, actor, actorCoordination);
+  const run = runs.find((item) => item.id === runId) || null;
+  if (!run) return null;
+
+  const lines = await listFinanceLines(client, run.id, actor, actorCoordination);
+  run.summary = summarizeLines(lines);
+  return {
+    run,
+    lines,
+    coordinationSummary: summarizeCoordinations(lines)
+  };
+}
+
 function paymentHeaders(): string[] {
   return [
     'Docente',
@@ -938,6 +972,318 @@ function moneyText(value: number): string {
     style: 'currency',
     currency: 'MXN'
   });
+}
+
+function numberText(value: number): string {
+  return Number(value || 0).toLocaleString('es-MX');
+}
+
+function hourText(value: number): string {
+  const numeric = Number(value || 0);
+  return Number.isInteger(numeric) ? `${numeric} h` : `${numeric.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')} h`;
+}
+
+function dateTimeText(value: string | null | undefined): string {
+  if (!value) return '-';
+  return new Date(value).toLocaleString('es-MX', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  });
+}
+
+function statusText(status: PayrollRunStatus): string {
+  if (status === 'EN_REVISION') return 'EN REVISION';
+  return status;
+}
+
+function paymentTypeText(paymentType: string): string {
+  if (paymentType === 'E') return 'Efectivo';
+  if (paymentType === '1') return 'Santander';
+  if (paymentType === '2') return 'Banorte';
+  return paymentType || '-';
+}
+
+function shortText(value: string | null | undefined, maxLength = 48): string {
+  const text = (value || '-').trim() || '-';
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 1))}.`;
+}
+
+function financePdfFileName(run: FinanceRun, suffix: string): string {
+  const safePeriod = run.periodLabel
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `finanzas-${safePeriod || run.id}-${suffix}.pdf`;
+}
+
+function sendPdf(reply: FastifyReply, fileName: string, content: Buffer): void {
+  void reply
+    .header('Content-Type', 'application/pdf')
+    .header('Content-Disposition', `attachment; filename="${fileName}"`)
+    .send(content);
+}
+
+function summarizePaymentTypes(lines: FinanceLine[]): PaymentTypeSummary[] {
+  const groups = new Map<string, PaymentTypeSummary & { teacherIds: Set<string> }>();
+  for (const line of lines) {
+    const code = line.paymentType || '-';
+    const existing =
+      groups.get(code) ||
+      ({
+        code,
+        label: paymentTypeText(code),
+        lines: 0,
+        teachers: 0,
+        teacherIds: new Set<string>(),
+        ready: 0,
+        pending: 0,
+        totalAmount: 0
+      } satisfies PaymentTypeSummary & { teacherIds: Set<string> });
+    existing.lines += 1;
+    existing.teacherIds.add(line.teacherId);
+    existing.ready += line.paymentStatus === 'LISTO' ? 1 : 0;
+    existing.pending += line.paymentStatus === 'PENDIENTE' ? 1 : 0;
+    existing.totalAmount += line.totalAmount;
+    groups.set(code, existing);
+  }
+
+  const preferred = ['1', '2', 'E'];
+  return [...groups.values()]
+    .map(({ teacherIds, ...summary }) => ({
+      ...summary,
+      teachers: teacherIds.size,
+      totalAmount: round2(summary.totalAmount)
+    }))
+    .sort((left, right) => {
+      const leftIndex = preferred.indexOf(left.code);
+      const rightIndex = preferred.indexOf(right.code);
+      if (leftIndex !== -1 || rightIndex !== -1) return (leftIndex === -1 ? 99 : leftIndex) - (rightIndex === -1 ? 99 : rightIndex);
+      return left.label.localeCompare(right.label, 'es');
+    });
+}
+
+const pdfMargin = 42;
+const pdfRight = 570;
+const pdfBottom = 750;
+
+function startFinancePdf(title: string, run: FinanceRun): PDFKit.PDFDocument {
+  const doc = new PDFDocument({ size: 'LETTER', margin: pdfMargin, autoFirstPage: true });
+  doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(18).text(title, pdfMargin, pdfMargin);
+  doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(8).text('NOMINA DOCENTE', pdfMargin, pdfMargin + 24);
+  doc
+    .fillColor('#0F766E')
+    .font('Helvetica-Bold')
+    .fontSize(10)
+    .text(statusText(run.status), pdfRight - 120, pdfMargin + 4, { width: 120, align: 'right' });
+  doc
+    .fillColor('#0F172A')
+    .font('Helvetica-Bold')
+    .fontSize(11)
+    .text(run.periodLabel, pdfMargin, pdfMargin + 48, { width: 340 });
+  doc.fillColor('#64748B').font('Helvetica').fontSize(9).text(run.cycleLabel, pdfMargin, pdfMargin + 65, { width: 340 });
+  doc
+    .fillColor('#64748B')
+    .font('Helvetica')
+    .fontSize(8)
+    .text(`Emitido ${dateTimeText(new Date().toISOString())}`, pdfRight - 190, pdfMargin + 50, { width: 190, align: 'right' });
+  doc.moveTo(pdfMargin, pdfMargin + 88).lineTo(pdfRight, pdfMargin + 88).strokeColor('#CBD5E1').lineWidth(1).stroke();
+  return doc;
+}
+
+function pdfBufferFrom(doc: PDFKit.PDFDocument): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+    doc.end();
+  });
+}
+
+function ensurePdfSpace(doc: PDFKit.PDFDocument, cursor: number, needed: number, title: string, run: FinanceRun): number {
+  if (cursor + needed <= pdfBottom) return cursor;
+  doc.addPage();
+  doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(11).text(title, pdfMargin, pdfMargin);
+  doc.fillColor('#64748B').font('Helvetica').fontSize(8).text(`${run.periodLabel} / ${statusText(run.status)}`, pdfMargin, pdfMargin + 16);
+  doc.moveTo(pdfMargin, pdfMargin + 34).lineTo(pdfRight, pdfMargin + 34).strokeColor('#CBD5E1').stroke();
+  return pdfMargin + 52;
+}
+
+function drawPdfSection(doc: PDFKit.PDFDocument, title: string, y: number): number {
+  doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(12).text(title, pdfMargin, y);
+  doc.moveTo(pdfMargin, y + 18).lineTo(pdfRight, y + 18).strokeColor('#E2E8F0').stroke();
+  return y + 30;
+}
+
+function drawPdfMetric(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  width: number,
+  label: string,
+  value: string,
+  helper: string
+): void {
+  doc.roundedRect(x, y, width, 62, 8).fillAndStroke('#F8FAFC', '#DBE3EF');
+  doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(7.5).text(label.toUpperCase(), x + 10, y + 10, { width: width - 20 });
+  doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(14).text(value, x + 10, y + 25, { width: width - 20 });
+  doc.fillColor('#64748B').font('Helvetica').fontSize(8).text(helper, x + 10, y + 45, { width: width - 20 });
+}
+
+function drawPdfTableHeader(doc: PDFKit.PDFDocument, columns: Array<{ label: string; x: number; width: number }>, y: number): number {
+  doc.rect(pdfMargin, y, pdfRight - pdfMargin, 22).fill('#F1F5F9');
+  for (const column of columns) {
+    doc.fillColor('#475569').font('Helvetica-Bold').fontSize(7.5).text(column.label.toUpperCase(), column.x, y + 7, {
+      width: column.width
+    });
+  }
+  return y + 22;
+}
+
+function buildFinanceSummaryPdf(run: FinanceRun, lines: FinanceLine[], coordinations: CoordinationSummary[]): Promise<Buffer> {
+  const doc = startFinancePdf('Resumen ejecutivo de nomina', run);
+  const summary = summarizeLines(lines);
+  const paymentTypes = summarizePaymentTypes(lines);
+  let y = 150;
+
+  const metricWidth = 124;
+  drawPdfMetric(doc, 42, y, metricWidth, 'Total a pagar', moneyText(summary.totalAmount), `${numberText(summary.teachers)} docentes`);
+  drawPdfMetric(doc, 176, y, metricWidth, 'Horas base', hourText(summary.baseHours), moneyText(summary.grossBaseAmount));
+  drawPdfMetric(doc, 310, y, metricWidth, 'Descuentos', moneyText(summary.discountAmount), 'Faltas y retardos');
+  drawPdfMetric(doc, 444, y, metricWidth, 'Extras', moneyText(summary.totalExtraAmount), hourText(summary.totalExtraHours));
+  y += 88;
+
+  y = drawPdfSection(doc, 'Distribucion por tipo de pago', y);
+  const paymentColumns = [
+    { label: 'Tipo', x: 48, width: 120 },
+    { label: 'Lineas', x: 190, width: 58 },
+    { label: 'Docentes', x: 260, width: 66 },
+    { label: 'Listos', x: 338, width: 56 },
+    { label: 'Pendientes', x: 406, width: 70 },
+    { label: 'Total', x: 486, width: 76 }
+  ];
+  y = drawPdfTableHeader(doc, paymentColumns, y);
+  for (const row of paymentTypes) {
+    y = ensurePdfSpace(doc, y, 24, 'Resumen ejecutivo de nomina', run);
+    doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(8.5).text(row.label, 48, y + 7, { width: 120 });
+    doc.fillColor('#334155').font('Helvetica').fontSize(8).text(String(row.lines), 190, y + 7, { width: 58 });
+    doc.text(String(row.teachers), 260, y + 7, { width: 66 });
+    doc.text(String(row.ready), 338, y + 7, { width: 56 });
+    doc.text(String(row.pending), 406, y + 7, { width: 70 });
+    doc.font('Helvetica-Bold').text(moneyText(row.totalAmount), 486, y + 7, { width: 76, align: 'right' });
+    doc.moveTo(pdfMargin, y + 24).lineTo(pdfRight, y + 24).strokeColor('#E2E8F0').stroke();
+    y += 24;
+  }
+
+  y += 22;
+  y = drawPdfSection(doc, 'Resumen por coordinacion', y);
+  const coordinationColumns = [
+    { label: 'Coordinacion', x: 48, width: 178 },
+    { label: 'Doc.', x: 236, width: 40 },
+    { label: 'Base', x: 288, width: 62 },
+    { label: 'Extras', x: 362, width: 62 },
+    { label: 'Desc.', x: 434, width: 60 },
+    { label: 'Total', x: 504, width: 58 }
+  ];
+  y = drawPdfTableHeader(doc, coordinationColumns, y);
+  for (const row of coordinations) {
+    y = ensurePdfSpace(doc, y, 28, 'Resumen ejecutivo de nomina', run);
+    doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(8).text(shortText(row.coordinationName, 38), 48, y + 7, { width: 178 });
+    doc.fillColor('#334155').font('Helvetica').fontSize(8).text(String(row.teachers), 236, y + 7, { width: 40 });
+    doc.text(hourText(row.baseHours), 288, y + 7, { width: 62 });
+    doc.text(hourText(row.totalExtraHours), 362, y + 7, { width: 62 });
+    doc.text(moneyText(row.discountAmount), 434, y + 7, { width: 60, align: 'right' });
+    doc.font('Helvetica-Bold').text(moneyText(row.totalAmount), 504, y + 7, { width: 58, align: 'right' });
+    doc.moveTo(pdfMargin, y + 28).lineTo(pdfRight, y + 28).strokeColor('#E2E8F0').stroke();
+    y += 28;
+  }
+
+  y = ensurePdfSpace(doc, y + 18, 42, 'Resumen ejecutivo de nomina', run);
+  doc
+    .fillColor('#64748B')
+    .font('Helvetica')
+    .fontSize(8)
+    .text(
+      `Corrida calculada por ${run.calculatedByEmail || 'Sistema'} el ${dateTimeText(run.calculatedAt || run.createdAt)}. Estado actual: ${statusText(run.status)}.`,
+      pdfMargin,
+      y + 18,
+      { width: pdfRight - pdfMargin }
+    );
+
+  return pdfBufferFrom(doc);
+}
+
+function buildCoordinationReportPdf(run: FinanceRun, lines: FinanceLine[], coordinations: CoordinationSummary[]): Promise<Buffer> {
+  const doc = startFinancePdf('Reporte por coordinacion', run);
+  const linesByCoordination = new Map<string, FinanceLine[]>();
+  for (const line of lines) {
+    const list = linesByCoordination.get(line.coordinationId) || [];
+    list.push(line);
+    linesByCoordination.set(line.coordinationId, list);
+  }
+
+  const columns = [
+    { label: 'Docente', x: 48, width: 176 },
+    { label: 'Pago', x: 236, width: 58 },
+    { label: 'Base', x: 304, width: 58 },
+    { label: 'Desc.', x: 372, width: 58 },
+    { label: 'Extras', x: 440, width: 58 },
+    { label: 'Total', x: 508, width: 54 }
+  ];
+
+  let y = 126;
+  for (const coordination of coordinations) {
+    y = ensurePdfSpace(doc, y, 96, 'Reporte por coordinacion', run);
+    doc.roundedRect(pdfMargin, y, pdfRight - pdfMargin, 58, 8).fillAndStroke('#F8FAFC', '#DBE3EF');
+    doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(11).text(coordination.coordinationName, 54, y + 10, { width: 300 });
+    doc
+      .fillColor('#0F172A')
+      .font('Helvetica-Bold')
+      .fontSize(12)
+      .text(moneyText(coordination.totalAmount), 408, y + 10, { width: 150, align: 'right' });
+    doc
+      .fillColor('#64748B')
+      .font('Helvetica')
+      .fontSize(8)
+      .text(
+        `${coordination.teachers} docentes / ${coordination.lines} lineas / Base ${hourText(coordination.baseHours)} / Extras ${hourText(coordination.totalExtraHours)} / Pendientes ${coordination.fiscalPending}`,
+        54,
+        y + 32,
+        { width: 500 }
+      );
+    y += 72;
+    y = drawPdfTableHeader(doc, columns, y);
+
+    const rows = (linesByCoordination.get(coordination.coordinationId) || []).sort((left, right) =>
+      left.teacherName.localeCompare(right.teacherName, 'es')
+    );
+    for (const line of rows) {
+      y = ensurePdfSpace(doc, y, 30, 'Reporte por coordinacion', run);
+      doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(7.8).text(shortText(line.teacherName, 38), 48, y + 6, {
+        width: 176
+      });
+      doc.fillColor('#64748B').font('Helvetica').fontSize(7).text(shortText(line.fiscalMissing.join(', ') || 'Listo', 38), 48, y + 17, {
+        width: 176
+      });
+      doc.fillColor('#334155').font('Helvetica').fontSize(7.5).text(paymentTypeText(line.paymentType), 236, y + 8, { width: 58 });
+      doc.text(hourText(line.baseHours), 304, y + 8, { width: 58 });
+      doc.text(moneyText(line.absenceDiscountAmount + line.delayDiscountAmount), 372, y + 8, { width: 58, align: 'right' });
+      doc.text(moneyText(line.totalExtraAmount), 440, y + 8, { width: 58, align: 'right' });
+      doc.font('Helvetica-Bold').text(moneyText(line.totalAmount), 508, y + 8, { width: 54, align: 'right' });
+      doc.moveTo(pdfMargin, y + 30).lineTo(pdfRight, y + 30).strokeColor('#E2E8F0').stroke();
+      y += 30;
+    }
+    y += 22;
+  }
+
+  if (!coordinations.length) {
+    doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(10).text('No hay coordinaciones visibles para esta corrida.', pdfMargin, y);
+  }
+
+  return pdfBufferFrom(doc);
 }
 
 function receiptFileName(run: FinanceRun): string {
@@ -1078,6 +1424,50 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       return {
         message: nextStatusMessage(parsedBody.data.status)
       };
+    }
+  );
+
+  app.get(
+    '/reports/finance/runs/:id/summary-pdf',
+    { preHandler: requireAnyPermission(['reports.view', 'finance.view']) },
+    async (request, reply) => {
+      const parsedParams = runParamsSchema.safeParse(request.params as FinanceRunParams);
+      if (!parsedParams.success) {
+        sendValidation(reply, parsedParams.error);
+        return;
+      }
+
+      const actor = request.user!;
+      const loaded = await withTransaction((client) => loadVisibleFinanceRun(client, actor, parsedParams.data.id));
+      if (!loaded) {
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+        return;
+      }
+
+      const content = await buildFinanceSummaryPdf(loaded.run, loaded.lines, loaded.coordinationSummary);
+      sendPdf(reply, financePdfFileName(loaded.run, 'resumen'), content);
+    }
+  );
+
+  app.get(
+    '/reports/finance/runs/:id/coordinations-pdf',
+    { preHandler: requireAnyPermission(['reports.view', 'finance.view']) },
+    async (request, reply) => {
+      const parsedParams = runParamsSchema.safeParse(request.params as FinanceRunParams);
+      if (!parsedParams.success) {
+        sendValidation(reply, parsedParams.error);
+        return;
+      }
+
+      const actor = request.user!;
+      const loaded = await withTransaction((client) => loadVisibleFinanceRun(client, actor, parsedParams.data.id));
+      if (!loaded) {
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+        return;
+      }
+
+      const content = await buildCoordinationReportPdf(loaded.run, loaded.lines, loaded.coordinationSummary);
+      sendPdf(reply, financePdfFileName(loaded.run, 'coordinaciones'), content);
     }
   );
 
