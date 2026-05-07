@@ -19,6 +19,7 @@ import {
   type CoordinationOption
 } from '../api';
 import TeacherModal from '../components/modals/TeacherModal.vue';
+import ConfirmModal from '../components/modals/ConfirmModal.vue';
 
 const authStore = useAuthStore();
 
@@ -45,6 +46,8 @@ const teacherUploading = ref(false);
 const teacherExporting = ref<'active' | 'history' | ''>('');
 const editingTeacherId = ref<string | null>(null);
 const selectedConstancia = ref<File | null>(null);
+const pendingDeleteTeacher = ref<Teacher | null>(null);
+const deletingTeacher = ref(false);
 
 const blankTeacher = (): TeacherPayload => ({
   firstNames: '',
@@ -242,19 +245,33 @@ async function exportTeachers(kind: 'active' | 'history') {
   }
 }
 
-async function removeTeacher(teacher: Teacher) {
+function requestRemoveTeacher(teacher: Teacher) {
   if (!authStore.isAdmin) return;
-  const confirmed = window.confirm(`Eliminar docente ${teacher.fullName}? Esta accion no se permitira si tiene historial operativo.`);
-  if (!confirmed) return;
+  pendingDeleteTeacher.value = teacher;
+  clearNotice();
+}
 
+function closeDeleteTeacherModal() {
+  if (deletingTeacher.value) return;
+  pendingDeleteTeacher.value = null;
+}
+
+async function confirmRemoveTeacher() {
+  const teacher = pendingDeleteTeacher.value;
+  if (!teacher || !authStore.isAdmin) return;
+
+  deletingTeacher.value = true;
   clearNotice();
   try {
     const response = await deleteTeacher(teacher.id);
+    pendingDeleteTeacher.value = null;
     setNotice('ok', response.message);
     if (editingTeacherId.value === teacher.id) closeTeacherModal();
     await loadTeachers();
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible eliminar el docente.');
+  } finally {
+    deletingTeacher.value = false;
   }
 }
 
@@ -368,7 +385,7 @@ onMounted(() => {
                   <button v-if="authStore.canManageTeachers" class="icon-button" type="button" title="Editar" @click="editTeacher(teacher)">
                     <Edit3 :size="16" />
                   </button>
-                  <button v-if="authStore.isAdmin" class="icon-button danger" type="button" title="Eliminar" @click="removeTeacher(teacher)">
+                  <button v-if="authStore.isAdmin" class="icon-button danger" type="button" title="Eliminar" @click="requestRemoveTeacher(teacher)">
                     <Trash2 :size="16" />
                   </button>
                 </td>
@@ -391,6 +408,25 @@ onMounted(() => {
       @save="saveTeacher"
       @file-selected="onConstanciaSelected"
       @upload="uploadConstancia"
+    />
+
+    <ConfirmModal
+      :show="!!pendingDeleteTeacher"
+      eyebrow="Directorio docente"
+      title="Eliminar docente"
+      :subject="pendingDeleteTeacher?.fullName"
+      message="Se intentara retirar este registro del directorio. Si el docente ya tiene horarios, incidencias, extras o historial operativo, la base de datos protegera la informacion y no permitira eliminarlo."
+      :details="[
+        'Accion exclusiva para administradores.',
+        'El cambio queda sujeto a las reglas de integridad del sistema.'
+      ]"
+      confirm-label="Eliminar docente"
+      cancel-label="Conservar registro"
+      tone="danger"
+      icon="trash"
+      :loading="deletingTeacher"
+      @close="closeDeleteTeacherModal"
+      @confirm="confirmRemoveTeacher"
     />
   </div>
 </template>

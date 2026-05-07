@@ -13,6 +13,7 @@ import {
   type UserPayload
 } from '../api';
 import AccessModal from '../components/modals/AccessModal.vue';
+import ConfirmModal from '../components/modals/ConfirmModal.vue';
 
 const authStore = useAuthStore();
 
@@ -28,6 +29,8 @@ const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 const accessModalOpen = ref(false);
 const accessSaving = ref(false);
 const editingAccessId = ref<string | null>(null);
+const pendingDeleteAccessUser = ref<AccessUser | null>(null);
+const deletingAccessUser = ref(false);
 
 const blankAccessUser = (): UserPayload => ({
   email: '',
@@ -120,19 +123,33 @@ async function saveAccessUser() {
   }
 }
 
-async function removeAccessUser(user: AccessUser) {
+function requestRemoveAccessUser(user: AccessUser) {
   if (!authStore.canManageAccess || user.isProtectedSuperAdmin) return;
-  const confirmed = window.confirm(`Eliminar acceso de ${user.displayName}?`);
-  if (!confirmed) return;
+  pendingDeleteAccessUser.value = user;
+  clearNotice();
+}
 
+function closeDeleteAccessModal() {
+  if (deletingAccessUser.value) return;
+  pendingDeleteAccessUser.value = null;
+}
+
+async function confirmRemoveAccessUser() {
+  const user = pendingDeleteAccessUser.value;
+  if (!user || !authStore.canManageAccess || user.isProtectedSuperAdmin) return;
+
+  deletingAccessUser.value = true;
   clearNotice();
   try {
     const response = await deleteAccessUser(user.id);
+    pendingDeleteAccessUser.value = null;
     setNotice('ok', response.message);
     if (editingAccessId.value === user.id) closeAccessModal();
     await loadAccessUsers();
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible eliminar el usuario.');
+  } finally {
+    deletingAccessUser.value = false;
   }
 }
 
@@ -223,7 +240,7 @@ onMounted(() => {
                     type="button"
                     title="Eliminar"
                     :disabled="user.isProtectedSuperAdmin"
-                    @click="removeAccessUser(user)"
+                    @click="requestRemoveAccessUser(user)"
                   >
                     <Trash2 :size="16" />
                   </button>
@@ -243,6 +260,26 @@ onMounted(() => {
       :roles="accessRoles"
       @close="closeAccessModal"
       @save="saveAccessUser"
+    />
+
+    <ConfirmModal
+      :show="!!pendingDeleteAccessUser"
+      eyebrow="Usuarios y roles"
+      title="Eliminar acceso"
+      :subject="pendingDeleteAccessUser?.displayName"
+      message="La cuenta dejara de estar autorizada para ingresar a la Web App. El super admin protegido no puede eliminarse desde este flujo."
+      :details="pendingDeleteAccessUser ? [
+        pendingDeleteAccessUser.email,
+        `Rol actual: ${pendingDeleteAccessUser.roleName}`,
+        `Estatus: ${pendingDeleteAccessUser.status}`
+      ] : []"
+      confirm-label="Eliminar acceso"
+      cancel-label="Conservar acceso"
+      tone="danger"
+      icon="trash"
+      :loading="deletingAccessUser"
+      @close="closeDeleteAccessModal"
+      @confirm="confirmRemoveAccessUser"
     />
   </div>
 </template>

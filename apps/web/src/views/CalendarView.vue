@@ -13,6 +13,7 @@ import {
   type CycleModuleDatesPayload,
   type CycleOption
 } from '../api';
+import ConfirmModal from '../components/modals/ConfirmModal.vue';
 
 const authStore = useAuthStore();
 
@@ -526,29 +527,24 @@ onMounted(() => {
       </div>
     </section>
 
-    <div v-if="pendingDeletePeriod" class="modal-backdrop" @click.self="closeDeleteModal">
-      <section class="modal-card delete-confirm-card" role="dialog" aria-modal="true">
-        <div class="delete-confirm-icon">
-          <Trash2 :size="22" />
-        </div>
-        <div>
-          <p class="eyebrow">Confirmar eliminacion</p>
-          <h3>Eliminar quincena</h3>
-          <p class="delete-confirm-copy">
-            Se eliminara <strong>{{ pendingDeletePeriod.periodLabel }}</strong> del calendario operativo. Esta accion no debe usarse si la
-            quincena ya forma parte de una revision real de nomina.
-          </p>
-        </div>
-        <div class="modal-actions">
-          <button class="secondary-action" type="button" :disabled="deletingPeriod" @click="closeDeleteModal">
-            Cancelar
-          </button>
-          <button class="primary-inline danger-action" type="button" :disabled="deletingPeriod" @click="confirmRemovePeriod">
-            <Trash2 :size="16" />
-            Eliminar quincena
-          </button>
-        </div>
-      </section>
-    </div>
+    <ConfirmModal
+      :show="!!pendingDeletePeriod"
+      eyebrow="Calendario operativo"
+      title="Eliminar quincena"
+      :subject="pendingDeletePeriod?.periodLabel"
+      message="Esta quincena saldra de la fuente de calculo de nomina. No debe eliminarse si ya forma parte de una revision real o de una corrida guardada."
+      :details="pendingDeletePeriod ? [
+        `${formatDate(pendingDeletePeriod.payrollStart)} - ${formatDate(pendingDeletePeriod.payrollEnd)}`,
+        `${pendingDeletePeriod.blackoutDates.length} dia${pendingDeletePeriod.blackoutDates.length === 1 ? '' : 's'} inhabil${pendingDeletePeriod.blackoutDates.length === 1 ? '' : 'es'}`,
+        `Acceso incidencias: ${pendingDeletePeriod.incidencesAccessDays} dias / Extras: ${pendingDeletePeriod.extrasAccessDays} dias`
+      ] : []"
+      confirm-label="Eliminar quincena"
+      cancel-label="Conservar quincena"
+      tone="danger"
+      icon="trash"
+      :loading="deletingPeriod"
+      @close="closeDeleteModal"
+      @confirm="confirmRemovePeriod"
+    />
   </div>
 </template>

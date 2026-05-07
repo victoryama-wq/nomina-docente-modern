@@ -18,6 +18,7 @@ import {
   type PayrollScheduleDetail,
   type PayrollSummary
 } from '../api';
+import ConfirmModal from '../components/modals/ConfirmModal.vue';
 
 type AlertFilter = 'TODOS' | 'CON_ALERTAS' | 'SIN_ALERTAS';
 type PayrollViewMode = 'RESUMEN' | 'DETALLE';
@@ -72,6 +73,7 @@ const saving = ref(false);
 const exporting = ref<'summary' | 'schedules' | 'extras' | ''>('');
 const loadingRunId = ref('');
 const selectedRunId = ref('');
+const confirmSavePayrollOpen = ref(false);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
 const summary = computed(() => currentPreview.value?.summary || zeroSummary());
@@ -371,16 +373,24 @@ async function refreshPreview() {
   await calculatePreview(false);
 }
 
-async function saveCurrentRun() {
+function requestSaveCurrentRun() {
   if (!canSaveRun.value) return;
-  const confirmed = window.confirm(
-    'Guardar la nomina definitiva de esta quincena? Esta accion conserva el historico y libera incidencias/extras operativos para la siguiente quincena.'
-  );
-  if (!confirmed) return;
+  confirmSavePayrollOpen.value = true;
+  clearNotice();
+}
+
+function closeSavePayrollModal() {
+  if (saving.value) return;
+  confirmSavePayrollOpen.value = false;
+}
+
+async function confirmSaveCurrentRun() {
+  if (!canSaveRun.value) return;
   saving.value = true;
   clearNotice();
   try {
     const result = await savePayrollRun(payloadFromForm());
+    confirmSavePayrollOpen.value = false;
     currentPreview.value = result;
     selectedRunId.value = result.run.id;
     selectedLineKey.value = '';
@@ -521,7 +531,7 @@ onMounted(() => {
             class="primary-inline"
             type="button"
             :disabled="!canSaveRun"
-            @click="saveCurrentRun"
+            @click="requestSaveCurrentRun"
           >
             <Save :size="17" />
             Guardar nomina
@@ -823,5 +833,27 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
+    <ConfirmModal
+      :show="confirmSavePayrollOpen"
+      eyebrow="Nomina"
+      title="Guardar nomina definitiva"
+      :subject="form.periodLabel || defaultPeriodLabel()"
+      message="Se conservara el historico de esta quincena y se liberaran incidencias y extras operativos para continuar con la siguiente captura. Usa esta accion solo cuando Direccion autorice proceder al pago."
+      :details="[
+        `Docentes: ${summary.teachers}`,
+        `Horas base: ${formatHours(summary.baseHours)}`,
+        `Extras: ${formatHours(summary.totalExtraHours)} h`,
+        `Total: ${moneyLabel(summary.totalAmount)}`
+      ]"
+      confirm-label="Guardar nomina"
+      cancel-label="Seguir revisando"
+      tone="warning"
+      icon="save"
+      :loading="saving"
+      :disabled="!canSaveRun"
+      @close="closeSavePayrollModal"
+      @confirm="confirmSaveCurrentRun"
+    />
   </div>
 </template>

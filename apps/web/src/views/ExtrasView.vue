@@ -16,6 +16,7 @@ import {
   type TabulatorOption
 } from '../api';
 import ExtraModal from '../components/modals/ExtraModal.vue';
+import ConfirmModal from '../components/modals/ConfirmModal.vue';
 
 const authStore = useAuthStore();
 type LoadStatusFilter = 'TODOS' | ExtraTeacher['loadStatus'];
@@ -42,6 +43,8 @@ const modalOpen = ref(false);
 const saving = ref(false);
 const formError = ref('');
 const editingExtraId = ref<string | null>(null);
+const pendingDeleteExtra = ref<ExtraRecord | null>(null);
+const deletingExtra = ref(false);
 const teacherSearchText = ref('');
 const teacherPickerOpen = ref(false);
 const pageBusy = ref(false);
@@ -357,23 +360,36 @@ async function saveExtra() {
   }
 }
 
-async function removeExtra(extra: ExtraRecord) {
+function requestRemoveExtra(extra: ExtraRecord) {
   if (!extra.canEdit) {
     setNotice('error', 'Solo la coordinacion que capturo este extra puede eliminarlo.');
     return;
   }
+  pendingDeleteExtra.value = extra;
+  clearNotice();
+}
 
-  const confirmed = window.confirm(`Eliminar ${formatHours(extra.hours)}h extra de ${extra.teacherName}?`);
-  if (!confirmed) return;
+function closeDeleteExtraModal() {
+  if (deletingExtra.value) return;
+  pendingDeleteExtra.value = null;
+}
 
+async function confirmRemoveExtra() {
+  const extra = pendingDeleteExtra.value;
+  if (!extra) return;
+
+  deletingExtra.value = true;
   clearNotice();
   try {
     const response = await deleteExtra(extra.id);
+    pendingDeleteExtra.value = null;
     setNotice('ok', response.message);
     if (editingExtraId.value === extra.id) closeModal();
     await loadExtras(selectedCycleId.value);
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible eliminar el extra.');
+  } finally {
+    deletingExtra.value = false;
   }
 }
 
@@ -518,7 +534,7 @@ onMounted(() => {
                     type="button"
                     :disabled="!extra.canEdit"
                     :title="extra.canEdit ? 'Eliminar' : 'Solo eliminable por la coordinacion que lo capturo'"
-                    @click="removeExtra(extra)"
+                    @click="requestRemoveExtra(extra)"
                   >
                     <Trash2 :size="16" />
                   </button>
@@ -554,6 +570,26 @@ onMounted(() => {
       @escape-teacher-search="teacherPickerOpen = false"
       @select-teacher="selectTeacher"
       @apply-tabulator="applyTabulator"
+    />
+
+    <ConfirmModal
+      :show="!!pendingDeleteExtra"
+      eyebrow="Capturar extras"
+      title="Eliminar hora extra"
+      :subject="pendingDeleteExtra?.teacherName"
+      message="Este registro dejara de sumarse a la carga y al calculo de nomina del ciclo activo. Confirma que se trata de una captura incorrecta antes de continuar."
+      :details="pendingDeleteExtra ? [
+        `${formatHours(pendingDeleteExtra.hours)} h / ${moneyLabel(pendingDeleteExtra.totalAmount)}`,
+        pendingDeleteExtra.reason,
+        `Fecha: ${formatDate(pendingDeleteExtra.activityDate)}`
+      ] : []"
+      confirm-label="Eliminar extra"
+      cancel-label="Conservar extra"
+      tone="danger"
+      icon="trash"
+      :loading="deletingExtra"
+      @close="closeDeleteExtraModal"
+      @confirm="confirmRemoveExtra"
     />
   </div>
 </template>

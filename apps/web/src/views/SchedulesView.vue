@@ -20,6 +20,7 @@ import {
   type SchedulePayload
 } from '../api';
 import ScheduleModal from '../components/modals/ScheduleModal.vue';
+import ConfirmModal from '../components/modals/ConfirmModal.vue';
 
 const authStore = useAuthStore();
 type ScheduleLoadStatus = 'TODOS' | 'DISPONIBLE' | 'CERCA' | 'LIMITE' | 'EXCEDE';
@@ -50,6 +51,8 @@ const scheduleModalOpen = ref(false);
 const scheduleSaving = ref(false);
 const scheduleFormError = ref('');
 const editingScheduleId = ref<string | null>(null);
+const pendingDeleteSchedule = ref<Schedule | null>(null);
+const deletingSchedule = ref(false);
 const pageBusy = ref(false);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
@@ -466,24 +469,37 @@ async function saveSchedule() {
   }
 }
 
-async function removeSchedule(schedule: Schedule) {
+function requestRemoveSchedule(schedule: Schedule) {
   if (!authStore.canManageSchedules) return;
   if (!canEditSchedule(schedule)) {
     setNotice('error', 'Solo la coordinacion que capturo este horario puede eliminarlo.');
     return;
   }
+  pendingDeleteSchedule.value = schedule;
+  clearNotice();
+}
 
-  const confirmed = window.confirm(`Eliminar horario de ${schedule.teacherName} en ${schedule.groupCode}?`);
-  if (!confirmed) return;
+function closeDeleteScheduleModal() {
+  if (deletingSchedule.value) return;
+  pendingDeleteSchedule.value = null;
+}
 
+async function confirmRemoveSchedule() {
+  const schedule = pendingDeleteSchedule.value;
+  if (!schedule || !authStore.canManageSchedules) return;
+
+  deletingSchedule.value = true;
   clearNotice();
   try {
     const response = await deleteSchedule(schedule.id);
+    pendingDeleteSchedule.value = null;
     setNotice('ok', response.message);
     if (editingScheduleId.value === schedule.id) closeScheduleModal();
     await loadSchedules(selectedScheduleCycleId.value);
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible eliminar el horario.');
+  } finally {
+    deletingSchedule.value = false;
   }
 }
 
@@ -635,7 +651,7 @@ onMounted(() => {
                     type="button"
                     :disabled="!canEditSchedule(schedule)"
                     :title="canEditSchedule(schedule) ? 'Eliminar' : 'Solo eliminable por la coordinacion que lo capturo'"
-                    @click="removeSchedule(schedule)"
+                    @click="requestRemoveSchedule(schedule)"
                   >
                     <Trash2 :size="16" />
                   </button>
@@ -673,6 +689,25 @@ onMounted(() => {
       @escape-teacher-search="scheduleTeacherPickerOpen = false"
       @select-teacher="selectScheduleTeacher"
       @apply-tabulator="applySelectedTabulator"
+    />
+
+    <ConfirmModal
+      :show="!!pendingDeleteSchedule"
+      eyebrow="Capturar horarios"
+      title="Eliminar horario"
+      :subject="pendingDeleteSchedule ? `${pendingDeleteSchedule.teacherName} / ${pendingDeleteSchedule.groupCode}` : ''"
+      message="Este horario saldra de la carga activa del ciclo seleccionado. Verifica que no forme parte de una revision de nomina antes de continuar."
+      :details="[
+        pendingDeleteSchedule ? `Asignatura: ${pendingDeleteSchedule.subjectName}` : '',
+        pendingDeleteSchedule ? `Coordinacion: ${pendingDeleteSchedule.coordinationName}` : ''
+      ].filter(Boolean)"
+      confirm-label="Eliminar horario"
+      cancel-label="Conservar horario"
+      tone="danger"
+      icon="trash"
+      :loading="deletingSchedule"
+      @close="closeDeleteScheduleModal"
+      @confirm="confirmRemoveSchedule"
     />
   </div>
 </template>
