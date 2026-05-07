@@ -35,7 +35,14 @@ type PaymentFilter = 'TODOS' | 'LISTO' | 'PENDIENTE';
 type PaymentTypeFilter = 'TODOS' | 'E' | '1' | '2';
 type ExportKind = 'payments' | 'fiscal' | 'coordinations';
 type CoordinationRow = FinanceContext['coordinationSummary'][number];
-type WorkflowTargetStatus = 'EN_REVISION' | 'APROBADA' | 'PAGADA';
+type WorkflowTargetStatus = 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CANCELADA';
+
+interface WorkflowAction {
+  status: WorkflowTargetStatus;
+  label: string;
+  title: string;
+  message: string;
+}
 
 const authStore = useAuthStore();
 
@@ -113,14 +120,22 @@ const cashLines = computed(() => lines.value.filter((line) => line.paymentType =
 
 const cashAmount = computed(() => cashLines.value.reduce((sum, line) => sum + Number(line.totalAmount || 0), 0));
 
+const canUseFinanceWorkflow = computed(
+  () => authStore.isAdmin || authStore.canFinalizePayroll || authStore.session?.permissions?.includes('finance.view') || false
+);
+
+const canCancelForCorrection = computed(() => authStore.isAdmin || authStore.canFinalizePayroll);
+
 const nextWorkflowAction = computed(() => {
+  if (!canUseFinanceWorkflow.value) return null;
   if (!selectedRun.value) return null;
   if (selectedRun.value.status === 'CALCULADA') {
     return {
       status: 'EN_REVISION' as const,
       label: 'Enviar a revision',
       title: 'Enviar nomina a revision',
-      message: 'La nomina quedara marcada para revision financiera. Coordinaciones y Finanzas podran usar los reportes guardados para validar importes antes de aprobar.'
+      message:
+        'La nomina quedara marcada para revision financiera sobre una corrida ya guardada. Si detectan un error operativo, se debe cancelar para correccion antes de aprobar.'
     };
   }
   if (selectedRun.value.status === 'EN_REVISION') {
@@ -142,9 +157,40 @@ const nextWorkflowAction = computed(() => {
   return null;
 });
 
+const cancelWorkflowAction = computed<WorkflowAction | null>(() => {
+  if (!canCancelForCorrection.value) return null;
+  if (!selectedRun.value) return null;
+  if (!['CALCULADA', 'EN_REVISION', 'APROBADA'].includes(selectedRun.value.status)) return null;
+  return {
+    status: 'CANCELADA',
+    label: 'Cancelar para correccion',
+    title: 'Cancelar nomina para correccion',
+    message:
+      'Se cancelara esta corrida, se restauraran las incidencias y extras desde el historico guardado y la quincena quedara abierta para corregir. Despues deberas recalcular y guardar una nueva nomina.'
+  };
+});
+
+const workflowActions = computed(() => [nextWorkflowAction.value, cancelWorkflowAction.value].filter(Boolean) as WorkflowAction[]);
+
 const pendingWorkflowAction = computed(() =>
-  pendingStatus.value && nextWorkflowAction.value?.status === pendingStatus.value ? nextWorkflowAction.value : null
+  pendingStatus.value ? workflowActions.value.find((action) => action.status === pendingStatus.value) || null : null
 );
+
+const workflowConfirmDetails = computed(() => {
+  const details = [
+    `Estado actual: ${selectedRun.value ? statusLabel(selectedRun.value.status) : '-'}`,
+    `Total: ${moneyLabel(summary.value.totalAmount)}`,
+    `Pendientes fiscales: ${summary.value.fiscalPending}`,
+    `Pagos en efectivo: ${cashLines.value.length} / ${moneyLabel(cashAmount.value)}`
+  ];
+
+  if (pendingStatus.value === 'CANCELADA') {
+    details.push('Se reabrira la quincena para ajustar Incidencias y Extras.');
+    details.push('La corrida cancelada permanecera en historico y auditoria.');
+  }
+
+  return details;
+});
 
 const readyAmount = computed(() =>
   lines.value
@@ -363,9 +409,10 @@ function closeCoordinationDetail() {
   selectedCoordinationId.value = '';
 }
 
-function openStatusConfirm() {
-  if (!nextWorkflowAction.value) return;
-  pendingStatus.value = nextWorkflowAction.value.status;
+function openStatusConfirm(status?: WorkflowTargetStatus) {
+  const targetStatus = status || nextWorkflowAction.value?.status;
+  if (!targetStatus) return;
+  pendingStatus.value = targetStatus;
   notice.value = null;
 }
 
@@ -490,10 +537,20 @@ onMounted(() => {
           class="primary-inline"
           type="button"
           :disabled="updatingStatus"
-          @click="openStatusConfirm"
+          @click="openStatusConfirm()"
         >
           <CheckCircle2 :size="16" />
           {{ nextWorkflowAction.label }}
+        </button>
+        <button
+          v-if="cancelWorkflowAction"
+          class="primary-inline danger-action"
+          type="button"
+          :disabled="updatingStatus"
+          @click="openStatusConfirm('CANCELADA')"
+        >
+          <AlertTriangle :size="16" />
+          {{ cancelWorkflowAction.label }}
         </button>
         <button class="secondary-action" type="button" :disabled="!selectedRun || exporting === 'payments'" @click="exportReport('payments')">
           <Download :size="16" />
@@ -1125,16 +1182,11 @@ onMounted(() => {
       :title="pendingWorkflowAction?.title || 'Actualizar estado'"
       :subject="selectedRun?.periodLabel"
       :message="pendingWorkflowAction?.message || 'Confirma el cambio de estado de la nomina.'"
-      :details="[
-        `Estado actual: ${selectedRun ? statusLabel(selectedRun.status) : '-'}`,
-        `Total: ${moneyLabel(summary.totalAmount)}`,
-        `Pendientes fiscales: ${summary.fiscalPending}`,
-        `Pagos en efectivo: ${cashLines.length} / ${moneyLabel(cashAmount)}`
-      ]"
+      :details="workflowConfirmDetails"
       :confirm-label="pendingWorkflowAction?.label || 'Confirmar'"
       cancel-label="Cancelar"
-      :tone="pendingStatus === 'PAGADA' ? 'warning' : 'primary'"
-      :icon="pendingStatus === 'PAGADA' ? 'save' : 'info'"
+      :tone="pendingStatus === 'CANCELADA' ? 'danger' : pendingStatus === 'PAGADA' ? 'warning' : 'primary'"
+      :icon="pendingStatus === 'CANCELADA' ? 'warning' : pendingStatus === 'PAGADA' ? 'save' : 'info'"
       :loading="updatingStatus"
       @close="closeStatusConfirm"
       @confirm="confirmStatusChange"

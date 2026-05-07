@@ -25,7 +25,12 @@ interface FinanceRunParams {
 }
 
 interface FinanceRunStatusPayload {
-  status: Extract<PayrollRunStatus, 'EN_REVISION' | 'APROBADA' | 'PAGADA'>;
+  status: Extract<PayrollRunStatus, 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CANCELADA'>;
+}
+
+interface CorrectionRestoreSummary {
+  incidences: number;
+  extras: number;
 }
 
 interface FinanceSummary {
@@ -171,7 +176,7 @@ const runParamsSchema = z.object({
 });
 
 const statusPayloadSchema = z.object({
-  status: z.enum(['EN_REVISION', 'APROBADA', 'PAGADA'])
+  status: z.enum(['EN_REVISION', 'APROBADA', 'PAGADA', 'CANCELADA'])
 });
 
 const emptySummary = (): FinanceSummary => ({
@@ -206,6 +211,10 @@ function canViewAllFinance(actor: SessionUser): boolean {
 
 function canManageFinanceWorkflow(actor: SessionUser): boolean {
   return isSystemAdmin(actor) || actor.permissions.includes('finance.view') || actor.permissions.includes('payroll.finalize');
+}
+
+function canCancelPayrollForCorrection(actor: SessionUser): boolean {
+  return isSystemAdmin(actor) || actor.permissions.includes('payroll.finalize');
 }
 
 function round2(value: number): number {
@@ -541,15 +550,16 @@ async function listFinanceExtraDetails(
 function nextStatusMessage(status: FinanceRunStatusPayload['status']): string {
   if (status === 'EN_REVISION') return 'Nomina enviada a revision financiera.';
   if (status === 'APROBADA') return 'Nomina aprobada para pago.';
+  if (status === 'CANCELADA') return 'Nomina cancelada para correccion. La quincena quedo abierta para ajustar incidencias y extras.';
   return 'Nomina marcada como pagada.';
 }
 
 function validateStatusTransition(current: PayrollRunStatus, target: FinanceRunStatusPayload['status']): void {
   const allowed: Record<PayrollRunStatus, PayrollRunStatus[]> = {
     BORRADOR: [],
-    CALCULADA: ['EN_REVISION'],
-    EN_REVISION: ['APROBADA'],
-    APROBADA: ['PAGADA'],
+    CALCULADA: ['EN_REVISION', 'CANCELADA'],
+    EN_REVISION: ['APROBADA', 'CANCELADA'],
+    APROBADA: ['PAGADA', 'CANCELADA'],
     PAGADA: [],
     CERRADA: [],
     CANCELADA: []
@@ -558,6 +568,130 @@ function validateStatusTransition(current: PayrollRunStatus, target: FinanceRunS
   if (!allowed[current]?.includes(target)) {
     throw new Error(`La nomina no puede pasar de ${current} a ${target}.`);
   }
+}
+
+async function restoreRunInputsForCorrection(
+  client: PoolClient,
+  actor: SessionUser,
+  runId: string
+): Promise<CorrectionRestoreSummary> {
+  const runResult = await client.query<{ cycleId: string; periodLabel: string; calendarConfigId: string | null }>(
+    `
+      SELECT
+        cycle_id AS "cycleId",
+        period_label AS "periodLabel",
+        NULLIF(weights->>'calendarConfigId', '') AS "calendarConfigId"
+      FROM payroll_runs
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [runId]
+  );
+  const run = runResult.rows[0];
+  if (!run) throw new Error('No se encontro la corrida de nomina.');
+
+  let restoredIncidences = 0;
+  if (run.calendarConfigId) {
+    const incidenceResult = await client.query(
+      `
+        INSERT INTO schedule_incidences (
+          schedule_id,
+          calendar_config_id,
+          absences,
+          delays,
+          extra_hours_in_schedule,
+          updated_at,
+          updated_by
+        )
+        SELECT
+          schedule_id,
+          $2::uuid,
+          absences,
+          delays,
+          schedule_extra_hours,
+          now(),
+          $3
+        FROM payroll_schedule_details
+        WHERE payroll_run_id = $1
+          AND schedule_id IS NOT NULL
+          AND (
+            absences > 0
+            OR delays > 0
+            OR schedule_extra_hours > 0
+          )
+        ON CONFLICT (schedule_id, calendar_config_id)
+        DO UPDATE SET
+          absences = EXCLUDED.absences,
+          delays = EXCLUDED.delays,
+          extra_hours_in_schedule = EXCLUDED.extra_hours_in_schedule,
+          updated_at = now(),
+          updated_by = EXCLUDED.updated_by
+      `,
+      [runId, run.calendarConfigId, actor.id]
+    );
+    restoredIncidences = incidenceResult.rowCount || 0;
+  }
+
+  const extraResult = await client.query(
+    `
+      INSERT INTO extra_hours (
+        id,
+        cycle_id,
+        coordination_id,
+        teacher_id,
+        hours,
+        tabulator_amount,
+        reason,
+        activity_date,
+        reference,
+        observations,
+        captured_at,
+        captured_by,
+        updated_at,
+        updated_by
+      )
+      SELECT
+        COALESCE(ped.extra_id, gen_random_uuid()),
+        pr.cycle_id,
+        ped.coordination_id,
+        ped.teacher_id,
+        ped.hours,
+        ped.tabulator_amount,
+        COALESCE(NULLIF(ped.reason_snapshot, ''), 'Extra restaurado'),
+        ped.activity_date,
+        '',
+        CONCAT('Restaurado desde nomina cancelada: ', pr.period_label),
+        now(),
+        $2,
+        now(),
+        $2
+      FROM payroll_extra_details ped
+      JOIN payroll_runs pr ON pr.id = ped.payroll_run_id
+      WHERE ped.payroll_run_id = $1
+        AND ped.teacher_id IS NOT NULL
+        AND ped.coordination_id IS NOT NULL
+        AND ped.hours > 0
+        AND ped.tabulator_amount > 0
+      ON CONFLICT (id)
+      DO UPDATE SET
+        cycle_id = EXCLUDED.cycle_id,
+        coordination_id = EXCLUDED.coordination_id,
+        teacher_id = EXCLUDED.teacher_id,
+        hours = EXCLUDED.hours,
+        tabulator_amount = EXCLUDED.tabulator_amount,
+        reason = EXCLUDED.reason,
+        activity_date = EXCLUDED.activity_date,
+        observations = EXCLUDED.observations,
+        updated_at = now(),
+        updated_by = EXCLUDED.updated_by
+    `,
+    [runId, actor.id]
+  );
+
+  return {
+    incidences: restoredIncidences,
+    extras: extraResult.rowCount || 0
+  };
 }
 
 async function updateFinanceRunStatus(
@@ -575,12 +709,16 @@ async function updateFinanceRunStatus(
   validateStatusTransition(currentStatus, targetStatus);
 
   const auditBefore = { status: currentStatus };
+  const correctionRestore =
+    targetStatus === 'CANCELADA' ? await restoreRunInputsForCorrection(client, actor, runId) : null;
   const extraColumns =
     targetStatus === 'EN_REVISION'
       ? ', reviewed_at = COALESCE(reviewed_at, now()), reviewed_by = COALESCE(reviewed_by, $3)'
       : targetStatus === 'APROBADA'
         ? ', approved_at = COALESCE(approved_at, now()), approved_by = COALESCE(approved_by, $3)'
-        : ', paid_at = COALESCE(paid_at, now()), paid_by = COALESCE(paid_by, $3)';
+        : targetStatus === 'PAGADA'
+          ? ', paid_at = COALESCE(paid_at, now()), paid_by = COALESCE(paid_by, $3)'
+          : '';
 
   await client.query(
     `
@@ -606,14 +744,18 @@ async function updateFinanceRunStatus(
         before_data,
         after_data
       )
-      VALUES ($1, $2, 'PAYROLL_STATUS_UPDATED', 'payroll_run', $3, $4::jsonb, $5::jsonb)
+      VALUES ($1, $2, $6, 'payroll_run', $3, $4::jsonb, $5::jsonb)
     `,
     [
       actor.id,
       actor.email,
       runId,
       JSON.stringify(auditBefore),
-      JSON.stringify({ status: targetStatus })
+      JSON.stringify({
+        status: targetStatus,
+        correctionRestore
+      }),
+      targetStatus === 'CANCELADA' ? 'PAYROLL_CANCELLED_FOR_CORRECTION' : 'PAYROLL_STATUS_UPDATED'
     ]
   );
 }
@@ -917,6 +1059,10 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       const actor = request.user!;
       if (!canManageFinanceWorkflow(actor)) {
         await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para modificar el estado de nomina.' });
+        return;
+      }
+      if (parsedBody.data.status === 'CANCELADA' && !canCancelPayrollForCorrection(actor)) {
+        await reply.code(403).send({ error: 'FORBIDDEN', message: 'Solo Admin puede cancelar una nomina para correccion.' });
         return;
       }
 

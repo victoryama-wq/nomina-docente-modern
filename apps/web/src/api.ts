@@ -1030,7 +1030,7 @@ export async function downloadFinanceExport(kind: 'payments' | 'fiscal' | 'coord
 
 export async function updateFinanceRunStatus(
   runId: string,
-  status: Extract<PayrollRun['status'], 'EN_REVISION' | 'APROBADA' | 'PAGADA'>
+  status: Extract<PayrollRun['status'], 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CANCELADA'>
 ): Promise<{ message: string }> {
   return request(`/reports/finance/runs/${runId}/status`, {
     method: 'PATCH',
