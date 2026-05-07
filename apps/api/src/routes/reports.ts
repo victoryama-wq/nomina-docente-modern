@@ -1,12 +1,13 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
+import PDFDocument from 'pdfkit';
 import { z } from 'zod';
 import { requireAnyPermission } from '../auth.js';
 import { withTransaction } from '../db.js';
 import type { SessionUser } from '../types.js';
 import { listCycles, loadActorCoordination, type CoordinationRow, type CycleRow } from './academic-context.js';
 
-type PayrollRunStatus = 'BORRADOR' | 'CALCULADA' | 'APROBADA' | 'CERRADA' | 'CANCELADA';
+type PayrollRunStatus = 'BORRADOR' | 'CALCULADA' | 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CERRADA' | 'CANCELADA';
 type PaymentStatus = 'LISTO' | 'PENDIENTE';
 type FinanceExportKind = 'payments' | 'fiscal' | 'coordinations';
 
@@ -17,6 +18,14 @@ interface FinanceQuery {
 
 interface FinanceExportParams {
   kind: FinanceExportKind;
+}
+
+interface FinanceRunParams {
+  id: string;
+}
+
+interface FinanceRunStatusPayload {
+  status: Extract<PayrollRunStatus, 'EN_REVISION' | 'APROBADA' | 'PAGADA'>;
 }
 
 interface FinanceSummary {
@@ -43,6 +52,14 @@ interface FinanceRun {
   summary: FinanceSummary;
   calculatedAt: string | null;
   calculatedByEmail: string;
+  reviewedAt: string | null;
+  reviewedByEmail: string;
+  approvedAt: string | null;
+  approvedByEmail: string;
+  paidAt: string | null;
+  paidByEmail: string;
+  statusUpdatedAt: string | null;
+  statusUpdatedByEmail: string;
   createdAt: string;
 }
 
@@ -149,6 +166,14 @@ const exportParamsSchema = z.object({
   kind: z.enum(['payments', 'fiscal', 'coordinations'])
 });
 
+const runParamsSchema = z.object({
+  id: z.string().uuid()
+});
+
+const statusPayloadSchema = z.object({
+  status: z.enum(['EN_REVISION', 'APROBADA', 'PAGADA'])
+});
+
 const emptySummary = (): FinanceSummary => ({
   lines: 0,
   teachers: 0,
@@ -177,6 +202,10 @@ function isSystemAdmin(actor: SessionUser): boolean {
 
 function canViewAllFinance(actor: SessionUser): boolean {
   return isSystemAdmin(actor) || actor.permissions.includes('finance.view');
+}
+
+function canManageFinanceWorkflow(actor: SessionUser): boolean {
+  return isSystemAdmin(actor) || actor.permissions.includes('finance.view') || actor.permissions.includes('payroll.finalize');
 }
 
 function round2(value: number): number {
@@ -265,7 +294,15 @@ async function listFinanceRuns(
         pr.period_label AS "periodLabel",
         pr.status,
         pr.calculated_at AS "calculatedAt",
-        COALESCE(u.email, '') AS "calculatedByEmail",
+        COALESCE(calculated_user.email, '') AS "calculatedByEmail",
+        pr.reviewed_at AS "reviewedAt",
+        COALESCE(reviewed_user.email, '') AS "reviewedByEmail",
+        pr.approved_at AS "approvedAt",
+        COALESCE(approved_user.email, '') AS "approvedByEmail",
+        pr.paid_at AS "paidAt",
+        COALESCE(paid_user.email, '') AS "paidByEmail",
+        pr.status_updated_at AS "statusUpdatedAt",
+        COALESCE(status_user.email, '') AS "statusUpdatedByEmail",
         pr.created_at AS "createdAt",
         count(pl.id)::int AS lines,
         count(DISTINCT pl.teacher_id)::int AS teachers,
@@ -288,10 +325,22 @@ async function listFinanceRuns(
         )::int AS alerts
       FROM payroll_runs pr
       JOIN academic_cycles ac ON ac.id = pr.cycle_id
-      LEFT JOIN app_users u ON u.id = pr.calculated_by
+      LEFT JOIN app_users calculated_user ON calculated_user.id = pr.calculated_by
+      LEFT JOIN app_users reviewed_user ON reviewed_user.id = pr.reviewed_by
+      LEFT JOIN app_users approved_user ON approved_user.id = pr.approved_by
+      LEFT JOIN app_users paid_user ON paid_user.id = pr.paid_by
+      LEFT JOIN app_users status_user ON status_user.id = pr.status_updated_by
       LEFT JOIN payroll_lines pl ON pl.payroll_run_id = pr.id ${visibility}
       WHERE pr.cycle_id = $1
-      GROUP BY pr.id, ac.period_label, ac.quarter_code, u.email
+      GROUP BY
+        pr.id,
+        ac.period_label,
+        ac.quarter_code,
+        calculated_user.email,
+        reviewed_user.email,
+        approved_user.email,
+        paid_user.email,
+        status_user.email
       ORDER BY pr.calculated_at DESC NULLS LAST, pr.created_at DESC
       LIMIT 72
     `,
@@ -306,6 +355,14 @@ async function listFinanceRuns(
     status: row.status,
     calculatedAt: row.calculatedAt,
     calculatedByEmail: row.calculatedByEmail,
+    reviewedAt: row.reviewedAt,
+    reviewedByEmail: row.reviewedByEmail,
+    approvedAt: row.approvedAt,
+    approvedByEmail: row.approvedByEmail,
+    paidAt: row.paidAt,
+    paidByEmail: row.paidByEmail,
+    statusUpdatedAt: row.statusUpdatedAt,
+    statusUpdatedByEmail: row.statusUpdatedByEmail,
     createdAt: row.createdAt,
     summary: {
       lines: Number(row.lines || 0),
@@ -481,6 +538,86 @@ async function listFinanceExtraDetails(
   return result.rows;
 }
 
+function nextStatusMessage(status: FinanceRunStatusPayload['status']): string {
+  if (status === 'EN_REVISION') return 'Nomina enviada a revision financiera.';
+  if (status === 'APROBADA') return 'Nomina aprobada para pago.';
+  return 'Nomina marcada como pagada.';
+}
+
+function validateStatusTransition(current: PayrollRunStatus, target: FinanceRunStatusPayload['status']): void {
+  const allowed: Record<PayrollRunStatus, PayrollRunStatus[]> = {
+    BORRADOR: [],
+    CALCULADA: ['EN_REVISION'],
+    EN_REVISION: ['APROBADA'],
+    APROBADA: ['PAGADA'],
+    PAGADA: [],
+    CERRADA: [],
+    CANCELADA: []
+  };
+
+  if (!allowed[current]?.includes(target)) {
+    throw new Error(`La nomina no puede pasar de ${current} a ${target}.`);
+  }
+}
+
+async function updateFinanceRunStatus(
+  client: PoolClient,
+  actor: SessionUser,
+  runId: string,
+  targetStatus: FinanceRunStatusPayload['status']
+): Promise<void> {
+  const current = await client.query<{ status: PayrollRunStatus }>(
+    'SELECT status FROM payroll_runs WHERE id = $1 FOR UPDATE',
+    [runId]
+  );
+  const currentStatus = current.rows[0]?.status;
+  if (!currentStatus) throw new Error('No se encontro la corrida de nomina.');
+  validateStatusTransition(currentStatus, targetStatus);
+
+  const auditBefore = { status: currentStatus };
+  const extraColumns =
+    targetStatus === 'EN_REVISION'
+      ? ', reviewed_at = COALESCE(reviewed_at, now()), reviewed_by = COALESCE(reviewed_by, $3)'
+      : targetStatus === 'APROBADA'
+        ? ', approved_at = COALESCE(approved_at, now()), approved_by = COALESCE(approved_by, $3)'
+        : ', paid_at = COALESCE(paid_at, now()), paid_by = COALESCE(paid_by, $3)';
+
+  await client.query(
+    `
+      UPDATE payroll_runs
+      SET
+        status = $2,
+        status_updated_at = now(),
+        status_updated_by = $3
+        ${extraColumns}
+      WHERE id = $1
+    `,
+    [runId, targetStatus, actor.id]
+  );
+
+  await client.query(
+    `
+      INSERT INTO audit_log (
+        actor_user_id,
+        actor_email,
+        action,
+        entity_type,
+        entity_id,
+        before_data,
+        after_data
+      )
+      VALUES ($1, $2, 'PAYROLL_STATUS_UPDATED', 'payroll_run', $3, $4::jsonb, $5::jsonb)
+    `,
+    [
+      actor.id,
+      actor.email,
+      runId,
+      JSON.stringify(auditBefore),
+      JSON.stringify({ status: targetStatus })
+    ]
+  );
+}
+
 function summarizeLines(lines: FinanceLine[]): FinanceSummary {
   return {
     lines: lines.length,
@@ -654,6 +791,99 @@ function coordinationRows(rows: CoordinationSummary[]): unknown[][] {
   ]);
 }
 
+function moneyText(value: number): string {
+  return Number(value || 0).toLocaleString('es-MX', {
+    style: 'currency',
+    currency: 'MXN'
+  });
+}
+
+function receiptFileName(run: FinanceRun): string {
+  const safePeriod = run.periodLabel
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `comprobantes-efectivo-${safePeriod || run.id}.pdf`;
+}
+
+function drawReceipt(doc: PDFKit.PDFDocument, run: FinanceRun, line: FinanceLine, y: number): void {
+  const left = 42;
+  const width = 528;
+  const top = y + 28;
+  const height = 326;
+
+  doc.save();
+  doc.roundedRect(left, top, width, height, 8).strokeColor('#CBD5E1').lineWidth(1).stroke();
+  doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(14).text('COMPROBANTE DE PAGO DOCENTE', left + 18, top + 18);
+  doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(8).text('NOMINA DOCENTE', left + 18, top + 36);
+  doc
+    .fillColor('#0F766E')
+    .font('Helvetica-Bold')
+    .fontSize(10)
+    .text('Pago en efectivo', left + width - 150, top + 20, { width: 130, align: 'right' });
+
+  doc.moveTo(left + 18, top + 58).lineTo(left + width - 18, top + 58).strokeColor('#E2E8F0').stroke();
+
+  const labelX = left + 18;
+  const valueX = left + 150;
+  let cursor = top + 78;
+  const row = (label: string, value: string) => {
+    doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(9).text(label, labelX, cursor, { width: 112 });
+    doc.fillColor('#0F172A').font('Helvetica').fontSize(11).text(value || '-', valueX, cursor - 1, { width: 390 });
+    cursor += 28;
+  };
+
+  row('Quincena', run.periodLabel);
+  row('Docente', line.teacherName);
+  row('Coordinacion', line.coordinationName);
+  row('Monto pagado', moneyText(line.totalAmount));
+  row('Fecha de emision', new Date().toLocaleDateString('es-MX'));
+
+  cursor += 14;
+  doc.fillColor('#475569').font('Helvetica').fontSize(9).text(
+    'Declaro haber recibido el importe indicado por concepto de pago docente correspondiente a la quincena senalada.',
+    labelX,
+    cursor,
+    { width: width - 36, align: 'left' }
+  );
+
+  const signatureY = top + height - 54;
+  doc.moveTo(left + 120, signatureY).lineTo(left + width - 120, signatureY).strokeColor('#0F172A').stroke();
+  doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(9).text('Firma de conformidad', left, signatureY + 8, {
+    width,
+    align: 'center'
+  });
+
+  doc.restore();
+}
+
+function buildCashReceiptsPdf(run: FinanceRun, lines: FinanceLine[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'LETTER', margin: 0, autoFirstPage: true });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    lines.forEach((line, index) => {
+      if (index > 0 && index % 2 === 0) doc.addPage();
+      const slot = index % 2;
+      if (slot === 1) {
+        doc.save();
+        doc.dash(4, { space: 4 });
+        doc.moveTo(36, 396).lineTo(576, 396).strokeColor('#CBD5E1').stroke();
+        doc.undash();
+        doc.restore();
+      }
+      drawReceipt(doc, run, line, slot === 0 ? 0 : 396);
+    });
+
+    doc.end();
+  });
+}
+
 export async function registerReportRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/reports/finance/context',
@@ -666,6 +896,87 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       }
 
       return buildFinanceContext(request.user!, parsed.data);
+    }
+  );
+
+  app.patch(
+    '/reports/finance/runs/:id/status',
+    { preHandler: requireAnyPermission(['finance.view', 'payroll.finalize']) },
+    async (request, reply) => {
+      const parsedParams = runParamsSchema.safeParse(request.params as FinanceRunParams);
+      const parsedBody = statusPayloadSchema.safeParse(request.body as FinanceRunStatusPayload);
+      if (!parsedParams.success) {
+        sendValidation(reply, parsedParams.error);
+        return;
+      }
+      if (!parsedBody.success) {
+        sendValidation(reply, parsedBody.error);
+        return;
+      }
+
+      const actor = request.user!;
+      if (!canManageFinanceWorkflow(actor)) {
+        await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para modificar el estado de nomina.' });
+        return;
+      }
+
+      try {
+        await withTransaction((client) => updateFinanceRunStatus(client, actor, parsedParams.data.id, parsedBody.data.status));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'No fue posible actualizar el estado de nomina.';
+        const statusCode = message.includes('No se encontro') ? 404 : 409;
+        await reply.code(statusCode).send({ error: 'PAYROLL_STATUS_ERROR', message });
+        return;
+      }
+
+      return {
+        message: nextStatusMessage(parsedBody.data.status)
+      };
+    }
+  );
+
+  app.get(
+    '/reports/finance/runs/:id/cash-receipts',
+    { preHandler: requireAnyPermission(['reports.view', 'finance.view']) },
+    async (request, reply) => {
+      const parsedParams = runParamsSchema.safeParse(request.params as FinanceRunParams);
+      if (!parsedParams.success) {
+        sendValidation(reply, parsedParams.error);
+        return;
+      }
+
+      const actor = request.user!;
+      const result = await withTransaction(async (client) => {
+        const runHeader = await loadReportRunHeader(client, parsedParams.data.id);
+        if (!runHeader) return null;
+        const actorCoordination = await loadActorCoordination(client, actor, false);
+        const runs = await listFinanceRuns(client, runHeader.cycleId, actor, actorCoordination);
+        const run = runs.find((item) => item.id === parsedParams.data.id) || null;
+        if (!run) return null;
+        const lines = await listFinanceLines(client, run.id, actor, actorCoordination);
+        return {
+          run,
+          cashLines: lines.filter((line) => line.paymentType === 'E').sort((left, right) =>
+            left.teacherName.localeCompare(right.teacherName, 'es')
+          )
+        };
+      });
+
+      if (!result?.run) {
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+        return;
+      }
+
+      if (!result.cashLines.length) {
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No hay docentes con pago en efectivo en esta nomina.' });
+        return;
+      }
+
+      const pdf = await buildCashReceiptsPdf(result.run, result.cashLines);
+      await reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', `attachment; filename="${receiptFileName(result.run)}"`)
+        .send(pdf);
     }
   );
 

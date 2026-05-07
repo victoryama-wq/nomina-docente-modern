@@ -446,7 +446,7 @@ export interface PayrollRun {
   cycleId: string;
   cycleLabel: string;
   periodLabel: string;
-  status: 'BORRADOR' | 'CALCULADA' | 'APROBADA' | 'CERRADA' | 'CANCELADA';
+  status: 'BORRADOR' | 'CALCULADA' | 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CERRADA' | 'CANCELADA';
   weights: Record<string, unknown>;
   summary: PayrollSummary;
   calculatedAt: string | null;
@@ -543,6 +543,14 @@ export interface FinanceRun {
   summary: FinanceSummary;
   calculatedAt: string | null;
   calculatedByEmail: string;
+  reviewedAt: string | null;
+  reviewedByEmail: string;
+  approvedAt: string | null;
+  approvedByEmail: string;
+  paidAt: string | null;
+  paidByEmail: string;
+  statusUpdatedAt: string | null;
+  statusUpdatedByEmail: string;
   createdAt: string;
 }
 
@@ -1010,6 +1018,46 @@ export async function downloadFinanceExport(kind: 'payments' | 'fiscal' | 'coord
   const disposition = response.headers.get('Content-Disposition') || '';
   const match = /filename="([^"]+)"/.exec(disposition);
   const fileName = match?.[1] || `finanzas-${kind}.csv`;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+export async function updateFinanceRunStatus(
+  runId: string,
+  status: Extract<PayrollRun['status'], 'EN_REVISION' | 'APROBADA' | 'PAGADA'>
+): Promise<{ message: string }> {
+  return request(`/reports/finance/runs/${runId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function downloadCashReceipts(runId: string): Promise<void> {
+  const token = await getIdToken();
+  const response = await fetch(`${apiBaseUrl}/reports/finance/runs/${runId}/cash-receipts`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    let body: ApiErrorBody = {};
+    try {
+      body = (await response.json()) as ApiErrorBody;
+    } catch {
+      body = {};
+    }
+    throw new Error(body.message || 'No fue posible generar los comprobantes de efectivo.');
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const fileName = match?.[1] || 'comprobantes-efectivo.pdf';
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

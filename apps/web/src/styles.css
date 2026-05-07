@@ -1384,6 +1384,61 @@ td span {
   gap: 12px;
 }
 
+.finance-status-timeline {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.finance-status-timeline article {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+}
+
+.finance-status-timeline article.done {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.finance-status-timeline article.cash-summary {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.finance-status-timeline strong,
+.finance-status-timeline span,
+.finance-status-timeline small {
+  display: block;
+  min-width: 0;
+  margin-top: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finance-status-timeline strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.finance-status-timeline span {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.finance-status-timeline small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .finance-payment-card {
   min-width: 0;
   display: grid;
@@ -2428,6 +2483,7 @@ td span {
   .metric-grid,
   .main-grid,
   .module-grid,
+  .finance-status-timeline,
   .finance-payment-grid,
   .finance-signal-grid,
   .finance-detail-grid,
@@ -2485,6 +2541,7 @@ td span {
     .payroll-detail-metrics,
     .run-list,
     .finance-history-grid,
+    .finance-status-timeline,
     .finance-payment-grid,
     .finance-signal-grid,
     .finance-detail-grid,

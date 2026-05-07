@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Download,
   Eye,
+  FileText,
   FileSpreadsheet,
   History,
   RefreshCw,
@@ -19,18 +20,22 @@ import {
 import { useAuthStore } from '../stores/auth';
 import {
   downloadFinanceExport,
+  downloadCashReceipts,
   fetchFinanceContext,
+  updateFinanceRunStatus,
   type CycleOption,
   type FinanceContext,
   type FinanceLine,
   type FinanceRun
 } from '../api';
+import ConfirmModal from '../components/modals/ConfirmModal.vue';
 
 type FinanceTab = 'PAGOS' | 'COORDINACIONES' | 'FISCALES' | 'HISTORICO';
 type PaymentFilter = 'TODOS' | 'LISTO' | 'PENDIENTE';
 type PaymentTypeFilter = 'TODOS' | 'E' | '1' | '2';
 type ExportKind = 'payments' | 'fiscal' | 'coordinations';
 type CoordinationRow = FinanceContext['coordinationSummary'][number];
+type WorkflowTargetStatus = 'EN_REVISION' | 'APROBADA' | 'PAGADA';
 
 const authStore = useAuthStore();
 
@@ -50,8 +55,11 @@ const paymentFilter = ref<PaymentFilter>('TODOS');
 const paymentTypeFilter = ref<PaymentTypeFilter>('TODOS');
 const pageBusy = ref(false);
 const exporting = ref<ExportKind | ''>('');
+const exportingReceipts = ref(false);
+const updatingStatus = ref(false);
 const selectedLineId = ref('');
 const selectedCoordinationId = ref('');
+const pendingStatus = ref<WorkflowTargetStatus | null>(null);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
 const zeroSummary = () => ({
@@ -99,6 +107,43 @@ const selectedCoordinationExtraDetails = computed(() =>
   selectedCoordination.value
     ? extraDetails.value.filter((detail) => detail.coordinationId === selectedCoordination.value?.coordinationId)
     : []
+);
+
+const cashLines = computed(() => lines.value.filter((line) => line.paymentType === 'E'));
+
+const cashAmount = computed(() => cashLines.value.reduce((sum, line) => sum + Number(line.totalAmount || 0), 0));
+
+const nextWorkflowAction = computed(() => {
+  if (!selectedRun.value) return null;
+  if (selectedRun.value.status === 'CALCULADA') {
+    return {
+      status: 'EN_REVISION' as const,
+      label: 'Enviar a revision',
+      title: 'Enviar nomina a revision',
+      message: 'La nomina quedara marcada para revision financiera. Coordinaciones y Finanzas podran usar los reportes guardados para validar importes antes de aprobar.'
+    };
+  }
+  if (selectedRun.value.status === 'EN_REVISION') {
+    return {
+      status: 'APROBADA' as const,
+      label: 'Aprobar nomina',
+      title: 'Aprobar nomina para pago',
+      message: 'La nomina quedara aprobada para proceder al pago. Verifica que los pendientes fiscales y alertas hayan sido revisados.'
+    };
+  }
+  if (selectedRun.value.status === 'APROBADA') {
+    return {
+      status: 'PAGADA' as const,
+      label: 'Marcar pagada',
+      title: 'Marcar nomina como pagada',
+      message: 'La nomina quedara registrada como pagada. Esta accion debe hacerse cuando Finanzas confirme que los pagos fueron ejecutados.'
+    };
+  }
+  return null;
+});
+
+const pendingWorkflowAction = computed(() =>
+  pendingStatus.value && nextWorkflowAction.value?.status === pendingStatus.value ? nextWorkflowAction.value : null
 );
 
 const readyAmount = computed(() =>
@@ -234,9 +279,17 @@ function paymentTypeLabel(paymentType: string) {
 }
 
 function statusClass(run: FinanceRun) {
-  if (run.status === 'CERRADA' || run.status === 'APROBADA') return 'ok';
+  if (run.status === 'PAGADA' || run.status === 'CERRADA') return 'ok';
+  if (run.status === 'APROBADA') return 'neutral';
+  if (run.status === 'EN_REVISION') return 'warning';
   if (run.status === 'CANCELADA') return 'danger';
   return 'neutral';
+}
+
+function statusLabel(status: FinanceRun['status']) {
+  if (status === 'EN_REVISION') return 'EN REVISION';
+  if (status === 'PAGADA') return 'PAGADA';
+  return status;
 }
 
 function setNotice(type: 'ok' | 'error', text: string) {
@@ -310,6 +363,33 @@ function closeCoordinationDetail() {
   selectedCoordinationId.value = '';
 }
 
+function openStatusConfirm() {
+  if (!nextWorkflowAction.value) return;
+  pendingStatus.value = nextWorkflowAction.value.status;
+  notice.value = null;
+}
+
+function closeStatusConfirm() {
+  if (updatingStatus.value) return;
+  pendingStatus.value = null;
+}
+
+async function confirmStatusChange() {
+  if (!selectedRun.value || !pendingStatus.value) return;
+  updatingStatus.value = true;
+  notice.value = null;
+  try {
+    const response = await updateFinanceRunStatus(selectedRun.value.id, pendingStatus.value);
+    pendingStatus.value = null;
+    setNotice('ok', response.message);
+    await loadFinance(selectedCycleId.value, selectedRunId.value);
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible actualizar el estado de nomina.');
+  } finally {
+    updatingStatus.value = false;
+  }
+}
+
 async function exportReport(kind: ExportKind) {
   if (!selectedRun.value) return;
   exporting.value = kind;
@@ -321,6 +401,20 @@ async function exportReport(kind: ExportKind) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar el reporte.');
   } finally {
     exporting.value = '';
+  }
+}
+
+async function exportCashReceipts() {
+  if (!selectedRun.value) return;
+  exportingReceipts.value = true;
+  notice.value = null;
+  try {
+    await downloadCashReceipts(selectedRun.value.id);
+    setNotice('ok', 'Comprobantes de efectivo generados.');
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible generar comprobantes de efectivo.');
+  } finally {
+    exportingReceipts.value = false;
   }
 }
 
@@ -388,9 +482,19 @@ onMounted(() => {
           <h3>{{ selectedRun?.periodLabel || 'Sin nomina guardada' }}</h3>
           <span>{{ selectedRun?.cycleLabel || activeCycle?.periodLabel || 'Ciclo operativo' }}</span>
         </div>
-        <span v-if="selectedRun" class="badge" :class="statusClass(selectedRun)">{{ selectedRun.status }}</span>
+        <span v-if="selectedRun" class="badge" :class="statusClass(selectedRun)">{{ statusLabel(selectedRun.status) }}</span>
       </div>
       <div class="export-actions">
+        <button
+          v-if="nextWorkflowAction"
+          class="primary-inline"
+          type="button"
+          :disabled="updatingStatus"
+          @click="openStatusConfirm"
+        >
+          <CheckCircle2 :size="16" />
+          {{ nextWorkflowAction.label }}
+        </button>
         <button class="secondary-action" type="button" :disabled="!selectedRun || exporting === 'payments'" @click="exportReport('payments')">
           <Download :size="16" />
           Pagos CSV
@@ -408,7 +512,44 @@ onMounted(() => {
           <Download :size="16" />
           Coordinaciones CSV
         </button>
+        <button
+          class="secondary-action"
+          type="button"
+          :disabled="!selectedRun || !cashLines.length || exportingReceipts"
+          @click="exportCashReceipts"
+        >
+          <FileText :size="16" />
+          Comprobantes efectivo
+        </button>
       </div>
+    </section>
+
+    <section v-if="selectedRun" class="finance-status-timeline">
+      <article :class="{ done: !!selectedRun.calculatedAt }">
+        <strong>Calculada</strong>
+        <span>{{ formatDateTime(selectedRun.calculatedAt || selectedRun.createdAt) }}</span>
+        <small>{{ selectedRun.calculatedByEmail || 'Sistema' }}</small>
+      </article>
+      <article :class="{ done: !!selectedRun.reviewedAt || ['EN_REVISION', 'APROBADA', 'PAGADA', 'CERRADA'].includes(selectedRun.status) }">
+        <strong>En revision</strong>
+        <span>{{ formatDateTime(selectedRun.reviewedAt) }}</span>
+        <small>{{ selectedRun.reviewedByEmail || 'Pendiente' }}</small>
+      </article>
+      <article :class="{ done: !!selectedRun.approvedAt || ['APROBADA', 'PAGADA', 'CERRADA'].includes(selectedRun.status) }">
+        <strong>Aprobada</strong>
+        <span>{{ formatDateTime(selectedRun.approvedAt) }}</span>
+        <small>{{ selectedRun.approvedByEmail || 'Pendiente' }}</small>
+      </article>
+      <article :class="{ done: !!selectedRun.paidAt || selectedRun.status === 'PAGADA' }">
+        <strong>Pagada</strong>
+        <span>{{ formatDateTime(selectedRun.paidAt) }}</span>
+        <small>{{ selectedRun.paidByEmail || 'Pendiente' }}</small>
+      </article>
+      <article class="cash-summary">
+        <strong>Efectivo</strong>
+        <span>{{ moneyLabel(cashAmount) }}</span>
+        <small>{{ cashLines.length }} comprobante{{ cashLines.length === 1 ? '' : 's' }}</small>
+      </article>
     </section>
 
     <section class="finance-payment-grid">
@@ -977,6 +1118,27 @@ onMounted(() => {
         </div>
       </section>
     </div>
+
+    <ConfirmModal
+      :show="!!pendingWorkflowAction"
+      eyebrow="Flujo financiero"
+      :title="pendingWorkflowAction?.title || 'Actualizar estado'"
+      :subject="selectedRun?.periodLabel"
+      :message="pendingWorkflowAction?.message || 'Confirma el cambio de estado de la nomina.'"
+      :details="[
+        `Estado actual: ${selectedRun ? statusLabel(selectedRun.status) : '-'}`,
+        `Total: ${moneyLabel(summary.totalAmount)}`,
+        `Pendientes fiscales: ${summary.fiscalPending}`,
+        `Pagos en efectivo: ${cashLines.length} / ${moneyLabel(cashAmount)}`
+      ]"
+      :confirm-label="pendingWorkflowAction?.label || 'Confirmar'"
+      cancel-label="Cancelar"
+      :tone="pendingStatus === 'PAGADA' ? 'warning' : 'primary'"
+      :icon="pendingStatus === 'PAGADA' ? 'save' : 'info'"
+      :loading="updatingStatus"
+      @close="closeStatusConfirm"
+      @confirm="confirmStatusChange"
+    />
 
     <section class="finance-signal-grid">
       <article class="data-panel">
