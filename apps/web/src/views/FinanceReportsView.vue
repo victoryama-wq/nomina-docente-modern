@@ -5,7 +5,6 @@ import {
   Banknote,
   Building2,
   CheckCircle2,
-  CircleDollarSign,
   Download,
   Eye,
   FileText,
@@ -36,6 +35,7 @@ type PaymentTypeFilter = 'TODOS' | 'E' | '1' | '2';
 type ExportKind = 'payments' | 'fiscal' | 'coordinations';
 type CoordinationRow = FinanceContext['coordinationSummary'][number];
 type WorkflowTargetStatus = 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CANCELADA';
+type RunStatusFilter = 'TODOS' | FinanceRun['status'];
 
 interface WorkflowAction {
   status: WorkflowTargetStatus;
@@ -60,6 +60,7 @@ const searchText = ref('');
 const activeTab = ref<FinanceTab>('PAGOS');
 const paymentFilter = ref<PaymentFilter>('TODOS');
 const paymentTypeFilter = ref<PaymentTypeFilter>('TODOS');
+const runStatusFilter = ref<RunStatusFilter>('TODOS');
 const pageBusy = ref(false);
 const exporting = ref<ExportKind | ''>('');
 const exportingReceipts = ref(false);
@@ -204,6 +205,12 @@ const pendingAmount = computed(() =>
     .reduce((sum, line) => sum + Number(line.totalAmount || 0), 0)
 );
 
+const searchPlaceholder = computed(() =>
+  activeTab.value === 'HISTORICO'
+    ? 'Buscar quincena, estado o usuario'
+    : 'Buscar docente, coordinacion, RFC o pendiente'
+);
+
 const paymentTypeSummary = computed(() => {
   const groups: Array<{
     code: Exclude<PaymentTypeFilter, 'TODOS'>;
@@ -278,6 +285,46 @@ const filteredFiscalLines = computed(() => {
   });
 });
 
+const runStatusOptions = computed(() => {
+  const preferred: FinanceRun['status'][] = ['CALCULADA', 'EN_REVISION', 'APROBADA', 'PAGADA', 'CANCELADA', 'CERRADA'];
+  const present = new Set(runs.value.map((run) => run.status));
+  return preferred.filter((status) => present.has(status));
+});
+
+const filteredRuns = computed(() => {
+  const text = searchText.value.toLowerCase().trim();
+  return runs.value.filter((run) => {
+    const matchesStatus = runStatusFilter.value === 'TODOS' || run.status === runStatusFilter.value;
+    const haystack = [
+      run.periodLabel,
+      run.cycleLabel,
+      run.status,
+      statusLabel(run.status),
+      run.calculatedByEmail,
+      run.reviewedByEmail,
+      run.approvedByEmail,
+      run.paidByEmail,
+      run.statusUpdatedByEmail
+    ]
+      .join(' ')
+      .toLowerCase();
+    return matchesStatus && (!text || haystack.includes(text));
+  });
+});
+
+const historicalSummary = computed(() => {
+  const visibleRuns = filteredRuns.value;
+  const activeRuns = visibleRuns.filter((run) => run.status !== 'CANCELADA');
+  return {
+    totalRuns: visibleRuns.length,
+    activeRuns: activeRuns.length,
+    cancelledRuns: visibleRuns.filter((run) => run.status === 'CANCELADA').length,
+    paidRuns: visibleRuns.filter((run) => run.status === 'PAGADA').length,
+    totalAmount: activeRuns.reduce((sum, run) => sum + Number(run.summary.totalAmount || 0), 0),
+    teachers: activeRuns.reduce((sum, run) => sum + Number(run.summary.teachers || 0), 0)
+  };
+});
+
 function moneyLabel(value: number | string | null | undefined) {
   return (Number(value) || 0).toLocaleString('es-MX', {
     style: 'currency',
@@ -338,6 +385,22 @@ function statusLabel(status: FinanceRun['status']) {
   return status;
 }
 
+function runTraceLabel(run: FinanceRun) {
+  if (run.status === 'PAGADA') return `Pagada ${formatDateTime(run.paidAt)}`;
+  if (run.status === 'APROBADA') return `Aprobada ${formatDateTime(run.approvedAt)}`;
+  if (run.status === 'EN_REVISION') return `En revision ${formatDateTime(run.reviewedAt)}`;
+  if (run.status === 'CANCELADA') return `Cancelada ${formatDateTime(run.statusUpdatedAt)}`;
+  return `Calculada ${formatDateTime(run.calculatedAt || run.createdAt)}`;
+}
+
+function runTraceUser(run: FinanceRun) {
+  if (run.status === 'PAGADA') return run.paidByEmail || run.statusUpdatedByEmail || 'Sistema';
+  if (run.status === 'APROBADA') return run.approvedByEmail || run.statusUpdatedByEmail || 'Sistema';
+  if (run.status === 'EN_REVISION') return run.reviewedByEmail || run.statusUpdatedByEmail || 'Sistema';
+  if (run.status === 'CANCELADA') return run.statusUpdatedByEmail || 'Sistema';
+  return run.calculatedByEmail || 'Sistema';
+}
+
 function setNotice(type: 'ok' | 'error', text: string) {
   notice.value = { type, text };
   window.setTimeout(() => {
@@ -386,6 +449,12 @@ function loadSelectedCycle() {
 
 function loadSelectedRun() {
   return loadFinance(selectedCycleId.value, selectedRunId.value);
+}
+
+function selectHistoricalRun(run: FinanceRun, tab: FinanceTab = 'PAGOS') {
+  selectedRunId.value = run.id;
+  activeTab.value = tab;
+  return loadSelectedRun();
 }
 
 function selectPaymentTypeFilter(value: PaymentTypeFilter) {
@@ -636,19 +705,34 @@ onMounted(() => {
         <div class="filters-row finance">
           <label class="search-box">
             <Search :size="17" />
-            <input v-model="searchText" placeholder="Buscar docente, coordinacion, RFC o pendiente" />
+            <input v-model="searchText" :placeholder="searchPlaceholder" />
           </label>
-          <select v-model="paymentFilter">
+          <select v-if="activeTab === 'HISTORICO'" v-model="runStatusFilter">
+            <option value="TODOS">Todos los estados</option>
+            <option v-for="status in runStatusOptions" :key="status" :value="status">
+              {{ statusLabel(status) }}
+            </option>
+          </select>
+          <select v-else v-model="paymentFilter">
             <option value="TODOS">Todos</option>
             <option value="LISTO">Listos</option>
             <option value="PENDIENTE">Pendientes</option>
           </select>
-          <select v-model="paymentTypeFilter">
+          <select v-if="activeTab !== 'HISTORICO'" v-model="paymentTypeFilter">
             <option value="TODOS">Todos los pagos</option>
             <option value="1">Santander</option>
             <option value="2">Banorte</option>
             <option value="E">Efectivo</option>
           </select>
+          <button
+            v-else
+            class="secondary-action"
+            type="button"
+            @click="searchText = ''; runStatusFilter = 'TODOS'"
+          >
+            <RefreshCw :size="16" />
+            Limpiar
+          </button>
           <div class="segmented-control" aria-label="Vista financiera">
             <button type="button" :class="{ active: activeTab === 'PAGOS' }" @click="activeTab = 'PAGOS'">
               Pagos
@@ -809,27 +893,75 @@ onMounted(() => {
           </table>
         </div>
 
-        <div v-else class="finance-history-grid">
-          <button
-            v-for="run in runs"
-            :key="run.id"
-            class="finance-run-card"
-            :class="{ active: run.id === selectedRunId }"
-            type="button"
-            @click="selectedRunId = run.id; loadSelectedRun()"
-          >
-            <div>
-              <p class="eyebrow">{{ run.status }}</p>
-              <strong>{{ run.periodLabel }}</strong>
-              <span>{{ formatDateTime(run.calculatedAt || run.createdAt) }} / {{ run.calculatedByEmail || 'Sin usuario' }}</span>
-            </div>
-            <div class="finance-run-card-total">
-              <CircleDollarSign :size="18" />
-              <b>{{ moneyLabel(run.summary.totalAmount) }}</b>
-              <small>{{ run.summary.teachers }} docentes</small>
-            </div>
-          </button>
-          <div v-if="!runs.length" class="empty-cell">No hay nominas guardadas en el ciclo seleccionado.</div>
+        <div v-else class="finance-history-view">
+          <div class="finance-history-summary">
+            <article>
+              <span>Corridas visibles</span>
+              <strong>{{ historicalSummary.totalRuns }}</strong>
+              <small>{{ historicalSummary.activeRuns }} vigentes / {{ historicalSummary.cancelledRuns }} canceladas</small>
+            </article>
+            <article>
+              <span>Total vigente</span>
+              <strong>{{ moneyLabel(historicalSummary.totalAmount) }}</strong>
+              <small>No incluye corridas canceladas</small>
+            </article>
+            <article>
+              <span>Pagadas</span>
+              <strong>{{ historicalSummary.paidRuns }}</strong>
+              <small>{{ historicalSummary.teachers }} docentes acumulados</small>
+            </article>
+          </div>
+
+          <div class="table-shell">
+            <table class="finance-history-table">
+              <thead>
+                <tr>
+                  <th>Quincena</th>
+                  <th>Estado</th>
+                  <th>Total</th>
+                  <th>Alcance</th>
+                  <th>Trazabilidad</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="!filteredRuns.length">
+                  <td colspan="6" class="empty-cell">No hay nominas con el filtro actual.</td>
+                </tr>
+                <tr v-for="run in filteredRuns" :key="run.id" :class="{ 'active-row': run.id === selectedRunId }">
+                  <td>
+                    <strong>{{ run.periodLabel }}</strong>
+                    <span>{{ run.cycleLabel }}</span>
+                    <small>Guardada {{ formatDateTime(run.calculatedAt || run.createdAt) }}</small>
+                  </td>
+                  <td>
+                    <span class="badge" :class="statusClass(run)">{{ statusLabel(run.status) }}</span>
+                    <small v-if="run.statusUpdatedAt">Movida {{ formatDateTime(run.statusUpdatedAt) }}</small>
+                  </td>
+                  <td>
+                    <strong>{{ moneyLabel(run.summary.totalAmount) }}</strong>
+                    <span>Base {{ moneyLabel(run.summary.grossBaseAmount) }}</span>
+                    <small>Extras {{ moneyLabel(run.summary.totalExtraAmount) }}</small>
+                  </td>
+                  <td>
+                    <strong>{{ run.summary.teachers }} docentes</strong>
+                    <span>{{ run.summary.coordinations }} coordinaciones</span>
+                    <small>{{ run.summary.lines }} lineas / {{ run.summary.alerts }} alertas</small>
+                  </td>
+                  <td>
+                    <strong>{{ runTraceLabel(run) }}</strong>
+                    <span>{{ runTraceUser(run) }}</span>
+                    <small>Calculada por {{ run.calculatedByEmail || 'Sistema' }}</small>
+                  </td>
+                  <td class="row-actions">
+                    <button class="icon-button" type="button" title="Ver pagos" @click="selectHistoricalRun(run, 'PAGOS')">
+                      <Eye :size="16" />
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>

@@ -1537,63 +1537,82 @@ td span {
   table-layout: fixed;
 }
 
-.finance-history-grid {
+.finance-history-view {
+  display: grid;
+  gap: 12px;
+}
+
+.finance-history-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-.finance-run-card {
+.finance-history-summary article {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
+  gap: 4px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
-  background: #ffffff;
-  color: #172033;
-  padding: 14px;
-  text-align: left;
-  cursor: pointer;
+  background: #f8fafc;
+  padding: 12px;
 }
 
-.finance-run-card:hover,
-.finance-run-card.active {
-  border-color: #0f766e;
-  background: #f0fdfa;
-}
-
-.finance-run-card strong,
-.finance-run-card span,
-.finance-run-card b,
-.finance-run-card small {
+.finance-history-summary span,
+.finance-history-summary strong,
+.finance-history-summary small {
   display: block;
-}
-
-.finance-run-card strong {
+  min-width: 0;
   overflow: hidden;
-  color: #0f172a;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.finance-run-card span,
-.finance-run-card small {
+.finance-history-summary span {
   color: #64748b;
   font-size: 12px;
+  font-weight: 850;
 }
 
-.finance-run-card-total {
-  display: grid;
-  justify-items: end;
-  gap: 2px;
-  color: #0f766e;
-}
-
-.finance-run-card-total b {
+.finance-history-summary strong {
   color: #0f172a;
-  font-size: 17px;
+  font-size: 22px;
+}
+
+.finance-history-summary small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.finance-history-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.finance-history-table th:nth-child(1) {
+  width: 21%;
+}
+
+.finance-history-table th:nth-child(2) {
+  width: 14%;
+}
+
+.finance-history-table th:nth-child(3),
+.finance-history-table th:nth-child(4) {
+  width: 16%;
+}
+
+.finance-history-table th:nth-child(5) {
+  width: 25%;
+}
+
+.finance-history-table th:nth-child(6) {
+  width: 72px;
+}
+
+.finance-history-table tr.active-row {
+  background: #f0fdfa;
 }
 
 .finance-signal-grid {
@@ -2503,7 +2522,7 @@ td span {
 
   .payroll-control-grid,
   .run-list,
-  .finance-history-grid {
+  .finance-history-summary {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -2540,7 +2559,7 @@ td span {
     .payroll-control-grid,
     .payroll-detail-metrics,
     .run-list,
-    .finance-history-grid,
+    .finance-history-summary,
     .finance-status-timeline,
     .finance-payment-grid,
     .finance-signal-grid,
