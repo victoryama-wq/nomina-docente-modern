@@ -1627,6 +1627,11 @@ td span {
   gap: 12px;
 }
 
+.finance-detail-breakdown {
+  display: grid;
+  gap: 12px;
+}
+
 .finance-detail-section {
   min-width: 0;
   border: 1px solid #dbe3ef;
@@ -1669,6 +1674,71 @@ td span {
   margin: 0;
   color: #64748b;
   font-weight: 800;
+}
+
+.finance-breakdown-table {
+  min-width: 860px;
+  table-layout: fixed;
+}
+
+.finance-breakdown-table th:nth-child(1) {
+  width: 30%;
+}
+
+.finance-breakdown-table th:nth-child(2),
+.finance-breakdown-table th:nth-child(3),
+.finance-breakdown-table th:nth-child(4) {
+  width: 23.33%;
+}
+
+.finance-breakdown-table.extras th:nth-child(1) {
+  width: 18%;
+}
+
+.finance-breakdown-table.extras th:nth-child(2) {
+  width: 42%;
+}
+
+.finance-breakdown-table.extras th:nth-child(3),
+.finance-breakdown-table.extras th:nth-child(4) {
+  width: 20%;
+}
+
+.finance-breakdown-table.coordination-lines {
+  min-width: 980px;
+}
+
+.finance-breakdown-table.coordination-lines th:nth-child(1) {
+  width: 24%;
+}
+
+.finance-breakdown-table.coordination-lines th:nth-child(2),
+.finance-breakdown-table.coordination-lines th:nth-child(3),
+.finance-breakdown-table.coordination-lines th:nth-child(4) {
+  width: 16%;
+}
+
+.finance-breakdown-table.coordination-lines th:nth-child(5),
+.finance-breakdown-table.coordination-lines th:nth-child(6) {
+  width: 14%;
+}
+
+.finance-breakdown-table.coordination-schedules {
+  min-width: 1100px;
+}
+
+.finance-breakdown-table.coordination-schedules th:nth-child(1) {
+  width: 18%;
+}
+
+.finance-breakdown-table.coordination-schedules th:nth-child(2) {
+  width: 28%;
+}
+
+.finance-breakdown-table.coordination-schedules th:nth-child(3),
+.finance-breakdown-table.coordination-schedules th:nth-child(4),
+.finance-breakdown-table.coordination-schedules th:nth-child(5) {
+  width: 18%;
 }
 
 .alert-list {

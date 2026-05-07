@@ -48,6 +48,7 @@ interface FinanceRun {
 
 interface FinanceLineRow {
   id: string;
+  lineKey: string;
   teacherId: string;
   coordinationId: string;
   teacherName: string;
@@ -79,6 +80,46 @@ interface FinanceLine extends Omit<FinanceLineRow, 'alerts'> {
   alerts: string[];
   fiscalMissing: string[];
   paymentStatus: PaymentStatus;
+}
+
+interface FinanceScheduleDetail {
+  lineKey: string;
+  scheduleId: string;
+  teacherId: string;
+  coordinationId: string;
+  teacherName: string;
+  coordinationName: string;
+  subjectName: string;
+  groupCode: string;
+  tabulatorName: string;
+  tabulatorAmount: number;
+  weekdayHours: number;
+  module1Hours: number;
+  module2Hours: number;
+  baseHours: number;
+  grossBaseAmount: number;
+  absences: number;
+  delays: number;
+  delayDiscountHours: number;
+  absenceDiscountAmount: number;
+  delayDiscountAmount: number;
+  scheduleExtraHours: number;
+  scheduleExtraAmount: number;
+  baseNetAmount: number;
+}
+
+interface FinanceExtraDetail {
+  lineKey: string;
+  extraId: string;
+  teacherId: string;
+  coordinationId: string;
+  teacherName: string;
+  coordinationName: string;
+  reason: string;
+  activityDate: string | null;
+  hours: number;
+  tabulatorAmount: number;
+  totalAmount: number;
 }
 
 interface CoordinationSummary {
@@ -300,6 +341,7 @@ async function listFinanceLines(
     `
       SELECT
         pl.id,
+        CONCAT(pl.teacher_id::text, ':', pl.coordination_id::text) AS "lineKey",
         pl.teacher_id AS "teacherId",
         pl.coordination_id AS "coordinationId",
         pl.teacher_name_snapshot AS "teacherName",
@@ -349,6 +391,94 @@ async function listFinanceLines(
       paymentStatus: missing.length ? 'PENDIENTE' : 'LISTO'
     };
   });
+}
+
+async function listFinanceScheduleDetails(
+  client: PoolClient,
+  runId: string,
+  actor: SessionUser,
+  actorCoordination: CoordinationRow | null
+): Promise<FinanceScheduleDetail[]> {
+  const params: unknown[] = [runId];
+  let visibility = '';
+  if (!canViewAllFinance(actor)) {
+    params.push(actorCoordination?.id || null);
+    visibility = actorCoordination ? 'AND coordination_id = $2' : 'AND false';
+  }
+
+  const result = await client.query<FinanceScheduleDetail>(
+    `
+      SELECT
+        CONCAT(teacher_id::text, ':', coordination_id::text) AS "lineKey",
+        schedule_id AS "scheduleId",
+        teacher_id AS "teacherId",
+        coordination_id AS "coordinationId",
+        teacher_name_snapshot AS "teacherName",
+        coordination_name_snapshot AS "coordinationName",
+        subject_name_snapshot AS "subjectName",
+        group_code_snapshot AS "groupCode",
+        tabulator_name_snapshot AS "tabulatorName",
+        tabulator_amount::float8 AS "tabulatorAmount",
+        weekday_hours::float8 AS "weekdayHours",
+        module1_hours::float8 AS "module1Hours",
+        module2_hours::float8 AS "module2Hours",
+        base_hours::float8 AS "baseHours",
+        gross_base_amount::float8 AS "grossBaseAmount",
+        absences::float8 AS absences,
+        delays::float8 AS delays,
+        delay_discount_hours::float8 AS "delayDiscountHours",
+        absence_discount_amount::float8 AS "absenceDiscountAmount",
+        delay_discount_amount::float8 AS "delayDiscountAmount",
+        schedule_extra_hours::float8 AS "scheduleExtraHours",
+        schedule_extra_amount::float8 AS "scheduleExtraAmount",
+        base_net_amount::float8 AS "baseNetAmount"
+      FROM payroll_schedule_details
+      WHERE payroll_run_id = $1
+        ${visibility}
+      ORDER BY coordination_name_snapshot ASC, teacher_name_snapshot ASC, subject_name_snapshot ASC, group_code_snapshot ASC
+    `,
+    params
+  );
+
+  return result.rows;
+}
+
+async function listFinanceExtraDetails(
+  client: PoolClient,
+  runId: string,
+  actor: SessionUser,
+  actorCoordination: CoordinationRow | null
+): Promise<FinanceExtraDetail[]> {
+  const params: unknown[] = [runId];
+  let visibility = '';
+  if (!canViewAllFinance(actor)) {
+    params.push(actorCoordination?.id || null);
+    visibility = actorCoordination ? 'AND coordination_id = $2' : 'AND false';
+  }
+
+  const result = await client.query<FinanceExtraDetail>(
+    `
+      SELECT
+        CONCAT(teacher_id::text, ':', coordination_id::text) AS "lineKey",
+        extra_id AS "extraId",
+        teacher_id AS "teacherId",
+        coordination_id AS "coordinationId",
+        teacher_name_snapshot AS "teacherName",
+        coordination_name_snapshot AS "coordinationName",
+        reason_snapshot AS reason,
+        activity_date AS "activityDate",
+        hours::float8 AS hours,
+        tabulator_amount::float8 AS "tabulatorAmount",
+        total_amount::float8 AS "totalAmount"
+      FROM payroll_extra_details
+      WHERE payroll_run_id = $1
+        ${visibility}
+      ORDER BY coordination_name_snapshot ASC, teacher_name_snapshot ASC, activity_date ASC NULLS LAST, reason_snapshot ASC
+    `,
+    params
+  );
+
+  return result.rows;
 }
 
 function summarizeLines(lines: FinanceLine[]): FinanceSummary {
@@ -432,7 +562,9 @@ async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
       selectedRun: null,
       summary: emptySummary(),
       lines: [],
-      coordinationSummary: []
+      coordinationSummary: [],
+      scheduleDetails: [],
+      extraDetails: []
     };
   }
 
@@ -440,6 +572,10 @@ async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
     const runs = await listFinanceRuns(client, selectedCycle.id, actor, actorCoordination);
     const selectedRun = runs.find((run) => run.id === query.runId) || runs[0] || null;
     const lines = selectedRun ? await listFinanceLines(client, selectedRun.id, actor, actorCoordination) : [];
+    const scheduleDetails = selectedRun
+      ? await listFinanceScheduleDetails(client, selectedRun.id, actor, actorCoordination)
+      : [];
+    const extraDetails = selectedRun ? await listFinanceExtraDetails(client, selectedRun.id, actor, actorCoordination) : [];
     const summary = summarizeLines(lines);
     if (selectedRun) selectedRun.summary = summary;
 
@@ -451,7 +587,9 @@ async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
       selectedRun,
       summary,
       lines,
-      coordinationSummary: summarizeCoordinations(lines)
+      coordinationSummary: summarizeCoordinations(lines),
+      scheduleDetails,
+      extraDetails
     };
   });
 }

@@ -548,6 +548,7 @@ export interface FinanceRun {
 
 export interface FinanceLine {
   id: string;
+  lineKey: string;
   teacherId: string;
   coordinationId: string;
   teacherName: string;
@@ -577,6 +578,46 @@ export interface FinanceLine {
   paymentStatus: 'LISTO' | 'PENDIENTE';
 }
 
+export interface FinanceScheduleDetail {
+  lineKey: string;
+  scheduleId: string;
+  teacherId: string;
+  coordinationId: string;
+  teacherName: string;
+  coordinationName: string;
+  subjectName: string;
+  groupCode: string;
+  tabulatorName: string;
+  tabulatorAmount: number;
+  weekdayHours: number;
+  module1Hours: number;
+  module2Hours: number;
+  baseHours: number;
+  grossBaseAmount: number;
+  absences: number;
+  delays: number;
+  delayDiscountHours: number;
+  absenceDiscountAmount: number;
+  delayDiscountAmount: number;
+  scheduleExtraHours: number;
+  scheduleExtraAmount: number;
+  baseNetAmount: number;
+}
+
+export interface FinanceExtraDetail {
+  lineKey: string;
+  extraId: string;
+  teacherId: string;
+  coordinationId: string;
+  teacherName: string;
+  coordinationName: string;
+  reason: string;
+  activityDate: string | null;
+  hours: number;
+  tabulatorAmount: number;
+  totalAmount: number;
+}
+
 export interface FinanceCoordinationSummary {
   coordinationId: string;
   coordinationName: string;
@@ -599,6 +640,8 @@ export interface FinanceContext {
   summary: FinanceSummary;
   lines: FinanceLine[];
   coordinationSummary: FinanceCoordinationSummary[];
+  scheduleDetails: FinanceScheduleDetail[];
+  extraDetails: FinanceExtraDetail[];
 }
 
 export interface TeacherPayload {

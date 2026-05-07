@@ -30,6 +30,7 @@ type FinanceTab = 'PAGOS' | 'COORDINACIONES' | 'FISCALES' | 'HISTORICO';
 type PaymentFilter = 'TODOS' | 'LISTO' | 'PENDIENTE';
 type PaymentTypeFilter = 'TODOS' | 'E' | '1' | '2';
 type ExportKind = 'payments' | 'fiscal' | 'coordinations';
+type CoordinationRow = FinanceContext['coordinationSummary'][number];
 
 const authStore = useAuthStore();
 
@@ -39,6 +40,8 @@ const runs = ref<FinanceRun[]>([]);
 const selectedRun = ref<FinanceRun | null>(null);
 const lines = ref<FinanceLine[]>([]);
 const coordinationSummary = ref<FinanceContext['coordinationSummary']>([]);
+const scheduleDetails = ref<FinanceContext['scheduleDetails']>([]);
+const extraDetails = ref<FinanceContext['extraDetails']>([]);
 const selectedCycleId = ref('');
 const selectedRunId = ref('');
 const searchText = ref('');
@@ -48,6 +51,7 @@ const paymentTypeFilter = ref<PaymentTypeFilter>('TODOS');
 const pageBusy = ref(false);
 const exporting = ref<ExportKind | ''>('');
 const selectedLineId = ref('');
+const selectedCoordinationId = ref('');
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
 const zeroSummary = () => ({
@@ -69,6 +73,33 @@ const summary = ref(zeroSummary());
 
 const pendingFiscalLines = computed(() => lines.value.filter((line) => line.paymentStatus === 'PENDIENTE'));
 const selectedLine = computed(() => lines.value.find((line) => line.id === selectedLineId.value) || null);
+const selectedCoordination = computed(
+  () => coordinationSummary.value.find((coordination) => coordination.coordinationId === selectedCoordinationId.value) || null
+);
+
+const selectedLineScheduleDetails = computed(() =>
+  selectedLine.value ? scheduleDetails.value.filter((detail) => detail.lineKey === selectedLine.value?.lineKey) : []
+);
+
+const selectedLineExtraDetails = computed(() =>
+  selectedLine.value ? extraDetails.value.filter((detail) => detail.lineKey === selectedLine.value?.lineKey) : []
+);
+
+const selectedCoordinationLines = computed(() =>
+  selectedCoordination.value ? lines.value.filter((line) => line.coordinationId === selectedCoordination.value?.coordinationId) : []
+);
+
+const selectedCoordinationScheduleDetails = computed(() =>
+  selectedCoordination.value
+    ? scheduleDetails.value.filter((detail) => detail.coordinationId === selectedCoordination.value?.coordinationId)
+    : []
+);
+
+const selectedCoordinationExtraDetails = computed(() =>
+  selectedCoordination.value
+    ? extraDetails.value.filter((detail) => detail.coordinationId === selectedCoordination.value?.coordinationId)
+    : []
+);
 
 const readyAmount = computed(() =>
   lines.value
@@ -176,6 +207,14 @@ function formatDateTime(value: string | null | undefined) {
   });
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return '-';
+  const text = value.slice(0, 10);
+  const [year, month, day] = text.split('-');
+  if (!year || !month || !day) return text;
+  return `${day}/${month}/${year}`;
+}
+
 function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
@@ -217,6 +256,14 @@ function applyContext(data: FinanceContext) {
   summary.value = data.summary;
   lines.value = data.lines;
   coordinationSummary.value = data.coordinationSummary;
+  scheduleDetails.value = data.scheduleDetails || [];
+  extraDetails.value = data.extraDetails || [];
+  if (!data.lines.some((line) => line.id === selectedLineId.value)) {
+    selectedLineId.value = '';
+  }
+  if (!data.coordinationSummary.some((coordination) => coordination.coordinationId === selectedCoordinationId.value)) {
+    selectedCoordinationId.value = '';
+  }
 }
 
 async function loadFinance(cycleId = selectedCycleId.value || undefined, runId = selectedRunId.value || undefined) {
@@ -253,6 +300,14 @@ function openLineDetail(line: FinanceLine) {
 
 function closeLineDetail() {
   selectedLineId.value = '';
+}
+
+function openCoordinationDetail(row: CoordinationRow) {
+  selectedCoordinationId.value = row.coordinationId;
+}
+
+function closeCoordinationDetail() {
+  selectedCoordinationId.value = '';
 }
 
 async function exportReport(kind: ExportKind) {
@@ -486,11 +541,12 @@ onMounted(() => {
                 <th>Descuentos</th>
                 <th>Total</th>
                 <th>Revision</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!coordinationSummary.length">
-                <td colspan="6" class="empty-cell">No hay coordinaciones en la nomina seleccionada.</td>
+                <td colspan="7" class="empty-cell">No hay coordinaciones en la nomina seleccionada.</td>
               </tr>
               <tr v-for="row in coordinationSummary" :key="row.coordinationId">
                 <td>
@@ -509,6 +565,11 @@ onMounted(() => {
                     {{ row.fiscalPending ? `${row.fiscalPending} pendientes` : 'Completa' }}
                   </span>
                   <small v-if="row.alerts">{{ row.alerts }} alerta{{ row.alerts === 1 ? '' : 's' }}</small>
+                </td>
+                <td class="row-actions">
+                  <button class="icon-button" type="button" title="Ver detalle" @click="openCoordinationDetail(row)">
+                    <Eye :size="16" />
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -653,8 +714,266 @@ onMounted(() => {
           </section>
         </div>
 
+        <div class="finance-detail-breakdown">
+          <section class="finance-detail-section">
+            <div class="section-title compact">
+              <div>
+                <p class="eyebrow">Horarios e incidencias</p>
+                <h3>Base calculada</h3>
+              </div>
+            </div>
+            <div class="table-shell compact">
+              <table class="finance-breakdown-table">
+                <thead>
+                  <tr>
+                    <th>Asignatura</th>
+                    <th>Horas</th>
+                    <th>Incidencias</th>
+                    <th>Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="!selectedLineScheduleDetails.length">
+                    <td colspan="4" class="empty-cell">Sin horarios base para esta linea.</td>
+                  </tr>
+                  <tr v-for="detail in selectedLineScheduleDetails" :key="`${detail.scheduleId}-${detail.subjectName}`">
+                    <td>
+                      <strong>{{ detail.subjectName }}</strong>
+                      <span>Grupo {{ detail.groupCode }} / {{ detail.tabulatorName }} {{ moneyLabel(detail.tabulatorAmount) }}</span>
+                    </td>
+                    <td>
+                      <strong>{{ formatHours(detail.baseHours) }} h</strong>
+                      <span>L-V {{ formatHours(detail.weekdayHours) }} / M1 {{ formatHours(detail.module1Hours) }} / M2 {{ formatHours(detail.module2Hours) }}</span>
+                    </td>
+                    <td>
+                      <strong>F {{ formatHours(detail.absences) }} h / R {{ formatHours(detail.delays) }}</strong>
+                      <span>Extras incidencia {{ formatHours(detail.scheduleExtraHours) }} h</span>
+                    </td>
+                    <td>
+                      <strong>{{ moneyLabel(detail.baseNetAmount) }}</strong>
+                      <span>Bruto {{ moneyLabel(detail.grossBaseAmount) }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="finance-detail-section">
+            <div class="section-title compact">
+              <div>
+                <p class="eyebrow">Extras externos</p>
+                <h3>Capturas adicionales</h3>
+              </div>
+            </div>
+            <div class="table-shell compact">
+              <table class="finance-breakdown-table extras">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Motivo</th>
+                    <th>Horas</th>
+                    <th>Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="!selectedLineExtraDetails.length">
+                    <td colspan="4" class="empty-cell">Sin extras externos para esta linea.</td>
+                  </tr>
+                  <tr v-for="detail in selectedLineExtraDetails" :key="`${detail.extraId}-${detail.reason}`">
+                    <td>{{ formatDate(detail.activityDate) }}</td>
+                    <td>
+                      <strong>{{ detail.reason }}</strong>
+                      <span>{{ moneyLabel(detail.tabulatorAmount) }} por hora</span>
+                    </td>
+                    <td><strong>{{ formatHours(detail.hours) }} h</strong></td>
+                    <td><strong>{{ moneyLabel(detail.totalAmount) }}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
         <div class="modal-actions">
           <button class="secondary-action" type="button" @click="closeLineDetail">Cerrar detalle</button>
+        </div>
+      </section>
+    </div>
+
+    <div v-if="selectedCoordination" class="modal-backdrop" @click.self="closeCoordinationDetail">
+      <section class="modal-card large finance-detail-modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Reporte por coordinacion</p>
+            <h3>{{ selectedCoordination.coordinationName }}</h3>
+            <span>{{ selectedRun?.periodLabel || 'Nomina seleccionada' }}</span>
+          </div>
+          <button class="icon-button" type="button" title="Cerrar" @click="closeCoordinationDetail">
+            <X :size="17" />
+          </button>
+        </div>
+
+        <div class="finance-detail-grid">
+          <article class="finance-detail-card total">
+            <span>Total coordinacion</span>
+            <strong>{{ moneyLabel(selectedCoordination.totalAmount) }}</strong>
+            <small>{{ selectedCoordination.teachers }} docente{{ selectedCoordination.teachers === 1 ? '' : 's' }}</small>
+          </article>
+          <article class="finance-detail-card">
+            <span>Horas base</span>
+            <strong>{{ formatHours(selectedCoordination.baseHours) }} h</strong>
+            <small>{{ selectedCoordination.lines }} linea{{ selectedCoordination.lines === 1 ? '' : 's' }}</small>
+          </article>
+          <article class="finance-detail-card">
+            <span>Descuentos</span>
+            <strong>{{ moneyLabel(selectedCoordination.discountAmount) }}</strong>
+            <small>Faltas y retardos</small>
+          </article>
+          <article class="finance-detail-card">
+            <span>Extras</span>
+            <strong>{{ formatHours(selectedCoordination.totalExtraHours) }} h</strong>
+            <small>{{ selectedCoordination.fiscalPending }} pendiente{{ selectedCoordination.fiscalPending === 1 ? '' : 's' }}</small>
+          </article>
+        </div>
+
+        <section class="finance-detail-section">
+          <div class="section-title compact">
+            <div>
+              <p class="eyebrow">Docentes</p>
+              <h3>Resumen de pago</h3>
+            </div>
+          </div>
+          <div class="table-shell compact">
+            <table class="finance-breakdown-table coordination-lines">
+              <thead>
+                <tr>
+                  <th>Docente</th>
+                  <th>Base</th>
+                  <th>Descuentos</th>
+                  <th>Extras</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="line in selectedCoordinationLines" :key="line.id">
+                  <td>
+                    <strong>{{ line.teacherName }}</strong>
+                    <span>{{ categoryLabel(line.category) }} / {{ paymentTypeLabel(line.paymentType) }}</span>
+                  </td>
+                  <td>
+                    <strong>{{ formatHours(line.baseHours) }} h</strong>
+                    <span>{{ moneyLabel(line.baseNetAmount) }}</span>
+                  </td>
+                  <td>
+                    <strong>{{ moneyLabel(line.absenceDiscountAmount + line.delayDiscountAmount) }}</strong>
+                    <span>F {{ formatHours(line.absences) }} h / R {{ formatHours(line.delays) }}</span>
+                  </td>
+                  <td>
+                    <strong>{{ formatHours(line.totalExtraHours) }} h</strong>
+                    <span>{{ moneyLabel(line.totalExtraAmount) }}</span>
+                  </td>
+                  <td><strong>{{ moneyLabel(line.totalAmount) }}</strong></td>
+                  <td>
+                    <span class="badge" :class="line.paymentStatus === 'LISTO' ? 'ok' : 'warning'">
+                      {{ line.paymentStatus === 'LISTO' ? 'Listo' : 'Pendiente' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="finance-detail-breakdown">
+          <section class="finance-detail-section">
+            <div class="section-title compact">
+              <div>
+                <p class="eyebrow">Materias y grupos</p>
+                <h3>Horarios considerados</h3>
+              </div>
+            </div>
+            <div class="table-shell compact">
+              <table class="finance-breakdown-table coordination-schedules">
+                <thead>
+                  <tr>
+                    <th>Docente</th>
+                    <th>Asignatura</th>
+                    <th>Horas</th>
+                    <th>Incidencias</th>
+                    <th>Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="!selectedCoordinationScheduleDetails.length">
+                    <td colspan="5" class="empty-cell">Sin horarios base para esta coordinacion.</td>
+                  </tr>
+                  <tr
+                    v-for="(detail, index) in selectedCoordinationScheduleDetails"
+                    :key="`${detail.scheduleId}-${detail.teacherId}-${index}`"
+                  >
+                    <td><strong>{{ detail.teacherName }}</strong></td>
+                    <td>
+                      <strong>{{ detail.subjectName }}</strong>
+                      <span>Grupo {{ detail.groupCode }}</span>
+                    </td>
+                    <td>
+                      <strong>{{ formatHours(detail.baseHours) }} h</strong>
+                      <span>L-V {{ formatHours(detail.weekdayHours) }} / M1 {{ formatHours(detail.module1Hours) }} / M2 {{ formatHours(detail.module2Hours) }}</span>
+                    </td>
+                    <td>
+                      <strong>F {{ formatHours(detail.absences) }} h / R {{ formatHours(detail.delays) }}</strong>
+                      <span>Extra incidencia {{ formatHours(detail.scheduleExtraHours) }} h</span>
+                    </td>
+                    <td>
+                      <strong>{{ moneyLabel(detail.baseNetAmount) }}</strong>
+                      <span>{{ detail.tabulatorName }} / {{ moneyLabel(detail.tabulatorAmount) }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="finance-detail-section">
+            <div class="section-title compact">
+              <div>
+                <p class="eyebrow">Extras externos</p>
+                <h3>Capturas consideradas</h3>
+              </div>
+            </div>
+            <div class="table-shell compact">
+              <table class="finance-breakdown-table extras">
+                <thead>
+                  <tr>
+                    <th>Docente</th>
+                    <th>Fecha</th>
+                    <th>Motivo</th>
+                    <th>Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="!selectedCoordinationExtraDetails.length">
+                    <td colspan="4" class="empty-cell">Sin extras externos para esta coordinacion.</td>
+                  </tr>
+                  <tr v-for="(detail, index) in selectedCoordinationExtraDetails" :key="`${detail.extraId}-${index}`">
+                    <td><strong>{{ detail.teacherName }}</strong></td>
+                    <td>{{ formatDate(detail.activityDate) }}</td>
+                    <td>
+                      <strong>{{ detail.reason }}</strong>
+                      <span>{{ formatHours(detail.hours) }} h / {{ moneyLabel(detail.tabulatorAmount) }}</span>
+                    </td>
+                    <td><strong>{{ moneyLabel(detail.totalAmount) }}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-action" type="button" @click="closeCoordinationDetail">Cerrar reporte</button>
         </div>
       </section>
     </div>
