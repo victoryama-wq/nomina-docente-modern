@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import {
+  AlertTriangle,
+  Banknote,
   Building2,
   CheckCircle2,
   CircleDollarSign,
   Download,
+  Eye,
   FileSpreadsheet,
   History,
   RefreshCw,
   Search,
-  ShieldAlert
+  ShieldAlert,
+  WalletCards,
+  X
 } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import {
@@ -23,6 +28,7 @@ import {
 
 type FinanceTab = 'PAGOS' | 'COORDINACIONES' | 'FISCALES' | 'HISTORICO';
 type PaymentFilter = 'TODOS' | 'LISTO' | 'PENDIENTE';
+type PaymentTypeFilter = 'TODOS' | 'E' | '1' | '2';
 type ExportKind = 'payments' | 'fiscal' | 'coordinations';
 
 const authStore = useAuthStore();
@@ -38,8 +44,10 @@ const selectedRunId = ref('');
 const searchText = ref('');
 const activeTab = ref<FinanceTab>('PAGOS');
 const paymentFilter = ref<PaymentFilter>('TODOS');
+const paymentTypeFilter = ref<PaymentTypeFilter>('TODOS');
 const pageBusy = ref(false);
 const exporting = ref<ExportKind | ''>('');
+const selectedLineId = ref('');
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
 const zeroSummary = () => ({
@@ -60,6 +68,52 @@ const zeroSummary = () => ({
 const summary = ref(zeroSummary());
 
 const pendingFiscalLines = computed(() => lines.value.filter((line) => line.paymentStatus === 'PENDIENTE'));
+const selectedLine = computed(() => lines.value.find((line) => line.id === selectedLineId.value) || null);
+
+const readyAmount = computed(() =>
+  lines.value
+    .filter((line) => line.paymentStatus === 'LISTO')
+    .reduce((sum, line) => sum + Number(line.totalAmount || 0), 0)
+);
+
+const pendingAmount = computed(() =>
+  lines.value
+    .filter((line) => line.paymentStatus === 'PENDIENTE')
+    .reduce((sum, line) => sum + Number(line.totalAmount || 0), 0)
+);
+
+const paymentTypeSummary = computed(() => {
+  const groups: Array<{
+    code: Exclude<PaymentTypeFilter, 'TODOS'>;
+    label: string;
+    lines: number;
+    teachers: number;
+    totalAmount: number;
+    ready: number;
+    pending: number;
+  }> = [
+    { code: '1', label: paymentTypeLabel('1'), lines: 0, teachers: 0, totalAmount: 0, ready: 0, pending: 0 },
+    { code: '2', label: paymentTypeLabel('2'), lines: 0, teachers: 0, totalAmount: 0, ready: 0, pending: 0 },
+    { code: 'E', label: paymentTypeLabel('E'), lines: 0, teachers: 0, totalAmount: 0, ready: 0, pending: 0 }
+  ];
+  const teacherSets = new Map<string, Set<string>>(groups.map((group) => [group.code, new Set<string>()]));
+
+  for (const line of lines.value) {
+    const group = groups.find((item) => item.code === line.paymentType);
+    if (!group) continue;
+    group.lines += 1;
+    group.totalAmount += Number(line.totalAmount || 0);
+    group.ready += line.paymentStatus === 'LISTO' ? 1 : 0;
+    group.pending += line.paymentStatus === 'PENDIENTE' ? 1 : 0;
+    teacherSets.get(group.code)?.add(line.teacherId);
+  }
+
+  return groups.map((group) => ({
+    ...group,
+    teachers: teacherSets.get(group.code)?.size || 0,
+    totalAmount: round2(group.totalAmount)
+  }));
+});
 
 const filteredLines = computed(() => {
   const text = searchText.value.toLowerCase().trim();
@@ -79,7 +133,8 @@ const filteredLines = computed(() => {
       .toLowerCase();
     const matchesText = !text || haystack.includes(text);
     const matchesStatus = paymentFilter.value === 'TODOS' || line.paymentStatus === paymentFilter.value;
-    return matchesText && matchesStatus;
+    const matchesPaymentType = paymentTypeFilter.value === 'TODOS' || line.paymentType === paymentTypeFilter.value;
+    return matchesText && matchesStatus && matchesPaymentType;
   });
 });
 
@@ -113,12 +168,16 @@ function formatHours(value: number | string | null | undefined) {
   return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
-  const text = value.slice(0, 10);
-  const [year, month, day] = text.split('-');
-  if (!year || !month || !day) return text;
-  return `${day}/${month}/${year}`;
+  return new Date(value).toLocaleString('es-MX', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  });
+}
+
+function round2(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function categoryLabel(category: string) {
@@ -129,9 +188,9 @@ function categoryLabel(category: string) {
 }
 
 function paymentTypeLabel(paymentType: string) {
-  if (paymentType === 'E') return 'Esquema E';
-  if (paymentType === '1') return 'Pago 1';
-  if (paymentType === '2') return 'Pago 2';
+  if (paymentType === 'E') return 'Efectivo';
+  if (paymentType === '1') return 'Santander';
+  if (paymentType === '2') return 'Banorte';
   return paymentType || '-';
 }
 
@@ -181,6 +240,19 @@ function loadSelectedCycle() {
 
 function loadSelectedRun() {
   return loadFinance(selectedCycleId.value, selectedRunId.value);
+}
+
+function selectPaymentTypeFilter(value: PaymentTypeFilter) {
+  paymentTypeFilter.value = paymentTypeFilter.value === value ? 'TODOS' : value;
+  activeTab.value = 'PAGOS';
+}
+
+function openLineDetail(line: FinanceLine) {
+  selectedLineId.value = line.id;
+}
+
+function closeLineDetail() {
+  selectedLineId.value = '';
 }
 
 async function exportReport(kind: ExportKind) {
@@ -238,19 +310,19 @@ onMounted(() => {
         <small>{{ summary.teachers }} docentes / {{ summary.coordinations }} coordinaciones</small>
       </article>
       <article class="metric-card mini">
-        <p>Base</p>
-        <strong>{{ formatHours(summary.baseHours) }} h</strong>
-        <small>{{ moneyLabel(summary.grossBaseAmount) }} bruto</small>
+        <p>Listo para pago</p>
+        <strong>{{ moneyLabel(readyAmount) }}</strong>
+        <small>{{ summary.readyPayments }} linea{{ summary.readyPayments === 1 ? '' : 's' }} completa{{ summary.readyPayments === 1 ? '' : 's' }}</small>
+      </article>
+      <article class="metric-card mini">
+        <p>Pendiente revision</p>
+        <strong>{{ moneyLabel(pendingAmount) }}</strong>
+        <small>{{ summary.fiscalPending }} pendiente{{ summary.fiscalPending === 1 ? '' : 's' }} fiscal{{ summary.fiscalPending === 1 ? '' : 'es' }}</small>
       </article>
       <article class="metric-card mini">
         <p>Extras</p>
         <strong>{{ formatHours(summary.totalExtraHours) }} h</strong>
         <small>{{ moneyLabel(summary.totalExtraAmount) }}</small>
-      </article>
-      <article class="metric-card mini">
-        <p>Pendientes fiscales</p>
-        <strong>{{ summary.fiscalPending }}</strong>
-        <small>{{ summary.readyPayments }} listos para pago</small>
       </article>
     </section>
 
@@ -284,6 +356,28 @@ onMounted(() => {
       </div>
     </section>
 
+    <section class="finance-payment-grid">
+      <button
+        v-for="group in paymentTypeSummary"
+        :key="group.code"
+        class="finance-payment-card"
+        :class="{ active: paymentTypeFilter === group.code }"
+        type="button"
+        @click="selectPaymentTypeFilter(group.code)"
+      >
+        <span class="finance-payment-icon">
+          <Banknote v-if="group.code === 'E'" :size="18" />
+          <WalletCards v-else :size="18" />
+        </span>
+        <span>
+          <strong>{{ group.label }}</strong>
+          <small>{{ group.teachers }} docente{{ group.teachers === 1 ? '' : 's' }} / {{ group.lines }} linea{{ group.lines === 1 ? '' : 's' }}</small>
+        </span>
+        <b>{{ moneyLabel(group.totalAmount) }}</b>
+        <em>{{ group.ready }} listo{{ group.ready === 1 ? '' : 's' }} / {{ group.pending }} pendiente{{ group.pending === 1 ? '' : 's' }}</em>
+      </button>
+    </section>
+
     <section class="single-grid">
       <div class="data-panel full">
         <div class="filters-row finance">
@@ -295,6 +389,12 @@ onMounted(() => {
             <option value="TODOS">Todos</option>
             <option value="LISTO">Listos</option>
             <option value="PENDIENTE">Pendientes</option>
+          </select>
+          <select v-model="paymentTypeFilter">
+            <option value="TODOS">Todos los pagos</option>
+            <option value="1">Santander</option>
+            <option value="2">Banorte</option>
+            <option value="E">Efectivo</option>
           </select>
           <div class="segmented-control" aria-label="Vista financiera">
             <button type="button" :class="{ active: activeTab === 'PAGOS' }" @click="activeTab = 'PAGOS'">
@@ -323,11 +423,12 @@ onMounted(() => {
                 <th>Extras</th>
                 <th>Total</th>
                 <th>Estado</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!filteredLines.length">
-                <td colspan="7" class="empty-cell">
+                <td colspan="8" class="empty-cell">
                   {{ selectedRun ? 'No hay pagos con el filtro actual.' : 'No hay nominas guardadas para mostrar.' }}
                 </td>
               </tr>
@@ -364,6 +465,11 @@ onMounted(() => {
                     {{ line.paymentStatus === 'LISTO' ? 'Listo' : 'Pendiente' }}
                   </span>
                   <small v-if="line.fiscalMissing.length">{{ line.fiscalMissing.join(', ') }}</small>
+                </td>
+                <td class="row-actions">
+                  <button class="icon-button" type="button" title="Ver detalle" @click="openLineDetail(line)">
+                    <Eye :size="16" />
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -456,7 +562,7 @@ onMounted(() => {
             <div>
               <p class="eyebrow">{{ run.status }}</p>
               <strong>{{ run.periodLabel }}</strong>
-              <span>{{ formatDate(run.calculatedAt || run.createdAt) }} / {{ run.calculatedByEmail || 'Sin usuario' }}</span>
+              <span>{{ formatDateTime(run.calculatedAt || run.createdAt) }} / {{ run.calculatedByEmail || 'Sin usuario' }}</span>
             </div>
             <div class="finance-run-card-total">
               <CircleDollarSign :size="18" />
@@ -468,6 +574,90 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
+    <div v-if="selectedLine" class="modal-backdrop" @click.self="closeLineDetail">
+      <section class="modal-card large finance-detail-modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Detalle financiero</p>
+            <h3>{{ selectedLine.teacherName }}</h3>
+            <span>{{ selectedLine.coordinationName }} / {{ categoryLabel(selectedLine.category) }}</span>
+          </div>
+          <button class="icon-button" type="button" title="Cerrar" @click="closeLineDetail">
+            <X :size="17" />
+          </button>
+        </div>
+
+        <div class="finance-detail-grid">
+          <article class="finance-detail-card total">
+            <span>Total neto</span>
+            <strong>{{ moneyLabel(selectedLine.totalAmount) }}</strong>
+            <small>{{ paymentTypeLabel(selectedLine.paymentType) }}</small>
+          </article>
+          <article class="finance-detail-card">
+            <span>Base</span>
+            <strong>{{ formatHours(selectedLine.baseHours) }} h</strong>
+            <small>{{ moneyLabel(selectedLine.baseNetAmount) }}</small>
+          </article>
+          <article class="finance-detail-card">
+            <span>Descuentos</span>
+            <strong>{{ moneyLabel(selectedLine.absenceDiscountAmount + selectedLine.delayDiscountAmount) }}</strong>
+            <small>F {{ formatHours(selectedLine.absences) }} h / R {{ formatHours(selectedLine.delays) }}</small>
+          </article>
+          <article class="finance-detail-card">
+            <span>Extras</span>
+            <strong>{{ formatHours(selectedLine.totalExtraHours) }} h</strong>
+            <small>{{ moneyLabel(selectedLine.totalExtraAmount) }}</small>
+          </article>
+        </div>
+
+        <div class="finance-detail-sections">
+          <section class="finance-detail-section">
+            <div class="section-title compact">
+              <div>
+                <p class="eyebrow">Expediente fiscal</p>
+                <h3>Datos para pago</h3>
+              </div>
+              <span class="badge" :class="selectedLine.paymentStatus === 'LISTO' ? 'ok' : 'warning'">
+                {{ selectedLine.paymentStatus === 'LISTO' ? 'Listo' : 'Pendiente' }}
+              </span>
+            </div>
+            <div class="finance-fiscal-list">
+              <span><b>RFC</b>{{ selectedLine.rfc || 'Pendiente' }}</span>
+              <span><b>Correo</b>{{ selectedLine.email || 'Pendiente' }}</span>
+              <span><b>Banco / cuenta</b>{{ selectedLine.bankDetail || 'Pendiente' }}</span>
+              <span><b>Constancia fiscal</b>{{ selectedLine.hasConstancia ? 'Capturada' : 'Pendiente' }}</span>
+            </div>
+            <div v-if="selectedLine.fiscalMissing.length" class="alert-list">
+              <span v-for="missing in selectedLine.fiscalMissing" :key="missing">
+                <ShieldAlert :size="12" />
+                {{ missing }}
+              </span>
+            </div>
+          </section>
+
+          <section class="finance-detail-section">
+            <div class="section-title compact">
+              <div>
+                <p class="eyebrow">Revision</p>
+                <h3>Alertas de nomina</h3>
+              </div>
+            </div>
+            <div v-if="selectedLine.alerts.length" class="alert-list">
+              <span v-for="alert in selectedLine.alerts" :key="alert">
+                <AlertTriangle :size="12" />
+                {{ alert }}
+              </span>
+            </div>
+            <p v-else class="finance-detail-muted">Sin alertas registradas para esta linea.</p>
+          </section>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-action" type="button" @click="closeLineDetail">Cerrar detalle</button>
+        </div>
+      </section>
+    </div>
 
     <section class="finance-signal-grid">
       <article class="data-panel">

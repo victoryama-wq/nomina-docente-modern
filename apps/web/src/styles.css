@@ -806,7 +806,7 @@ h3 {
 }
 
 .filters-row.finance {
-  grid-template-columns: minmax(280px, 1fr) 150px auto;
+  grid-template-columns: minmax(280px, 1fr) 150px 170px auto;
   align-items: center;
 }
 
@@ -1378,28 +1378,102 @@ td span {
   font-weight: 800;
 }
 
+.finance-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.finance-payment-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.finance-payment-card:hover,
+.finance-payment-card.active {
+  border-color: #0f766e;
+  background: #f0fdfa;
+}
+
+.finance-payment-icon {
+  width: 38px;
+  height: 38px;
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  margin-top: 0;
+  border-radius: 8px;
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.finance-payment-card strong,
+.finance-payment-card small,
+.finance-payment-card b,
+.finance-payment-card em {
+  display: block;
+  margin-top: 0;
+}
+
+.finance-payment-card strong {
+  color: #0f172a;
+}
+
+.finance-payment-card small,
+.finance-payment-card em {
+  color: #64748b;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.finance-payment-card b {
+  justify-self: end;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.finance-payment-card em {
+  grid-column: 2 / span 2;
+}
+
 .finance-table {
   min-width: 1280px;
   table-layout: fixed;
 }
 
 .finance-table th:nth-child(1) {
-  width: 20%;
+  width: 19%;
 }
 
 .finance-table th:nth-child(2) {
-  width: 20%;
+  width: 19%;
 }
 
 .finance-table th:nth-child(3),
 .finance-table th:nth-child(4),
 .finance-table th:nth-child(5),
 .finance-table th:nth-child(6) {
-  width: 13%;
+  width: 12%;
 }
 
 .finance-table th:nth-child(7) {
-  width: 8%;
+  width: 10%;
+}
+
+.finance-table th:nth-child(8) {
+  width: 72px;
 }
 
 .finance-coordination-table,
@@ -1496,6 +1570,104 @@ td span {
 .finance-signal-grid span {
   color: #64748b;
   font-size: 13px;
+  font-weight: 800;
+}
+
+.finance-detail-modal {
+  display: grid;
+  gap: 16px;
+}
+
+.finance-detail-modal .modal-header span {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.finance-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.finance-detail-card {
+  display: grid;
+  gap: 3px;
+  min-height: 92px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.finance-detail-card.total {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.finance-detail-card span,
+.finance-detail-card small {
+  display: block;
+  margin-top: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.finance-detail-card strong {
+  color: #0f172a;
+  font-size: 21px;
+}
+
+.finance-detail-sections {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 12px;
+}
+
+.finance-detail-section {
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.finance-detail-section .section-title {
+  margin-bottom: 12px;
+}
+
+.finance-fiscal-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.finance-fiscal-list span {
+  display: grid;
+  gap: 3px;
+  margin-top: 0;
+  overflow-wrap: anywhere;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.finance-fiscal-list b {
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.finance-detail-muted {
+  margin: 0;
+  color: #64748b;
   font-weight: 800;
 }
 
@@ -2186,7 +2358,10 @@ td span {
   .metric-grid,
   .main-grid,
   .module-grid,
-  .finance-signal-grid {
+  .finance-payment-grid,
+  .finance-signal-grid,
+  .finance-detail-grid,
+  .finance-detail-sections {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -2240,7 +2415,11 @@ td span {
     .payroll-detail-metrics,
     .run-list,
     .finance-history-grid,
+    .finance-payment-grid,
     .finance-signal-grid,
+    .finance-detail-grid,
+    .finance-detail-sections,
+    .finance-fiscal-list,
     .form-grid {
     grid-template-columns: 1fr;
   }
