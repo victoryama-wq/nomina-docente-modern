@@ -125,6 +125,8 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 |---|---|
 | Admin | Acceso completo, usuarios, calendario, nómina, finanzas, auditoría y configuración |
 | Coordinador | Captura operativa de docentes, horarios, incidencias y extras según permisos |
+| Dirección/Subdirección | Mismos accesos operativos que Coordinador y consulta global de Finanzas sin acciones de flujo |
+| RH | Mismos accesos operativos que Coordinador y gestión global de expedientes fiscales |
 | Finanzas | Consulta financiera, expediente fiscal, reportes y pagos |
 | Contador | Consulta financiera/fiscal y reportes contables |
 
@@ -143,6 +145,8 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 | `reports.view` | Ver reportes |
 | `statistics.view` | Ver estadísticas |
 | `finance.view` | Ver finanzas y expediente fiscal |
+| `finance.global_view` | Ver Finanzas de todas las coordinaciones en modo consulta |
+| `fiscal.manage` | Gestionar expedientes fiscales y constancias |
 | `calendar.manage` | Gestionar calendario operativo |
 | `closures.manage` | Gestionar cierres |
 | `access.manage` | Gestionar accesos |
@@ -247,7 +251,7 @@ Reglas clave:
 
 ### 6.5 Expediente Fiscal
 
-Concentra información fiscal y bancaria para Finanzas/Contador. Permite:
+Concentra información fiscal y bancaria para Finanzas/Contador/RH. Permite:
 
 - Revisar RFC, correo, datos bancarios y constancia.
 - Ver vista previa de constancia fiscal.
@@ -256,7 +260,7 @@ Concentra información fiscal y bancaria para Finanzas/Contador. Permite:
 - Exportar listado de cumpleaños.
 
 La fecha de nacimiento se calcula desde RFC cuando el formato lo permite.
-Los coordinadores solo pueden actualizar expedientes de docentes de su coordinación; Admin y Finanzas pueden gestionar expedientes de forma global.
+Los coordinadores solo pueden actualizar expedientes de docentes de su coordinación; Admin, Finanzas y RH pueden gestionar expedientes de forma global.
 
 ### 6.6 Calendario Operativo
 

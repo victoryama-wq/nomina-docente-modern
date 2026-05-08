@@ -163,7 +163,13 @@ function fiscalPayloadFromTeacher(teacher: Teacher): FiscalForm {
 
 function canManageRecord(record: FiscalRecord) {
   if (!authStore.canManageFiscalRecords) return false;
-  if (authStore.isAdmin || authStore.session?.permissions?.includes('finance.view')) return true;
+  if (
+    authStore.isAdmin ||
+    authStore.session?.permissions?.includes('finance.view') ||
+    authStore.session?.permissions?.includes('fiscal.manage')
+  ) {
+    return true;
+  }
   return !!actorCoordination.value?.id && record.teacher.coordinationId === actorCoordination.value.id;
 }
 

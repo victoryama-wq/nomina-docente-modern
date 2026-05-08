@@ -1446,12 +1446,25 @@ td span {
   background: #ffffff;
 }
 
+.finance-action-group.readonly {
+  background: #eef6ff;
+  border-color: #bfdbfe;
+}
+
 .finance-action-group > span {
   color: #64748b;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.finance-action-group > p {
+  margin: 0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .finance-action-row {

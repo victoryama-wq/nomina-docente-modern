@@ -6,7 +6,7 @@ export interface SessionUser {
   firebaseUid: string;
   email: string;
   displayName: string;
-  role: 'admin' | 'coordinador' | 'finanzas' | 'contador' | 'contabilidad';
+  role: 'admin' | 'coordinador' | 'direccion' | 'rh' | 'finanzas' | 'contador' | 'contabilidad';
   status: 'ACTIVO' | 'INACTIVO';
   isProtectedSuperAdmin: boolean;
   permissions: string[];

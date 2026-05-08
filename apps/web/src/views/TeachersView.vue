@@ -120,7 +120,13 @@ function canEditTeacher(teacher: Teacher) {
 }
 
 function canAccessTeacherDocument(teacher: Teacher) {
-  if (authStore.isAdmin || authStore.session?.permissions?.includes('finance.view')) return true;
+  if (
+    authStore.isAdmin ||
+    authStore.session?.permissions?.includes('finance.view') ||
+    authStore.session?.permissions?.includes('fiscal.manage')
+  ) {
+    return true;
+  }
   return canEditTeacher(teacher);
 }
 

@@ -1,4 +1,4 @@
-export type RoleCode = 'admin' | 'coordinador' | 'finanzas' | 'contador' | 'contabilidad';
+export type RoleCode = 'admin' | 'coordinador' | 'direccion' | 'rh' | 'finanzas' | 'contador' | 'contabilidad';
 
 export interface SessionUser {
   id: string;

@@ -38,6 +38,8 @@ const initials = computed(() => {
 const roleLabel = computed(() => {
   const role = authStore.session?.role;
   if (role === 'admin') return 'Administrador';
+  if (role === 'direccion') return 'Dirección/Subdirección';
+  if (role === 'rh') return 'Recursos Humanos';
   if (role === 'finanzas') return 'Finanzas';
   if (role === 'contador') return 'Contador';
   if (role === 'contabilidad') return 'Contabilidad';

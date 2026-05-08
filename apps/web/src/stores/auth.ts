@@ -31,6 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
     () =>
       session.value?.isProtectedSuperAdmin ||
       session.value?.permissions?.includes('finance.view') ||
+      session.value?.permissions?.includes('finance.global_view') ||
       session.value?.permissions?.includes('reports.view') ||
       false
   );
@@ -39,6 +40,7 @@ export const useAuthStore = defineStore('auth', () => {
       session.value?.isProtectedSuperAdmin ||
       session.value?.permissions?.includes('teachers.manage') ||
       session.value?.permissions?.includes('finance.view') ||
+      session.value?.permissions?.includes('fiscal.manage') ||
       session.value?.permissions?.includes('reports.view') ||
       false
   );
@@ -47,6 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
       session.value?.isProtectedSuperAdmin ||
       session.value?.permissions?.includes('teachers.manage') ||
       session.value?.permissions?.includes('finance.view') ||
+      session.value?.permissions?.includes('fiscal.manage') ||
       false
   );
   const canExportTeacherHistory = computed(() => session.value?.permissions?.includes('audit.view') || false);
@@ -56,6 +59,7 @@ export const useAuthStore = defineStore('auth', () => {
   const canViewTeachers = computed(() => 
     canManageTeachers.value || 
     session.value?.permissions?.includes('finance.view') || 
+    session.value?.permissions?.includes('fiscal.manage') || 
     session.value?.permissions?.includes('reports.view') || 
     false
   );

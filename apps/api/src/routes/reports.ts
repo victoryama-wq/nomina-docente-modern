@@ -222,7 +222,7 @@ function isSystemAdmin(actor: SessionUser): boolean {
 }
 
 function canViewAllFinance(actor: SessionUser): boolean {
-  return isSystemAdmin(actor) || actor.permissions.includes('finance.view');
+  return isSystemAdmin(actor) || actor.permissions.includes('finance.view') || actor.permissions.includes('finance.global_view');
 }
 
 function canManageFinanceWorkflow(actor: SessionUser): boolean {
@@ -231,6 +231,15 @@ function canManageFinanceWorkflow(actor: SessionUser): boolean {
 
 function canCancelPayrollForCorrection(actor: SessionUser): boolean {
   return isSystemAdmin(actor) || actor.permissions.includes('payroll.finalize');
+}
+
+function isGlobalFinanceReadOnly(actor: SessionUser): boolean {
+  return (
+    actor.permissions.includes('finance.global_view') &&
+    !isSystemAdmin(actor) &&
+    !actor.permissions.includes('finance.view') &&
+    !actor.permissions.includes('payroll.finalize')
+  );
 }
 
 function round2(value: number): number {
@@ -1454,6 +1463,14 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       }
 
       const actor = request.user!;
+      if (isGlobalFinanceReadOnly(actor)) {
+        await reply.code(403).send({
+          error: 'FORBIDDEN',
+          message: 'Dirección/Subdirección solo puede descargar el PDF por coordinaciones.'
+        });
+        return;
+      }
+
       const loaded = await withTransaction((client) => loadVisibleFinanceRun(client, actor, parsedParams.data.id));
       if (!loaded) {
         await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontró la corrida de nómina.' });
@@ -1498,6 +1515,14 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       }
 
       const actor = request.user!;
+      if (isGlobalFinanceReadOnly(actor)) {
+        await reply.code(403).send({
+          error: 'FORBIDDEN',
+          message: 'Dirección/Subdirección solo puede descargar el PDF por coordinaciones.'
+        });
+        return;
+      }
+
       const result = await withTransaction(async (client) => {
         const runHeader = await loadReportRunHeader(client, parsedParams.data.id);
         if (!runHeader) return null;
@@ -1547,7 +1572,16 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
         return;
       }
 
-      const context = await buildFinanceContext(request.user!, parsedQuery.data);
+      const actor = request.user!;
+      if (isGlobalFinanceReadOnly(actor)) {
+        await reply.code(403).send({
+          error: 'FORBIDDEN',
+          message: 'Dirección/Subdirección solo puede descargar el PDF por coordinaciones.'
+        });
+        return;
+      }
+
+      const context = await buildFinanceContext(actor, parsedQuery.data);
       if (!context.selectedRun) {
         await reply.code(404).send({ error: 'NOT_FOUND', message: 'No hay una nómina guardada para exportar.' });
         return;

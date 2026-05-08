@@ -178,7 +178,12 @@ async function assertTeacherOwnedByActorCoordination(
   teacher: TeacherRow,
   options: { allowFinance?: boolean } = {}
 ): Promise<CoordinationRow | null> {
-  if (isSystemAdmin(actor) || (options.allowFinance && actor.permissions.includes('finance.view'))) return null;
+  if (
+    isSystemAdmin(actor) ||
+    (options.allowFinance && (actor.permissions.includes('finance.view') || actor.permissions.includes('fiscal.manage')))
+  ) {
+    return null;
+  }
 
   const actorCoordination = await loadActorCoordination(client, actor, false);
   if (!actorCoordination || !teacher.coordinationId || actorCoordination.id !== teacher.coordinationId) {
@@ -696,7 +701,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.patch(
     '/teachers/:id/fiscal',
-    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view']) },
+    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'fiscal.manage']) },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = teacherFiscalBodySchema.safeParse(request.body);
@@ -822,7 +827,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.post(
     '/teachers/:id/documents/constancia',
-    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view']) },
+    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'fiscal.manage']) },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = documentBodySchema.safeParse(request.body);
@@ -902,7 +907,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.get(
     '/teachers/:id/documents/current',
-    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'reports.view']) },
+    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'reports.view', 'fiscal.manage']) },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       if (!params.success) {

@@ -333,6 +333,8 @@ CREATE INDEX IF NOT EXISTS audit_log_created_at_idx ON audit_log(created_at);
 INSERT INTO roles (code, name, description) VALUES
   ('admin', 'Administrador', 'Acceso administrativo completo.'),
   ('coordinador', 'Coordinador', 'Captura y consulta registros de su coordinacion.'),
+  ('direccion', 'Dirección/Subdirección', 'Consulta ejecutiva global sin acciones operativas.'),
+  ('rh', 'Recursos Humanos', 'Consulta operativa y gestion de expedientes fiscales.'),
   ('finanzas', 'Finanzas', 'Consulta expedientes fiscales y reportes financieros.'),
   ('contador', 'Contador', 'Consulta expedientes fiscales y pendientes contables.')
 ON CONFLICT (code) DO UPDATE
@@ -351,6 +353,8 @@ INSERT INTO permissions (code, name, description) VALUES
   ('reports.view', 'Ver reportes', 'Consulta y exportacion de reportes.'),
   ('statistics.view', 'Ver estadisticas', 'Consulta de estadisticas historicas.'),
   ('finance.view', 'Ver finanzas', 'Consulta de expedientes fiscales.'),
+  ('finance.global_view', 'Ver finanzas global', 'Consulta financiera global sin acciones de flujo.'),
+  ('fiscal.manage', 'Gestionar expediente fiscal', 'Actualizacion de datos fiscales y constancias.'),
   ('calendar.manage', 'Gestionar calendario', 'Configuracion de calendario operativo.'),
   ('closures.manage', 'Gestionar cierres', 'Ejecucion de cierres de cuatrimestre.'),
   ('access.manage', 'Gestionar accesos', 'Alta y mantenimiento de usuarios y roles.'),
@@ -379,6 +383,38 @@ JOIN permissions p ON p.code IN (
   'reports.view'
 )
 WHERE r.code = 'coordinador'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.code IN (
+  'dashboard.view',
+  'teachers.manage',
+  'schedules.manage',
+  'incidences.manage',
+  'extras.manage',
+  'payroll.view',
+  'reports.view',
+  'finance.global_view'
+)
+WHERE r.code = 'direccion'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.code IN (
+  'dashboard.view',
+  'teachers.manage',
+  'schedules.manage',
+  'incidences.manage',
+  'extras.manage',
+  'payroll.view',
+  'reports.view',
+  'fiscal.manage'
+)
+WHERE r.code = 'rh'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id)

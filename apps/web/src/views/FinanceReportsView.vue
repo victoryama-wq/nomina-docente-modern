@@ -127,6 +127,19 @@ const canUseFinanceWorkflow = computed(
   () => authStore.isAdmin || authStore.canFinalizePayroll || authStore.session?.permissions?.includes('finance.view') || false
 );
 
+const isGlobalFinanceReadOnly = computed(
+  () =>
+    authStore.session?.permissions?.includes('finance.global_view') &&
+    !authStore.isAdmin &&
+    !authStore.session?.permissions?.includes('finance.view') &&
+    !authStore.canFinalizePayroll
+);
+
+const canExportFinanceSummaryPdf = computed(() => !isGlobalFinanceReadOnly.value);
+const canExportCoordinationPdf = computed(() => true);
+const canExportCashReceipts = computed(() => !isGlobalFinanceReadOnly.value);
+const canExportFinanceCsv = computed(() => !isGlobalFinanceReadOnly.value);
+
 const canCancelForCorrection = computed(() => authStore.isAdmin || authStore.canFinalizePayroll);
 
 const nextWorkflowAction = computed(() => {
@@ -509,7 +522,7 @@ async function confirmStatusChange() {
 }
 
 async function exportReport(kind: ExportKind) {
-  if (!selectedRun.value) return;
+  if (!selectedRun.value || !canExportFinanceCsv.value) return;
   exporting.value = kind;
   notice.value = null;
   try {
@@ -524,6 +537,8 @@ async function exportReport(kind: ExportKind) {
 
 async function exportPdf(kind: PdfExportKind) {
   if (!selectedRun.value) return;
+  if (kind === 'summary' && !canExportFinanceSummaryPdf.value) return;
+  if (kind === 'coordinations' && !canExportCoordinationPdf.value) return;
   exportingPdf.value = kind;
   notice.value = null;
   try {
@@ -537,7 +552,7 @@ async function exportPdf(kind: PdfExportKind) {
 }
 
 async function exportCashReceipts() {
-  if (!selectedRun.value) return;
+  if (!selectedRun.value || !canExportCashReceipts.value) return;
   exportingReceipts.value = true;
   notice.value = null;
   try {
@@ -647,6 +662,7 @@ onMounted(() => {
           <span>PDF</span>
           <div class="finance-action-row">
             <button
+              v-if="canExportFinanceSummaryPdf"
               class="secondary-action"
               type="button"
               :disabled="!selectedRun || exportingPdf === 'summary'"
@@ -656,6 +672,7 @@ onMounted(() => {
               Resumen
             </button>
             <button
+              v-if="canExportCoordinationPdf"
               class="secondary-action"
               type="button"
               :disabled="!selectedRun || exportingPdf === 'coordinations'"
@@ -665,6 +682,7 @@ onMounted(() => {
               Coordinaciones
             </button>
             <button
+              v-if="canExportCashReceipts"
               class="secondary-action"
               type="button"
               :disabled="!selectedRun || !cashLines.length || exportingReceipts"
@@ -676,7 +694,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="finance-action-group">
+        <div v-if="canExportFinanceCsv" class="finance-action-group">
           <span>CSV</span>
           <div class="finance-action-row">
             <button class="secondary-action" type="button" :disabled="!selectedRun || exporting === 'payments'" @click="exportReport('payments')">
@@ -697,6 +715,11 @@ onMounted(() => {
               Coordinaciones
             </button>
           </div>
+        </div>
+
+        <div v-if="isGlobalFinanceReadOnly" class="finance-action-group readonly">
+          <span>Solo consulta</span>
+          <p>Puede revisar todas las coordinaciones y descargar el PDF por coordinaciones.</p>
         </div>
       </div>
     </section>

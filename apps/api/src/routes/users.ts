@@ -106,9 +106,11 @@ async function listRoles(): Promise<RoleRow[]> {
         CASE code
           WHEN 'admin' THEN 1
           WHEN 'coordinador' THEN 2
-          WHEN 'finanzas' THEN 3
-          WHEN 'contador' THEN 4
-          WHEN 'contabilidad' THEN 5
+          WHEN 'direccion' THEN 3
+          WHEN 'rh' THEN 4
+          WHEN 'finanzas' THEN 5
+          WHEN 'contador' THEN 6
+          WHEN 'contabilidad' THEN 7
           ELSE 99
         END,
         name
