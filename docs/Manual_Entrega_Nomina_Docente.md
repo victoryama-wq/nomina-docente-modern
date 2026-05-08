@@ -270,13 +270,15 @@ Es la fuente oficial para el cálculo de nómina. Administra:
 - Fechas modulares por ciclo.
 - Quincenas.
 - Días inhábiles dentro de cada quincena.
-- Días de acceso para incidencias y extras.
+- Apertura con fecha/hora para incidencias y extras.
+- Días de acceso para incidencias y extras, contados como periodos de 24 horas desde la apertura.
 
 Reglas clave:
 
 - Las fechas modulares pertenecen al ciclo, no a cada quincena.
 - Las quincenas pertenecen a un ciclo.
 - Los días inhábiles afectan el cálculo de horas base.
+- La apertura de incidencias y extras debe caer dentro del rango de la quincena.
 - Una quincena con nómina guardada no debe eliminarse.
 
 ### 6.7 Apertura y cierre de ciclos
@@ -370,6 +372,7 @@ Reglas:
 
 - Solo se capturan en ciclo `ACTIVO`.
 - Solo se capturan sobre una quincena existente.
+- Solo se capturan durante la ventana de acceso definida en Calendario.
 - Solo la coordinación que capturó el horario puede editar sus incidencias, excepto Admin.
 - Si la nómina de la quincena ya fue guardada, la incidencia queda bloqueada.
 - Las faltas descuentan horas.
@@ -393,6 +396,7 @@ Reglas:
 
 - Solo se capturan en ciclo `ACTIVO`.
 - La fecha del extra debe caer dentro de una quincena abierta.
+- Solo se capturan durante la ventana de acceso definida para extras en Calendario.
 - Si la quincena ya tiene nómina guardada, no permite captura ni edición.
 - Cualquier coordinador puede agregar extras a cualquier docente.
 - Solo quien capturó el extra puede editarlo/eliminarlo, excepto Admin.

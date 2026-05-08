@@ -36,8 +36,12 @@ interface CalendarPeriodRow {
   module1End: string;
   module2Start: string;
   module2End: string;
+  incidencesAccessStartAt: string;
   incidencesAccessDays: number;
+  incidencesAccessEndAt: string;
+  extrasAccessStartAt: string;
   extrasAccessDays: number;
+  extrasAccessEndAt: string;
   createdAt: string;
   updatedAt: string;
   blackoutDates: BlackoutDateRow[];
@@ -56,6 +60,12 @@ const blackoutDateSchema = z.object({
   reason: z.string().trim().max(160).optional().default('')
 });
 
+const accessStartSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}, z.string().datetime({ offset: true }).optional());
+
 const calendarPeriodBodySchema = z
   .object({
     cycleId: z.string().uuid().optional(),
@@ -66,7 +76,9 @@ const calendarPeriodBodySchema = z
     module1End: z.string().date().optional(),
     module2Start: z.string().date().optional(),
     module2End: z.string().date().optional(),
+    incidencesAccessStartAt: accessStartSchema,
     incidencesAccessDays: z.coerce.number().int().min(0).max(31).optional().default(5),
+    extrasAccessStartAt: accessStartSchema,
     extrasAccessDays: z.coerce.number().int().min(0).max(31).optional().default(5),
     blackoutDates: z.array(blackoutDateSchema).max(40).optional().default([])
   })
@@ -81,6 +93,20 @@ const calendarPeriodBodySchema = z
           message: 'Los días inhábiles deben estar dentro del rango de la quincena.'
         });
       }
+    }
+    const incidenceStartDate = body.incidencesAccessStartAt?.slice(0, 10);
+    if (incidenceStartDate && (incidenceStartDate < body.payrollStart || incidenceStartDate > body.payrollEnd)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La apertura de incidencias debe estar dentro del rango de la quincena.'
+      });
+    }
+    const extrasStartDate = body.extrasAccessStartAt?.slice(0, 10);
+    if (extrasStartDate && (extrasStartDate < body.payrollStart || extrasStartDate > body.payrollEnd)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La apertura de extras debe estar dentro del rango de la quincena.'
+      });
     }
   });
 
@@ -171,8 +197,12 @@ async function listCalendarPeriods(client: PoolClient, cycleId: string): Promise
         ac.module1_end::text AS "module1End",
         ac.module2_start::text AS "module2Start",
         ac.module2_end::text AS "module2End",
+        pcc.incidences_access_start_at AS "incidencesAccessStartAt",
         pcc.incidences_access_days AS "incidencesAccessDays",
+        (pcc.incidences_access_start_at + make_interval(days => pcc.incidences_access_days)) AS "incidencesAccessEndAt",
+        pcc.extras_access_start_at AS "extrasAccessStartAt",
         pcc.extras_access_days AS "extrasAccessDays",
+        (pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days)) AS "extrasAccessEndAt",
         pcc.created_at AS "createdAt",
         pcc.updated_at AS "updatedAt"
       FROM payroll_calendar_config pcc
@@ -203,8 +233,12 @@ async function loadCalendarPeriod(client: PoolClient, id: string): Promise<Calen
         ac.module1_end::text AS "module1End",
         ac.module2_start::text AS "module2Start",
         ac.module2_end::text AS "module2End",
+        pcc.incidences_access_start_at AS "incidencesAccessStartAt",
         pcc.incidences_access_days AS "incidencesAccessDays",
+        (pcc.incidences_access_start_at + make_interval(days => pcc.incidences_access_days)) AS "incidencesAccessEndAt",
+        pcc.extras_access_start_at AS "extrasAccessStartAt",
         pcc.extras_access_days AS "extrasAccessDays",
+        (pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days)) AS "extrasAccessEndAt",
         pcc.created_at AS "createdAt",
         pcc.updated_at AS "updatedAt"
       FROM payroll_calendar_config pcc
@@ -235,6 +269,10 @@ async function replaceBlackouts(client: PoolClient, configId: string, blackouts:
   }
 }
 
+function accessStart(value: string | undefined): string {
+  return value || new Date().toISOString();
+}
+
 async function createPeriod(client: PoolClient, cycle: CycleRow, body: CalendarPeriodBody): Promise<CalendarPeriodRow> {
   const created = await client.query<{ id: string }>(
     `
@@ -247,10 +285,12 @@ async function createPeriod(client: PoolClient, cycle: CycleRow, body: CalendarP
         module1_end,
         module2_start,
         module2_end,
+        incidences_access_start_at,
         incidences_access_days,
+        extras_access_start_at,
         extras_access_days
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING id
     `,
     [
@@ -262,7 +302,9 @@ async function createPeriod(client: PoolClient, cycle: CycleRow, body: CalendarP
       cycle.module1End,
       cycle.module2Start,
       cycle.module2End,
+      accessStart(body.incidencesAccessStartAt),
       body.incidencesAccessDays,
+      accessStart(body.extrasAccessStartAt),
       body.extrasAccessDays
     ]
   );
@@ -291,10 +333,12 @@ async function updatePeriod(
         module1_end = $6,
         module2_start = $7,
         module2_end = $8,
-        incidences_access_days = $9,
-        extras_access_days = $10,
+        incidences_access_start_at = $9,
+        incidences_access_days = $10,
+        extras_access_start_at = $11,
+        extras_access_days = $12,
         updated_at = now()
-      WHERE id = $11
+      WHERE id = $13
       RETURNING id
     `,
     [
@@ -306,7 +350,9 @@ async function updatePeriod(
       cycle.module1End,
       cycle.module2Start,
       cycle.module2End,
+      accessStart(body.incidencesAccessStartAt),
       body.incidencesAccessDays,
+      accessStart(body.extrasAccessStartAt),
       body.extrasAccessDays,
       id
     ]

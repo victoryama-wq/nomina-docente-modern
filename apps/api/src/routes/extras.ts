@@ -66,7 +66,25 @@ interface ExtraRow {
   capturedByEmail: string;
   updatedAt: string;
   updatedByEmail: string;
+  payrollLocked: boolean;
+  accessStartAt: string | null;
+  accessEndAt: string | null;
+  accessStatus: 'PENDIENTE' | 'ABIERTO' | 'CERRADO' | 'SIN_QUINCENA';
+  accessOpen: boolean;
   canEdit: boolean;
+}
+
+interface ExtraAccessPeriodRow {
+  id: string;
+  cycleId: string;
+  periodLabel: string;
+  payrollStart: string;
+  payrollEnd: string;
+  accessStartAt: string;
+  accessEndAt: string;
+  accessStatus: 'PENDIENTE' | 'ABIERTO' | 'CERRADO';
+  accessOpen: boolean;
+  hasPayrollRun: boolean;
 }
 
 interface ExtraDependencyRow {
@@ -215,11 +233,42 @@ function extraSelectSql(whereClause = ''): string {
       eh.captured_at AS "capturedAt",
       COALESCE(captured.email, '') AS "capturedByEmail",
       eh.updated_at AS "updatedAt",
-      COALESCE(updated.email, '') AS "updatedByEmail"
+      COALESCE(updated.email, '') AS "updatedByEmail",
+      COALESCE(
+        EXISTS (
+          SELECT 1
+          FROM payroll_runs pr
+          WHERE pr.cycle_id = pcc.cycle_id
+            AND pr.period_label = pcc.period_label
+            AND pr.status <> 'CANCELADA'
+        ),
+        false
+      ) AS "payrollLocked",
+      pcc.extras_access_start_at AS "accessStartAt",
+      (pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days)) AS "accessEndAt",
+      CASE
+        WHEN pcc.id IS NULL THEN 'SIN_QUINCENA'
+        WHEN now() < pcc.extras_access_start_at THEN 'PENDIENTE'
+        WHEN now() <= pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days) THEN 'ABIERTO'
+        ELSE 'CERRADO'
+      END AS "accessStatus",
+      COALESCE(
+        now() >= pcc.extras_access_start_at
+        AND now() <= pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days),
+        false
+      ) AS "accessOpen"
     FROM extra_hours eh
     JOIN academic_cycles ac ON ac.id = eh.cycle_id
     JOIN coordinations c ON c.id = eh.coordination_id
     JOIN teachers t ON t.id = eh.teacher_id
+    LEFT JOIN LATERAL (
+      SELECT *
+      FROM payroll_calendar_config config
+      WHERE config.cycle_id = eh.cycle_id
+        AND COALESCE(eh.activity_date, eh.captured_at::date) BETWEEN config.payroll_start AND config.payroll_end
+      ORDER BY config.payroll_start DESC, config.created_at DESC
+      LIMIT 1
+    ) pcc ON true
     LEFT JOIN app_users captured ON captured.id = eh.captured_by
     LEFT JOIN app_users updated ON updated.id = eh.updated_by
     ${whereClause}
@@ -233,7 +282,11 @@ function applyExtraEditability(
 ): ExtraRow[] {
   return rows.map((row) => ({
     ...row,
-    canEdit: isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId)
+    canEdit:
+      row.cycleStatus !== 'CERRADO' &&
+      !row.payrollLocked &&
+      row.accessOpen &&
+      (isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId))
   }));
 }
 
@@ -361,6 +414,41 @@ async function listTabulators(): Promise<TabulatorRow[]> {
   );
 }
 
+async function listExtraAccessPeriods(cycleId: string): Promise<ExtraAccessPeriodRow[]> {
+  return query<ExtraAccessPeriodRow>(
+    `
+      SELECT
+        pcc.id,
+        pcc.cycle_id AS "cycleId",
+        pcc.period_label AS "periodLabel",
+        pcc.payroll_start::text AS "payrollStart",
+        pcc.payroll_end::text AS "payrollEnd",
+        pcc.extras_access_start_at AS "accessStartAt",
+        (pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days)) AS "accessEndAt",
+        CASE
+          WHEN now() < pcc.extras_access_start_at THEN 'PENDIENTE'
+          WHEN now() <= pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days) THEN 'ABIERTO'
+          ELSE 'CERRADO'
+        END AS "accessStatus",
+        (
+          now() >= pcc.extras_access_start_at
+          AND now() <= pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days)
+        ) AS "accessOpen",
+        EXISTS (
+          SELECT 1
+          FROM payroll_runs pr
+          WHERE pr.cycle_id = pcc.cycle_id
+            AND pr.period_label = pcc.period_label
+            AND pr.status <> 'CANCELADA'
+        ) AS "hasPayrollRun"
+      FROM payroll_calendar_config pcc
+      WHERE pcc.cycle_id = $1
+      ORDER BY pcc.extras_access_start_at DESC, pcc.payroll_start DESC
+    `,
+    [cycleId]
+  );
+}
+
 async function auditExtra(
   client: PoolClient,
   actor: SessionUser,
@@ -395,13 +483,19 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
     actorCoordination: await loadActorCoordination(client, actor, false)
   }));
 
-  const [cycles, coordinations, teachers, extras, tabulators] = await Promise.all([
+  const [cycles, coordinations, teachers, extras, tabulators, extraAccessPeriods] = await Promise.all([
     listCycles(),
     listActiveCoordinations(),
     listExtraTeachers(setup.cycle.id),
     listExtraRows(setup.cycle.id, actor, setup.actorCoordination),
-    listTabulators()
+    listTabulators(),
+    listExtraAccessPeriods(setup.cycle.id)
   ]);
+  const activeExtraAccessPeriod =
+    extraAccessPeriods.find((period) => period.accessOpen && !period.hasPayrollRun) ||
+    extraAccessPeriods.find((period) => period.accessStatus === 'PENDIENTE' && !period.hasPayrollRun) ||
+    extraAccessPeriods[0] ||
+    null;
 
   return {
     activeCycle: setup.cycle,
@@ -410,6 +504,8 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
     coordinations: isSystemAdmin(actor) ? coordinations : setup.actorCoordination ? [setup.actorCoordination] : [],
     teachers,
     extras,
+    extraAccessPeriods,
+    activeExtraAccessPeriod,
     tabulators,
     summary: buildSummary(extras, teachers)
   };
@@ -431,27 +527,53 @@ async function ensureNoPayrollDependency(client: PoolClient, extraId: string): P
 }
 
 async function assertExtraPeriodOpen(client: PoolClient, cycleId: string, activityDate?: string | null): Promise<void> {
-  const result = await client.query<{ periodLabel: string }>(
+  const result = await client.query<ExtraAccessPeriodRow>(
     `
-      SELECT pcc.period_label AS "periodLabel"
-      FROM payroll_calendar_config pcc
-      WHERE pcc.cycle_id = $1
-        AND COALESCE($2::date, CURRENT_DATE) BETWEEN pcc.payroll_start AND pcc.payroll_end
-        AND EXISTS (
+      SELECT
+        pcc.id,
+        pcc.cycle_id AS "cycleId",
+        pcc.period_label AS "periodLabel",
+        pcc.payroll_start::text AS "payrollStart",
+        pcc.payroll_end::text AS "payrollEnd",
+        pcc.extras_access_start_at AS "accessStartAt",
+        (pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days)) AS "accessEndAt",
+        CASE
+          WHEN now() < pcc.extras_access_start_at THEN 'PENDIENTE'
+          WHEN now() <= pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days) THEN 'ABIERTO'
+          ELSE 'CERRADO'
+        END AS "accessStatus",
+        (
+          now() >= pcc.extras_access_start_at
+          AND now() <= pcc.extras_access_start_at + make_interval(days => pcc.extras_access_days)
+        ) AS "accessOpen",
+        EXISTS (
           SELECT 1
           FROM payroll_runs pr
           WHERE pr.cycle_id = pcc.cycle_id
             AND pr.period_label = pcc.period_label
             AND pr.status <> 'CANCELADA'
-        )
+        ) AS "hasPayrollRun"
+      FROM payroll_calendar_config pcc
+      WHERE pcc.cycle_id = $1
+        AND COALESCE($2::date, CURRENT_DATE) BETWEEN pcc.payroll_start AND pcc.payroll_end
+      ORDER BY pcc.payroll_start DESC, pcc.created_at DESC
       LIMIT 1
     `,
     [cycleId, activityDate || null]
   );
 
-  const lockedPeriod = result.rows[0];
-  if (lockedPeriod) {
-    throw new Error(`La quincena ${lockedPeriod.periodLabel} ya tiene nómina guardada. No se pueden capturar ni modificar extras.`);
+  const period = result.rows[0];
+  if (!period) {
+    throw new Error('La fecha del extra no pertenece a una quincena configurada en el calendario operativo.');
+  }
+  if (period.hasPayrollRun) {
+    throw new Error(`La quincena ${period.periodLabel} ya tiene nómina guardada. No se pueden capturar ni modificar extras.`);
+  }
+  if (!period.accessOpen) {
+    if (period.accessStatus === 'PENDIENTE') {
+      throw new Error(`La ventana de captura de extras abre el ${new Date(period.accessStartAt).toLocaleString('es-MX')}.`);
+    }
+    throw new Error(`La ventana de captura de extras cerró el ${new Date(period.accessEndAt).toLocaleString('es-MX')}.`);
   }
 }
 

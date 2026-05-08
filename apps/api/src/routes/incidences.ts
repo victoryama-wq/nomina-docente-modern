@@ -21,6 +21,10 @@ interface IncidenceScheduleRow {
   calendarConfigId: string;
   calendarPeriodLabel: string;
   payrollLocked: boolean;
+  accessStartAt: string;
+  accessEndAt: string;
+  accessStatus: 'PENDIENTE' | 'ABIERTO' | 'CERRADO';
+  accessOpen: boolean;
   coordinationId: string;
   coordinationName: string;
   teacherId: string;
@@ -48,6 +52,10 @@ interface IncidenceCalendarPeriodRow {
   periodLabel: string;
   payrollStart: string;
   payrollEnd: string;
+  accessStartAt: string;
+  accessEndAt: string;
+  accessStatus: 'PENDIENTE' | 'ABIERTO' | 'CERRADO';
+  accessOpen: boolean;
   hasPayrollRun: boolean;
 }
 
@@ -102,6 +110,17 @@ function incidenceSelectSql(whereClause = ''): string {
           AND pr.period_label = pcc.period_label
           AND pr.status <> 'CANCELADA'
       ) AS "payrollLocked",
+      pcc.incidences_access_start_at AS "accessStartAt",
+      (pcc.incidences_access_start_at + make_interval(days => pcc.incidences_access_days)) AS "accessEndAt",
+      CASE
+        WHEN now() < pcc.incidences_access_start_at THEN 'PENDIENTE'
+        WHEN now() <= pcc.incidences_access_start_at + make_interval(days => pcc.incidences_access_days) THEN 'ABIERTO'
+        ELSE 'CERRADO'
+      END AS "accessStatus",
+      (
+        now() >= pcc.incidences_access_start_at
+        AND now() <= pcc.incidences_access_start_at + make_interval(days => pcc.incidences_access_days)
+      ) AS "accessOpen",
       s.coordination_id AS "coordinationId",
       c.name AS "coordinationName",
       s.teacher_id AS "teacherId",
@@ -140,6 +159,7 @@ function applyEditability(
     ...row,
     canEdit:
       !row.payrollLocked &&
+      row.accessOpen &&
       row.cycleStatus !== 'CERRADO' &&
       (isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId))
   }));
@@ -154,6 +174,17 @@ async function listIncidenceCalendarPeriods(cycleId: string): Promise<IncidenceC
         pcc.period_label AS "periodLabel",
         pcc.payroll_start::text AS "payrollStart",
         pcc.payroll_end::text AS "payrollEnd",
+        pcc.incidences_access_start_at AS "accessStartAt",
+        (pcc.incidences_access_start_at + make_interval(days => pcc.incidences_access_days)) AS "accessEndAt",
+        CASE
+          WHEN now() < pcc.incidences_access_start_at THEN 'PENDIENTE'
+          WHEN now() <= pcc.incidences_access_start_at + make_interval(days => pcc.incidences_access_days) THEN 'ABIERTO'
+          ELSE 'CERRADO'
+        END AS "accessStatus",
+        (
+          now() >= pcc.incidences_access_start_at
+          AND now() <= pcc.incidences_access_start_at + make_interval(days => pcc.incidences_access_days)
+        ) AS "accessOpen",
         EXISTS (
           SELECT 1
           FROM payroll_runs pr
@@ -229,6 +260,12 @@ async function saveIncidenceRow(
   if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar incidencias de un ciclo cerrado.');
   if (before.cycleStatus !== 'ACTIVO') throw new Error('Solo se pueden capturar incidencias en un ciclo activo.');
   if (before.payrollLocked) throw new Error('Esta quincena ya tiene nómina guardada. Las incidencias quedaron cerradas.');
+  if (!before.accessOpen) {
+    if (before.accessStatus === 'PENDIENTE') {
+      throw new Error(`La ventana de captura de incidencias abre el ${new Date(before.accessStartAt).toLocaleString('es-MX')}.`);
+    }
+    throw new Error(`La ventana de captura de incidencias cerró el ${new Date(before.accessEndAt).toLocaleString('es-MX')}.`);
+  }
   if (!before.canEdit) throw new Error('Solo la coordinación que capturó este horario puede editar sus incidencias.');
 
   await client.query(

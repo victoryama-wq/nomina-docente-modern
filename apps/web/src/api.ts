@@ -261,6 +261,10 @@ export interface IncidenceSchedule {
   calendarConfigId: string;
   calendarPeriodLabel: string;
   payrollLocked: boolean;
+  accessStartAt: string;
+  accessEndAt: string;
+  accessStatus: 'PENDIENTE' | 'ABIERTO' | 'CERRADO';
+  accessOpen: boolean;
   coordinationId: string;
   coordinationName: string;
   teacherId: string;
@@ -306,6 +310,23 @@ export interface IncidenceCalendarPeriod {
   periodLabel: string;
   payrollStart: string;
   payrollEnd: string;
+  accessStartAt: string;
+  accessEndAt: string;
+  accessStatus: 'PENDIENTE' | 'ABIERTO' | 'CERRADO';
+  accessOpen: boolean;
+  hasPayrollRun: boolean;
+}
+
+export interface ExtraAccessPeriod {
+  id: string;
+  cycleId: string;
+  periodLabel: string;
+  payrollStart: string;
+  payrollEnd: string;
+  accessStartAt: string;
+  accessEndAt: string;
+  accessStatus: 'PENDIENTE' | 'ABIERTO' | 'CERRADO';
+  accessOpen: boolean;
   hasPayrollRun: boolean;
 }
 
@@ -352,6 +373,11 @@ export interface ExtraRecord {
   capturedByEmail: string;
   updatedAt: string;
   updatedByEmail: string;
+  payrollLocked: boolean;
+  accessStartAt: string | null;
+  accessEndAt: string | null;
+  accessStatus: 'PENDIENTE' | 'ABIERTO' | 'CERRADO' | 'SIN_QUINCENA';
+  accessOpen: boolean;
   canEdit: boolean;
 }
 
@@ -518,8 +544,12 @@ export interface CalendarPeriod {
   module1End: string;
   module2Start: string;
   module2End: string;
+  incidencesAccessStartAt: string;
   incidencesAccessDays: number;
+  incidencesAccessEndAt: string;
+  extrasAccessStartAt: string;
   extrasAccessDays: number;
+  extrasAccessEndAt: string;
   createdAt: string;
   updatedAt: string;
   blackoutDates: CalendarBlackoutDate[];
@@ -534,7 +564,9 @@ export interface CalendarPeriodPayload {
   module1End: string;
   module2Start: string;
   module2End: string;
+  incidencesAccessStartAt: string;
   incidencesAccessDays: number;
+  extrasAccessStartAt: string;
   extrasAccessDays: number;
   blackoutDates: Array<Pick<CalendarBlackoutDate, 'blackoutDate' | 'reason'>>;
 }
@@ -1101,6 +1133,8 @@ export async function fetchExtrasContext(cycleId?: string): Promise<{
   coordinations: CoordinationOption[];
   teachers: ExtraTeacher[];
   extras: ExtraRecord[];
+  extraAccessPeriods: ExtraAccessPeriod[];
+  activeExtraAccessPeriod: ExtraAccessPeriod | null;
   tabulators: TabulatorOption[];
   summary: ExtraSummary;
 }> {

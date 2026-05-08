@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RefreshCw, Search, Clock3, Save, RotateCcw, Building2 } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import {
@@ -45,6 +45,8 @@ const savingRows = ref<Record<string, boolean>>({});
 const savingBatch = ref(false);
 const pageBusy = ref(false);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
+const nowMs = ref(Date.now());
+let clockTimer: number | undefined;
 
 const filteredSchedules = computed(() => {
   const text = searchText.value.toLowerCase().trim();
@@ -71,8 +73,8 @@ const filteredSchedules = computed(() => {
       (incidenceFilter.value === 'SIN' && !hasIncidence);
     const matchesVisibility =
       visibilityFilter.value === 'TODOS' ||
-      (visibilityFilter.value === 'EDITABLES' && schedule.canEdit) ||
-      (visibilityFilter.value === 'BLOQUEADOS' && !schedule.canEdit);
+      (visibilityFilter.value === 'EDITABLES' && canEditSchedule(schedule)) ||
+      (visibilityFilter.value === 'BLOQUEADOS' && !canEditSchedule(schedule));
     const matchesChange =
       changeFilter.value === 'TODOS' ||
       (changeFilter.value === 'MODIFICADOS' && modified) ||
@@ -83,9 +85,33 @@ const filteredSchedules = computed(() => {
 });
 
 const visiblePendingRows = computed(() =>
-  filteredSchedules.value.filter((schedule) => schedule.canEdit && rowIsModified(schedule))
+  filteredSchedules.value.filter((schedule) => canEditSchedule(schedule) && rowIsModified(schedule))
 );
-const allPendingRows = computed(() => schedules.value.filter((schedule) => schedule.canEdit && rowIsModified(schedule)));
+const allPendingRows = computed(() => schedules.value.filter((schedule) => canEditSchedule(schedule) && rowIsModified(schedule)));
+
+const accessStatus = computed(() => {
+  const period = activeCalendarPeriod.value;
+  if (!period) return 'SIN_QUINCENA';
+  if (period.hasPayrollRun) return 'NOMINA';
+  const start = new Date(period.accessStartAt).getTime();
+  const end = new Date(period.accessEndAt).getTime();
+  if (nowMs.value < start) return 'PENDIENTE';
+  if (nowMs.value <= end) return 'ABIERTO';
+  return 'CERRADO';
+});
+
+const accessStatusLabel = computed(() => {
+  const period = activeCalendarPeriod.value;
+  if (!period) return 'Sin quincena';
+  if (accessStatus.value === 'NOMINA') return 'Nómina guardada';
+  if (accessStatus.value === 'PENDIENTE') return `Abre ${formatDateTime(period.accessStartAt)}`;
+  if (accessStatus.value === 'ABIERTO') return `Cierra en ${formatRemaining(new Date(period.accessEndAt).getTime() - nowMs.value)}`;
+  return `Cerró ${formatDateTime(period.accessEndAt)}`;
+});
+
+function canEditSchedule(schedule: IncidenceSchedule) {
+  return schedule.canEdit && accessStatus.value === 'ABIERTO';
+}
 
 function numberValue(value: number | string | null | undefined) {
   return Number(value) || 0;
@@ -101,6 +127,24 @@ function moneyLabel(value: number | string | null | undefined) {
     style: 'currency',
     currency: 'MXN'
   });
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '-';
+  return new Date(value).toLocaleString('es-MX', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  });
+}
+
+function formatRemaining(ms: number) {
+  const totalMinutes = Math.max(0, Math.ceil(ms / 60_000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days} d ${hours} h`;
+  if (hours > 0) return `${hours} h ${minutes} min`;
+  return `${minutes} min`;
 }
 
 function categoryLimitLabel(category: string) {
@@ -164,7 +208,9 @@ function rowHasIncidences(schedule: IncidenceSchedule) {
 
 function rowBadge(schedule: IncidenceSchedule) {
   if (schedule.payrollLocked) return { label: 'Nómina guardada', className: 'muted' };
-  if (!schedule.canEdit) return { label: 'Bloqueado', className: 'muted' };
+  if (accessStatus.value === 'PENDIENTE') return { label: 'Por abrir', className: 'warning' };
+  if (accessStatus.value === 'CERRADO') return { label: 'Acceso cerrado', className: 'muted' };
+  if (!canEditSchedule(schedule)) return { label: 'Bloqueado', className: 'muted' };
   if (rowIsModified(schedule)) return { label: 'Sin guardar', className: 'warning' };
   if (rowHasIncidences(schedule)) return { label: 'Con incidencia', className: 'danger' };
   return { label: 'Sin novedad', className: 'ok' };
@@ -175,7 +221,7 @@ function buildSummary(rows: IncidenceSchedule[]): IncidenceSummary {
   return {
     total: rows.length,
     teachers: teachers.size,
-    editable: rows.filter((schedule) => schedule.canEdit).length,
+    editable: rows.filter((schedule) => canEditSchedule(schedule)).length,
     withIncidences: rows.filter((schedule) => rowHasIncidences(schedule)).length,
     absences: rows.reduce((sum, schedule) => sum + numberValue(draftFor(schedule).absences), 0),
     delays: rows.reduce((sum, schedule) => sum + numberValue(draftFor(schedule).delays), 0),
@@ -225,7 +271,7 @@ function loadSelectedCalendar() {
 }
 
 async function saveRow(schedule: IncidenceSchedule) {
-  if (!schedule.canEdit || !rowIsModified(schedule)) return;
+  if (!canEditSchedule(schedule) || !rowIsModified(schedule)) return;
   if (!selectedCalendarConfigId.value) {
     setNotice('error', 'Selecciona una quincena de calendario antes de guardar incidencias.');
     return;
@@ -303,7 +349,15 @@ function discardPendingRows() {
 }
 
 onMounted(() => {
+  clockTimer = window.setInterval(() => {
+    nowMs.value = Date.now();
+    refreshSummary();
+  }, 60_000);
   loadIncidences();
+});
+
+onUnmounted(() => {
+  if (clockTimer) window.clearInterval(clockTimer);
 });
 </script>
 
@@ -348,6 +402,9 @@ onMounted(() => {
     <div v-if="activeCalendarPeriod?.hasPayrollRun" class="notice warning" style="margin-bottom: 1rem;">
       Esta quincena ya tiene nómina guardada. Las incidencias están cerradas y solo se muestran para consulta.
     </div>
+    <div v-else-if="activeCalendarPeriod && accessStatus !== 'ABIERTO'" class="notice warning" style="margin-bottom: 1rem;">
+      {{ accessStatusLabel }}. Las incidencias quedan en modo consulta hasta que la ventana de captura esté abierta.
+    </div>
 
     <section class="metric-grid compact">
       <article class="metric-card mini"><p>Registros</p><strong>{{ summary.total }}</strong></article>
@@ -380,7 +437,7 @@ onMounted(() => {
           </select>
           <span class="subtle-pill">
             <Clock3 :size="16" />
-            {{ activeCalendarPeriod?.periodLabel || activeCycle?.periodLabel || 'Quincena operativa' }}
+            {{ activeCalendarPeriod?.periodLabel || activeCycle?.periodLabel || 'Quincena operativa' }} / {{ accessStatusLabel }}
           </span>
         </div>
 
@@ -464,7 +521,7 @@ onMounted(() => {
                     type="number"
                     min="0"
                     step="0.5"
-                    :disabled="!schedule.canEdit"
+                    :disabled="!canEditSchedule(schedule)"
                     @input="setValue(schedule, 'absences', ($event.target as HTMLInputElement).value)"
                   />
                 </td>
@@ -475,7 +532,7 @@ onMounted(() => {
                     type="number"
                     min="0"
                     step="0.5"
-                    :disabled="!schedule.canEdit"
+                    :disabled="!canEditSchedule(schedule)"
                     @input="setValue(schedule, 'delays', ($event.target as HTMLInputElement).value)"
                   />
                 </td>
@@ -486,7 +543,7 @@ onMounted(() => {
                     type="number"
                     min="0"
                     step="0.5"
-                    :disabled="!schedule.canEdit"
+                    :disabled="!canEditSchedule(schedule)"
                     @input="setValue(schedule, 'extraHoursInSchedule', ($event.target as HTMLInputElement).value)"
                   />
                 </td>
@@ -498,7 +555,7 @@ onMounted(() => {
                   <button
                     class="icon-button"
                     type="button"
-                    :disabled="!schedule.canEdit || !rowIsModified(schedule) || savingRows[schedule.id]"
+                    :disabled="!canEditSchedule(schedule) || !rowIsModified(schedule) || savingRows[schedule.id]"
                     :title="schedule.payrollLocked ? 'La quincena ya tiene nómina guardada' : 'Guardar'"
                     @click="saveRow(schedule)"
                   >

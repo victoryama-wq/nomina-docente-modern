@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { BadgePlus, Building2, Clock3, Edit3, RefreshCw, Search, Trash2 } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import {
@@ -9,6 +9,7 @@ import {
   updateExtra,
   type CoordinationOption,
   type CycleOption,
+  type ExtraAccessPeriod,
   type ExtraPayload,
   type ExtraRecord,
   type ExtraSummary,
@@ -29,6 +30,8 @@ const selectedCycleId = ref('');
 const coordinations = ref<CoordinationOption[]>([]);
 const actorCoordination = ref<CoordinationOption | null>(null);
 const tabulators = ref<TabulatorOption[]>([]);
+const extraAccessPeriods = ref<ExtraAccessPeriod[]>([]);
+const activeExtraAccessPeriod = ref<ExtraAccessPeriod | null>(null);
 const summary = ref<ExtraSummary>({
   total: 0,
   hours: 0,
@@ -49,6 +52,8 @@ const teacherSearchText = ref('');
 const teacherPickerOpen = ref(false);
 const pageBusy = ref(false);
 const notice = ref<{ type: 'ok' | 'error' | 'warning'; text: string } | null>(null);
+const nowMs = ref(Date.now());
+let clockTimer: number | undefined;
 
 const blankExtra = (): ExtraPayload => ({
   teacherId: '',
@@ -102,9 +107,31 @@ const filteredExtras = computed(() => {
       .toLowerCase();
     const matchesText = !text || haystack.includes(text);
     const matchesStatus = loadStatusFilter.value === 'TODOS' || status === loadStatusFilter.value;
-    const matchesEditable = !onlyEditable.value || extra.canEdit;
+    const matchesEditable = !onlyEditable.value || canEditExtra(extra);
     return matchesText && matchesStatus && matchesEditable;
   });
+});
+
+const extraAccessStatus = computed(() => {
+  const period = activeExtraAccessPeriod.value;
+  if (!period) return 'SIN_QUINCENA';
+  if (period.hasPayrollRun) return 'NOMINA';
+  const start = new Date(period.accessStartAt).getTime();
+  const end = new Date(period.accessEndAt).getTime();
+  if (nowMs.value < start) return 'PENDIENTE';
+  if (nowMs.value <= end) return 'ABIERTO';
+  return 'CERRADO';
+});
+
+const canCaptureExtras = computed(() => activeCycle.value?.status !== 'CERRADO' && extraAccessStatus.value === 'ABIERTO');
+
+const extraAccessStatusLabel = computed(() => {
+  const period = activeExtraAccessPeriod.value;
+  if (!period) return 'Sin quincena configurada';
+  if (extraAccessStatus.value === 'NOMINA') return 'Nómina guardada';
+  if (extraAccessStatus.value === 'PENDIENTE') return `Abre ${formatDateTime(period.accessStartAt)}`;
+  if (extraAccessStatus.value === 'ABIERTO') return `Cierra en ${formatRemaining(new Date(period.accessEndAt).getTime() - nowMs.value)}`;
+  return `Cerró ${formatDateTime(period.accessEndAt)}`;
 });
 
 const projection = computed(() => {
@@ -173,6 +200,31 @@ function formatDate(value: string | null | undefined) {
   return `${day}/${month}/${year}`;
 }
 
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '-';
+  return new Date(value).toLocaleString('es-MX', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  });
+}
+
+function formatRemaining(ms: number) {
+  const totalMinutes = Math.max(0, Math.ceil(ms / 60_000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days} d ${hours} h`;
+  if (hours > 0) return `${hours} h ${minutes} min`;
+  return `${minutes} min`;
+}
+
+function canEditExtra(extra: ExtraRecord) {
+  if (!extra.canEdit || !extra.accessStartAt || !extra.accessEndAt) return false;
+  const start = new Date(extra.accessStartAt).getTime();
+  const end = new Date(extra.accessEndAt).getTime();
+  return nowMs.value >= start && nowMs.value <= end;
+}
+
 function setNotice(type: 'ok' | 'error' | 'warning', text: string) {
   notice.value = { type, text };
   setTimeout(() => clearNotice(), 3200);
@@ -228,6 +280,8 @@ async function loadExtras(cycleId = selectedCycleId.value || undefined) {
     coordinations.value = data.coordinations;
     teachers.value = data.teachers;
     extras.value = data.extras;
+    extraAccessPeriods.value = data.extraAccessPeriods;
+    activeExtraAccessPeriod.value = data.activeExtraAccessPeriod;
     tabulators.value = data.tabulators;
     summary.value = data.summary;
   } catch (err) {
@@ -247,6 +301,10 @@ function closeModal() {
 }
 
 function newExtra() {
+  if (!canCaptureExtras.value) {
+    setNotice('error', `La captura de extras no está abierta. ${extraAccessStatusLabel.value}.`);
+    return;
+  }
   editingExtraId.value = null;
   form.value = {
     ...blankExtra(),
@@ -293,8 +351,8 @@ function applyTabulator() {
 }
 
 function editExtra(extra: ExtraRecord) {
-  if (!extra.canEdit) {
-    setNotice('error', 'Solo la coordinación que capturó este extra puede editarlo.');
+  if (!canEditExtra(extra)) {
+    setNotice('error', extra.canEdit ? 'La ventana de captura de este extra no está abierta.' : 'Solo la coordinación que capturó este extra puede editarlo.');
     return;
   }
 
@@ -361,8 +419,8 @@ async function saveExtra() {
 }
 
 function requestRemoveExtra(extra: ExtraRecord) {
-  if (!extra.canEdit) {
-    setNotice('error', 'Solo la coordinación que capturó este extra puede eliminarlo.');
+  if (!canEditExtra(extra)) {
+    setNotice('error', extra.canEdit ? 'La ventana de captura de este extra no está abierta.' : 'Solo la coordinación que capturó este extra puede eliminarlo.');
     return;
   }
   pendingDeleteExtra.value = extra;
@@ -394,7 +452,14 @@ async function confirmRemoveExtra() {
 }
 
 onMounted(() => {
+  clockTimer = window.setInterval(() => {
+    nowMs.value = Date.now();
+  }, 60_000);
   loadExtras();
+});
+
+onUnmounted(() => {
+  if (clockTimer) window.clearInterval(clockTimer);
 });
 </script>
 
@@ -419,12 +484,16 @@ onMounted(() => {
           <RefreshCw :size="17" :class="{ spin: pageBusy }" />
           Actualizar
         </button>
-        <button class="primary-inline" type="button" :disabled="activeCycle?.status === 'CERRADO'" @click="newExtra">
+        <button class="primary-inline" type="button" :disabled="!canCaptureExtras" @click="newExtra">
           <BadgePlus :size="17" />
           Nuevo extra
         </button>
       </div>
     </section>
+
+    <div v-if="activeExtraAccessPeriod && extraAccessStatus !== 'ABIERTO'" class="notice warning" style="margin-bottom: 1rem;">
+      {{ extraAccessStatusLabel }}. La captura de extras queda en modo consulta hasta que la ventana esté abierta.
+    </div>
 
     <section class="metric-grid compact">
       <article class="metric-card mini"><p>Registros</p><strong>{{ summary.total }}</strong></article>
@@ -453,7 +522,7 @@ onMounted(() => {
           </label>
           <span class="subtle-pill">
             <Clock3 :size="16" />
-            {{ activeCycle?.periodLabel || 'Ciclo operativo' }}
+            {{ activeExtraAccessPeriod?.periodLabel || activeCycle?.periodLabel || 'Ciclo operativo' }} / {{ extraAccessStatusLabel }}
           </span>
         </div>
 
@@ -517,14 +586,14 @@ onMounted(() => {
                 <td>
                   <span>{{ formatDate(extra.capturedAt) }}</span>
                   <small>{{ extra.capturedByEmail || 'Sin usuario' }}</small>
-                  <span v-if="!extra.canEdit" class="badge muted">Bloqueado</span>
+                  <span v-if="!canEditExtra(extra)" class="badge muted">Bloqueado</span>
                 </td>
                 <td class="row-actions">
                   <button
                     class="icon-button"
                     type="button"
-                    :disabled="!extra.canEdit"
-                    :title="extra.canEdit ? 'Editar' : 'Solo editable por la coordinación que lo capturó'"
+                    :disabled="!canEditExtra(extra)"
+                    :title="canEditExtra(extra) ? 'Editar' : 'Solo editable durante la ventana de captura correspondiente'"
                     @click="editExtra(extra)"
                   >
                     <Edit3 :size="16" />
@@ -532,8 +601,8 @@ onMounted(() => {
                   <button
                     class="icon-button danger"
                     type="button"
-                    :disabled="!extra.canEdit"
-                    :title="extra.canEdit ? 'Eliminar' : 'Solo eliminable por la coordinación que lo capturó'"
+                    :disabled="!canEditExtra(extra)"
+                    :title="canEditExtra(extra) ? 'Eliminar' : 'Solo eliminable durante la ventana de captura correspondiente'"
                     @click="requestRemoveExtra(extra)"
                   >
                     <Trash2 :size="16" />

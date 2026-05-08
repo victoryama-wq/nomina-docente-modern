@@ -49,6 +49,16 @@ function dateOnly(value: string | null | undefined) {
   return value ? value.slice(0, 10) : '';
 }
 
+function toDatetimeLocal(value: string | Date | null | undefined) {
+  const date = value instanceof Date ? value : value ? new Date(value) : new Date();
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function fromDatetimeLocal(value: string | null | undefined) {
+  return value ? `${value}:00-05:00` : `${toDatetimeLocal(new Date())}:00-05:00`;
+}
+
 function currentFortnight() {
   const today = new Date();
   const year = today.getFullYear();
@@ -126,7 +136,9 @@ function blankForm(): CalendarPeriodPayload {
     module1End: dateOnly(cycle?.module1End) || fortnight.payrollEnd,
     module2Start: dateOnly(cycle?.module2Start) || fortnight.payrollStart,
     module2End: dateOnly(cycle?.module2End) || fortnight.payrollEnd,
+    incidencesAccessStartAt: toDatetimeLocal(new Date()),
     incidencesAccessDays: 5,
+    extrasAccessStartAt: toDatetimeLocal(new Date()),
     extrasAccessDays: 5,
     blackoutDates: []
   };
@@ -155,6 +167,14 @@ function formatDate(value: string | null | undefined) {
   const [year, month, day] = dateOnly(value).split('-');
   if (!year || !month || !day) return value;
   return `${day}/${month}/${year}`;
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '-';
+  return new Date(value).toLocaleString('es-MX', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  });
 }
 
 function setNotice(type: 'ok' | 'error', text: string) {
@@ -292,6 +312,10 @@ async function loadCalendar(cycleId = selectedCycleId.value || undefined) {
       module1End: dateOnly(period.module1End),
       module2Start: dateOnly(period.module2Start),
       module2End: dateOnly(period.module2End),
+      incidencesAccessStartAt: period.incidencesAccessStartAt,
+      incidencesAccessEndAt: period.incidencesAccessEndAt,
+      extrasAccessStartAt: period.extrasAccessStartAt,
+      extrasAccessEndAt: period.extrasAccessEndAt,
       blackoutDates: period.blackoutDates.map((blackout) => ({
         ...blackout,
         blackoutDate: dateOnly(blackout.blackoutDate)
@@ -325,7 +349,9 @@ function editPeriod(period: CalendarPeriod) {
     module1End: dateOnly(period.module1End),
     module2Start: dateOnly(period.module2Start),
     module2End: dateOnly(period.module2End),
+    incidencesAccessStartAt: toDatetimeLocal(period.incidencesAccessStartAt),
     incidencesAccessDays: period.incidencesAccessDays,
+    extrasAccessStartAt: toDatetimeLocal(period.extrasAccessStartAt),
     extrasAccessDays: period.extrasAccessDays,
     blackoutDates: period.blackoutDates.map((blackout) => ({
       blackoutDate: dateOnly(blackout.blackoutDate),
@@ -366,6 +392,16 @@ function removeBlackout(date: string) {
 function validateForm() {
   if (!form.value.payrollStart || !form.value.payrollEnd) return 'Captura inicio y cierre de quincena.';
   if (form.value.payrollStart > form.value.payrollEnd) return 'La quincena tiene fechas invertidas.';
+  if (!form.value.incidencesAccessStartAt) return 'Captura la apertura de incidencias.';
+  if (!form.value.extrasAccessStartAt) return 'Captura la apertura de extras.';
+  const incidenceDate = form.value.incidencesAccessStartAt.slice(0, 10);
+  if (incidenceDate < form.value.payrollStart || incidenceDate > form.value.payrollEnd) {
+    return 'La apertura de incidencias debe estar dentro de la quincena.';
+  }
+  const extraDate = form.value.extrasAccessStartAt.slice(0, 10);
+  if (extraDate < form.value.payrollStart || extraDate > form.value.payrollEnd) {
+    return 'La apertura de extras debe estar dentro de la quincena.';
+  }
   return '';
 }
 
@@ -415,7 +451,9 @@ async function savePeriod() {
       module1Start: dateOnly(activeCycle.value?.module1Start) || form.value.module1Start,
       module1End: dateOnly(activeCycle.value?.module1End) || form.value.module1End,
       module2Start: dateOnly(activeCycle.value?.module2Start) || form.value.module2Start,
-      module2End: dateOnly(activeCycle.value?.module2End) || form.value.module2End
+      module2End: dateOnly(activeCycle.value?.module2End) || form.value.module2End,
+      incidencesAccessStartAt: fromDatetimeLocal(form.value.incidencesAccessStartAt),
+      extrasAccessStartAt: fromDatetimeLocal(form.value.extrasAccessStartAt)
     };
     const response = editingId.value
       ? await updateCalendarPeriod(editingId.value, payload)
@@ -694,8 +732,16 @@ onMounted(() => {
             <input v-model="form.payrollEnd" type="date" @change="refreshPeriodLabel" />
           </label>
           <label>
+            <span>Apertura incidencias</span>
+            <input v-model="form.incidencesAccessStartAt" type="datetime-local" />
+          </label>
+          <label>
             <span>Días acceso incidencias</span>
             <input v-model.number="form.incidencesAccessDays" type="number" min="0" max="31" />
+          </label>
+          <label>
+            <span>Apertura extras</span>
+            <input v-model="form.extrasAccessStartAt" type="datetime-local" />
           </label>
           <label>
             <span>Días acceso extras</span>
@@ -783,7 +829,9 @@ onMounted(() => {
                 </td>
                 <td>
                   <strong>Inc {{ period.incidencesAccessDays }} días</strong>
-                  <span>Extras {{ period.extrasAccessDays }} días</span>
+                  <span>{{ formatDateTime(period.incidencesAccessStartAt) }} - {{ formatDateTime(period.incidencesAccessEndAt) }}</span>
+                  <strong>Extras {{ period.extrasAccessDays }} días</strong>
+                  <span>{{ formatDateTime(period.extrasAccessStartAt) }} - {{ formatDateTime(period.extrasAccessEndAt) }}</span>
                 </td>
                 <td class="row-actions">
                   <button class="icon-button" type="button" title="Editar" :disabled="activeCycle?.status === 'CERRADO'" @click="editPeriod(period)">
