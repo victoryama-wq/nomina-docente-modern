@@ -27,6 +27,11 @@ const router = createRouter({
           component: () => import('../views/TeachersView.vue')
         },
         {
+          path: 'expediente-fiscal',
+          name: 'fiscalRecords',
+          component: () => import('../views/FiscalRecordsView.vue')
+        },
+        {
           path: 'horarios',
           name: 'schedules',
           component: () => import('../views/SchedulesView.vue')

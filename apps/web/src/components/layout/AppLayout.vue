@@ -14,6 +14,7 @@ import {
   BadgePlus,
   CircleDollarSign,
   FileSpreadsheet,
+  FolderLock,
   Database,
   Menu,
   LogOut
@@ -43,6 +44,7 @@ const roleLabel = computed(() => {
 
 const pageTitle = computed(() => {
   if (route.name === 'teachers') return 'Directorio Docente';
+  if (route.name === 'fiscalRecords') return 'Expediente Fiscal';
   if (route.name === 'schedules') return 'Capturar Horarios';
   if (route.name === 'incidences') return 'Capturar Incidencias';
   if (route.name === 'extras') return 'Capturar Extras';
@@ -96,6 +98,17 @@ async function handleLogout() {
         >
           <Users :size="18" />
           Directorio
+        </router-link>
+
+        <router-link
+          v-if="authStore.canViewFiscalRecords"
+          :to="{ name: 'fiscalRecords' }"
+          class="nav-item"
+          active-class="active"
+          @click="menuOpen = false"
+        >
+          <FolderLock :size="18" />
+          Expediente fiscal
         </router-link>
         
         <router-link

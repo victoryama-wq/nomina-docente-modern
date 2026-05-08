@@ -33,6 +33,14 @@ export const useAuthStore = defineStore('auth', () => {
       session.value?.permissions?.includes('reports.view') ||
       false
   );
+  const canViewFiscalRecords = computed(
+    () =>
+      session.value?.isProtectedSuperAdmin ||
+      session.value?.permissions?.includes('teachers.manage') ||
+      session.value?.permissions?.includes('finance.view') ||
+      session.value?.permissions?.includes('reports.view') ||
+      false
+  );
   const canExportTeacherHistory = computed(() => session.value?.permissions?.includes('audit.view') || false);
   const canViewTeachers = computed(() => 
     canManageTeachers.value || 
@@ -115,6 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
     canFinalizePayroll,
     canManageCalendar,
     canViewFinanceReports,
+    canViewFiscalRecords,
     canExportTeacherHistory,
     canViewTeachers,
     login,
