@@ -26,6 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
     () => session.value?.isProtectedSuperAdmin || session.value?.permissions?.includes('payroll.finalize') || false
   );
   const canManageCalendar = computed(() => session.value?.permissions?.includes('calendar.manage') || false);
+  const canManageCatalogs = computed(() => isAdmin.value);
   const canViewFinanceReports = computed(
     () =>
       session.value?.isProtectedSuperAdmin ||
@@ -132,6 +133,7 @@ export const useAuthStore = defineStore('auth', () => {
     canCalculatePayroll,
     canFinalizePayroll,
     canManageCalendar,
+    canManageCatalogs,
     canViewFinanceReports,
     canViewFiscalRecords,
     canManageFiscalRecords,

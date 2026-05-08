@@ -34,8 +34,10 @@ const teacherSummary = ref<TeacherSummary>({
   fiscalReady: 0
 });
 const coordinations = ref<CoordinationOption[]>([]);
+const actorCoordination = ref<CoordinationOption | null>(null);
 const teacherSearch = ref('');
 const teacherStatusFilter = ref<'TODOS' | 'ACTIVO' | 'INACTIVO'>('TODOS');
+const onlyEditableTeachers = ref(false);
 const pageBusy = ref(false);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
@@ -74,6 +76,7 @@ const filteredTeachers = computed(() => {
   const text = teacherSearch.value.toLowerCase().trim();
   return teachers.value.filter((teacher) => {
     const matchesStatus = teacherStatusFilter.value === 'TODOS' || teacher.status === teacherStatusFilter.value;
+    const matchesEditable = !onlyEditableTeachers.value || canEditTeacher(teacher);
     const haystack = [
       teacher.fullName,
       teacher.rfc,
@@ -86,7 +89,7 @@ const filteredTeachers = computed(() => {
     ]
       .join(' ')
       .toLowerCase();
-    return matchesStatus && (!text || haystack.includes(text));
+    return matchesStatus && matchesEditable && (!text || haystack.includes(text));
   });
 });
 
@@ -111,6 +114,16 @@ function fiscalPercent(teacher: Teacher) {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
+function canEditTeacher(teacher: Teacher) {
+  if (authStore.isAdmin) return true;
+  return !!actorCoordination.value?.id && teacher.coordinationId === actorCoordination.value.id;
+}
+
+function canAccessTeacherDocument(teacher: Teacher) {
+  if (authStore.isAdmin || authStore.session?.permissions?.includes('finance.view')) return true;
+  return canEditTeacher(teacher);
+}
+
 async function loadTeachers() {
   pageBusy.value = true;
   clearNotice();
@@ -119,6 +132,7 @@ async function loadTeachers() {
     teachers.value = data.teachers;
     teacherSummary.value = data.summary;
     coordinations.value = data.coordinations;
+    actorCoordination.value = data.actorCoordination;
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar docentes.');
   } finally {
@@ -127,8 +141,15 @@ async function loadTeachers() {
 }
 
 function newTeacher() {
+  if (!authStore.isAdmin && !actorCoordination.value) {
+    setNotice('error', 'Tu usuario no tiene una coordinación vinculada para capturar docentes.');
+    return;
+  }
   editingTeacherId.value = null;
-  teacherForm.value = blankTeacher();
+  teacherForm.value = {
+    ...blankTeacher(),
+    coordinationName: authStore.isAdmin ? '' : actorCoordination.value?.name || ''
+  };
   selectedConstancia.value = null;
   teacherModalOpen.value = true;
   clearNotice();
@@ -142,6 +163,10 @@ function closeTeacherModal() {
 }
 
 function editTeacher(teacher: Teacher) {
+  if (!canEditTeacher(teacher)) {
+    setNotice('error', 'Solo la coordinación responsable puede editar este docente.');
+    return;
+  }
   editingTeacherId.value = teacher.id;
   teacherForm.value = {
     firstNames: teacher.firstNames,
@@ -172,6 +197,9 @@ async function saveTeacher() {
   teacherSaving.value = true;
   clearNotice();
   try {
+    if (!authStore.isAdmin && actorCoordination.value) {
+      teacherForm.value.coordinationName = actorCoordination.value.name;
+    }
     const response = editingTeacherId.value
       ? await updateTeacher(editingTeacherId.value, teacherForm.value)
       : await createTeacher(teacherForm.value);
@@ -325,6 +353,10 @@ onMounted(() => {
             <option value="INACTIVO">Inactivos</option>
           </select>
           <div class="export-actions">
+            <label v-if="!authStore.isAdmin" class="toggle-filter">
+              <input v-model="onlyEditableTeachers" type="checkbox" />
+              Solo editables por mí
+            </label>
             <button class="secondary-action" type="button" :disabled="teacherExporting === 'active'" @click="exportTeachers('active')">
               <Loader2 v-if="teacherExporting === 'active'" class="spin" :size="16" />
               <Download v-else :size="16" />
@@ -379,10 +411,24 @@ onMounted(() => {
                   <span class="badge" :class="teacher.status === 'ACTIVO' ? 'ok' : 'muted'">{{ teacher.status }}</span>
                 </td>
                 <td class="row-actions">
-                  <button v-if="teacher.documentId" class="icon-button" type="button" title="Abrir constancia" @click="openConstancia(teacher)">
+                  <button
+                    v-if="teacher.documentId"
+                    class="icon-button"
+                    type="button"
+                    :disabled="!canAccessTeacherDocument(teacher)"
+                    :title="canAccessTeacherDocument(teacher) ? 'Abrir constancia' : 'Constancia restringida a la coordinación responsable'"
+                    @click="openConstancia(teacher)"
+                  >
                     <FileText :size="16" />
                   </button>
-                  <button v-if="authStore.canManageTeachers" class="icon-button" type="button" title="Editar" @click="editTeacher(teacher)">
+                  <button
+                    v-if="authStore.canManageTeachers"
+                    class="icon-button"
+                    type="button"
+                    :disabled="!canEditTeacher(teacher)"
+                    :title="canEditTeacher(teacher) ? 'Editar' : 'Solo editable por la coordinación responsable'"
+                    @click="editTeacher(teacher)"
+                  >
                     <Edit3 :size="16" />
                   </button>
                   <button v-if="authStore.isAdmin" class="icon-button danger" type="button" title="Eliminar" @click="requestRemoveTeacher(teacher)">
@@ -403,6 +449,8 @@ onMounted(() => {
       :uploading="teacherUploading"
       :form="teacherForm"
       :coordinations="coordinations"
+      :can-choose-coordination="authStore.isAdmin"
+      :current-coordinator-name="actorCoordination?.name || ''"
       :selected-constancia="selectedConstancia"
       @close="closeTeacherModal"
       @save="saveTeacher"

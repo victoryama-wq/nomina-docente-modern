@@ -27,6 +27,7 @@ La operación quedó organizada por ciclos escolares y quincenas. Esto permite p
 - Restricción por dominio institucional.
 - Control de accesos por usuario, rol y permisos.
 - Administrador general protegido.
+- Catálogos administrativos para asignaturas y tabuladores.
 - Directorio docente con datos académicos, fiscales y bancarios.
 - Expediente fiscal con carga/vista previa/descarga de constancia fiscal.
 - Cálculo de fecha de nacimiento y cumpleaños desde RFC.
@@ -157,6 +158,7 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 | Dashboard | `/` | Resumen general y estado de módulos |
 | Directorio Docente | `/docentes` | Alta, edición, baja y exportación de docentes |
 | Expediente Fiscal | `/expediente-fiscal` | Datos fiscales, constancia y cumpleaños |
+| Catálogos Administrativos | `/catalogos` | Asignaturas y tabuladores de pago |
 | Capturar Horarios | `/horarios` | Captura de carga docente por ciclo |
 | Capturar Incidencias | `/incidencias` | Faltas, retardos y extras de horario por quincena |
 | Capturar Extras | `/extras` | Horas extra externas por quincena |
@@ -199,6 +201,25 @@ Restricciones:
 - Un administrador no debe dejar el sistema sin administradores activos.
 - Solo usuarios activos pueden iniciar sesión.
 
+### 6.3.1 Catálogos Administrativos
+
+Módulo exclusivo para administradores. Permite gestionar los catálogos usados por captura de horarios, extras y nómina:
+
+- Alta y edición de asignaturas.
+- Activación e inactivación de asignaturas.
+- Alta y edición de tabuladores.
+- Modificación del monto por hora.
+- Activación e inactivación de tabuladores.
+- Orden de visualización de tabuladores.
+- Consulta de uso operativo e histórico.
+
+Reglas clave:
+
+- Inactivar un catálogo lo oculta de nuevas capturas, pero conserva los históricos.
+- Los horarios y nóminas guardadas conservan el nombre y monto capturado como snapshot.
+- Cambiar un tabulador no recalcula nóminas históricas.
+- Las acciones quedan registradas en auditoría.
+
 ### 6.4 Directorio Docente
 
 Administra la base maestra de docentes. Incluye:
@@ -222,6 +243,7 @@ Reglas clave:
 - Existe exportación de docentes activos.
 - Existe exportación completa con historial de cambios.
 - El borrado de docentes respeta dependencias operativas.
+- Los coordinadores solo pueden editar docentes de su coordinación; Admin puede editar cualquiera.
 
 ### 6.5 Expediente Fiscal
 
@@ -234,6 +256,7 @@ Concentra información fiscal y bancaria para Finanzas/Contador. Permite:
 - Exportar listado de cumpleaños.
 
 La fecha de nacimiento se calcula desde RFC cuando el formato lo permite.
+Los coordinadores solo pueden actualizar expedientes de docentes de su coordinación; Admin y Finanzas pueden gestionar expedientes de forma global.
 
 ### 6.6 Calendario Operativo
 
@@ -834,4 +857,3 @@ flowchart TD
 El proyecto queda listo para uso formal con una arquitectura moderna, separación clara entre operación e histórico, control de acceso por rol, datos persistentes en PostgreSQL y reportes financieros sobre nóminas guardadas.
 
 La recomendación final es operar la primera quincena con seguimiento cercano de Sistemas y Finanzas para validar importes reales, resolver dudas de captura y consolidar el procedimiento institucional.
-

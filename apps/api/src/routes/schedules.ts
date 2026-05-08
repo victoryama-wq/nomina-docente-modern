@@ -466,10 +466,14 @@ async function getOrCreateSubject(client: PoolClient, subjectName: string): Prom
   const name = normalizeText(subjectName);
   if (!name) return null;
 
-  const existing = await client.query<{ id: string }>('SELECT id FROM subjects WHERE lower(name) = lower($1) LIMIT 1', [
-    name
-  ]);
-  if (existing.rows[0]) return existing.rows[0].id;
+  const existing = await client.query<{ id: string; status: string }>(
+    'SELECT id, status FROM subjects WHERE lower(name) = lower($1) LIMIT 1',
+    [name]
+  );
+  if (existing.rows[0]) {
+    if (existing.rows[0].status !== 'ACTIVO') throw new Error('La asignatura seleccionada está inactiva.');
+    return existing.rows[0].id;
+  }
 
   const created = await client.query<{ id: string }>(
     'INSERT INTO subjects (name, status) VALUES ($1, $2) RETURNING id',

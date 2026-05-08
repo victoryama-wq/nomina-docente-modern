@@ -21,6 +21,7 @@ import {
   fetchTeachers,
   updateTeacherFiscal,
   uploadTeacherConstancia,
+  type CoordinationOption,
   type Teacher,
   type TeacherFiscalPayload,
   type TeacherSummary
@@ -53,6 +54,7 @@ interface FiscalForm extends TeacherFiscalPayload {}
 const authStore = useAuthStore();
 
 const teachers = ref<Teacher[]>([]);
+const actorCoordination = ref<CoordinationOption | null>(null);
 const summary = ref<TeacherSummary>({
   total: 0,
   active: 0,
@@ -159,8 +161,17 @@ function fiscalPayloadFromTeacher(teacher: Teacher): FiscalForm {
   };
 }
 
+function canManageRecord(record: FiscalRecord) {
+  if (!authStore.canManageFiscalRecords) return false;
+  if (authStore.isAdmin || authStore.session?.permissions?.includes('finance.view')) return true;
+  return !!actorCoordination.value?.id && record.teacher.coordinationId === actorCoordination.value.id;
+}
+
 function openFiscalEdit(record: FiscalRecord) {
-  if (!authStore.canManageFiscalRecords) return;
+  if (!canManageRecord(record)) {
+    setNotice('error', 'Solo la coordinación responsable puede actualizar este expediente.');
+    return;
+  }
   editingRecord.value = record;
   fiscalForm.value = fiscalPayloadFromTeacher(record.teacher);
   selectedConstancia.value = null;
@@ -377,7 +388,7 @@ function closePreview() {
 }
 
 async function previewConstancia(record: FiscalRecord) {
-  if (!record.teacher.documentId) return;
+  if (!record.teacher.documentId || !canManageRecord(record)) return;
   previewBusyId.value = record.teacher.id;
   try {
     closePreview();
@@ -397,7 +408,7 @@ async function previewConstancia(record: FiscalRecord) {
 }
 
 async function downloadConstancia(record: FiscalRecord) {
-  if (!record.teacher.documentId) return;
+  if (!record.teacher.documentId || !canManageRecord(record)) return;
   downloadingId.value = record.teacher.id;
   try {
     await downloadTeacherConstancia(record.teacher.id);
@@ -430,6 +441,7 @@ async function loadFiscalRecords() {
     const data = await fetchTeachers();
     teachers.value = data.teachers;
     summary.value = data.summary;
+    actorCoordination.value = data.actorCoordination;
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar expedientes fiscales.');
   } finally {
@@ -547,7 +559,7 @@ onUnmounted(() => {
                 <td>
                   <strong>{{ record.teacher.documentName || 'Sin constancia' }}</strong>
                   <span>{{ documentDate(record.teacher.documentUploadedAt) }}</span>
-                  <div v-if="record.teacher.documentId" class="fiscal-document-actions">
+                  <div v-if="record.teacher.documentId && canManageRecord(record)" class="fiscal-document-actions">
                     <button
                       class="secondary-action"
                       type="button"
@@ -567,9 +579,16 @@ onUnmounted(() => {
                       Descargar
                     </button>
                   </div>
+                  <span v-else-if="record.teacher.documentId" class="badge muted">Restringida</span>
                   <span v-else class="badge warning"><AlertTriangle :size="12" /> Pendiente</span>
                   <div v-if="authStore.canManageFiscalRecords" class="fiscal-document-actions">
-                    <button class="primary-inline fiscal-edit-button" type="button" @click="openFiscalEdit(record)">
+                    <button
+                      class="primary-inline fiscal-edit-button"
+                      type="button"
+                      :disabled="!canManageRecord(record)"
+                      :title="canManageRecord(record) ? 'Actualizar fiscal' : 'Solo editable por la coordinación responsable'"
+                      @click="openFiscalEdit(record)"
+                    >
                       <Edit3 :size="15" />
                       Actualizar fiscal
                     </button>

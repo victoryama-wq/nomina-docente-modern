@@ -9,6 +9,8 @@ defineProps<{
   uploading: boolean;
   form: TeacherPayload;
   coordinations: CoordinationOption[];
+  canChooseCoordination: boolean;
+  currentCoordinatorName: string;
   selectedConstancia: File | null;
 }>();
 
@@ -79,10 +81,16 @@ defineEmits<{
         </label>
         <label>
           <span>Coordinación</span>
-          <input v-model.trim="form.coordinationName" list="coordinations-list" />
+          <input
+            v-model.trim="form.coordinationName"
+            :disabled="!canChooseCoordination"
+            list="coordinations-list"
+            :placeholder="canChooseCoordination ? 'Coordinación responsable' : currentCoordinatorName"
+          />
           <datalist id="coordinations-list">
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.name" />
           </datalist>
+          <small v-if="!canChooseCoordination">Se asigna a tu coordinación.</small>
         </label>
         <label>
           <span>Telefono</span>

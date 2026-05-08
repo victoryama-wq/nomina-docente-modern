@@ -6,6 +6,7 @@ import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
 import { firebaseAdmin } from '../firebase.js';
 import type { SessionUser } from '../types.js';
+import { loadActorCoordination, type CoordinationRow } from './academic-context.js';
 
 type TeacherStatus = 'ACTIVO' | 'INACTIVO';
 
@@ -169,6 +170,45 @@ function sendValidation(reply: FastifyReply, error: z.ZodError): void {
 
 function isSystemAdmin(actor: SessionUser): boolean {
   return actor.role === 'admin' || actor.isProtectedSuperAdmin;
+}
+
+async function assertTeacherOwnedByActorCoordination(
+  client: PoolClient,
+  actor: SessionUser,
+  teacher: TeacherRow,
+  options: { allowFinance?: boolean } = {}
+): Promise<CoordinationRow | null> {
+  if (isSystemAdmin(actor) || (options.allowFinance && actor.permissions.includes('finance.view'))) return null;
+
+  const actorCoordination = await loadActorCoordination(client, actor, false);
+  if (!actorCoordination || !teacher.coordinationId || actorCoordination.id !== teacher.coordinationId) {
+    throw new Error('Solo la coordinación responsable puede modificar este docente.');
+  }
+  return actorCoordination;
+}
+
+async function resolveTeacherCoordinationForActor(
+  client: PoolClient,
+  actor: SessionUser,
+  submittedCoordinationName: string
+): Promise<{ id: string | null; name: string }> {
+  if (isSystemAdmin(actor)) {
+    const name = normalizeText(submittedCoordinationName);
+    return {
+      id: await getOrCreateCoordination(client, name),
+      name
+    };
+  }
+
+  const actorCoordination = await loadActorCoordination(client, actor, false);
+  if (!actorCoordination) {
+    throw new Error('Tu usuario no tiene una coordinación vinculada para capturar docentes.');
+  }
+
+  return {
+    id: actorCoordination.id,
+    name: actorCoordination.name
+  };
 }
 
 function buildSummary(teachers: TeacherRow[]) {
@@ -379,8 +419,9 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const coordinations = await query<{ id: string; name: string }>(
         "SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC"
       );
+      const actorCoordination = await withTransaction((client) => loadActorCoordination(client, request.user!, false));
 
-      return { teachers, summary: buildSummary(teachers), coordinations };
+      return { teachers, summary: buildSummary(teachers), coordinations, actorCoordination };
     }
   );
 
@@ -497,7 +538,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
     const actor = request.user!;
     const teacher = await withTransaction(async (client) => {
-      const coordinationId = await getOrCreateCoordination(client, parsed.data.coordinationName);
+      const coordination = await resolveTeacherCoordinationForActor(client, actor, parsed.data.coordinationName);
       const fullName = buildFullName(parsed.data);
       const normalizedName = normalizeComparable(fullName);
 
@@ -544,7 +585,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           parsed.data.location || 'Local',
           parsed.data.comment,
           parsed.data.observation,
-          coordinationId,
+          coordination.id,
           parsed.data.phone.replace(/[^0-9+]/g, ''),
           parsed.data.email,
           parsed.data.rfc,
@@ -586,7 +627,8 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const before = await loadTeacherById(client, params.data.id);
       if (!before) throw new Error('No se encontró el docente.');
 
-      const coordinationId = await getOrCreateCoordination(client, parsed.data.coordinationName);
+      await assertTeacherOwnedByActorCoordination(client, actor, before);
+      const coordination = await resolveTeacherCoordinationForActor(client, actor, parsed.data.coordinationName);
       const fullName = buildFullName(parsed.data);
       const normalizedName = normalizeComparable(fullName);
 
@@ -632,7 +674,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           parsed.data.location || 'Local',
           parsed.data.comment,
           parsed.data.observation,
-          coordinationId,
+          coordination.id,
           parsed.data.phone.replace(/[^0-9+]/g, ''),
           parsed.data.email,
           parsed.data.rfc,
@@ -677,6 +719,8 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const teacher = await withTransaction(async (client) => {
         const before = await loadTeacherById(client, params.data.id);
         if (!before) throw new Error('No se encontró el docente.');
+
+        await assertTeacherOwnedByActorCoordination(client, actor, before, { allowFinance: true });
 
         await client.query(
           `
@@ -802,6 +846,8 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
         const teacher = await loadTeacherById(client, params.data.id);
         if (!teacher) throw new Error('No se encontró el docente.');
 
+        await assertTeacherOwnedByActorCoordination(client, actor, teacher, { allowFinance: true });
+
         const safeName = parsed.data.fileName.replace(/[^a-zA-Z0-9._-]+/g, '-');
         const storageObject = `constancias/${teacher.id}/${Date.now()}-${safeName}`;
         const bucket = firebaseAdmin.storage().bucket(config.CONSTANCIAS_BUCKET);
@@ -863,6 +909,13 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
         await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
         return;
       }
+
+      const actor = request.user!;
+      await withTransaction(async (client) => {
+        const teacher = await loadTeacherById(client, params.data.id);
+        if (!teacher) throw new Error('No se encontró el docente.');
+        await assertTeacherOwnedByActorCoordination(client, actor, teacher, { allowFinance: true });
+      });
 
       const rows = await query<CurrentDocumentRow>(
         `

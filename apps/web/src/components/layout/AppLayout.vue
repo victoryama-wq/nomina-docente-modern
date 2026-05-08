@@ -17,6 +17,7 @@ import {
   FolderLock,
   ScrollText,
   Database,
+  Tags,
   Menu,
   LogOut
 } from 'lucide-vue-next';
@@ -52,6 +53,7 @@ const pageTitle = computed(() => {
   if (route.name === 'payroll') return 'Nómina';
   if (route.name === 'financeReports') return 'Reportes y Finanzas';
   if (route.name === 'calendar') return 'Calendario Operativo';
+  if (route.name === 'catalogs') return 'Catálogos Administrativos';
   if (route.name === 'access') return 'Control de Accesos';
   if (route.name === 'audit') return 'Auditoría y Bitácora';
   return 'Centro de control';
@@ -188,6 +190,17 @@ async function handleLogout() {
         >
           <CalendarDays :size="18" />
           Calendario
+        </router-link>
+
+        <router-link
+          v-if="authStore.canManageCatalogs"
+          :to="{ name: 'catalogs' }"
+          class="nav-item"
+          active-class="active"
+          @click="menuOpen = false"
+        >
+          <Tags :size="18" />
+          Catálogos
         </router-link>
 
         <router-link

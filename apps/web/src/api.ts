@@ -129,6 +129,51 @@ export interface TabulatorOption {
   sortOrder: number;
 }
 
+export interface CatalogSubject {
+  id: string;
+  name: string;
+  status: 'ACTIVO' | 'INACTIVO';
+  scheduleCount: number;
+  activeScheduleCount: number;
+}
+
+export interface CatalogTabulator {
+  id: string;
+  name: string;
+  amount: number;
+  status: 'ACTIVO' | 'INACTIVO';
+  sortOrder: number;
+  scheduleCount: number;
+  activeScheduleCount: number;
+}
+
+export interface CatalogSummary {
+  subjects: {
+    total: number;
+    active: number;
+    inactive: number;
+    usedInWorkingCycles: number;
+  };
+  tabulators: {
+    total: number;
+    active: number;
+    inactive: number;
+    usedInWorkingCycles: number;
+  };
+}
+
+export interface SubjectPayload {
+  name: string;
+  status: 'ACTIVO' | 'INACTIVO';
+}
+
+export interface TabulatorPayload {
+  name: string;
+  amount: number;
+  status: 'ACTIVO' | 'INACTIVO';
+  sortOrder: number;
+}
+
 export interface ScheduleTeacher {
   id: string;
   fullName: string;
@@ -807,6 +852,7 @@ export async function fetchTeachers(): Promise<{
   teachers: Teacher[];
   summary: TeacherSummary;
   coordinations: CoordinationOption[];
+  actorCoordination: CoordinationOption | null;
 }> {
   return request('/teachers');
 }
@@ -931,6 +977,48 @@ export async function openTeacherConstancia(teacherId: string): Promise<void> {
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank', 'noopener,noreferrer');
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export async function fetchCatalogsContext(): Promise<{
+  subjects: CatalogSubject[];
+  tabulators: CatalogTabulator[];
+  summary: CatalogSummary;
+}> {
+  return request('/catalogs/context');
+}
+
+export async function createCatalogSubject(payload: SubjectPayload): Promise<{ subject: CatalogSubject; message: string }> {
+  return request('/catalogs/subjects', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateCatalogSubject(
+  id: string,
+  payload: SubjectPayload
+): Promise<{ subject: CatalogSubject; message: string }> {
+  return request(`/catalogs/subjects/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createCatalogTabulator(payload: TabulatorPayload): Promise<{ tabulator: CatalogTabulator; message: string }> {
+  return request('/catalogs/tabulators', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateCatalogTabulator(
+  id: string,
+  payload: TabulatorPayload
+): Promise<{ tabulator: CatalogTabulator; message: string }> {
+  return request(`/catalogs/tabulators/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function fetchSchedulesContext(cycleId?: string): Promise<{
