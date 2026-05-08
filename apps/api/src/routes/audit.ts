@@ -44,13 +44,15 @@ interface AuditOptionRow {
   total: string;
 }
 
+const optionalDateFilterSchema = z.union([z.literal(''), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional().default('');
+
 const auditQuerySchema = z.object({
   search: z.string().trim().max(160).optional().default(''),
   entityType: z.string().trim().max(80).optional().default(''),
   actionGroup: z.enum(['ALL', 'CREATE', 'UPDATE', 'DELETE', 'PAYROLL', 'ACCESS', 'FISCAL']).optional().default('ALL'),
   actorEmail: z.string().trim().toLowerCase().max(160).optional().default(''),
-  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().default(''),
-  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().default(''),
+  dateFrom: optionalDateFilterSchema,
+  dateTo: optionalDateFilterSchema,
   limit: z.coerce.number().int().min(25).max(200).optional().default(100),
   offset: z.coerce.number().int().min(0).max(5000).optional().default(0)
 });
