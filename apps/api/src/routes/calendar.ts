@@ -77,7 +77,7 @@ const calendarPeriodBodySchema = z
       if (blackout.blackoutDate < body.payrollStart || blackout.blackoutDate > body.payrollEnd) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Los dias inhabiles deben estar dentro del rango de la quincena.'
+          message: 'Los días inhábiles deben estar dentro del rango de la quincena.'
         });
       }
     }
@@ -94,13 +94,13 @@ const cycleModuleDatesBodySchema = z
   })
   .superRefine((body, ctx) => {
     if (body.module1Start > body.module1End) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de modulo 1 debe ser menor o igual al cierre.' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de módulo 1 debe ser menor o igual al cierre.' });
     }
     if (body.module2Start > body.module2End) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de modulo 2 debe ser menor o igual al cierre.' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de módulo 2 debe ser menor o igual al cierre.' });
     }
     if (body.module1End > body.module2End) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El cierre de modulo 1 no puede ser posterior al cierre de modulo 2.' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El cierre de módulo 1 no puede ser posterior al cierre de módulo 2.' });
     }
   });
 
@@ -109,7 +109,7 @@ type CycleModuleDatesBody = z.infer<typeof cycleModuleDatesBodySchema>;
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos invalidos.'
+    message: error.issues[0]?.message || 'Datos inválidos.'
   });
 }
 
@@ -215,7 +215,7 @@ async function replaceBlackouts(client: PoolClient, configId: string, blackouts:
         INSERT INTO calendar_blackout_dates (config_id, blackout_date, reason)
         VALUES ($1, $2, $3)
       `,
-      [configId, blackout.blackoutDate, blackout.reason || 'Dia inhabil']
+      [configId, blackout.blackoutDate, blackout.reason || 'Día inhábil']
     );
   }
 }
@@ -297,7 +297,7 @@ async function updatePeriod(
     ]
   );
 
-  if (!updated.rows[0]) throw new Error('No se encontro la quincena seleccionada.');
+  if (!updated.rows[0]) throw new Error('No se encontró la quincena seleccionada.');
   await replaceBlackouts(client, id, body.blackoutDates);
   const period = await loadCalendarPeriod(client, id);
   if (!period) throw new Error('No fue posible leer la quincena actualizada.');
@@ -409,7 +409,7 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
     const params = paramsSchema.safeParse(request.params as CalendarParams);
     const parsed = cycleModuleDatesBodySchema.safeParse(request.body);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Ciclo invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Ciclo inválido.' });
       return;
     }
     if (!parsed.success) {
@@ -454,7 +454,7 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
     const params = paramsSchema.safeParse(request.params as CalendarParams);
     const parsed = calendarPeriodBodySchema.safeParse(request.body);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Quincena invalida.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Quincena inválida.' });
       return;
     }
     if (!parsed.success) {
@@ -483,15 +483,15 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
   app.delete('/calendar/periods/:id', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
     const params = paramsSchema.safeParse(request.params as CalendarParams);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Quincena invalida.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Quincena inválida.' });
       return;
     }
 
     const deleted = await withTransaction(async (client) => {
       const period = await loadCalendarPeriod(client, params.data.id);
-      if (!period) throw new Error('No se encontro la quincena seleccionada.');
+      if (!period) throw new Error('No se encontró la quincena seleccionada.');
       if (await periodHasPayrollRun(client, period)) {
-        throw new Error('Esta quincena ya tiene nomina calculada y no puede eliminarse.');
+        throw new Error('Esta quincena ya tiene nómina calculada y no puede eliminarse.');
       }
       await client.query('DELETE FROM payroll_calendar_config WHERE id = $1', [period.id]);
       return period;

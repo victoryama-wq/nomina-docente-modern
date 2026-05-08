@@ -309,8 +309,8 @@ export async function registerAuditRoutes(app: FastifyInstance): Promise<void> {
       [
         'Fecha',
         'Usuario',
-        'Accion',
-        'Modulo',
+        'Acción',
+        'Módulo',
         'Registro',
         'ID entidad',
         'Antes',

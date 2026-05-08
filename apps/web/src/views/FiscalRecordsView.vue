@@ -359,11 +359,11 @@ function exportBirthdays() {
       ]);
 
     downloadCsv(
-      'cumpleanos-docentes.csv',
-      ['Docente', 'Coordinacion', 'RFC', 'Fecha nacimiento', 'Cumpleanos', 'Edad', 'Dias para cumpleanos', 'Correo', 'Estatus'],
+      'cumpleaños-docentes.csv',
+      ['Docente', 'Coordinación', 'RFC', 'Fecha nacimiento', 'Cumpleaños', 'Edad', 'Días para cumpleaños', 'Correo', 'Estatus'],
       rows
     );
-    setNotice('ok', 'Listado de cumpleanos generado.');
+    setNotice('ok', 'Listado de cumpleaños generado.');
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible generar el listado.');
   } finally {
@@ -455,7 +455,7 @@ onUnmounted(() => {
     <section class="toolbar-card">
       <div>
         <p class="eyebrow">Expediente fiscal</p>
-        <h3>Documentacion y cumpleanos docentes</h3>
+        <h3>Documentación y cumpleaños docentes</h3>
       </div>
       <div class="toolbar-actions">
         <button class="secondary-action" type="button" @click="loadFiscalRecords">
@@ -464,7 +464,7 @@ onUnmounted(() => {
         </button>
         <button class="primary-inline" type="button" :disabled="exportingBirthdays" @click="exportBirthdays">
           <Download :size="17" />
-          Cumpleanos CSV
+          Cumpleaños CSV
         </button>
       </div>
     </section>
@@ -473,7 +473,7 @@ onUnmounted(() => {
       <article class="metric-card mini"><p>Docentes</p><strong>{{ fiscalMetrics.total }}</strong><small>{{ summary.active }} activos</small></article>
       <article class="metric-card mini"><p>Completos</p><strong>{{ fiscalMetrics.complete }}</strong><small>RFC, correo, banco y constancia</small></article>
       <article class="metric-card mini"><p>Constancias</p><strong>{{ fiscalMetrics.withConstancia }}</strong><small>{{ fiscalMetrics.missingConstancia }} pendientes</small></article>
-      <article class="metric-card mini"><p>Cumpleanos</p><strong>{{ fiscalMetrics.birthdays30 }}</strong><small>Proximos 30 dias</small></article>
+      <article class="metric-card mini"><p>Cumpleaños</p><strong>{{ fiscalMetrics.birthdays30 }}</strong><small>Próximos 30 días</small></article>
     </section>
 
     <section class="single-grid">
@@ -481,7 +481,7 @@ onUnmounted(() => {
         <div class="filters-row fiscal-records">
           <label class="search-box">
             <Search :size="17" />
-            <input v-model="searchText" placeholder="Buscar docente, RFC, correo, banco o coordinacion" />
+            <input v-model="searchText" placeholder="Buscar docente, RFC, correo, banco o coordinación" />
           </label>
           <select v-model="statusFilter">
             <option value="TODOS">Todos</option>
@@ -494,7 +494,7 @@ onUnmounted(() => {
             <option value="INCOMPLETO">Incompletos</option>
             <option value="SIN_CONSTANCIA">Sin constancia</option>
             <option value="SIN_RFC">Sin RFC</option>
-            <option value="CUMPLEANOS">Cumpleanos 30 dias</option>
+            <option value="CUMPLEANOS">Cumpleaños 30 días</option>
           </select>
         </div>
 
@@ -516,7 +516,7 @@ onUnmounted(() => {
               <tr v-for="record in filteredRecords" :key="record.teacher.id">
                 <td>
                   <strong>{{ record.teacher.fullName }}</strong>
-                  <span><Building2 :size="13" /> {{ record.teacher.coordinationName || 'Sin coordinacion' }}</span>
+                  <span><Building2 :size="13" /> {{ record.teacher.coordinationName || 'Sin coordinación' }}</span>
                   <span><Mail :size="13" /> {{ record.teacher.email || 'Sin correo' }}</span>
                   <span class="badge" :class="record.teacher.status === 'ACTIVO' ? 'ok' : 'muted'">{{ record.teacher.status }}</span>
                 </td>
@@ -536,7 +536,7 @@ onUnmounted(() => {
                 <td>
                   <strong>{{ record.birthDateLabel }}</strong>
                   <span><CalendarDays :size="13" /> {{ record.birthdayLabel }}</span>
-                  <small v-if="record.age !== null">{{ record.age }} anos / {{ record.daysUntilBirthday }} dias</small>
+                  <small v-if="record.age !== null">{{ record.age }} años / {{ record.daysUntilBirthday }} días</small>
                   <small v-else>No disponible desde RFC</small>
                 </td>
                 <td>
@@ -588,7 +588,7 @@ onUnmounted(() => {
           <div>
             <p class="eyebrow">Actualizacion fiscal</p>
             <h3>{{ editingRecord.teacher.fullName }}</h3>
-            <span>{{ editingRecord.teacher.coordinationName || 'Sin coordinacion' }}</span>
+            <span>{{ editingRecord.teacher.coordinationName || 'Sin coordinación' }}</span>
           </div>
           <button class="icon-button" type="button" title="Cerrar" :disabled="fiscalSaving" @click="closeFiscalEdit()">
             <X :size="17" />
@@ -629,7 +629,7 @@ onUnmounted(() => {
 
         <div class="security-box fiscal-edit-note">
           <ShieldCheck :size="18" />
-          <span>Esta ventana solo actualiza datos fiscales. Nombre, coordinacion, categoria y estatus operativo se mantienen en Directorio.</span>
+          <span>Esta ventana solo actualiza datos fiscales. Nombre, coordinación, categoría y estatus operativo se mantienen en Directorio.</span>
         </div>
 
         <div class="modal-actions">

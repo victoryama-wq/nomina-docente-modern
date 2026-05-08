@@ -14,7 +14,7 @@ import {
   FileSpreadsheet
 } from 'lucide-vue-next';
 
-type ModuleStatus = 'Disponible' | 'Preparando' | 'Migracion';
+type ModuleStatus = 'Disponible' | 'Preparando' | 'Migración';
 
 interface ModuleItem {
   name: string;
@@ -27,7 +27,7 @@ interface ModuleItem {
 const modules: ModuleItem[] = [
   {
     name: 'Directorio Docente',
-    description: 'Expediente, estatus, datos fiscales y coordinacion.',
+    description: 'Expediente, estatus, datos fiscales y coordinación.',
     status: 'Disponible',
     icon: GraduationCap,
     accent: 'teal'
@@ -54,15 +54,15 @@ const modules: ModuleItem[] = [
     accent: 'emerald'
   },
   {
-    name: 'Nomina',
-    description: 'Motor de calculo y comparacion contra legacy.',
+    name: 'Nómina',
+    description: 'Motor de cálculo y comparación contra legacy.',
     status: 'Disponible',
     icon: CircleDollarSign,
     accent: 'indigo'
   },
   {
     name: 'Reportes',
-    description: 'Exportaciones, historicos y vista financiera.',
+    description: 'Exportaciones, históricos y vista financiera.',
     status: 'Disponible',
     icon: FileSpreadsheet,
     accent: 'cyan'
@@ -100,9 +100,9 @@ onMounted(async () => {
     <section class="executive-strip">
       <div>
         <p class="eyebrow">Estado de plataforma</p>
-        <h3>Base moderna lista para migracion controlada</h3>
+        <h3>Base moderna lista para migración controlada</h3>
         <p>
-          Autenticacion con Google, roles desde PostgreSQL y estructura preparada para migrar datos desde Apps Script.
+          Autenticación con Google, roles desde PostgreSQL y estructura preparada para migrar datos desde Apps Script.
         </p>
       </div>
       <div class="status-pill">
@@ -128,7 +128,7 @@ onMounted(async () => {
         <span class="metric-icon emerald"><Activity :size="20" /></span>
         <p>Extras registrados</p>
         <strong>{{ metrics.extraHoursRecords }}</strong>
-        <small>Bitacora nueva</small>
+        <small>Bitácora nueva</small>
       </article>
       <article class="metric-card">
         <span class="metric-icon indigo"><ShieldCheck :size="20" /></span>
@@ -143,7 +143,7 @@ onMounted(async () => {
         <div class="section-title">
           <div>
             <p class="eyebrow">Mapa funcional</p>
-            <h3>Modulos prioritarios</h3>
+            <h3>Módulos prioritarios</h3>
           </div>
           <span class="subtle-pill">Fase base</span>
         </div>
@@ -164,7 +164,7 @@ onMounted(async () => {
         <div class="section-title compact">
           <div>
             <p class="eyebrow">Ruta inmediata</p>
-            <h3>Migracion activa</h3>
+            <h3>Migración activa</h3>
           </div>
         </div>
 
@@ -173,21 +173,21 @@ onMounted(async () => {
             <span></span>
             <div>
               <strong>Directorio y accesos</strong>
-              <p>CRUD moderno con auditoria y reglas de dominio institucional.</p>
+              <p>CRUD moderno con auditoría y reglas de dominio institucional.</p>
             </div>
           </li>
           <li>
             <span></span>
             <div>
-              <strong>Importacion desde Sheets</strong>
-              <p>CSV de Directorio y Coord. Academicos hacia PostgreSQL.</p>
+              <strong>Importación desde Sheets</strong>
+              <p>CSV de Directorio y Coord. Académicos hacia PostgreSQL.</p>
             </div>
           </li>
           <li>
             <span></span>
             <div>
               <strong>Horarios</strong>
-              <p>Solo docentes con estatus ACTIVO participaran en captura.</p>
+              <p>Solo docentes con estatus ACTIVO participarán en captura.</p>
             </div>
           </li>
         </ol>

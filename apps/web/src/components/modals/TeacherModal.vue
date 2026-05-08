@@ -59,7 +59,7 @@ defineEmits<{
           </select>
         </label>
         <label>
-          <span>Categoria</span>
+          <span>Categoría</span>
           <select v-model="form.category" required>
             <option value="V">V - 35 h</option>
             <option value="M">M - 25 h</option>
@@ -78,7 +78,7 @@ defineEmits<{
           </select>
         </label>
         <label>
-          <span>Coordinacion</span>
+          <span>Coordinación</span>
           <input v-model.trim="form.coordinationName" list="coordinations-list" />
           <datalist id="coordinations-list">
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.name" />

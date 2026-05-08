@@ -137,9 +137,9 @@ const selectedLineDetailTotals = computed(() => {
 
 const calendarLabel = computed(() => {
   const calendar = currentPreview.value?.calendar;
-  if (!calendar) return 'Sin calculo';
+  if (!calendar) return 'Sin cálculo';
   const dayCounts = calendar.dayCounts;
-  return `L${dayCounts.L} M${dayCounts.M} X${dayCounts.X} J${dayCounts.J} V${dayCounts.V} / M1 ${calendar.module1Saturdays} sab / M2 ${calendar.module2Saturdays} sab / ${calendar.blackoutDates.length} inhabiles`;
+  return `L${dayCounts.L} M${dayCounts.M} X${dayCounts.X} J${dayCounts.J} V${dayCounts.V} / M1 ${calendar.module1Saturdays} sab / M2 ${calendar.module2Saturdays} sab / ${calendar.blackoutDates.length} inhábiles`;
 });
 
 const canSaveRun = computed(
@@ -194,7 +194,7 @@ function categoryLabel(category: string) {
   if (category === 'V') return 'VIP';
   if (category === 'M') return 'Medio tiempo';
   if (category === 'N') return 'Nuevo ingreso';
-  return 'Sin categoria';
+  return 'Sin categoría';
 }
 
 function paymentLabel(paymentType: string) {
@@ -216,7 +216,7 @@ function lineBadge(line: PayrollLine) {
 }
 
 function runSourceLabel() {
-  if (selectedRun.value) return `Historico guardado / ${selectedRun.value.status}`;
+  if (selectedRun.value) return `Histórico guardado / ${selectedRun.value.status}`;
   return 'Vista previa viva';
 }
 
@@ -269,7 +269,7 @@ function applyContext(data: {
     module2End: dateOnly(period.module2End),
     blackoutDates: (period.blackoutDates as Array<CalendarPeriod['blackoutDates'][number] | string>).map((blackout) =>
       typeof blackout === 'string'
-        ? { blackoutDate: dateOnly(blackout), reason: 'Dia inhabil' }
+        ? { blackoutDate: dateOnly(blackout), reason: 'Día inhábil' }
         : {
             ...blackout,
             blackoutDate: dateOnly(blackout.blackoutDate)
@@ -342,7 +342,7 @@ async function loadContext(cycleId = selectedCycleId.value || undefined) {
     applyContext(data);
     await calculatePreview(true);
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar nomina.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar nómina.');
   } finally {
     pageBusy.value = false;
   }
@@ -351,7 +351,7 @@ async function loadContext(cycleId = selectedCycleId.value || undefined) {
 async function calculatePreview(silent = false) {
   if (!hasCalendarSelection.value) {
     currentPreview.value = null;
-    if (!silent) setNotice('error', 'Selecciona una quincena del calendario para calcular la nomina.');
+    if (!silent) setNotice('error', 'Selecciona una quincena del calendario para calcular la nómina.');
     return;
   }
   if (!form.value.payrollStart || !form.value.payrollEnd) return;
@@ -361,9 +361,9 @@ async function calculatePreview(silent = false) {
     currentPreview.value = await previewPayroll(payloadFromForm());
     selectedRunId.value = '';
     selectedLineKey.value = '';
-    if (!silent) setNotice('ok', 'Vista previa de nomina actualizada.');
+    if (!silent) setNotice('ok', 'Vista previa de nómina actualizada.');
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible calcular la nomina.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible calcular la nómina.');
   } finally {
     calculating.value = false;
   }
@@ -395,9 +395,9 @@ async function confirmSaveCurrentRun() {
     selectedRunId.value = result.run.id;
     selectedLineKey.value = '';
     recentRuns.value = [result.run, ...recentRuns.value.filter((run) => run.id !== result.run.id)].slice(0, 36);
-    setNotice('ok', result.message || 'Nomina guardada correctamente.');
+    setNotice('ok', result.message || 'Nómina guardada correctamente.');
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible guardar la nomina.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible guardar la nómina.');
   } finally {
     saving.value = false;
   }
@@ -441,9 +441,9 @@ async function exportRun(kind: 'summary' | 'schedules' | 'extras') {
   clearNotice();
   try {
     await downloadPayrollExport(run.id, kind);
-    setNotice('ok', 'Exportacion de nomina generada.');
+    setNotice('ok', 'Exportación de nómina generada.');
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar la nomina.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar la nómina.');
   } finally {
     exporting.value = '';
   }
@@ -462,8 +462,8 @@ onMounted(() => {
 
     <section class="toolbar-card">
       <div>
-        <p class="eyebrow">Nomina</p>
-        <h3>Calculo quincenal docente</h3>
+        <p class="eyebrow">Nómina</p>
+        <h3>Cálculo quincenal docente</h3>
       </div>
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadContext(selectedCycleId)">
@@ -485,7 +485,7 @@ onMounted(() => {
           <select v-model="form.calendarConfigId" @change="applyCalendarPeriod">
             <option value="">Seleccionar quincena</option>
             <option v-for="period in calendarPeriods" :key="period.id" :value="period.id">
-              {{ period.periodLabel }} / {{ period.blackoutDates.length }} inhabiles
+              {{ period.periodLabel }} / {{ period.blackoutDates.length }} inhábiles
             </option>
           </select>
         </label>
@@ -494,7 +494,7 @@ onMounted(() => {
           <input
             v-model="form.periodLabel"
             :disabled="!!selectedCalendarPeriod"
-            :placeholder="defaultPeriodLabel() || 'Periodo de nomina'"
+            :placeholder="defaultPeriodLabel() || 'Periodo de nómina'"
           />
         </label>
         <label>
@@ -506,25 +506,25 @@ onMounted(() => {
           <input v-model="form.payrollEnd" type="date" :disabled="!!selectedCalendarPeriod" />
         </label>
         <label>
-          <span>Inicio modulo 1</span>
+          <span>Inicio módulo 1</span>
           <input v-model="form.module1Start" type="date" :disabled="!!selectedCalendarPeriod" />
         </label>
         <label>
-          <span>Cierre modulo 1</span>
+          <span>Cierre módulo 1</span>
           <input v-model="form.module1End" type="date" :disabled="!!selectedCalendarPeriod" />
         </label>
         <label>
-          <span>Inicio modulo 2</span>
+          <span>Inicio módulo 2</span>
           <input v-model="form.module2Start" type="date" :disabled="!!selectedCalendarPeriod" />
         </label>
         <label>
-          <span>Cierre modulo 2</span>
+          <span>Cierre módulo 2</span>
           <input v-model="form.module2End" type="date" :disabled="!!selectedCalendarPeriod" />
         </label>
         <div class="payroll-actions">
           <button class="secondary-action" type="button" :disabled="calculating || !hasCalendarSelection" @click="refreshPreview">
             <RefreshCw :size="17" :class="{ spin: calculating }" />
-            Actualizar calculo
+            Actualizar cálculo
           </button>
           <button
             v-if="authStore.canFinalizePayroll"
@@ -534,7 +534,7 @@ onMounted(() => {
             @click="requestSaveCurrentRun"
           >
             <Save :size="17" />
-            Guardar nomina
+            Guardar nómina
           </button>
         </div>
       </div>
@@ -551,7 +551,7 @@ onMounted(() => {
       <div class="section-title compact">
         <div>
           <p class="eyebrow">Historial</p>
-          <h3>Nominas guardadas</h3>
+          <h3>Nóminas guardadas</h3>
         </div>
         <div class="payroll-history-actions">
           <span class="subtle-pill"><History :size="16" /> {{ recentRuns.length }} guardadas</span>
@@ -607,10 +607,10 @@ onMounted(() => {
         <div class="filters-row payroll">
           <label class="search-box">
             <Search :size="17" />
-            <input v-model="searchText" placeholder="Buscar docente, coordinacion o alerta" />
+            <input v-model="searchText" placeholder="Buscar docente, coordinación o alerta" />
           </label>
           <select v-model="alertFilter">
-            <option value="TODOS">Todas las lineas</option>
+            <option value="TODOS">Todas las líneas</option>
             <option value="CON_ALERTAS">Con alertas</option>
             <option value="SIN_ALERTAS">Sin alertas</option>
           </select>
@@ -621,7 +621,7 @@ onMounted(() => {
         </div>
 
         <div class="payroll-view-switch">
-          <div class="segmented-control" aria-label="Vista de nomina">
+          <div class="segmented-control" aria-label="Vista de nómina">
             <button type="button" :class="{ active: viewMode === 'RESUMEN' }" @click="viewMode = 'RESUMEN'">
               Resumen
             </button>
@@ -646,7 +646,7 @@ onMounted(() => {
             <thead>
               <tr>
                 <th>Docente</th>
-                <th>Coordinacion</th>
+                <th>Coordinación</th>
                 <th>Base</th>
                 <th>Descuentos</th>
                 <th>Extras</th>
@@ -657,7 +657,7 @@ onMounted(() => {
             <tbody>
               <tr v-if="!filteredLines.length">
                 <td colspan="7" class="empty-cell">
-                  {{ currentPreview ? 'No hay lineas con el filtro actual.' : 'Selecciona una quincena para ver la nomina.' }}
+                  {{ currentPreview ? 'No hay líneas con el filtro actual.' : 'Selecciona una quincena para ver la nómina.' }}
                 </td>
               </tr>
               <tr
@@ -725,13 +725,13 @@ onMounted(() => {
               <small>{{ formatHours(line.baseHours) }} h base / {{ formatHours(line.totalExtraHours) }} h extras</small>
               <em>{{ moneyLabel(line.totalAmount) }}</em>
             </button>
-            <div v-if="!filteredLines.length" class="empty-cell">No hay lineas con el filtro actual.</div>
+            <div v-if="!filteredLines.length" class="empty-cell">No hay líneas con el filtro actual.</div>
           </div>
 
           <div class="payroll-detail-panel" v-if="selectedLine">
             <div class="payroll-detail-header">
               <div>
-                <p class="eyebrow">Detalle historico</p>
+                <p class="eyebrow">Detalle histórico</p>
                 <h3>{{ selectedLine.teacherName }}</h3>
                 <span>{{ selectedLine.coordinationName }} / {{ categoryLabel(selectedLine.category) }}</span>
               </div>
@@ -766,7 +766,7 @@ onMounted(() => {
                   </thead>
                   <tbody>
                     <tr v-if="!selectedScheduleDetails.length">
-                      <td colspan="4" class="empty-cell">Sin horarios base para esta linea.</td>
+                      <td colspan="4" class="empty-cell">Sin horarios base para esta línea.</td>
                     </tr>
                     <tr v-for="detail in selectedScheduleDetails" :key="detail.scheduleId">
                       <td>
@@ -810,7 +810,7 @@ onMounted(() => {
                   </thead>
                   <tbody>
                     <tr v-if="!selectedExtraDetails.length">
-                      <td colspan="4" class="empty-cell">Sin extras externos para esta linea.</td>
+                      <td colspan="4" class="empty-cell">Sin extras externos para esta línea.</td>
                     </tr>
                     <tr v-for="detail in selectedExtraDetails" :key="detail.extraId">
                       <td>{{ formatDate(detail.activityDate) }}</td>
@@ -828,7 +828,7 @@ onMounted(() => {
           </div>
 
           <div v-else class="payroll-detail-panel empty">
-            <div class="empty-cell">Selecciona una linea de nomina para ver el detalle.</div>
+            <div class="empty-cell">Selecciona una línea de nómina para ver el detalle.</div>
           </div>
         </div>
       </div>
@@ -836,17 +836,17 @@ onMounted(() => {
 
     <ConfirmModal
       :show="confirmSavePayrollOpen"
-      eyebrow="Nomina"
-      title="Guardar nomina definitiva"
+      eyebrow="Nómina"
+      title="Guardar nómina definitiva"
       :subject="form.periodLabel || defaultPeriodLabel()"
-      message="Se conservara el historico de esta quincena y se liberaran incidencias y extras operativos para continuar con la siguiente captura. Usa esta accion solo cuando Direccion autorice proceder al pago."
+      message="Se conservará el histórico de esta quincena y se liberarán incidencias y extras operativos para continuar con la siguiente captura. Usa esta acción solo cuando Dirección autorice proceder al pago."
       :details="[
         `Docentes: ${summary.teachers}`,
         `Horas base: ${formatHours(summary.baseHours)}`,
         `Extras: ${formatHours(summary.totalExtraHours)} h`,
         `Total: ${moneyLabel(summary.totalAmount)}`
       ]"
-      confirm-label="Guardar nomina"
+      confirm-label="Guardar nómina"
       cancel-label="Seguir revisando"
       tone="warning"
       icon="save"

@@ -221,7 +221,7 @@ function rowSummary(log: AuditLogEntry) {
   if (log.action.includes('DELETED')) return 'Registro retirado del flujo operativo.';
   if (log.action.includes('CREATED')) return 'Nuevo registro agregado.';
   if (log.action.includes('FISCAL') || log.action.includes('CONSTANCIA')) return 'Cambio en expediente fiscal.';
-  if (log.entityType === 'payroll_run') return 'Movimiento dentro del flujo de nomina.';
+  if (log.entityType === 'payroll_run') return 'Movimiento dentro del flujo de nómina.';
   const fields = changedFields(log).slice(0, 3);
   if (!fields.length) return 'Evento registrado sin diferencias visibles.';
   return `Campos modificados: ${fields.join(', ')}`;
@@ -343,7 +343,7 @@ onMounted(() => {
           <Search :size="17" />
           <input v-model="filters.search" placeholder="Buscar usuario, acción, docente, quincena o ID" />
         </label>
-        <select v-model="filters.entityType" title="Modulo">
+        <select v-model="filters.entityType" title="Módulo">
           <option value="">Todos los módulos</option>
           <option v-for="option in options.entityTypes" :key="option.value" :value="option.value">
             {{ optionLabel(option, entityLabels) }}
@@ -390,7 +390,7 @@ onMounted(() => {
             <tr>
               <th>Fecha</th>
               <th>Evento</th>
-              <th>Modulo</th>
+              <th>Módulo</th>
               <th>Usuario</th>
               <th>Registro</th>
               <th>Cambio</th>

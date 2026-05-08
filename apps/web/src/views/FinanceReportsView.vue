@@ -135,26 +135,26 @@ const nextWorkflowAction = computed(() => {
   if (selectedRun.value.status === 'CALCULADA') {
     return {
       status: 'EN_REVISION' as const,
-      label: 'Enviar a revision',
-      title: 'Enviar nomina a revision',
+      label: 'Enviar a revisión',
+      title: 'Enviar nómina a revisión',
       message:
-        'La nomina quedara marcada para revision financiera sobre una corrida ya guardada. Si detectan un error operativo, se debe cancelar para correccion antes de aprobar.'
+        'La nómina quedará marcada para revisión financiera sobre una corrida ya guardada. Si detectan un error operativo, se debe cancelar para corrección antes de aprobar.'
     };
   }
   if (selectedRun.value.status === 'EN_REVISION') {
     return {
       status: 'APROBADA' as const,
-      label: 'Aprobar nomina',
-      title: 'Aprobar nomina para pago',
-      message: 'La nomina quedara aprobada para proceder al pago. Verifica que los pendientes fiscales y alertas hayan sido revisados.'
+      label: 'Aprobar nómina',
+      title: 'Aprobar nómina para pago',
+      message: 'La nómina quedará aprobada para proceder al pago. Verifica que los pendientes fiscales y alertas hayan sido revisados.'
     };
   }
   if (selectedRun.value.status === 'APROBADA') {
     return {
       status: 'PAGADA' as const,
       label: 'Marcar pagada',
-      title: 'Marcar nomina como pagada',
-      message: 'La nomina quedara registrada como pagada. Esta accion debe hacerse cuando Finanzas confirme que los pagos fueron ejecutados.'
+      title: 'Marcar nómina como pagada',
+      message: 'La nómina quedará registrada como pagada. Esta acción debe hacerse cuando Finanzas confirme que los pagos fueron ejecutados.'
     };
   }
   return null;
@@ -166,10 +166,10 @@ const cancelWorkflowAction = computed<WorkflowAction | null>(() => {
   if (!['CALCULADA', 'EN_REVISION', 'APROBADA'].includes(selectedRun.value.status)) return null;
   return {
     status: 'CANCELADA',
-    label: 'Cancelar para correccion',
-    title: 'Cancelar nomina para correccion',
+    label: 'Cancelar para corrección',
+    title: 'Cancelar nómina para corrección',
     message:
-      'Se cancelara esta corrida, se restauraran las incidencias y extras desde el historico guardado y la quincena quedara abierta para corregir. Despues deberas recalcular y guardar una nueva nomina.'
+      'Se cancelará esta corrida, se restaurarán las incidencias y extras desde el histórico guardado y la quincena quedará abierta para corregir. Después deberás recalcular y guardar una nueva nómina.'
   };
 });
 
@@ -188,8 +188,8 @@ const workflowConfirmDetails = computed(() => {
   ];
 
   if (pendingStatus.value === 'CANCELADA') {
-    details.push('Se reabrira la quincena para ajustar Incidencias y Extras.');
-    details.push('La corrida cancelada permanecera en historico y auditoria.');
+    details.push('Se reabrirá la quincena para ajustar Incidencias y Extras.');
+    details.push('La corrida cancelada permanecerá en histórico y auditoría.');
   }
 
   return details;
@@ -210,7 +210,7 @@ const pendingAmount = computed(() =>
 const searchPlaceholder = computed(() =>
   activeTab.value === 'HISTORICO'
     ? 'Buscar quincena, estado o usuario'
-    : 'Buscar docente, coordinacion, RFC o pendiente'
+    : 'Buscar docente, coordinación, RFC o pendiente'
 );
 
 const paymentTypeSummary = computed(() => {
@@ -382,7 +382,7 @@ function statusClass(run: FinanceRun) {
 }
 
 function statusLabel(status: FinanceRun['status']) {
-  if (status === 'EN_REVISION') return 'EN REVISION';
+  if (status === 'EN_REVISION') return 'EN REVISIÓN';
   if (status === 'PAGADA') return 'PAGADA';
   return status;
 }
@@ -390,7 +390,7 @@ function statusLabel(status: FinanceRun['status']) {
 function runTraceLabel(run: FinanceRun) {
   if (run.status === 'PAGADA') return `Pagada ${formatDateTime(run.paidAt)}`;
   if (run.status === 'APROBADA') return `Aprobada ${formatDateTime(run.approvedAt)}`;
-  if (run.status === 'EN_REVISION') return `En revision ${formatDateTime(run.reviewedAt)}`;
+  if (run.status === 'EN_REVISION') return `En revisión ${formatDateTime(run.reviewedAt)}`;
   if (run.status === 'CANCELADA') return `Cancelada ${formatDateTime(run.statusUpdatedAt)}`;
   return `Calculada ${formatDateTime(run.calculatedAt || run.createdAt)}`;
 }
@@ -502,7 +502,7 @@ async function confirmStatusChange() {
     setNotice('ok', response.message);
     await loadFinance(selectedCycleId.value, selectedRunId.value);
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible actualizar el estado de nomina.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible actualizar el estado de nómina.');
   } finally {
     updatingStatus.value = false;
   }
@@ -514,7 +514,7 @@ async function exportReport(kind: ExportKind) {
   notice.value = null;
   try {
     await downloadFinanceExport(kind, selectedRun.value.id, selectedCycleId.value);
-    setNotice('ok', 'Exportacion financiera generada.');
+    setNotice('ok', 'Exportación financiera generada.');
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar el reporte.');
   } finally {
@@ -564,7 +564,7 @@ onMounted(() => {
     <section class="toolbar-card">
       <div>
         <p class="eyebrow">Reportes / Finanzas</p>
-        <h3>Nominas guardadas y pagos</h3>
+        <h3>Nóminas guardadas y pagos</h3>
       </div>
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadSelectedCycle">
@@ -593,10 +593,10 @@ onMounted(() => {
       <article class="metric-card mini">
         <p>Listo para pago</p>
         <strong>{{ moneyLabel(readyAmount) }}</strong>
-        <small>{{ summary.readyPayments }} linea{{ summary.readyPayments === 1 ? '' : 's' }} completa{{ summary.readyPayments === 1 ? '' : 's' }}</small>
+        <small>{{ summary.readyPayments }} línea{{ summary.readyPayments === 1 ? '' : 's' }} completa{{ summary.readyPayments === 1 ? '' : 's' }}</small>
       </article>
       <article class="metric-card mini">
-        <p>Pendiente revision</p>
+        <p>Pendiente revisión</p>
         <strong>{{ moneyLabel(pendingAmount) }}</strong>
         <small>{{ summary.fiscalPending }} pendiente{{ summary.fiscalPending === 1 ? '' : 's' }} fiscal{{ summary.fiscalPending === 1 ? '' : 'es' }}</small>
       </article>
@@ -610,8 +610,8 @@ onMounted(() => {
     <section class="data-panel finance-header-panel">
       <div class="finance-run-summary">
         <div>
-          <p class="eyebrow">Nomina seleccionada</p>
-          <h3>{{ selectedRun?.periodLabel || 'Sin nomina guardada' }}</h3>
+          <p class="eyebrow">Nómina seleccionada</p>
+          <h3>{{ selectedRun?.periodLabel || 'Sin nómina guardada' }}</h3>
           <span>{{ selectedRun?.cycleLabel || activeCycle?.periodLabel || 'Ciclo operativo' }}</span>
         </div>
         <span v-if="selectedRun" class="badge" :class="statusClass(selectedRun)">{{ statusLabel(selectedRun.status) }}</span>
@@ -708,7 +708,7 @@ onMounted(() => {
         <small>{{ selectedRun.calculatedByEmail || 'Sistema' }}</small>
       </article>
       <article :class="{ done: !!selectedRun.reviewedAt || ['EN_REVISION', 'APROBADA', 'PAGADA', 'CERRADA'].includes(selectedRun.status) }">
-        <strong>En revision</strong>
+        <strong>En revisión</strong>
         <span>{{ formatDateTime(selectedRun.reviewedAt) }}</span>
         <small>{{ selectedRun.reviewedByEmail || 'Pendiente' }}</small>
       </article>
@@ -744,7 +744,7 @@ onMounted(() => {
         </span>
         <span>
           <strong>{{ group.label }}</strong>
-          <small>{{ group.teachers }} docente{{ group.teachers === 1 ? '' : 's' }} / {{ group.lines }} linea{{ group.lines === 1 ? '' : 's' }}</small>
+          <small>{{ group.teachers }} docente{{ group.teachers === 1 ? '' : 's' }} / {{ group.lines }} línea{{ group.lines === 1 ? '' : 's' }}</small>
         </span>
         <b>{{ moneyLabel(group.totalAmount) }}</b>
         <em>{{ group.ready }} listo{{ group.ready === 1 ? '' : 's' }} / {{ group.pending }} pendiente{{ group.pending === 1 ? '' : 's' }}</em>
@@ -795,7 +795,7 @@ onMounted(() => {
               Pendientes
             </button>
             <button type="button" :class="{ active: activeTab === 'HISTORICO' }" @click="activeTab = 'HISTORICO'">
-              Historico
+              Histórico
             </button>
           </div>
         </div>
@@ -817,7 +817,7 @@ onMounted(() => {
             <tbody>
               <tr v-if="!filteredLines.length">
                 <td colspan="8" class="empty-cell">
-                  {{ selectedRun ? 'No hay pagos con el filtro actual.' : 'No hay nominas guardadas para mostrar.' }}
+                  {{ selectedRun ? 'No hay pagos con el filtro actual.' : 'No hay nóminas guardadas para mostrar.' }}
                 </td>
               </tr>
               <tr v-for="line in filteredLines" :key="line.id">
@@ -868,23 +868,23 @@ onMounted(() => {
           <table class="finance-coordination-table">
             <thead>
               <tr>
-                <th>Coordinacion</th>
+                <th>Coordinación</th>
                 <th>Docentes</th>
                 <th>Horas</th>
                 <th>Descuentos</th>
                 <th>Total</th>
-                <th>Revision</th>
+                <th>Revisión</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!coordinationSummary.length">
-                <td colspan="7" class="empty-cell">No hay coordinaciones en la nomina seleccionada.</td>
+                <td colspan="7" class="empty-cell">No hay coordinaciones en la nómina seleccionada.</td>
               </tr>
               <tr v-for="row in coordinationSummary" :key="row.coordinationId">
                 <td>
                   <strong>{{ row.coordinationName }}</strong>
-                  <span>{{ row.lines }} linea{{ row.lines === 1 ? '' : 's' }} de pago</span>
+                  <span>{{ row.lines }} línea{{ row.lines === 1 ? '' : 's' }} de pago</span>
                 </td>
                 <td><strong>{{ row.teachers }}</strong></td>
                 <td>
@@ -914,7 +914,7 @@ onMounted(() => {
             <thead>
               <tr>
                 <th>Docente</th>
-                <th>Coordinacion</th>
+                <th>Coordinación</th>
                 <th>Pendientes</th>
                 <th>Total</th>
               </tr>
@@ -977,7 +977,7 @@ onMounted(() => {
               </thead>
               <tbody>
                 <tr v-if="!filteredRuns.length">
-                  <td colspan="6" class="empty-cell">No hay nominas con el filtro actual.</td>
+                  <td colspan="6" class="empty-cell">No hay nóminas con el filtro actual.</td>
                 </tr>
                 <tr v-for="run in filteredRuns" :key="run.id" :class="{ 'active-row': run.id === selectedRunId }">
                   <td>
@@ -997,7 +997,7 @@ onMounted(() => {
                   <td>
                     <strong>{{ run.summary.teachers }} docentes</strong>
                     <span>{{ run.summary.coordinations }} coordinaciones</span>
-                    <small>{{ run.summary.lines }} lineas / {{ run.summary.alerts }} alertas</small>
+                    <small>{{ run.summary.lines }} línea{{ run.summary.lines === 1 ? '' : 's' }} / {{ run.summary.alerts }} alertas</small>
                   </td>
                   <td>
                     <strong>{{ runTraceLabel(run) }}</strong>
@@ -1081,8 +1081,8 @@ onMounted(() => {
           <section class="finance-detail-section">
             <div class="section-title compact">
               <div>
-                <p class="eyebrow">Revision</p>
-                <h3>Alertas de nomina</h3>
+                <p class="eyebrow">Revisión</p>
+                <h3>Alertas de nómina</h3>
               </div>
             </div>
             <div v-if="selectedLine.alerts.length" class="alert-list">
@@ -1091,7 +1091,7 @@ onMounted(() => {
                 {{ alert }}
               </span>
             </div>
-            <p v-else class="finance-detail-muted">Sin alertas registradas para esta linea.</p>
+            <p v-else class="finance-detail-muted">Sin alertas registradas para esta línea.</p>
           </section>
         </div>
 
@@ -1115,7 +1115,7 @@ onMounted(() => {
                 </thead>
                 <tbody>
                   <tr v-if="!selectedLineScheduleDetails.length">
-                    <td colspan="4" class="empty-cell">Sin horarios base para esta linea.</td>
+                    <td colspan="4" class="empty-cell">Sin horarios base para esta línea.</td>
                   </tr>
                   <tr v-for="detail in selectedLineScheduleDetails" :key="`${detail.scheduleId}-${detail.subjectName}`">
                     <td>
@@ -1159,7 +1159,7 @@ onMounted(() => {
                 </thead>
                 <tbody>
                   <tr v-if="!selectedLineExtraDetails.length">
-                    <td colspan="4" class="empty-cell">Sin extras externos para esta linea.</td>
+                    <td colspan="4" class="empty-cell">Sin extras externos para esta línea.</td>
                   </tr>
                   <tr v-for="detail in selectedLineExtraDetails" :key="`${detail.extraId}-${detail.reason}`">
                     <td>{{ formatDate(detail.activityDate) }}</td>
@@ -1186,9 +1186,9 @@ onMounted(() => {
       <section class="modal-card large finance-detail-modal" role="dialog" aria-modal="true">
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Reporte por coordinacion</p>
+            <p class="eyebrow">Reporte por coordinación</p>
             <h3>{{ selectedCoordination.coordinationName }}</h3>
-            <span>{{ selectedRun?.periodLabel || 'Nomina seleccionada' }}</span>
+            <span>{{ selectedRun?.periodLabel || 'Nómina seleccionada' }}</span>
           </div>
           <button class="icon-button" type="button" title="Cerrar" @click="closeCoordinationDetail">
             <X :size="17" />
@@ -1197,14 +1197,14 @@ onMounted(() => {
 
         <div class="finance-detail-grid">
           <article class="finance-detail-card total">
-            <span>Total coordinacion</span>
+            <span>Total coordinación</span>
             <strong>{{ moneyLabel(selectedCoordination.totalAmount) }}</strong>
             <small>{{ selectedCoordination.teachers }} docente{{ selectedCoordination.teachers === 1 ? '' : 's' }}</small>
           </article>
           <article class="finance-detail-card">
             <span>Horas base</span>
             <strong>{{ formatHours(selectedCoordination.baseHours) }} h</strong>
-            <small>{{ selectedCoordination.lines }} linea{{ selectedCoordination.lines === 1 ? '' : 's' }}</small>
+            <small>{{ selectedCoordination.lines }} línea{{ selectedCoordination.lines === 1 ? '' : 's' }}</small>
           </article>
           <article class="finance-detail-card">
             <span>Descuentos</span>
@@ -1288,7 +1288,7 @@ onMounted(() => {
                 </thead>
                 <tbody>
                   <tr v-if="!selectedCoordinationScheduleDetails.length">
-                    <td colspan="5" class="empty-cell">Sin horarios base para esta coordinacion.</td>
+                    <td colspan="5" class="empty-cell">Sin horarios base para esta coordinación.</td>
                   </tr>
                   <tr
                     v-for="(detail, index) in selectedCoordinationScheduleDetails"
@@ -1336,7 +1336,7 @@ onMounted(() => {
                 </thead>
                 <tbody>
                   <tr v-if="!selectedCoordinationExtraDetails.length">
-                    <td colspan="4" class="empty-cell">Sin extras externos para esta coordinacion.</td>
+                    <td colspan="4" class="empty-cell">Sin extras externos para esta coordinación.</td>
                   </tr>
                   <tr v-for="(detail, index) in selectedCoordinationExtraDetails" :key="`${detail.extraId}-${index}`">
                     <td><strong>{{ detail.teacherName }}</strong></td>
@@ -1364,7 +1364,7 @@ onMounted(() => {
       eyebrow="Flujo financiero"
       :title="pendingWorkflowAction?.title || 'Actualizar estado'"
       :subject="selectedRun?.periodLabel"
-      :message="pendingWorkflowAction?.message || 'Confirma el cambio de estado de la nomina.'"
+      :message="pendingWorkflowAction?.message || 'Confirma el cambio de estado de la nómina.'"
       :details="workflowConfirmDetails"
       :confirm-label="pendingWorkflowAction?.label || 'Confirmar'"
       cancel-label="Cancelar"
@@ -1380,7 +1380,7 @@ onMounted(() => {
         <FileSpreadsheet :size="22" />
         <div>
           <strong>{{ summary.lines }}</strong>
-          <span>Lineas de pago</span>
+          <span>Líneas de pago</span>
         </div>
       </article>
       <article class="data-panel">
@@ -1401,7 +1401,7 @@ onMounted(() => {
         <History :size="22" />
         <div>
           <strong>{{ runs.length }}</strong>
-          <span>Corridas historicas</span>
+          <span>Corridas históricas</span>
         </div>
       </article>
     </section>

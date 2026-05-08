@@ -77,7 +77,7 @@ type IncidencePayload = z.infer<typeof incidencePayloadSchema>;
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos invalidos.'
+    message: error.issues[0]?.message || 'Datos inválidos.'
   });
 }
 
@@ -225,10 +225,10 @@ async function saveIncidenceRow(
   payload: IncidencePayload
 ): Promise<IncidenceScheduleRow> {
   const before = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, actorCoordination);
-  if (!before) throw new Error('No se encontro el horario seleccionado.');
+  if (!before) throw new Error('No se encontró el horario seleccionado.');
   if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar incidencias de un ciclo cerrado.');
-  if (before.payrollLocked) throw new Error('Esta quincena ya tiene nomina guardada. Las incidencias quedaron cerradas.');
-  if (!before.canEdit) throw new Error('Solo la coordinacion que capturo este horario puede editar sus incidencias.');
+  if (before.payrollLocked) throw new Error('Esta quincena ya tiene nómina guardada. Las incidencias quedaron cerradas.');
+  if (!before.canEdit) throw new Error('Solo la coordinación que capturó este horario puede editar sus incidencias.');
 
   await client.query(
     `
@@ -316,7 +316,7 @@ export async function registerIncidenceRoutes(app: FastifyInstance): Promise<voi
       const params = incidenceParamsSchema.safeParse(request.params);
       const parsed = incidencePayloadSchema.safeParse(request.body);
       if (!params.success) {
-        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Horario invalido.' });
+        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Horario inválido.' });
         return;
       }
       if (!parsed.success) {

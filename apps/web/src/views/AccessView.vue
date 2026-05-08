@@ -267,7 +267,7 @@ onMounted(() => {
       eyebrow="Usuarios y roles"
       title="Eliminar acceso"
       :subject="pendingDeleteAccessUser?.displayName"
-      message="La cuenta dejara de estar autorizada para ingresar a la Web App. El super admin protegido no puede eliminarse desde este flujo."
+      message="La cuenta dejará de estar autorizada para ingresar a la Web App. El super admin protegido no puede eliminarse desde este flujo."
       :details="pendingDeleteAccessUser ? [
         pendingDeleteAccessUser.email,
         `Rol actual: ${pendingDeleteAccessUser.roleName}`,

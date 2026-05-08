@@ -183,20 +183,20 @@ function editPeriod(period: CalendarPeriod) {
 function addBlackout() {
   formError.value = '';
   if (!blackoutDraft.value.blackoutDate) {
-    formError.value = 'Selecciona la fecha inhabil.';
+    formError.value = 'Selecciona la fecha inhábil.';
     return;
   }
   if (
     blackoutDraft.value.blackoutDate < form.value.payrollStart ||
     blackoutDraft.value.blackoutDate > form.value.payrollEnd
   ) {
-    formError.value = 'El dia inhabil debe estar dentro de la quincena.';
+    formError.value = 'El día inhábil debe estar dentro de la quincena.';
     return;
   }
   const next = form.value.blackoutDates.filter((blackout) => blackout.blackoutDate !== blackoutDraft.value.blackoutDate);
   next.push({
     blackoutDate: blackoutDraft.value.blackoutDate,
-    reason: blackoutDraft.value.reason.trim() || 'Dia inhabil'
+    reason: blackoutDraft.value.reason.trim() || 'Día inhábil'
   });
   form.value.blackoutDates = next.sort((left, right) => left.blackoutDate.localeCompare(right.blackoutDate));
   blackoutDraft.value = { blackoutDate: '', reason: '' };
@@ -215,11 +215,11 @@ function validateForm() {
 function validateModuleForm() {
   const modules = moduleForm.value;
   if (!modules.module1Start || !modules.module1End || !modules.module2Start || !modules.module2End) {
-    return 'Captura inicio y cierre de ambos modulos.';
+    return 'Captura inicio y cierre de ambos módulos.';
   }
-  if (modules.module1Start > modules.module1End) return 'El modulo 1 tiene fechas invertidas.';
-  if (modules.module2Start > modules.module2End) return 'El modulo 2 tiene fechas invertidas.';
-  if (modules.module1End > modules.module2End) return 'El cierre de modulo 1 no puede ser posterior al cierre de modulo 2.';
+  if (modules.module1Start > modules.module1End) return 'El módulo 1 tiene fechas invertidas.';
+  if (modules.module2Start > modules.module2End) return 'El módulo 2 tiene fechas invertidas.';
+  if (modules.module1End > modules.module2End) return 'El cierre de módulo 1 no puede ser posterior al cierre de módulo 2.';
   return '';
 }
 
@@ -322,7 +322,7 @@ onMounted(() => {
     <section class="toolbar-card">
       <div>
         <p class="eyebrow">Calendario Operativo</p>
-        <h3>Quincenas, modulos y dias inhabiles</h3>
+        <h3>Quincenas, módulos y días inhábiles</h3>
       </div>
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadCalendar(selectedCycleId)">
@@ -343,8 +343,8 @@ onMounted(() => {
 
     <section class="metric-grid compact">
       <article class="metric-card mini"><p>Quincenas</p><strong>{{ summary.periods }}</strong><small>{{ activeCycle?.periodLabel || 'Ciclo operativo' }}</small></article>
-      <article class="metric-card mini"><p>Dias inhabiles</p><strong>{{ summary.blackoutTotal }}</strong><small>Dentro de quincenas</small></article>
-      <article class="metric-card mini"><p>Proxima base</p><strong>{{ summary.nextPeriod }}</strong><small>Fuente para Nomina</small></article>
+      <article class="metric-card mini"><p>Días inhábiles</p><strong>{{ summary.blackoutTotal }}</strong><small>Dentro de quincenas</small></article>
+      <article class="metric-card mini"><p>Próxima base</p><strong>{{ summary.nextPeriod }}</strong><small>Fuente para Nómina</small></article>
       <article class="metric-card mini"><p>Acceso</p><strong>Admin</strong><small>Calendario centralizado</small></article>
     </section>
 
@@ -359,19 +359,19 @@ onMounted(() => {
 
       <div class="form-grid">
         <label>
-          <span>Inicio modulo 1</span>
+          <span>Inicio módulo 1</span>
           <input v-model="moduleForm.module1Start" type="date" />
         </label>
         <label>
-          <span>Cierre modulo 1</span>
+          <span>Cierre módulo 1</span>
           <input v-model="moduleForm.module1End" type="date" />
         </label>
         <label>
-          <span>Inicio modulo 2</span>
+          <span>Inicio módulo 2</span>
           <input v-model="moduleForm.module2Start" type="date" />
         </label>
         <label>
-          <span>Cierre modulo 2</span>
+          <span>Cierre módulo 2</span>
           <input v-model="moduleForm.module2End" type="date" />
         </label>
       </div>
@@ -389,7 +389,7 @@ onMounted(() => {
         </button>
         <button class="primary-inline" type="button" :disabled="savingModules || !activeCycle" @click="saveModuleDates">
           <Save :size="17" />
-          Guardar modulos
+          Guardar módulos
         </button>
       </div>
     </section>
@@ -399,7 +399,7 @@ onMounted(() => {
         <div class="section-title compact">
           <div>
             <p class="eyebrow">{{ editingId ? 'Editar quincena' : 'Nueva quincena' }}</p>
-            <h3>Parametros de calculo</h3>
+            <h3>Parámetros de cálculo</h3>
           </div>
           <CalendarDays :size="22" />
         </div>
@@ -421,11 +421,11 @@ onMounted(() => {
             <input v-model="form.payrollEnd" type="date" @change="refreshPeriodLabel" />
           </label>
           <label>
-            <span>Dias acceso incidencias</span>
+            <span>Días acceso incidencias</span>
             <input v-model.number="form.incidencesAccessDays" type="number" min="0" max="31" />
           </label>
           <label>
-            <span>Dias acceso extras</span>
+            <span>Días acceso extras</span>
             <input v-model.number="form.extrasAccessDays" type="number" min="0" max="31" />
           </label>
         </div>
@@ -437,7 +437,7 @@ onMounted(() => {
         </div>
 
         <div class="blackout-editor">
-          <strong>Dias inhabiles de la quincena</strong>
+          <strong>Días inhábiles de la quincena</strong>
           <div class="blackout-inputs">
             <input v-model="blackoutDraft.blackoutDate" type="date" />
             <input v-model="blackoutDraft.reason" placeholder="Motivo" />
@@ -448,13 +448,13 @@ onMounted(() => {
           </div>
           <div v-if="form.blackoutDates.length" class="blackout-list">
             <span v-for="blackout in form.blackoutDates" :key="blackout.blackoutDate">
-              {{ formatDate(blackout.blackoutDate) }} / {{ blackout.reason || 'Dia inhabil' }}
+              {{ formatDate(blackout.blackoutDate) }} / {{ blackout.reason || 'Día inhábil' }}
               <button type="button" title="Quitar" @click="removeBlackout(blackout.blackoutDate)">
                 <X :size="13" />
               </button>
             </span>
           </div>
-          <p v-else>Sin dias inhabiles capturados.</p>
+          <p v-else>Sin días inhábiles capturados.</p>
         </div>
 
         <div v-if="formError" class="error-box wide">{{ formError }}</div>
@@ -472,7 +472,7 @@ onMounted(() => {
         <div class="section-title compact">
           <div>
             <p class="eyebrow">Quincenas guardadas</p>
-            <h3>Fuente para calculo de nomina</h3>
+            <h3>Fuente para cálculo de nómina</h3>
           </div>
         </div>
 
@@ -481,8 +481,8 @@ onMounted(() => {
             <thead>
               <tr>
                 <th>Quincena</th>
-                <th>Modulos</th>
-                <th>Inhabiles</th>
+                <th>Módulos</th>
+                <th>Inhábiles</th>
                 <th>Acceso</th>
                 <th></th>
               </tr>
@@ -509,8 +509,8 @@ onMounted(() => {
                   </small>
                 </td>
                 <td>
-                  <strong>Inc {{ period.incidencesAccessDays }} dias</strong>
-                  <span>Extras {{ period.extrasAccessDays }} dias</span>
+                  <strong>Inc {{ period.incidencesAccessDays }} días</strong>
+                  <span>Extras {{ period.extrasAccessDays }} días</span>
                 </td>
                 <td class="row-actions">
                   <button class="icon-button" type="button" title="Editar" @click="editPeriod(period)">
@@ -532,11 +532,11 @@ onMounted(() => {
       eyebrow="Calendario operativo"
       title="Eliminar quincena"
       :subject="pendingDeletePeriod?.periodLabel"
-      message="Esta quincena saldra de la fuente de calculo de nomina. No debe eliminarse si ya forma parte de una revision real o de una corrida guardada."
+      message="Esta quincena saldrá de la fuente de cálculo de nómina. No debe eliminarse si ya forma parte de una revisión real o de una corrida guardada."
       :details="pendingDeletePeriod ? [
         `${formatDate(pendingDeletePeriod.payrollStart)} - ${formatDate(pendingDeletePeriod.payrollEnd)}`,
-        `${pendingDeletePeriod.blackoutDates.length} dia${pendingDeletePeriod.blackoutDates.length === 1 ? '' : 's'} inhabil${pendingDeletePeriod.blackoutDates.length === 1 ? '' : 'es'}`,
-        `Acceso incidencias: ${pendingDeletePeriod.incidencesAccessDays} dias / Extras: ${pendingDeletePeriod.extrasAccessDays} dias`
+        `${pendingDeletePeriod.blackoutDates.length} día${pendingDeletePeriod.blackoutDates.length === 1 ? '' : 's'} inhábil${pendingDeletePeriod.blackoutDates.length === 1 ? '' : 'es'}`,
+        `Acceso incidencias: ${pendingDeletePeriod.incidencesAccessDays} días / Extras: ${pendingDeletePeriod.extrasAccessDays} días`
       ] : []"
       confirm-label="Eliminar quincena"
       cancel-label="Conservar quincena"

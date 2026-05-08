@@ -746,7 +746,7 @@ export interface UserPayload {
 
 async function getIdToken(): Promise<string> {
   const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('No hay una sesion activa.');
+  if (!currentUser) throw new Error('No hay una sesión activa.');
   return currentUser.getIdToken();
 }
 
@@ -850,7 +850,7 @@ export async function downloadTeacherExport(kind: 'active' | 'history'): Promise
     } catch {
       body = {};
     }
-    throw new Error(body.message || 'No fue posible generar la exportacion.');
+    throw new Error(body.message || 'No fue posible generar la exportación.');
   }
 
   const blob = await response.blob();
@@ -1069,7 +1069,7 @@ export async function downloadPayrollExport(runId: string, kind: 'summary' | 'sc
     } catch {
       body = {};
     }
-    throw new Error(body.message || 'No fue posible generar la exportacion de nomina.');
+    throw new Error(body.message || 'No fue posible generar la exportación de nómina.');
   }
 
   const blob = await response.blob();
@@ -1111,7 +1111,7 @@ export async function downloadFinanceExport(kind: 'payments' | 'fiscal' | 'coord
     } catch {
       body = {};
     }
-    throw new Error(body.message || 'No fue posible generar la exportacion financiera.');
+    throw new Error(body.message || 'No fue posible generar la exportación financiera.');
   }
 
   const blob = await response.blob();

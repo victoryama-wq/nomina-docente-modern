@@ -78,7 +78,7 @@ async function loadUserByEmail(email: string, firebaseUid: string): Promise<Sess
 export async function authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const token = getBearerToken(request);
   if (!token) {
-    await reply.code(401).send({ error: 'AUTH_REQUIRED', message: 'Inicia sesion para continuar.' });
+    await reply.code(401).send({ error: 'AUTH_REQUIRED', message: 'Inicia sesión para continuar.' });
     return;
   }
 
@@ -103,7 +103,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     if (!user) {
       await reply.code(403).send({
         error: 'USER_NOT_ALLOWED',
-        message: 'Tu correo no tiene acceso activo a Nomina Docente.'
+        message: 'Tu correo no tiene acceso activo a Nómina Docente.'
       });
       return;
     }
@@ -112,7 +112,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   } catch (error) {
     console.error('--- AUTH ERROR ---', error);
     request.log.warn({ error: error instanceof Error ? error.message : String(error) }, 'Firebase token rejected');
-    await reply.code(401).send({ error: 'INVALID_TOKEN', message: 'La sesion no es valida o expiro.' });
+    await reply.code(401).send({ error: 'INVALID_TOKEN', message: 'La sesión no es válida o expiró.' });
   }
 }
 
@@ -123,7 +123,7 @@ export function requirePermission(permission: string) {
 
     const permissions = request.user?.permissions || [];
     if (!permissions.includes(permission)) {
-      await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para esta accion.' });
+      await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para esta acción.' });
     }
   };
 }
@@ -136,7 +136,7 @@ export function requirePermissionOrProtectedSuperAdmin(permission: string) {
     const user = request.user;
     const permissions = user?.permissions || [];
     if (!user?.isProtectedSuperAdmin && !permissions.includes(permission)) {
-      await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para esta accion.' });
+      await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para esta acción.' });
     }
   };
 }
@@ -148,7 +148,7 @@ export function requireAnyPermission(allowedPermissions: string[]) {
 
     const permissions = request.user?.permissions || [];
     if (!allowedPermissions.some((permission) => permissions.includes(permission))) {
-      await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para esta accion.' });
+      await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para esta acción.' });
     }
   };
 }

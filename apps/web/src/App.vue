@@ -10,7 +10,7 @@ authStore.initAuth();
   <main v-if="authStore.loading" class="app-shell">
     <section class="center-stage">
       <Loader2 class="spin" :size="34" />
-      <p>Preparando Nomina Docente...</p>
+      <p>Preparando Nómina Docente...</p>
     </section>
   </main>
   

@@ -101,7 +101,7 @@ type ExtraBody = z.infer<typeof extraBodySchema>;
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos invalidos.'
+    message: error.issues[0]?.message || 'Datos inválidos.'
   });
 }
 
@@ -130,7 +130,7 @@ async function resolveTabulatorAmount(client: PoolClient, body: ExtraBody): Prom
     "SELECT amount::float8 AS amount FROM tabulators WHERE id = $1 AND status = 'ACTIVO' LIMIT 1",
     [body.tabulatorId]
   );
-  if (!result.rows[0]) throw new Error('Selecciona un tabulador valido del catalogo.');
+  if (!result.rows[0]) throw new Error('Selecciona un tabulador válido del catálogo.');
   return result.rows[0].amount;
 }
 
@@ -175,7 +175,7 @@ async function resolveExtraCoordination(
 ): Promise<string> {
   if (!isSystemAdmin(actor)) {
     const actorCoordination = await loadActorCoordination(client, actor, true);
-    if (!actorCoordination) throw new Error('No se pudo resolver la coordinacion del usuario logeado.');
+    if (!actorCoordination) throw new Error('No se pudo resolver la coordinación del usuario conectado.');
     return actorCoordination.id;
   }
 
@@ -426,7 +426,7 @@ async function ensureNoPayrollDependency(client: PoolClient, extraId: string): P
     [`%${extraId}%`]
   );
   if (Number(result.rows[0]?.payrollLines || 0) > 0) {
-    throw new Error('Este extra ya fue considerado en nomina. No se puede eliminar.');
+    throw new Error('Este extra ya fue considerado en nómina. No se puede eliminar.');
   }
 }
 
@@ -451,7 +451,7 @@ async function assertExtraPeriodOpen(client: PoolClient, cycleId: string, activi
 
   const lockedPeriod = result.rows[0];
   if (lockedPeriod) {
-    throw new Error(`La quincena ${lockedPeriod.periodLabel} ya tiene nomina guardada. No se pueden capturar ni modificar extras.`);
+    throw new Error(`La quincena ${lockedPeriod.periodLabel} ya tiene nómina guardada. No se pueden capturar ni modificar extras.`);
   }
 }
 
@@ -528,7 +528,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
     const params = extraParamsSchema.safeParse(request.params);
     const parsed = extraBodySchema.safeParse(request.body);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Extra invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Extra inválido.' });
       return;
     }
     if (!parsed.success) {
@@ -540,9 +540,9 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
     const extra = await withTransaction(async (client) => {
       const actorCoordination = await loadActorCoordination(client, actor, false);
       const before = await loadExtraById(client, params.data.id, actor, actorCoordination);
-      if (!before) throw new Error('No se encontro el registro de extra.');
+      if (!before) throw new Error('No se encontró el registro de extra.');
       if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar extras de un ciclo cerrado.');
-      if (!before.canEdit) throw new Error('Solo la coordinacion que capturo este extra puede editarlo.');
+      if (!before.canEdit) throw new Error('Solo la coordinación que capturó este extra puede editarlo.');
 
       const cycle = await ensureWritableCycle(client, actor, parsed.data.cycleId || before.cycleId);
       const teacher = await loadTeacherForExtra(client, parsed.data.teacherId);
@@ -599,7 +599,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
   app.delete('/extras/:id', { preHandler: requirePermission('extras.manage') }, async (request, reply) => {
     const params = extraParamsSchema.safeParse(request.params);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Extra invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Extra inválido.' });
       return;
     }
 
@@ -607,9 +607,9 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
     const deleted = await withTransaction(async (client) => {
       const actorCoordination = await loadActorCoordination(client, actor, false);
       const before = await loadExtraById(client, params.data.id, actor, actorCoordination);
-      if (!before) throw new Error('No se encontro el registro de extra.');
+      if (!before) throw new Error('No se encontró el registro de extra.');
       if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden eliminar extras de un ciclo cerrado.');
-      if (!before.canEdit) throw new Error('Solo la coordinacion que capturo este extra puede eliminarlo.');
+      if (!before.canEdit) throw new Error('Solo la coordinación que capturó este extra puede eliminarlo.');
 
       await assertExtraPeriodOpen(client, before.cycleId, dateOnly(before.activityDate) || dateOnly(before.capturedAt));
       await ensureNoPayrollDependency(client, before.id);

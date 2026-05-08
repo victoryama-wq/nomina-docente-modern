@@ -24,9 +24,9 @@ async function handleLogin() {
       </div>
       <div>
         <p class="eyebrow">Tec Playacar</p>
-        <h1>Nomina Docente</h1>
+        <h1>Nómina Docente</h1>
         <p class="login-copy">
-          Acceso institucional para administrar docentes, roles, operacion academica y control financiero.
+          Acceso institucional para administrar docentes, roles, operación académica y control financiero.
         </p>
       </div>
 

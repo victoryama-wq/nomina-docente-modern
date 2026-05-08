@@ -87,7 +87,7 @@ function remainingHoursLabel(value: number, maxHours: number) {
             <input
               :value="teacherSearchText"
               autocomplete="off"
-              placeholder="Buscar por nombre, categoria o coordinacion"
+              placeholder="Buscar por nombre, categoría o coordinación"
               required
               @focus="$emit('focusTeacherSearch')"
               @input="$emit('update:teacherSearchText', ($event.target as HTMLInputElement).value); $emit('inputTeacherSearch')"
@@ -101,7 +101,7 @@ function remainingHoursLabel(value: number, maxHours: number) {
                 @mousedown.prevent="$emit('selectTeacher', teacher)"
               >
                 <strong>{{ teacher.fullName }}</strong>
-                <span>{{ categoryLimitLabel(teacher.category) }} / {{ teacher.coordinationName || 'Sin coordinacion' }}</span>
+                <span>{{ categoryLimitLabel(teacher.category) }} / {{ teacher.coordinationName || 'Sin coordinación' }}</span>
               </button>
               <p v-if="!filteredTeacherOptions.length">Sin coincidencias.</p>
             </div>
@@ -109,14 +109,14 @@ function remainingHoursLabel(value: number, maxHours: number) {
         </label>
 
         <label>
-          <span>Coordinacion</span>
+          <span>Coordinación</span>
           <select v-if="isAdmin" v-model="form.coordinationId">
-            <option value="">Segun docente</option>
+            <option value="">Según docente</option>
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">
               {{ coordination.name }}
             </option>
           </select>
-          <input v-else :value="selectedTeacher?.coordinationName || 'Coordinacion logeada'" disabled />
+          <input v-else :value="selectedTeacher?.coordinationName || 'Coordinación conectada'" disabled />
         </label>
         <label>
           <span>Ciclo</span>
@@ -193,8 +193,8 @@ function remainingHoursLabel(value: number, maxHours: number) {
       </div>
 
       <div v-if="overallLoadClass === 'danger'" class="warning-box wide">
-        Advertencia: la carga global rebasa el maximo por categoria considerando horarios, incidencias y extras. El
-        registro se puede guardar para que quede evidencia en nomina.
+        Advertencia: la carga global rebasa el máximo por categoría considerando horarios, incidencias y extras. El
+        registro se puede guardar para que quede evidencia en nómina.
       </div>
 
       <div v-if="formError" class="error-box wide">{{ formError }}</div>

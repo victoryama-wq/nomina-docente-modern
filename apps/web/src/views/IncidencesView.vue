@@ -163,7 +163,7 @@ function rowHasIncidences(schedule: IncidenceSchedule) {
 }
 
 function rowBadge(schedule: IncidenceSchedule) {
-  if (schedule.payrollLocked) return { label: 'Nomina guardada', className: 'muted' };
+  if (schedule.payrollLocked) return { label: 'Nómina guardada', className: 'muted' };
   if (!schedule.canEdit) return { label: 'Bloqueado', className: 'muted' };
   if (rowIsModified(schedule)) return { label: 'Sin guardar', className: 'warning' };
   if (rowHasIncidences(schedule)) return { label: 'Con incidencia', className: 'danger' };
@@ -326,7 +326,7 @@ onMounted(() => {
         </select>
         <select v-if="calendarPeriods.length" v-model="selectedCalendarConfigId" @change="loadSelectedCalendar">
           <option v-for="period in calendarPeriods" :key="period.id" :value="period.id">
-            {{ period.periodLabel }} / {{ period.hasPayrollRun ? 'Nomina guardada' : 'Abierta' }}
+            {{ period.periodLabel }} / {{ period.hasPayrollRun ? 'Nómina guardada' : 'Abierta' }}
           </option>
         </select>
         <button class="secondary-action" type="button" @click="loadIncidences(selectedCycleId, selectedCalendarConfigId)">
@@ -346,7 +346,7 @@ onMounted(() => {
     </section>
 
     <div v-if="activeCalendarPeriod?.hasPayrollRun" class="notice warning" style="margin-bottom: 1rem;">
-      Esta quincena ya tiene nomina guardada. Las incidencias estan cerradas y solo se muestran para consulta.
+      Esta quincena ya tiene nómina guardada. Las incidencias están cerradas y solo se muestran para consulta.
     </div>
 
     <section class="metric-grid compact">
@@ -361,7 +361,7 @@ onMounted(() => {
         <div class="filters-row incidences">
           <label class="search-box">
             <Search :size="17" />
-            <input v-model="searchText" placeholder="Buscar docente, asignatura, grupo o coordinacion" />
+            <input v-model="searchText" placeholder="Buscar docente, asignatura, grupo o coordinación" />
           </label>
           <select v-model="incidenceFilter">
             <option value="TODOS">Todas</option>
@@ -499,7 +499,7 @@ onMounted(() => {
                     class="icon-button"
                     type="button"
                     :disabled="!schedule.canEdit || !rowIsModified(schedule) || savingRows[schedule.id]"
-                    :title="schedule.payrollLocked ? 'La quincena ya tiene nomina guardada' : 'Guardar'"
+                    :title="schedule.payrollLocked ? 'La quincena ya tiene nómina guardada' : 'Guardar'"
                     @click="saveRow(schedule)"
                   >
                     <Save :size="16" />

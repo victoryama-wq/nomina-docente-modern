@@ -213,7 +213,7 @@ const emptySummary = (): FinanceSummary => ({
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos invalidos.'
+    message: error.issues[0]?.message || 'Datos inválidos.'
   });
 }
 
@@ -564,10 +564,10 @@ async function listFinanceExtraDetails(
 }
 
 function nextStatusMessage(status: FinanceRunStatusPayload['status']): string {
-  if (status === 'EN_REVISION') return 'Nomina enviada a revision financiera.';
-  if (status === 'APROBADA') return 'Nomina aprobada para pago.';
-  if (status === 'CANCELADA') return 'Nomina cancelada para correccion. La quincena quedo abierta para ajustar incidencias y extras.';
-  return 'Nomina marcada como pagada.';
+  if (status === 'EN_REVISION') return 'Nómina enviada a revisión financiera.';
+  if (status === 'APROBADA') return 'Nómina aprobada para pago.';
+  if (status === 'CANCELADA') return 'Nómina cancelada para corrección. La quincena quedó abierta para ajustar incidencias y extras.';
+  return 'Nómina marcada como pagada.';
 }
 
 function validateStatusTransition(current: PayrollRunStatus, target: FinanceRunStatusPayload['status']): void {
@@ -582,7 +582,7 @@ function validateStatusTransition(current: PayrollRunStatus, target: FinanceRunS
   };
 
   if (!allowed[current]?.includes(target)) {
-    throw new Error(`La nomina no puede pasar de ${current} a ${target}.`);
+    throw new Error(`La nómina no puede pasar de ${current} a ${target}.`);
   }
 }
 
@@ -604,7 +604,7 @@ async function restoreRunInputsForCorrection(
     [runId]
   );
   const run = runResult.rows[0];
-  if (!run) throw new Error('No se encontro la corrida de nomina.');
+  if (!run) throw new Error('No se encontró la corrida de nómina.');
 
   let restoredIncidences = 0;
   if (run.calendarConfigId) {
@@ -676,7 +676,7 @@ async function restoreRunInputsForCorrection(
         COALESCE(NULLIF(ped.reason_snapshot, ''), 'Extra restaurado'),
         ped.activity_date,
         '',
-        CONCAT('Restaurado desde nomina cancelada: ', pr.period_label),
+        CONCAT('Restaurado desde nómina cancelada: ', pr.period_label),
         now(),
         $2,
         now(),
@@ -721,7 +721,7 @@ async function updateFinanceRunStatus(
     [runId]
   );
   const currentStatus = current.rows[0]?.status;
-  if (!currentStatus) throw new Error('No se encontro la corrida de nomina.');
+  if (!currentStatus) throw new Error('No se encontró la corrida de nómina.');
   validateStatusTransition(currentStatus, targetStatus);
 
   const auditBefore = { status: currentStatus };
@@ -910,12 +910,12 @@ async function loadVisibleFinanceRun(client: PoolClient, actor: SessionUser, run
 function paymentHeaders(): string[] {
   return [
     'Docente',
-    'Coordinacion',
+    'Coordinación',
     'RFC',
     'Correo',
     'Datos bancarios',
     'Tipo pago',
-    'Categoria',
+    'Categoría',
     'Horas base',
     'Bruto base',
     'Descuentos',
@@ -950,7 +950,7 @@ function paymentRows(lines: FinanceLine[]): unknown[][] {
 }
 
 function coordinationHeaders(): string[] {
-  return ['Coordinacion', 'Docentes', 'Lineas', 'Horas base', 'Extras h', 'Descuentos', 'Total', 'Pendientes fiscales', 'Alertas'];
+  return ['Coordinación', 'Docentes', 'Líneas', 'Horas base', 'Extras h', 'Descuentos', 'Total', 'Pendientes fiscales', 'Alertas'];
 }
 
 function coordinationRows(rows: CoordinationSummary[]): unknown[][] {
@@ -992,7 +992,7 @@ function dateTimeText(value: string | null | undefined): string {
 }
 
 function statusText(status: PayrollRunStatus): string {
-  if (status === 'EN_REVISION') return 'EN REVISION';
+  if (status === 'EN_REVISION') return 'EN REVISIÓN';
   return status;
 }
 
@@ -1072,7 +1072,7 @@ const pdfBottom = 750;
 function startFinancePdf(title: string, run: FinanceRun): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: 'LETTER', margin: pdfMargin, autoFirstPage: true });
   doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(18).text(title, pdfMargin, pdfMargin);
-  doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(8).text('NOMINA DOCENTE', pdfMargin, pdfMargin + 24);
+  doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(8).text('NÓMINA DOCENTE', pdfMargin, pdfMargin + 24);
   doc
     .fillColor('#0F766E')
     .font('Helvetica-Bold')
@@ -1144,7 +1144,7 @@ function drawPdfTableHeader(doc: PDFKit.PDFDocument, columns: Array<{ label: str
 }
 
 function buildFinanceSummaryPdf(run: FinanceRun, lines: FinanceLine[], coordinations: CoordinationSummary[]): Promise<Buffer> {
-  const doc = startFinancePdf('Resumen ejecutivo de nomina', run);
+  const doc = startFinancePdf('Resumen ejecutivo de nómina', run);
   const summary = summarizeLines(lines);
   const paymentTypes = summarizePaymentTypes(lines);
   let y = 150;
@@ -1159,7 +1159,7 @@ function buildFinanceSummaryPdf(run: FinanceRun, lines: FinanceLine[], coordinat
   y = drawPdfSection(doc, 'Distribucion por tipo de pago', y);
   const paymentColumns = [
     { label: 'Tipo', x: 48, width: 120 },
-    { label: 'Lineas', x: 190, width: 58 },
+    { label: 'Líneas', x: 190, width: 58 },
     { label: 'Docentes', x: 260, width: 66 },
     { label: 'Listos', x: 338, width: 56 },
     { label: 'Pendientes', x: 406, width: 70 },
@@ -1167,7 +1167,7 @@ function buildFinanceSummaryPdf(run: FinanceRun, lines: FinanceLine[], coordinat
   ];
   y = drawPdfTableHeader(doc, paymentColumns, y);
   for (const row of paymentTypes) {
-    y = ensurePdfSpace(doc, y, 24, 'Resumen ejecutivo de nomina', run);
+    y = ensurePdfSpace(doc, y, 24, 'Resumen ejecutivo de nómina', run);
     doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(8.5).text(row.label, 48, y + 7, { width: 120 });
     doc.fillColor('#334155').font('Helvetica').fontSize(8).text(String(row.lines), 190, y + 7, { width: 58 });
     doc.text(String(row.teachers), 260, y + 7, { width: 66 });
@@ -1179,9 +1179,9 @@ function buildFinanceSummaryPdf(run: FinanceRun, lines: FinanceLine[], coordinat
   }
 
   y += 22;
-  y = drawPdfSection(doc, 'Resumen por coordinacion', y);
+  y = drawPdfSection(doc, 'Resumen por coordinación', y);
   const coordinationColumns = [
-    { label: 'Coordinacion', x: 48, width: 178 },
+    { label: 'Coordinación', x: 48, width: 178 },
     { label: 'Doc.', x: 236, width: 40 },
     { label: 'Base', x: 288, width: 62 },
     { label: 'Extras', x: 362, width: 62 },
@@ -1190,7 +1190,7 @@ function buildFinanceSummaryPdf(run: FinanceRun, lines: FinanceLine[], coordinat
   ];
   y = drawPdfTableHeader(doc, coordinationColumns, y);
   for (const row of coordinations) {
-    y = ensurePdfSpace(doc, y, 28, 'Resumen ejecutivo de nomina', run);
+    y = ensurePdfSpace(doc, y, 28, 'Resumen ejecutivo de nómina', run);
     doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(8).text(shortText(row.coordinationName, 38), 48, y + 7, { width: 178 });
     doc.fillColor('#334155').font('Helvetica').fontSize(8).text(String(row.teachers), 236, y + 7, { width: 40 });
     doc.text(hourText(row.baseHours), 288, y + 7, { width: 62 });
@@ -1201,7 +1201,7 @@ function buildFinanceSummaryPdf(run: FinanceRun, lines: FinanceLine[], coordinat
     y += 28;
   }
 
-  y = ensurePdfSpace(doc, y + 18, 42, 'Resumen ejecutivo de nomina', run);
+  y = ensurePdfSpace(doc, y + 18, 42, 'Resumen ejecutivo de nómina', run);
   doc
     .fillColor('#64748B')
     .font('Helvetica')
@@ -1217,7 +1217,7 @@ function buildFinanceSummaryPdf(run: FinanceRun, lines: FinanceLine[], coordinat
 }
 
 function buildCoordinationReportPdf(run: FinanceRun, lines: FinanceLine[], coordinations: CoordinationSummary[]): Promise<Buffer> {
-  const doc = startFinancePdf('Reporte por coordinacion', run);
+  const doc = startFinancePdf('Reporte por coordinación', run);
   const linesByCoordination = new Map<string, FinanceLine[]>();
   for (const line of lines) {
     const list = linesByCoordination.get(line.coordinationId) || [];
@@ -1236,7 +1236,7 @@ function buildCoordinationReportPdf(run: FinanceRun, lines: FinanceLine[], coord
 
   let y = 126;
   for (const coordination of coordinations) {
-    y = ensurePdfSpace(doc, y, 96, 'Reporte por coordinacion', run);
+    y = ensurePdfSpace(doc, y, 96, 'Reporte por coordinación', run);
     doc.roundedRect(pdfMargin, y, pdfRight - pdfMargin, 58, 8).fillAndStroke('#F8FAFC', '#DBE3EF');
     doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(11).text(coordination.coordinationName, 54, y + 10, { width: 300 });
     doc
@@ -1249,7 +1249,7 @@ function buildCoordinationReportPdf(run: FinanceRun, lines: FinanceLine[], coord
       .font('Helvetica')
       .fontSize(8)
       .text(
-        `${coordination.teachers} docentes / ${coordination.lines} lineas / Base ${hourText(coordination.baseHours)} / Extras ${hourText(coordination.totalExtraHours)} / Pendientes ${coordination.fiscalPending}`,
+        `${coordination.teachers} docentes / ${coordination.lines} líneas / Base ${hourText(coordination.baseHours)} / Extras ${hourText(coordination.totalExtraHours)} / Pendientes ${coordination.fiscalPending}`,
         54,
         y + 32,
         { width: 500 }
@@ -1261,7 +1261,7 @@ function buildCoordinationReportPdf(run: FinanceRun, lines: FinanceLine[], coord
       left.teacherName.localeCompare(right.teacherName, 'es')
     );
     for (const line of rows) {
-      y = ensurePdfSpace(doc, y, 30, 'Reporte por coordinacion', run);
+      y = ensurePdfSpace(doc, y, 30, 'Reporte por coordinación', run);
       doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(7.8).text(shortText(line.teacherName, 38), 48, y + 6, {
         width: 176
       });
@@ -1305,7 +1305,7 @@ function drawReceipt(doc: PDFKit.PDFDocument, run: FinanceRun, line: FinanceLine
   doc.save();
   doc.roundedRect(left, top, width, height, 8).strokeColor('#CBD5E1').lineWidth(1).stroke();
   doc.fillColor('#0F172A').font('Helvetica-Bold').fontSize(14).text('COMPROBANTE DE PAGO DOCENTE', left + 18, top + 18);
-  doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(8).text('NOMINA DOCENTE', left + 18, top + 36);
+  doc.fillColor('#64748B').font('Helvetica-Bold').fontSize(8).text('NÓMINA DOCENTE', left + 18, top + 36);
   doc
     .fillColor('#0F766E')
     .font('Helvetica-Bold')
@@ -1325,13 +1325,13 @@ function drawReceipt(doc: PDFKit.PDFDocument, run: FinanceRun, line: FinanceLine
 
   row('Quincena', run.periodLabel);
   row('Docente', line.teacherName);
-  row('Coordinacion', line.coordinationName);
+  row('Coordinación', line.coordinationName);
   row('Monto pagado', moneyText(line.totalAmount));
   row('Fecha de emision', new Date().toLocaleDateString('es-MX'));
 
   cursor += 14;
   doc.fillColor('#475569').font('Helvetica').fontSize(9).text(
-    'Declaro haber recibido el importe indicado por concepto de pago docente correspondiente a la quincena senalada.',
+    'Declaro haber recibido el importe indicado por concepto de pago docente correspondiente a la quincena señalada.',
     labelX,
     cursor,
     { width: width - 36, align: 'left' }
@@ -1404,19 +1404,19 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
 
       const actor = request.user!;
       if (!canManageFinanceWorkflow(actor)) {
-        await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para modificar el estado de nomina.' });
+        await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para modificar el estado de nómina.' });
         return;
       }
       if (parsedBody.data.status === 'CANCELADA' && !canCancelPayrollForCorrection(actor)) {
-        await reply.code(403).send({ error: 'FORBIDDEN', message: 'Solo Admin puede cancelar una nomina para correccion.' });
+        await reply.code(403).send({ error: 'FORBIDDEN', message: 'Solo Admin puede cancelar una nómina para corrección.' });
         return;
       }
 
       try {
         await withTransaction((client) => updateFinanceRunStatus(client, actor, parsedParams.data.id, parsedBody.data.status));
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'No fue posible actualizar el estado de nomina.';
-        const statusCode = message.includes('No se encontro') ? 404 : 409;
+        const message = error instanceof Error ? error.message : 'No fue posible actualizar el estado de nómina.';
+        const statusCode = message.includes('No se encontró') ? 404 : 409;
         await reply.code(statusCode).send({ error: 'PAYROLL_STATUS_ERROR', message });
         return;
       }
@@ -1440,7 +1440,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       const actor = request.user!;
       const loaded = await withTransaction((client) => loadVisibleFinanceRun(client, actor, parsedParams.data.id));
       if (!loaded) {
-        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontró la corrida de nómina.' });
         return;
       }
 
@@ -1462,7 +1462,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       const actor = request.user!;
       const loaded = await withTransaction((client) => loadVisibleFinanceRun(client, actor, parsedParams.data.id));
       if (!loaded) {
-        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontró la corrida de nómina.' });
         return;
       }
 
@@ -1499,12 +1499,12 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       });
 
       if (!result?.run) {
-        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontró la corrida de nómina.' });
         return;
       }
 
       if (!result.cashLines.length) {
-        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No hay docentes con pago en efectivo en esta nomina.' });
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No hay docentes con pago en efectivo en esta nómina.' });
         return;
       }
 
@@ -1533,7 +1533,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
 
       const context = await buildFinanceContext(request.user!, parsedQuery.data);
       if (!context.selectedRun) {
-        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No hay una nomina guardada para exportar.' });
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No hay una nómina guardada para exportar.' });
         return;
       }
 

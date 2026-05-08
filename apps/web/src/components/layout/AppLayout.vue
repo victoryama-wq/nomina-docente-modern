@@ -80,7 +80,7 @@ async function handleLogout() {
         </button>
       </div>
 
-      <nav class="nav-list" aria-label="Modulos">
+      <nav class="nav-list" aria-label="Módulos">
         <router-link
           :to="{ name: 'dashboard' }"
           class="nav-item"
@@ -225,7 +225,7 @@ async function handleLogout() {
             <strong>{{ authStore.session.displayName }}</strong>
             <span>{{ roleLabel }} - {{ authStore.session.email }}</span>
           </div>
-          <button class="icon-button" type="button" title="Cerrar sesion" @click="handleLogout">
+          <button class="icon-button" type="button" title="Cerrar sesión" @click="handleLogout">
             <LogOut :size="18" />
           </button>
         </div>

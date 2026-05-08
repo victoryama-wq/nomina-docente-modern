@@ -149,7 +149,7 @@ function normalizeComparable(value: string): string {
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos invalidos.'
+    message: error.issues[0]?.message || 'Datos inválidos.'
   });
 }
 
@@ -383,7 +383,7 @@ async function getOrCreateCoordination(
   if (body.coordinationId) return body.coordinationId;
   if (teacher.coordinationId) return teacher.coordinationId;
 
-  const name = normalizeText(body.coordinationName || teacher.coordinationName || 'Sin coordinacion');
+  const name = normalizeText(body.coordinationName || teacher.coordinationName || 'Sin coordinación');
   const existing = await client.query<{ id: string }>('SELECT id FROM coordinations WHERE lower(name) = lower($1) LIMIT 1', [
     name
   ]);
@@ -442,7 +442,7 @@ async function resolveScheduleCoordination(
 ): Promise<string> {
   if (!isSystemAdmin(actor)) {
     const actorCoordination = await loadActorCoordination(client, actor, true);
-    if (!actorCoordination) throw new Error('No se pudo resolver la coordinacion del usuario logeado.');
+    if (!actorCoordination) throw new Error('No se pudo resolver la coordinación del usuario conectado.');
     return actorCoordination.id;
   }
 
@@ -458,7 +458,7 @@ async function assertScheduleWritableByActor(
 
   const actorCoordination = await loadActorCoordination(client, actor, false);
   if (!actorCoordination || actorCoordination.id !== schedule.coordinationId) {
-    throw new Error('Solo la coordinacion que capturo este horario puede editarlo o eliminarlo.');
+    throw new Error('Solo la coordinación que capturó este horario puede editarlo o eliminarlo.');
   }
 }
 
@@ -496,11 +496,11 @@ async function resolveTabulator(client: PoolClient, body: ScheduleBody): Promise
   );
 
   if (!existing.rows[0]) {
-    throw new Error('Selecciona un tabulador valido del catalogo.');
+    throw new Error('Selecciona un tabulador válido del catálogo.');
   }
 
   if (existing.rows[0].amount <= 0) {
-    throw new Error('El tabulador seleccionado no tiene un monto valido.');
+    throw new Error('El tabulador seleccionado no tiene un monto válido.');
   }
 
   return existing.rows[0];
@@ -785,7 +785,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
     const params = scheduleParamsSchema.safeParse(request.params);
     const parsed = scheduleBodySchema.safeParse(request.body);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Horario invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Horario inválido.' });
       return;
     }
     if (!parsed.success) {
@@ -796,7 +796,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
     const actor = request.user!;
     const schedule = await withTransaction(async (client) => {
       const before = await loadScheduleById(client, params.data.id);
-      if (!before) throw new Error('No se encontro el horario.');
+      if (!before) throw new Error('No se encontró el horario.');
       await assertScheduleWritableByActor(client, actor, before);
 
       const cycle = await ensureWritableCycle(client, actor, parsed.data.cycleId || before.cycleId);
@@ -867,14 +867,14 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
   app.delete('/schedules/:id', { preHandler: requirePermission('schedules.manage') }, async (request, reply) => {
     const params = scheduleParamsSchema.safeParse(request.params);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Horario invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Horario inválido.' });
       return;
     }
 
     const actor = request.user!;
     const deleted = await withTransaction(async (client) => {
       const before = await loadScheduleById(client, params.data.id);
-      if (!before) throw new Error('No se encontro el horario.');
+      if (!before) throw new Error('No se encontró el horario.');
       if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar horarios de un ciclo cerrado.');
       await assertScheduleWritableByActor(client, actor, before);
 

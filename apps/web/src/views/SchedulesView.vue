@@ -84,7 +84,7 @@ const currentUserCoordination = computed(() => {
 });
 
 const currentCoordinatorName = computed(
-  () => currentUserCoordination.value?.name || authStore.session?.displayName || 'Coordinador logeado'
+  () => currentUserCoordination.value?.name || authStore.session?.displayName || 'Coordinador conectado'
 );
 
 const editingSchedule = computed(
@@ -284,9 +284,9 @@ function scheduleLoadStatus(schedule: Schedule): { code: ScheduleLoadStatus; lab
   const highestLoad = Math.max(load.weekHours, load.mod1Hours, load.mod2Hours);
   const className = loadLevelClass(highestLoad, load.maxHours);
 
-  if (className === 'danger') return { code: 'EXCEDE', label: 'Excede el limite', className };
-  if (className === 'limit') return { code: 'LIMITE', label: 'Al limite', className };
-  if (className === 'warning') return { code: 'CERCA', label: 'Cerca del limite', className };
+  if (className === 'danger') return { code: 'EXCEDE', label: 'Excede el límite', className };
+  if (className === 'limit') return { code: 'LIMITE', label: 'Al límite', className };
+  if (className === 'warning') return { code: 'CERCA', label: 'Cerca del límite', className };
   return { code: 'DISPONIBLE', label: 'Disponible', className: 'ok' };
 }
 
@@ -391,7 +391,7 @@ function applySelectedTabulator() {
 
 function editSchedule(schedule: Schedule) {
   if (!canEditSchedule(schedule)) {
-    setNotice('error', 'Solo la coordinacion que capturo este horario puede editarlo.');
+    setNotice('error', 'Solo la coordinación que capturó este horario puede editarlo.');
     return;
   }
 
@@ -440,11 +440,11 @@ async function saveSchedule() {
     return;
   }
   if (!scheduleForm.value.tabulatorId) {
-    scheduleFormError.value = 'Selecciona un tabulador del catalogo.';
+    scheduleFormError.value = 'Selecciona un tabulador del catálogo.';
     return;
   }
   if (scheduleFormProjection.value.exceeds) {
-    scheduleFormError.value = 'La carga proyectada excede el limite de la categoria docente.';
+    scheduleFormError.value = 'La carga proyectada excede el límite de la categoría docente.';
     return;
   }
   scheduleSaving.value = true;
@@ -472,7 +472,7 @@ async function saveSchedule() {
 function requestRemoveSchedule(schedule: Schedule) {
   if (!authStore.canManageSchedules) return;
   if (!canEditSchedule(schedule)) {
-    setNotice('error', 'Solo la coordinacion que capturo este horario puede eliminarlo.');
+    setNotice('error', 'Solo la coordinación que capturó este horario puede eliminarlo.');
     return;
   }
   pendingDeleteSchedule.value = schedule;
@@ -519,7 +519,7 @@ onMounted(() => {
     <section class="toolbar-card">
       <div>
         <p class="eyebrow">Capturar Horarios</p>
-        <h3>Carga semanal por categoria docente</h3>
+        <h3>Carga semanal por categoría docente</h3>
       </div>
       <div class="toolbar-actions">
         <select v-if="scheduleCycles.length" v-model="selectedScheduleCycleId" @change="loadSchedules(selectedScheduleCycleId)">
@@ -542,7 +542,7 @@ onMounted(() => {
       <article class="metric-card mini"><p>Registros</p><strong>{{ scheduleSummary.total }}</strong></article>
       <article class="metric-card mini"><p>Docentes activos</p><strong>{{ scheduleSummary.activeTeachers }}</strong></article>
       <article class="metric-card mini"><p>Horas L-V</p><strong>{{ formatHours(scheduleSummary.weekHours) }}</strong></article>
-      <article class="metric-card mini"><p>Al limite</p><strong>{{ scheduleSummary.teachersAtLimit }}</strong></article>
+      <article class="metric-card mini"><p>Al límite</p><strong>{{ scheduleSummary.teachersAtLimit }}</strong></article>
     </section>
 
     <section class="single-grid">
@@ -550,14 +550,14 @@ onMounted(() => {
         <div class="filters-row schedules">
           <label class="search-box">
             <Search :size="17" />
-            <input v-model="scheduleSearch" placeholder="Buscar docente, asignatura, grupo o coordinacion" />
+            <input v-model="scheduleSearch" placeholder="Buscar docente, asignatura, grupo o coordinación" />
           </label>
           <select v-model="scheduleStatusFilter">
             <option value="TODOS">Todos los estados</option>
             <option value="DISPONIBLE">Disponible</option>
-            <option value="CERCA">Cerca del limite</option>
-            <option value="LIMITE">Al limite</option>
-            <option value="EXCEDE">Excede el limite</option>
+            <option value="CERCA">Cerca del límite</option>
+            <option value="LIMITE">Al límite</option>
+            <option value="EXCEDE">Excede el límite</option>
           </select>
           <label v-if="!authStore.isAdmin" class="toggle-filter">
             <input v-model="onlyMyEditableSchedules" type="checkbox" />
@@ -641,7 +641,7 @@ onMounted(() => {
                     class="icon-button"
                     type="button"
                     :disabled="!canEditSchedule(schedule)"
-                    :title="canEditSchedule(schedule) ? 'Editar' : 'Solo editable por la coordinacion que lo capturo'"
+                    :title="canEditSchedule(schedule) ? 'Editar' : 'Solo editable por la coordinación que lo capturó'"
                     @click="editSchedule(schedule)"
                   >
                     <Edit3 :size="16" />
@@ -650,7 +650,7 @@ onMounted(() => {
                     class="icon-button danger"
                     type="button"
                     :disabled="!canEditSchedule(schedule)"
-                    :title="canEditSchedule(schedule) ? 'Eliminar' : 'Solo eliminable por la coordinacion que lo capturo'"
+                    :title="canEditSchedule(schedule) ? 'Eliminar' : 'Solo eliminable por la coordinación que lo capturó'"
                     @click="requestRemoveSchedule(schedule)"
                   >
                     <Trash2 :size="16" />
@@ -696,10 +696,10 @@ onMounted(() => {
       eyebrow="Capturar horarios"
       title="Eliminar horario"
       :subject="pendingDeleteSchedule ? `${pendingDeleteSchedule.teacherName} / ${pendingDeleteSchedule.groupCode}` : ''"
-      message="Este horario saldra de la carga activa del ciclo seleccionado. Verifica que no forme parte de una revision de nomina antes de continuar."
+      message="Este horario saldrá de la carga activa del ciclo seleccionado. Verifica que no forme parte de una revisión de nómina antes de continuar."
       :details="[
         pendingDeleteSchedule ? `Asignatura: ${pendingDeleteSchedule.subjectName}` : '',
-        pendingDeleteSchedule ? `Coordinacion: ${pendingDeleteSchedule.coordinationName}` : ''
+        pendingDeleteSchedule ? `Coordinación: ${pendingDeleteSchedule.coordinationName}` : ''
       ].filter(Boolean)"
       confirm-label="Eliminar horario"
       cancel-label="Conservar horario"

@@ -50,7 +50,7 @@ function normalizeDomain(email: string): boolean {
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos invalidos.'
+    message: error.issues[0]?.message || 'Datos inválidos.'
   });
 }
 
@@ -221,7 +221,7 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
     const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
     const parsed = userPatchSchema.safeParse(request.body);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Usuario invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Usuario inválido.' });
       return;
     }
     if (!parsed.success) {
@@ -258,7 +258,7 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
       );
 
       const before = existing.rows[0];
-      if (!before) throw new Error('No se encontro el usuario.');
+      if (!before) throw new Error('No se encontró el usuario.');
 
       const nextEmail = parsed.data.email || before.email;
       if (!normalizeDomain(nextEmail)) {
@@ -271,7 +271,7 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
 
       const nextStatus = parsed.data.status || before.status;
       if (before.id === actor.id && (nextStatus !== 'ACTIVO' || role.code !== 'admin')) {
-        throw new Error('No puedes quitarte acceso activo de administrador desde tu propia sesion.');
+        throw new Error('No puedes quitarte acceso activo de administrador desde tu propia sesión.');
       }
 
       if (before.isProtectedSuperAdmin && (nextStatus !== 'ACTIVO' || role.code !== 'admin' || nextEmail !== before.email)) {
@@ -335,7 +335,7 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
   app.delete('/users/:id', { preHandler: requirePermission('access.manage') }, async (request, reply) => {
     const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Usuario invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Usuario inválido.' });
       return;
     }
 
@@ -367,7 +367,7 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
       );
 
       const before = existing.rows[0];
-      if (!before) throw new Error('No se encontro el usuario.');
+      if (!before) throw new Error('No se encontró el usuario.');
       if (before.id === actor.id) throw new Error('No puedes eliminar tu propio acceso.');
       if (before.isProtectedSuperAdmin) throw new Error('El administrador general protegido no puede ser eliminado.');
       if (before.role === 'admin' && before.status === 'ACTIVO') {

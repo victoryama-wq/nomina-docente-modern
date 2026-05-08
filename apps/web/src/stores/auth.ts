@@ -77,7 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
       await signInWithPopup(auth, googleProvider);
       await loadProtectedData();
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'No fue posible iniciar sesion.';
+      error.value = err instanceof Error ? err.message : 'No fue posible iniciar sesión.';
       throw err;
     } finally {
       signingIn.value = false;

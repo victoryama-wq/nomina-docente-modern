@@ -190,9 +190,9 @@ function loadStatusClass(status: ExtraTeacher['loadStatus']) {
 }
 
 function loadStatusLabel(status: ExtraTeacher['loadStatus']) {
-  if (status === 'EXCEDE') return 'Excede limite';
-  if (status === 'LIMITE') return 'Al limite';
-  if (status === 'CERCA') return 'Cerca del limite';
+  if (status === 'EXCEDE') return 'Excede límite';
+  if (status === 'LIMITE') return 'Al límite';
+  if (status === 'CERCA') return 'Cerca del límite';
   return 'Disponible';
 }
 
@@ -212,7 +212,7 @@ function projectionWarningText() {
   const highest = dimensions[0];
   return `Advertencia: ${teacher.fullName} queda en ${formatHours(highest.value)}/${formatHours(
     current.maxHours
-  )} h en ${highest.label}, por arriba del maximo de su categoria.`;
+  )} h en ${highest.label}, por arriba del máximo de su categoría.`;
 }
 
 async function loadExtras(cycleId = selectedCycleId.value || undefined) {
@@ -294,7 +294,7 @@ function applyTabulator() {
 
 function editExtra(extra: ExtraRecord) {
   if (!extra.canEdit) {
-    setNotice('error', 'Solo la coordinacion que capturo este extra puede editarlo.');
+    setNotice('error', 'Solo la coordinación que capturó este extra puede editarlo.');
     return;
   }
 
@@ -326,7 +326,7 @@ async function saveExtra() {
     return;
   }
   if (!form.value.tabulatorId) {
-    formError.value = 'Selecciona un tabulador del catalogo.';
+    formError.value = 'Selecciona un tabulador del catálogo.';
     return;
   }
   if (!(numberValue(form.value.hours) > 0)) {
@@ -362,7 +362,7 @@ async function saveExtra() {
 
 function requestRemoveExtra(extra: ExtraRecord) {
   if (!extra.canEdit) {
-    setNotice('error', 'Solo la coordinacion que capturo este extra puede eliminarlo.');
+    setNotice('error', 'Solo la coordinación que capturó este extra puede eliminarlo.');
     return;
   }
   pendingDeleteExtra.value = extra;
@@ -438,14 +438,14 @@ onMounted(() => {
         <div class="filters-row extras">
           <label class="search-box">
             <Search :size="17" />
-            <input v-model="searchText" placeholder="Buscar docente, motivo, referencia o coordinacion" />
+            <input v-model="searchText" placeholder="Buscar docente, motivo, referencia o coordinación" />
           </label>
           <select v-model="loadStatusFilter">
             <option value="TODOS">Todos los estados</option>
             <option value="DISPONIBLE">Disponible</option>
-            <option value="CERCA">Cerca del limite</option>
-            <option value="LIMITE">Al limite</option>
-            <option value="EXCEDE">Excede limite</option>
+            <option value="CERCA">Cerca del límite</option>
+            <option value="LIMITE">Al límite</option>
+            <option value="EXCEDE">Excede límite</option>
           </select>
           <label v-if="!authStore.isAdmin" class="toggle-filter">
             <input v-model="onlyEditable" type="checkbox" />
@@ -524,7 +524,7 @@ onMounted(() => {
                     class="icon-button"
                     type="button"
                     :disabled="!extra.canEdit"
-                    :title="extra.canEdit ? 'Editar' : 'Solo editable por la coordinacion que lo capturo'"
+                    :title="extra.canEdit ? 'Editar' : 'Solo editable por la coordinación que lo capturó'"
                     @click="editExtra(extra)"
                   >
                     <Edit3 :size="16" />
@@ -533,7 +533,7 @@ onMounted(() => {
                     class="icon-button danger"
                     type="button"
                     :disabled="!extra.canEdit"
-                    :title="extra.canEdit ? 'Eliminar' : 'Solo eliminable por la coordinacion que lo capturo'"
+                    :title="extra.canEdit ? 'Eliminar' : 'Solo eliminable por la coordinación que lo capturó'"
                     @click="requestRemoveExtra(extra)"
                   >
                     <Trash2 :size="16" />
@@ -577,7 +577,7 @@ onMounted(() => {
       eyebrow="Capturar extras"
       title="Eliminar hora extra"
       :subject="pendingDeleteExtra?.teacherName"
-      message="Este registro dejara de sumarse a la carga y al calculo de nomina del ciclo activo. Confirma que se trata de una captura incorrecta antes de continuar."
+      message="Este registro dejará de sumarse a la carga y al cálculo de nómina del ciclo activo. Confirma que se trata de una captura incorrecta antes de continuar."
       :details="pendingDeleteExtra ? [
         `${formatHours(pendingDeleteExtra.hours)} h / ${moneyLabel(pendingDeleteExtra.totalAmount)}`,
         pendingDeleteExtra.reason,

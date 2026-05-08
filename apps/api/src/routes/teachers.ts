@@ -148,22 +148,22 @@ function buildFullName(body: z.infer<typeof teacherBodySchema>): string {
 
 function validateTeacherBusinessRules(body: z.infer<typeof teacherBodySchema>): string | null {
   const phone = body.phone.replace(/[^0-9+]/g, '');
-  if (phone && !/^\+?[0-9]{10,15}$/.test(phone)) return 'El telefono debe contener entre 10 y 15 digitos.';
-  if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return 'El correo electronico no tiene un formato valido.';
-  if (body.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(body.rfc)) return 'El RFC no tiene un formato valido.';
+  if (phone && !/^\+?[0-9]{10,15}$/.test(phone)) return 'El teléfono debe contener entre 10 y 15 dígitos.';
+  if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return 'El correo electrónico no tiene un formato válido.';
+  if (body.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(body.rfc)) return 'El RFC no tiene un formato válido.';
   return null;
 }
 
 function validateTeacherFiscalRules(body: z.infer<typeof teacherFiscalBodySchema>): string | null {
-  if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return 'El correo electronico no tiene un formato valido.';
-  if (body.rfc && !/^[A-Z&Ã‘]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(body.rfc)) return 'El RFC no tiene un formato valido.';
+  if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return 'El correo electrónico no tiene un formato válido.';
+  if (body.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(body.rfc)) return 'El RFC no tiene un formato válido.';
   return null;
 }
 
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos invalidos.'
+    message: error.issues[0]?.message || 'Datos inválidos.'
   });
 }
 
@@ -243,11 +243,11 @@ const teacherExportHeaders = [
   'Apellido materno',
   'Grado',
   'Tipo de pago',
-  'Categoria',
+  'Categoría',
   'Ubicacion',
   'Comentario',
   'Observacion',
-  'Coordinacion',
+  'Coordinación',
   'Telefono',
   'Correo',
   'RFC',
@@ -443,7 +443,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
     const headers = [
       ...teacherExportHeaders.slice(0, 22),
-      'Accion historial',
+      'Acción historial',
       'Usuario historial',
       'Fecha historial',
       'Datos antes',
@@ -567,7 +567,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
     const parsed = teacherBodySchema.safeParse(request.body);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
       return;
     }
     if (!parsed.success) {
@@ -584,7 +584,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     const actor = request.user!;
     const teacher = await withTransaction(async (client) => {
       const before = await loadTeacherById(client, params.data.id);
-      if (!before) throw new Error('No se encontro el docente.');
+      if (!before) throw new Error('No se encontró el docente.');
 
       const coordinationId = await getOrCreateCoordination(client, parsed.data.coordinationName);
       const fullName = buildFullName(parsed.data);
@@ -659,7 +659,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = teacherFiscalBodySchema.safeParse(request.body);
       if (!params.success) {
-        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente invalido.' });
+        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
         return;
       }
       if (!parsed.success) {
@@ -676,7 +676,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const actor = request.user!;
       const teacher = await withTransaction(async (client) => {
         const before = await loadTeacherById(client, params.data.id);
-        if (!before) throw new Error('No se encontro el docente.');
+        if (!before) throw new Error('No se encontró el docente.');
 
         await client.query(
           `
@@ -712,7 +712,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
   app.delete('/teachers/:id', { preHandler: requirePermission('teachers.manage') }, async (request, reply) => {
     const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
     if (!params.success) {
-      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente invalido.' });
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
       return;
     }
 
@@ -724,7 +724,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
     const deletedDocuments = await withTransaction(async (client) => {
       const before = await loadTeacherById(client, params.data.id);
-      if (!before) throw new Error('No se encontro el docente.');
+      if (!before) throw new Error('No se encontró el docente.');
 
       const dependencies = await client.query<TeacherDependencyRow>(
         `
@@ -783,7 +783,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = documentBodySchema.safeParse(request.body);
       if (!params.success) {
-        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente invalido.' });
+        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
         return;
       }
       if (!parsed.success) {
@@ -800,7 +800,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const actor = request.user!;
       const uploaded = await withTransaction(async (client) => {
         const teacher = await loadTeacherById(client, params.data.id);
-        if (!teacher) throw new Error('No se encontro el docente.');
+        if (!teacher) throw new Error('No se encontró el docente.');
 
         const safeName = parsed.data.fileName.replace(/[^a-zA-Z0-9._-]+/g, '-');
         const storageObject = `constancias/${teacher.id}/${Date.now()}-${safeName}`;
@@ -860,7 +860,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       if (!params.success) {
-        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente invalido.' });
+        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
         return;
       }
 

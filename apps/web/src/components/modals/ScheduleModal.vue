@@ -97,7 +97,7 @@ function remainingHoursLabel(value: number, maxHours: number) {
               :value="teacherSearchText"
               @input="$emit('update:teacherSearchText', ($event.target as HTMLInputElement).value); $emit('inputTeacherSearch')"
               autocomplete="off"
-              placeholder="Buscar por nombre, categoria o coordinacion"
+              placeholder="Buscar por nombre, categoría o coordinación"
               required
               @focus="$emit('focusTeacherSearch')"
               @keydown.escape="$emit('escapeTeacherSearch')"
@@ -110,14 +110,14 @@ function remainingHoursLabel(value: number, maxHours: number) {
                 @mousedown.prevent="$emit('selectTeacher', teacher)"
               >
                 <strong>{{ teacher.fullName }}</strong>
-                <span>{{ categoryLimitLabel(teacher.category) }} / {{ teacher.coordinationName || 'Sin coordinacion' }}</span>
+                <span>{{ categoryLimitLabel(teacher.category) }} / {{ teacher.coordinationName || 'Sin coordinación' }}</span>
               </button>
               <p v-if="!filteredTeacherOptions.length">Sin coincidencias.</p>
             </div>
           </div>
         </label>
         <label>
-          <span>Coordinacion</span>
+          <span>Coordinación</span>
           <select v-if="isAdmin" v-model="form.coordinationId">
             <option :value="null">{{ form.coordinationName || currentCoordinatorName }}</option>
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">

@@ -237,7 +237,7 @@ async function exportTeachers(kind: 'active' | 'history') {
   clearNotice();
   try {
     await downloadTeacherExport(kind);
-    setNotice('ok', kind === 'active' ? 'Exportacion de docentes activos generada.' : 'Exportacion completa con historial generada.');
+    setNotice('ok', kind === 'active' ? 'Exportación de docentes activos generada.' : 'Exportación completa con historial generada.');
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar docentes.');
   } finally {
@@ -317,7 +317,7 @@ onMounted(() => {
         <div class="filters-row with-actions">
           <label class="search-box">
             <Search :size="17" />
-            <input v-model="teacherSearch" placeholder="Buscar docente, RFC, correo o coordinacion" />
+            <input v-model="teacherSearch" placeholder="Buscar docente, RFC, correo o coordinación" />
           </label>
           <select v-model="teacherStatusFilter">
             <option value="TODOS">Todos</option>
@@ -362,7 +362,7 @@ onMounted(() => {
               <tr v-for="teacher in filteredTeachers" :key="teacher.id">
                 <td>
                   <strong>{{ teacher.fullName }}</strong>
-                  <span><Building2 :size="13" /> {{ teacher.coordinationName || 'Sin coordinacion' }}</span>
+                  <span><Building2 :size="13" /> {{ teacher.coordinationName || 'Sin coordinación' }}</span>
                   <span><Mail :size="13" /> {{ teacher.email || 'Sin correo' }}</span>
                 </td>
                 <td>
@@ -373,7 +373,7 @@ onMounted(() => {
                 </td>
                 <td>
                   <span class="badge neutral"><CreditCard :size="13" /> {{ paymentLabel(teacher.paymentType) }}</span>
-                  <small>Categoria {{ teacher.category || '-' }}</small>
+                  <small>Categoría {{ teacher.category || '-' }}</small>
                 </td>
                 <td>
                   <span class="badge" :class="teacher.status === 'ACTIVO' ? 'ok' : 'muted'">{{ teacher.status }}</span>
@@ -415,9 +415,9 @@ onMounted(() => {
       eyebrow="Directorio docente"
       title="Eliminar docente"
       :subject="pendingDeleteTeacher?.fullName"
-      message="Se intentara retirar este registro del directorio. Si el docente ya tiene horarios, incidencias, extras o historial operativo, la base de datos protegera la informacion y no permitira eliminarlo."
+      message="Se intentará retirar este registro del directorio. Si el docente ya tiene horarios, incidencias, extras o historial operativo, la base de datos protegerá la información y no permitirá eliminarlo."
       :details="[
-        'Accion exclusiva para administradores.',
+        'Acción exclusiva para administradores.',
         'El cambio queda sujeto a las reglas de integridad del sistema.'
       ]"
       confirm-label="Eliminar docente"

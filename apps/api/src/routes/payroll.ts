@@ -314,17 +314,17 @@ const payrollBodySchema = z
       body.module2End
     ];
     if (!body.calendarConfigId && requiredFields.some((value) => !value)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecciona una quincena de calendario valida.' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecciona una quincena de calendario válida.' });
       return;
     }
     if (body.payrollStart && body.payrollEnd && compareDateStrings(body.payrollStart, body.payrollEnd) > 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'La fecha inicial de nomina debe ser menor o igual al cierre.' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'La fecha inicial de nómina debe ser menor o igual al cierre.' });
     }
     if (body.module1Start && body.module1End && compareDateStrings(body.module1Start, body.module1End) > 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de modulo 1 debe ser menor o igual al cierre.' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de módulo 1 debe ser menor o igual al cierre.' });
     }
     if (body.module2Start && body.module2End && compareDateStrings(body.module2Start, body.module2End) > 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de modulo 2 debe ser menor o igual al cierre.' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El inicio de módulo 2 debe ser menor o igual al cierre.' });
     }
   });
 
@@ -341,7 +341,7 @@ type ResolvedPayrollBody = PayrollBody & {
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos invalidos.'
+    message: error.issues[0]?.message || 'Datos inválidos.'
   });
 }
 
@@ -466,7 +466,7 @@ function ensureResolvedBody(body: PayrollBody): ResolvedPayrollBody {
     !body.module2Start ||
     !body.module2End
   ) {
-    throw new Error('Selecciona una quincena de calendario valida.');
+    throw new Error('Selecciona una quincena de calendario válida.');
   }
   return body as ResolvedPayrollBody;
 }
@@ -1240,8 +1240,8 @@ function payrollLineExportHeaders(): string[] {
     'Quincena',
     'Estatus',
     'Docente',
-    'Coordinacion',
-    'Categoria',
+    'Coordinación',
+    'Categoría',
     'Tipo pago',
     'Horas base',
     'Bruto base',
@@ -1296,14 +1296,14 @@ function scheduleDetailExportHeaders(): string[] {
     'Quincena',
     'Estatus',
     'Docente',
-    'Coordinacion',
+    'Coordinación',
     'Asignatura',
     'Grupo',
     'Tabulador',
     'Monto tabulador',
     'Horas L-V',
-    'Horas modulo 1',
-    'Horas modulo 2',
+    'Horas módulo 1',
+    'Horas módulo 2',
     'Horas base',
     'Bruto base',
     'Faltas h',
@@ -1350,7 +1350,7 @@ function extraDetailExportHeaders(): string[] {
     'Quincena',
     'Estatus',
     'Docente',
-    'Coordinacion',
+    'Coordinación',
     'Fecha actividad',
     'Motivo',
     'Horas',
@@ -1398,7 +1398,7 @@ function weightsForRun(calculation: PayrollCalculation) {
 
 async function savePayrollRun(client: PoolClient, actor: SessionUser, calculation: PayrollCalculation): Promise<PayrollRunRow> {
   if (!calculation.input.calendarConfigId) {
-    throw new Error('Selecciona una quincena de calendario valida antes de guardar nomina.');
+    throw new Error('Selecciona una quincena de calendario válida antes de guardar nómina.');
   }
 
   const created = await client.query<{ id: string }>(
@@ -1681,13 +1681,13 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       await reply.code(201).send({
         run: result.run,
         ...publicCalculation(result.calculation),
-        message: 'Nomina guardada correctamente.'
+        message: 'Nómina guardada correctamente.'
       });
     } catch (error) {
       if (isUniqueViolation(error)) {
         await reply.code(409).send({
           error: 'PAYROLL_RUN_EXISTS',
-          message: 'Ya existe una corrida de nomina con ese ciclo y etiqueta de periodo.'
+          message: 'Ya existe una corrida de nómina con ese ciclo y etiqueta de periodo.'
         });
         return;
       }
@@ -1714,7 +1714,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
     });
 
     if (!result) {
-      await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+      await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontró la corrida de nómina.' });
       return;
     }
 
@@ -1767,7 +1767,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       });
 
       if (!result) {
-        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontro la corrida de nomina.' });
+        await reply.code(404).send({ error: 'NOT_FOUND', message: 'No se encontró la corrida de nómina.' });
         return;
       }
 
