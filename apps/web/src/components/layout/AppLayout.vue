@@ -15,6 +15,7 @@ import {
   CircleDollarSign,
   FileSpreadsheet,
   FolderLock,
+  ScrollText,
   Database,
   Menu,
   LogOut
@@ -52,6 +53,7 @@ const pageTitle = computed(() => {
   if (route.name === 'financeReports') return 'Reportes y Finanzas';
   if (route.name === 'calendar') return 'Calendario Operativo';
   if (route.name === 'access') return 'Control de Accesos';
+  if (route.name === 'audit') return 'Auditoria y Bitacora';
   return 'Centro de control';
 });
 
@@ -186,6 +188,17 @@ async function handleLogout() {
         >
           <CalendarDays :size="18" />
           Calendario
+        </router-link>
+
+        <router-link
+          v-if="authStore.canViewAudit"
+          :to="{ name: 'audit' }"
+          class="nav-item"
+          active-class="active"
+          @click="menuOpen = false"
+        >
+          <ScrollText :size="18" />
+          Auditoria
         </router-link>
       </nav>
 

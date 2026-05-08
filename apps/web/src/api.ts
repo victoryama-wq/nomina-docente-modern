@@ -652,6 +652,62 @@ export interface FinanceContext {
   extraDetails: FinanceExtraDetail[];
 }
 
+export type AuditActionGroup = 'ALL' | 'CREATE' | 'UPDATE' | 'DELETE' | 'PAYROLL' | 'ACCESS' | 'FISCAL';
+
+export interface AuditLogEntry {
+  id: string;
+  actorUserId: string | null;
+  actorEmail: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  beforeData: Record<string, unknown> | null;
+  afterData: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  recordLabel: string;
+}
+
+export interface AuditSummary {
+  total: number;
+  creates: number;
+  updates: number;
+  deletions: number;
+  payrollEvents: number;
+  actors: number;
+}
+
+export interface AuditOption {
+  value: string;
+  total: number;
+}
+
+export interface AuditContext {
+  logs: AuditLogEntry[];
+  summary: AuditSummary;
+  options: {
+    entityTypes: AuditOption[];
+    actions: AuditOption[];
+    actors: AuditOption[];
+  };
+  pagination: {
+    limit: number;
+    offset: number;
+    returned: number;
+  };
+}
+
+export interface AuditFilters {
+  search?: string;
+  entityType?: string;
+  actionGroup?: AuditActionGroup;
+  actorEmail?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface TeacherPayload {
   firstNames: string;
   paternalLastName: string;
@@ -1133,6 +1189,53 @@ export async function downloadCashReceipts(runId: string): Promise<void> {
   const disposition = response.headers.get('Content-Disposition') || '';
   const match = /filename="([^"]+)"/.exec(disposition);
   const fileName = match?.[1] || 'comprobantes-efectivo.pdf';
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+function auditQueryString(filters: AuditFilters): string {
+  const params = new URLSearchParams();
+  if (filters.search) params.set('search', filters.search);
+  if (filters.entityType) params.set('entityType', filters.entityType);
+  if (filters.actionGroup) params.set('actionGroup', filters.actionGroup);
+  if (filters.actorEmail) params.set('actorEmail', filters.actorEmail);
+  if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+  if (filters.dateTo) params.set('dateTo', filters.dateTo);
+  if (filters.limit) params.set('limit', String(filters.limit));
+  if (filters.offset) params.set('offset', String(filters.offset));
+  return params.toString() ? `?${params.toString()}` : '';
+}
+
+export async function fetchAuditLogs(filters: AuditFilters = {}): Promise<AuditContext> {
+  return request(`/audit/logs${auditQueryString(filters)}`);
+}
+
+export async function downloadAuditExport(filters: AuditFilters = {}): Promise<void> {
+  const token = await getIdToken();
+  const response = await fetch(`${apiBaseUrl}/audit/export${auditQueryString(filters)}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    let body: ApiErrorBody = {};
+    try {
+      body = (await response.json()) as ApiErrorBody;
+    } catch {
+      body = {};
+    }
+    throw new Error(body.message || 'No fue posible generar la bitacora.');
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const fileName = match?.[1] || 'auditoria-bitacora.csv';
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

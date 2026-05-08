@@ -65,6 +65,11 @@ const router = createRouter({
           path: 'accesos',
           name: 'access',
           component: () => import('../views/AccessView.vue')
+        },
+        {
+          path: 'auditoria',
+          name: 'audit',
+          component: () => import('../views/AuditView.vue')
         }
       ]
     }
