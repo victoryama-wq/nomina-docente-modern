@@ -1,6 +1,6 @@
-# Nomina Docente Modern
+# Nómina Docente Modern
 
-Nueva plataforma para Nomina Docente.
+Nueva plataforma para Nómina Docente.
 
 Stack inicial:
 
@@ -10,7 +10,16 @@ Stack inicial:
 - Base de datos: Cloud SQL PostgreSQL.
 - Archivos: Cloud Storage.
 
-La app legacy de Apps Script se conserva en `Codigo.gs` e `index.html` como referencia funcional durante la migracion.
+La app legacy de Apps Script se conserva en `Codigo.gs` e `index.html` como referencia funcional durante la migración.
+
+## Documentación de entrega
+
+La documentación técnico-operativa del sistema está en:
+
+- `docs/Manual_Entrega_Nomina_Docente.md`
+- `docs/Manual_Entrega_Nomina_Docente.docx`
+
+Incluye alcance, arquitectura, roles, vistas, flujos operativos, modelo de datos resumido, despliegue, respaldos, validación de entrega y recomendaciones post-entrega.
 
 ## Despliegue actual
 
@@ -20,9 +29,9 @@ Backend Cloud Run: https://nomina-api-443985127112.us-central1.run.app
 API via Hosting: https://nomina-docente-prod.web.app/api/health
 ```
 
-Firebase Hosting sirve la Web App y reenvia `/api/**` al servicio `nomina-api` en Cloud Run.
+Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
-## Comandos utiles
+## Comandos útiles
 
 ```powershell
 npm install
@@ -31,13 +40,13 @@ npm run build
 firebase deploy --only hosting --project nomina-docente-prod
 ```
 
-Para preparar la importacion de datos legacy:
+Para preparar la importación de datos legacy:
 
 ```powershell
 npm run legacy:csv-to-sql -- --directorio database/imports/Directorio.csv --usuarios database/imports/Coord_Academicos.csv --out database/imports/legacy_import.sql
 ```
 
-Guia completa: `database/import_legacy_data.md`.
+Guía completa: `database/import_legacy_data.md`.
 
 Para reconstruir y publicar la API:
 
