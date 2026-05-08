@@ -134,6 +134,67 @@ const extraAccessStatusLabel = computed(() => {
   return `Cerró ${formatDateTime(period.accessEndAt)}`;
 });
 
+const extraAccessWindowCard = computed(() => {
+  const period = activeExtraAccessPeriod.value;
+  if (!period) return null;
+  const startLabel = formatDateTime(period.accessStartAt);
+  const endLabel = formatDateTime(period.accessEndAt);
+  const detail = `Apertura: ${startLabel} / Cierre: ${endLabel}`;
+
+  if (extraAccessStatus.value === 'NOMINA') {
+    return {
+      className: 'locked',
+      eyebrow: 'Captura cerrada',
+      title: 'La nómina de esta quincena ya fue guardada.',
+      detail,
+      counterLabel: 'Estado',
+      counter: 'Solo consulta'
+    };
+  }
+
+  if (extraAccessStatus.value === 'PENDIENTE') {
+    return {
+      className: 'pending',
+      eyebrow: 'Ventana programada',
+      title: 'La captura de extras aún no está abierta.',
+      detail,
+      counterLabel: 'Abre en',
+      counter: formatRemaining(new Date(period.accessStartAt).getTime() - nowMs.value)
+    };
+  }
+
+  if (extraAccessStatus.value === 'ABIERTO') {
+    return {
+      className: 'open',
+      eyebrow: 'Ventana abierta',
+      title: 'La captura de extras está disponible.',
+      detail,
+      counterLabel: 'Cierra en',
+      counter: formatRemaining(new Date(period.accessEndAt).getTime() - nowMs.value)
+    };
+  }
+
+  return {
+    className: 'closed',
+    eyebrow: 'Ventana cerrada',
+    title: 'La captura de extras ya concluyó.',
+    detail,
+    counterLabel: 'Cerró',
+    counter: endLabel
+  };
+});
+
+const extraAccessWindowProgress = computed(() => {
+  const period = activeExtraAccessPeriod.value;
+  if (!period) return 0;
+  const start = new Date(period.accessStartAt).getTime();
+  const end = new Date(period.accessEndAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  if (extraAccessStatus.value === 'PENDIENTE') return 0;
+  if (extraAccessStatus.value === 'ABIERTO') return Math.min(100, Math.max(0, ((nowMs.value - start) / (end - start)) * 100));
+  return 100;
+});
+
 const projection = computed(() => {
   const teacher = selectedTeacher.value;
   const edited = editingExtra.value;
@@ -491,9 +552,23 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <div v-if="activeExtraAccessPeriod && extraAccessStatus !== 'ABIERTO'" class="notice warning" style="margin-bottom: 1rem;">
-      {{ extraAccessStatusLabel }}. La captura de extras queda en modo consulta hasta que la ventana esté abierta.
-    </div>
+    <section v-if="extraAccessWindowCard" class="access-window-card" :class="extraAccessWindowCard.className">
+      <div class="access-window-icon">
+        <Clock3 :size="22" />
+      </div>
+      <div class="access-window-main">
+        <p>{{ extraAccessWindowCard.eyebrow }}</p>
+        <h4>{{ extraAccessWindowCard.title }}</h4>
+        <span>{{ extraAccessWindowCard.detail }}</span>
+        <div class="access-progress" aria-hidden="true">
+          <span :style="{ width: `${extraAccessWindowProgress}%` }"></span>
+        </div>
+      </div>
+      <div class="access-countdown">
+        <small>{{ extraAccessWindowCard.counterLabel }}</small>
+        <strong>{{ extraAccessWindowCard.counter }}</strong>
+      </div>
+    </section>
 
     <section class="metric-grid compact">
       <article class="metric-card mini"><p>Registros</p><strong>{{ summary.total }}</strong></article>

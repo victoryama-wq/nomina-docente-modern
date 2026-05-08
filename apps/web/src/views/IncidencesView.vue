@@ -109,6 +109,67 @@ const accessStatusLabel = computed(() => {
   return `Cerró ${formatDateTime(period.accessEndAt)}`;
 });
 
+const accessWindowCard = computed(() => {
+  const period = activeCalendarPeriod.value;
+  if (!period) return null;
+  const startLabel = formatDateTime(period.accessStartAt);
+  const endLabel = formatDateTime(period.accessEndAt);
+  const detail = `Apertura: ${startLabel} / Cierre: ${endLabel}`;
+
+  if (accessStatus.value === 'NOMINA') {
+    return {
+      className: 'locked',
+      eyebrow: 'Captura cerrada',
+      title: 'La nómina de esta quincena ya fue guardada.',
+      detail,
+      counterLabel: 'Estado',
+      counter: 'Solo consulta'
+    };
+  }
+
+  if (accessStatus.value === 'PENDIENTE') {
+    return {
+      className: 'pending',
+      eyebrow: 'Ventana programada',
+      title: 'La captura de incidencias aún no está abierta.',
+      detail,
+      counterLabel: 'Abre en',
+      counter: formatRemaining(new Date(period.accessStartAt).getTime() - nowMs.value)
+    };
+  }
+
+  if (accessStatus.value === 'ABIERTO') {
+    return {
+      className: 'open',
+      eyebrow: 'Ventana abierta',
+      title: 'La captura de incidencias está disponible.',
+      detail,
+      counterLabel: 'Cierra en',
+      counter: formatRemaining(new Date(period.accessEndAt).getTime() - nowMs.value)
+    };
+  }
+
+  return {
+    className: 'closed',
+    eyebrow: 'Ventana cerrada',
+    title: 'La captura de incidencias ya concluyó.',
+    detail,
+    counterLabel: 'Cerró',
+    counter: endLabel
+  };
+});
+
+const accessWindowProgress = computed(() => {
+  const period = activeCalendarPeriod.value;
+  if (!period) return 0;
+  const start = new Date(period.accessStartAt).getTime();
+  const end = new Date(period.accessEndAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  if (accessStatus.value === 'PENDIENTE') return 0;
+  if (accessStatus.value === 'ABIERTO') return Math.min(100, Math.max(0, ((nowMs.value - start) / (end - start)) * 100));
+  return 100;
+});
+
 function canEditSchedule(schedule: IncidenceSchedule) {
   return schedule.canEdit && accessStatus.value === 'ABIERTO';
 }
@@ -399,12 +460,23 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <div v-if="activeCalendarPeriod?.hasPayrollRun" class="notice warning" style="margin-bottom: 1rem;">
-      Esta quincena ya tiene nómina guardada. Las incidencias están cerradas y solo se muestran para consulta.
-    </div>
-    <div v-else-if="activeCalendarPeriod && accessStatus !== 'ABIERTO'" class="notice warning" style="margin-bottom: 1rem;">
-      {{ accessStatusLabel }}. Las incidencias quedan en modo consulta hasta que la ventana de captura esté abierta.
-    </div>
+    <section v-if="accessWindowCard" class="access-window-card" :class="accessWindowCard.className">
+      <div class="access-window-icon">
+        <Clock3 :size="22" />
+      </div>
+      <div class="access-window-main">
+        <p>{{ accessWindowCard.eyebrow }}</p>
+        <h4>{{ accessWindowCard.title }}</h4>
+        <span>{{ accessWindowCard.detail }}</span>
+        <div class="access-progress" aria-hidden="true">
+          <span :style="{ width: `${accessWindowProgress}%` }"></span>
+        </div>
+      </div>
+      <div class="access-countdown">
+        <small>{{ accessWindowCard.counterLabel }}</small>
+        <strong>{{ accessWindowCard.counter }}</strong>
+      </div>
+    </section>
 
     <section class="metric-grid compact">
       <article class="metric-card mini"><p>Registros</p><strong>{{ summary.total }}</strong></article>

@@ -211,6 +211,124 @@ h3 {
   border-color: #fcd34d;
 }
 
+.access-window-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #dbe3ef;
+  border-left: 5px solid #0f766e;
+  border-radius: 8px;
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
+}
+
+.access-window-card.pending {
+  border-left-color: #b45309;
+  background: linear-gradient(90deg, #fffbeb 0%, #ffffff 42%);
+}
+
+.access-window-card.open {
+  border-left-color: #0f766e;
+  background: linear-gradient(90deg, #ecfdf5 0%, #ffffff 42%);
+}
+
+.access-window-card.closed,
+.access-window-card.locked {
+  border-left-color: #64748b;
+  background: linear-gradient(90deg, #f8fafc 0%, #ffffff 42%);
+}
+
+.access-window-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: #0f766e;
+  background: #d1fae5;
+  border-radius: 8px;
+}
+
+.access-window-card.pending .access-window-icon {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.access-window-card.closed .access-window-icon,
+.access-window-card.locked .access-window-icon {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.access-window-main {
+  min-width: 0;
+}
+
+.access-window-main p,
+.access-countdown small {
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.access-window-main h4 {
+  margin: 3px 0 4px;
+  color: #020617;
+  font-size: 17px;
+}
+
+.access-window-main span {
+  color: #475569;
+  font-size: 13px;
+}
+
+.access-countdown {
+  min-width: 160px;
+  padding: 12px 14px;
+  text-align: right;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.access-countdown strong {
+  display: block;
+  margin-top: 3px;
+  color: #020617;
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.access-progress {
+  height: 7px;
+  margin-top: 12px;
+  overflow: hidden;
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.access-progress span {
+  display: block;
+  height: 100%;
+  background: #0f766e;
+  border-radius: inherit;
+  transition: width 0.25s ease;
+}
+
+.access-window-card.pending .access-progress span {
+  background: #b45309;
+}
+
+.access-window-card.closed .access-progress span,
+.access-window-card.locked .access-progress span {
+  background: #64748b;
+}
+
 .policy-note {
   margin: 18px 0 0;
   color: #64748b;
@@ -3034,6 +3152,19 @@ td span {
   .toolbar-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .access-window-card {
+    grid-template-columns: 1fr;
+  }
+
+  .access-window-icon {
+    display: none;
+  }
+
+  .access-countdown {
+    width: 100%;
+    text-align: left;
   }
 
   .toolbar-actions,
