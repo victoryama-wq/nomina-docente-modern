@@ -109,6 +109,13 @@ const teacherBodySchema = z.object({
   status: z.enum(['ACTIVO', 'INACTIVO']).default('ACTIVO')
 });
 
+const teacherFiscalBodySchema = z.object({
+  paymentType: z.enum(['E', '1', '2']),
+  email: z.string().trim().toLowerCase().max(160).optional().default(''),
+  rfc: z.string().trim().toUpperCase().max(20).optional().default(''),
+  bankDetail: z.string().trim().max(140).optional().default('')
+});
+
 const documentBodySchema = z.object({
   fileName: z.string().trim().min(1).max(180),
   mimeType: z.enum(['application/pdf', 'image/jpeg', 'image/png']),
@@ -144,6 +151,12 @@ function validateTeacherBusinessRules(body: z.infer<typeof teacherBodySchema>): 
   if (phone && !/^\+?[0-9]{10,15}$/.test(phone)) return 'El telefono debe contener entre 10 y 15 digitos.';
   if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return 'El correo electronico no tiene un formato valido.';
   if (body.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(body.rfc)) return 'El RFC no tiene un formato valido.';
+  return null;
+}
+
+function validateTeacherFiscalRules(body: z.infer<typeof teacherFiscalBodySchema>): string | null {
+  if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return 'El correo electronico no tiene un formato valido.';
+  if (body.rfc && !/^[A-Z&Ã‘]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(body.rfc)) return 'El RFC no tiene un formato valido.';
   return null;
 }
 
@@ -639,6 +652,63 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     return { teacher, message: 'Docente actualizado correctamente.' };
   });
 
+  app.patch(
+    '/teachers/:id/fiscal',
+    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view']) },
+    async (request, reply) => {
+      const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+      const parsed = teacherFiscalBodySchema.safeParse(request.body);
+      if (!params.success) {
+        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente invalido.' });
+        return;
+      }
+      if (!parsed.success) {
+        sendValidation(reply, parsed.error);
+        return;
+      }
+
+      const businessError = validateTeacherFiscalRules(parsed.data);
+      if (businessError) {
+        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: businessError });
+        return;
+      }
+
+      const actor = request.user!;
+      const teacher = await withTransaction(async (client) => {
+        const before = await loadTeacherById(client, params.data.id);
+        if (!before) throw new Error('No se encontro el docente.');
+
+        await client.query(
+          `
+            UPDATE teachers
+            SET
+              payment_type = $1,
+              email = $2,
+              rfc = $3,
+              bank_detail = $4,
+              updated_by = $5,
+              updated_at = now()
+            WHERE id = $6
+          `,
+          [
+            parsed.data.paymentType,
+            parsed.data.email,
+            parsed.data.rfc,
+            parsed.data.bankDetail,
+            actor.id,
+            before.id
+          ]
+        );
+
+        const after = await loadTeacherById(client, before.id);
+        await auditTeacher(client, actor, 'TEACHER_FISCAL_UPDATED', before.id, before, after);
+        return after;
+      });
+
+      return { teacher, message: 'Datos fiscales actualizados correctamente.' };
+    }
+  );
+
   app.delete('/teachers/:id', { preHandler: requirePermission('teachers.manage') }, async (request, reply) => {
     const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
     if (!params.success) {
@@ -708,7 +778,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.post(
     '/teachers/:id/documents/constancia',
-    { preHandler: requirePermission('teachers.manage') },
+    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view']) },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = documentBodySchema.safeParse(request.body);

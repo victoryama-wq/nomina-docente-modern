@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CreditCard,
   Download,
+  Edit3,
   Eye,
   FileText,
   Mail,
@@ -18,7 +19,10 @@ import {
   downloadTeacherConstancia,
   fetchTeacherConstanciaBlob,
   fetchTeachers,
+  updateTeacherFiscal,
+  uploadTeacherConstancia,
   type Teacher,
+  type TeacherFiscalPayload,
   type TeacherSummary
 } from '../api';
 import { useAuthStore } from '../stores/auth';
@@ -44,6 +48,8 @@ interface ConstanciaPreview {
   fileName: string;
 }
 
+interface FiscalForm extends TeacherFiscalPayload {}
+
 const authStore = useAuthStore();
 
 const teachers = ref<Teacher[]>([]);
@@ -63,7 +69,16 @@ const pageBusy = ref(false);
 const exportingBirthdays = ref(false);
 const previewBusyId = ref('');
 const downloadingId = ref('');
+const fiscalSaving = ref(false);
 const constanciaPreview = ref<ConstanciaPreview | null>(null);
+const editingRecord = ref<FiscalRecord | null>(null);
+const selectedConstancia = ref<File | null>(null);
+const fiscalForm = ref<FiscalForm>({
+  paymentType: '1',
+  email: '',
+  rfc: '',
+  bankDetail: ''
+});
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
 const fiscalRecords = computed<FiscalRecord[]>(() =>
@@ -135,6 +150,35 @@ function setNotice(type: 'ok' | 'error', text: string) {
   }, 3200);
 }
 
+function fiscalPayloadFromTeacher(teacher: Teacher): FiscalForm {
+  return {
+    paymentType: teacher.paymentType === 'E' || teacher.paymentType === '1' || teacher.paymentType === '2' ? teacher.paymentType : '1',
+    email: teacher.email || '',
+    rfc: teacher.rfc || '',
+    bankDetail: teacher.bankDetail || ''
+  };
+}
+
+function openFiscalEdit(record: FiscalRecord) {
+  if (!authStore.canManageFiscalRecords) return;
+  editingRecord.value = record;
+  fiscalForm.value = fiscalPayloadFromTeacher(record.teacher);
+  selectedConstancia.value = null;
+  notice.value = null;
+}
+
+function closeFiscalEdit(force = false) {
+  if (fiscalSaving.value && !force) return;
+  editingRecord.value = null;
+  fiscalForm.value = {
+    paymentType: '1',
+    email: '',
+    rfc: '',
+    bankDetail: ''
+  };
+  selectedConstancia.value = null;
+}
+
 function fiscalMissing(teacher: Teacher) {
   const missing: string[] = [];
   if (!teacher.rfc) missing.push('RFC');
@@ -142,6 +186,67 @@ function fiscalMissing(teacher: Teacher) {
   if (!teacher.bankDetail) missing.push('Banco');
   if (!teacher.documentId) missing.push('Constancia');
   return missing;
+}
+
+function onConstanciaSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  selectedConstancia.value = input.files?.[0] || null;
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result?.toString() || '';
+      resolve(result.includes(',') ? result.split(',')[1] : result);
+    };
+    reader.onerror = () => reject(new Error('No fue posible leer el archivo.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function documentMimeType(file: File) {
+  if (file.type) return file.type;
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.pdf')) return 'application/pdf';
+  if (name.endsWith('.png')) return 'image/png';
+  return 'image/jpeg';
+}
+
+async function saveFiscalEdit() {
+  const record = editingRecord.value;
+  if (!record || !authStore.canManageFiscalRecords) return;
+  fiscalSaving.value = true;
+  notice.value = null;
+  try {
+    let message = '';
+    const response = await updateTeacherFiscal(record.teacher.id, {
+      paymentType: fiscalForm.value.paymentType,
+      email: fiscalForm.value.email,
+      rfc: fiscalForm.value.rfc,
+      bankDetail: fiscalForm.value.bankDetail
+    });
+    message = response.message;
+
+    if (selectedConstancia.value) {
+      const file = selectedConstancia.value;
+      const base64Data = await readFileAsBase64(file);
+      const uploadResponse = await uploadTeacherConstancia(record.teacher.id, {
+        fileName: file.name,
+        mimeType: documentMimeType(file),
+        base64Data
+      });
+      message = `${message} ${uploadResponse.message}`;
+    }
+
+    closeFiscalEdit(true);
+    await loadFiscalRecords();
+    setNotice('ok', message.trim() || 'Expediente fiscal actualizado.');
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible actualizar el expediente fiscal.');
+  } finally {
+    fiscalSaving.value = false;
+  }
 }
 
 function birthDateFromRfc(rfc: string): Date | null {
@@ -463,6 +568,12 @@ onUnmounted(() => {
                     </button>
                   </div>
                   <span v-else class="badge warning"><AlertTriangle :size="12" /> Pendiente</span>
+                  <div v-if="authStore.canManageFiscalRecords" class="fiscal-document-actions">
+                    <button class="primary-inline fiscal-edit-button" type="button" @click="openFiscalEdit(record)">
+                      <Edit3 :size="15" />
+                      Actualizar fiscal
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -470,6 +581,66 @@ onUnmounted(() => {
         </div>
       </div>
     </section>
+
+    <div v-if="editingRecord" class="modal-backdrop" @click.self="closeFiscalEdit()">
+      <form class="modal-card large" @submit.prevent="saveFiscalEdit">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Actualizacion fiscal</p>
+            <h3>{{ editingRecord.teacher.fullName }}</h3>
+            <span>{{ editingRecord.teacher.coordinationName || 'Sin coordinacion' }}</span>
+          </div>
+          <button class="icon-button" type="button" title="Cerrar" :disabled="fiscalSaving" @click="closeFiscalEdit()">
+            <X :size="17" />
+          </button>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>RFC</span>
+            <input v-model.trim="fiscalForm.rfc" maxlength="20" placeholder="RFC del docente" />
+          </label>
+          <label>
+            <span>Correo</span>
+            <input v-model.trim="fiscalForm.email" type="email" maxlength="160" placeholder="correo@dominio.mx" />
+          </label>
+          <label>
+            <span>Tipo de pago</span>
+            <select v-model="fiscalForm.paymentType">
+              <option value="1">Santander</option>
+              <option value="2">Banorte</option>
+              <option value="E">Efectivo</option>
+            </select>
+          </label>
+          <label>
+            <span>Banco / cuenta / CLABE</span>
+            <input v-model.trim="fiscalForm.bankDetail" maxlength="140" placeholder="Datos bancarios para pago" />
+          </label>
+        </div>
+
+        <div class="upload-box fiscal-edit-upload">
+          <FileText :size="22" />
+          <div>
+            <strong>Constancia fiscal</strong>
+            <span>{{ selectedConstancia?.name || editingRecord.teacher.documentName || 'Selecciona PDF, JPG o PNG para cargar o reemplazar' }}</span>
+          </div>
+          <input type="file" accept="application/pdf,image/jpeg,image/png" @change="onConstanciaSelected" />
+        </div>
+
+        <div class="security-box fiscal-edit-note">
+          <ShieldCheck :size="18" />
+          <span>Esta ventana solo actualiza datos fiscales. Nombre, coordinacion, categoria y estatus operativo se mantienen en Directorio.</span>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-action" type="button" :disabled="fiscalSaving" @click="closeFiscalEdit()">Cancelar</button>
+          <button class="primary-inline" type="submit" :disabled="fiscalSaving">
+            <ShieldCheck :size="16" />
+            {{ fiscalSaving ? 'Guardando...' : 'Guardar fiscal' }}
+          </button>
+        </div>
+      </form>
+    </div>
 
     <div v-if="constanciaPreview" class="modal-backdrop" @click.self="closePreview">
       <section class="modal-card large fiscal-preview-modal" role="dialog" aria-modal="true">

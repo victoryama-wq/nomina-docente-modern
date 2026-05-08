@@ -1934,6 +1934,32 @@ td span {
   font-size: 12px;
 }
 
+.fiscal-document-actions .fiscal-edit-button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.fiscal-edit-upload {
+  position: relative;
+}
+
+.fiscal-edit-upload input {
+  width: 100%;
+  color: #334155;
+}
+
+.fiscal-edit-note {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.fiscal-edit-note span {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 750;
+}
+
 .fiscal-preview-modal {
   max-width: 980px;
 }

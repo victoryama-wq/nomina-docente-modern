@@ -672,6 +672,13 @@ export interface TeacherPayload {
   legacyTeacherId?: string;
 }
 
+export interface TeacherFiscalPayload {
+  paymentType: 'E' | '1' | '2';
+  email: string;
+  rfc: string;
+  bankDetail: string;
+}
+
 export interface UserPayload {
   email: string;
   displayName: string;
@@ -753,6 +760,16 @@ export async function updateTeacher(
   payload: TeacherPayload
 ): Promise<{ teacher: Teacher; message: string }> {
   return request(`/teachers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateTeacherFiscal(
+  id: string,
+  payload: TeacherFiscalPayload
+): Promise<{ teacher: Teacher; message: string }> {
+  return request(`/teachers/${id}/fiscal`, {
     method: 'PATCH',
     body: JSON.stringify(payload)
   });
