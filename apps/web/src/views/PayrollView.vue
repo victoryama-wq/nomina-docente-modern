@@ -155,6 +155,16 @@ const canSaveRun = computed(
     !saving.value
 );
 
+const isGlobalPayrollReadOnly = computed(
+  () =>
+    authStore.session?.permissions?.includes('finance.global_view') &&
+    !authStore.session?.permissions?.includes('finance.view') &&
+    !authStore.canFinalizePayroll &&
+    !authStore.isAdmin
+);
+
+const canExportPayrollRun = computed(() => !isGlobalPayrollReadOnly.value);
+
 function numberValue(value: number | string | null | undefined) {
   return Number(value) || 0;
 }
@@ -436,7 +446,7 @@ function selectLine(line: PayrollLine) {
 
 async function exportRun(kind: 'summary' | 'schedules' | 'extras') {
   const run = selectedRun.value;
-  if (!run) return;
+  if (!run || !canExportPayrollRun.value) return;
   exporting.value = kind;
   clearNotice();
   try {
@@ -556,6 +566,7 @@ onMounted(() => {
         <div class="payroll-history-actions">
           <span class="subtle-pill"><History :size="16" /> {{ recentRuns.length }} guardadas</span>
           <button
+            v-if="canExportPayrollRun"
             class="secondary-action"
             type="button"
             :disabled="!selectedRun || exporting === 'summary'"
@@ -565,6 +576,7 @@ onMounted(() => {
             Resumen CSV
           </button>
           <button
+            v-if="canExportPayrollRun"
             class="secondary-action"
             type="button"
             :disabled="!selectedRun || exporting === 'schedules'"
@@ -574,6 +586,7 @@ onMounted(() => {
             Horarios CSV
           </button>
           <button
+            v-if="canExportPayrollRun"
             class="secondary-action"
             type="button"
             :disabled="!selectedRun || exporting === 'extras'"
@@ -582,6 +595,7 @@ onMounted(() => {
             <Download :size="16" />
             Extras CSV
           </button>
+          <span v-if="isGlobalPayrollReadOnly" class="subtle-pill">Vista global de solo consulta</span>
         </div>
       </div>
       <div class="run-list">

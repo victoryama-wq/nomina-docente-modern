@@ -333,7 +333,7 @@ CREATE INDEX IF NOT EXISTS audit_log_created_at_idx ON audit_log(created_at);
 INSERT INTO roles (code, name, description) VALUES
   ('admin', 'Administrador', 'Acceso administrativo completo.'),
   ('coordinador', 'Coordinador', 'Captura y consulta registros de su coordinacion.'),
-  ('direccion', 'Dirección/Subdirección', 'Consulta ejecutiva global sin acciones operativas.'),
+  ('direccion', 'Dirección/Subdirección', 'Consulta ejecutiva global de nomina viva y finanzas sin acciones operativas.'),
   ('rh', 'Recursos Humanos', 'Consulta operativa y gestion de expedientes fiscales.'),
   ('finanzas', 'Finanzas', 'Consulta expedientes fiscales y reportes financieros.'),
   ('contador', 'Contador', 'Consulta expedientes fiscales y pendientes contables.')

@@ -477,7 +477,17 @@ function canViewAllPayroll(actor: SessionUser): boolean {
     actor.role === 'finanzas' ||
     actor.role === 'contador' ||
     actor.role === 'contabilidad' ||
-    actor.permissions.includes('finance.view')
+    actor.permissions.includes('finance.view') ||
+    actor.permissions.includes('finance.global_view')
+  );
+}
+
+function isGlobalPayrollReadOnly(actor: SessionUser): boolean {
+  return (
+    actor.permissions.includes('finance.global_view') &&
+    !actor.permissions.includes('finance.view') &&
+    !actor.permissions.includes('payroll.finalize') &&
+    actor.role !== 'admin'
   );
 }
 
@@ -1757,6 +1767,14 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       }
 
       const actor = request.user!;
+      if (isGlobalPayrollReadOnly(actor)) {
+        await reply.code(403).send({
+          error: 'FORBIDDEN',
+          message: 'Dirección/Subdirección puede consultar la nómina viva global, pero no exportar CSV desde este módulo.'
+        });
+        return;
+      }
+
       const result = await withTransaction(async (client) => {
         const run = await loadPayrollRun(client, parsed.data.id);
         if (!run) return null;

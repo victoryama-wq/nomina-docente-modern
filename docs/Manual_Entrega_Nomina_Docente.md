@@ -125,7 +125,7 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 |---|---|
 | Admin | Acceso completo, usuarios, calendario, nómina, finanzas, auditoría y configuración |
 | Coordinador | Captura operativa de docentes, horarios, incidencias y extras según permisos |
-| Dirección/Subdirección | Mismos accesos operativos que Coordinador y consulta global de Finanzas sin acciones de flujo |
+| Dirección/Subdirección | Mismos accesos operativos que Coordinador, consulta global de Nómina viva y consulta global de Finanzas sin acciones de flujo |
 | RH | Mismos accesos operativos que Coordinador y gestión global de expedientes fiscales |
 | Finanzas | Consulta financiera, expediente fiscal, reportes y pagos |
 | Contador | Consulta financiera/fiscal y reportes contables |
@@ -422,6 +422,12 @@ Reglas de cálculo:
 - Retardos descuentan 0.5 horas.
 - Extras de incidencia suman al tabulador del horario.
 - Extras externos suman al tabulador asignado al extra.
+
+Alcance por rol:
+
+- Coordinador consulta la nómina viva de su coordinación.
+- Dirección/Subdirección consulta la nómina viva de todas las coordinaciones en modo solo lectura.
+- Admin puede consultar, calcular y guardar la nómina.
 
 ### 6.14 Guardar nómina
 
