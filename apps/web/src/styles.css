@@ -733,7 +733,7 @@ h3 {
 }
 
 .split-grid.calendar {
-  grid-template-columns: minmax(390px, 470px) minmax(0, 1fr);
+  grid-template-columns: minmax(500px, 560px) minmax(0, 1fr);
 }
 
 .single-grid {
@@ -798,6 +798,78 @@ h3 {
   color: #64748b;
   background: #f8fafc;
   cursor: not-allowed;
+}
+
+.calendar-form-section {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.calendar-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendar-section-heading strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.calendar-section-heading span {
+  max-width: 250px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.calendar-form-section .form-grid {
+  margin-bottom: 0;
+}
+
+.calendar-access-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 94px;
+  gap: 12px;
+}
+
+.calendar-access-row label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.calendar-access-row label span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.calendar-access-row input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  padding: 10px 11px;
+  font: inherit;
+  font-size: 14px;
+  min-height: 40px;
+}
+
+.calendar-access-row input[type='number'] {
+  text-align: center;
+  font-weight: 850;
 }
 
 .span-2 {
@@ -2401,7 +2473,7 @@ td span {
 .blackout-editor {
   display: grid;
   gap: 10px;
-  margin: 4px 0 16px;
+  margin: 0 0 16px;
   padding: 12px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
@@ -2409,29 +2481,44 @@ td span {
 }
 
 .module-period-note {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  flex-wrap: wrap;
-  margin: 0 0 16px;
-  padding: 11px 12px;
+  margin: 0 0 14px;
+  padding: 12px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
   background: #eff6ff;
   color: #1e40af;
 }
 
+.module-period-note strong {
+  grid-column: 1 / -1;
+}
+
 .module-period-note strong,
 .module-period-note span {
   display: inline-flex;
   align-items: center;
-  margin-top: 0;
   font-size: 12px;
   font-weight: 850;
 }
 
 .module-period-note strong {
   color: #0f172a;
+}
+
+.module-period-note span {
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.module-period-note b {
+  color: #1d4ed8;
 }
 
 .blackout-editor strong {
@@ -2495,28 +2582,69 @@ td span {
 }
 
 .calendar-table {
-  min-width: 980px;
+  min-width: 1120px;
   table-layout: fixed;
 }
 
 .calendar-table th:nth-child(1) {
-  width: 26%;
-}
-
-.calendar-table th:nth-child(2) {
-  width: 28%;
-}
-
-.calendar-table th:nth-child(3) {
   width: 20%;
 }
 
+.calendar-table th:nth-child(2) {
+  width: 22%;
+}
+
+.calendar-table th:nth-child(3) {
+  width: 16%;
+}
+
 .calendar-table th:nth-child(4) {
-  width: 14%;
+  width: 32%;
 }
 
 .calendar-table th:nth-child(5) {
   width: 92px;
+}
+
+.calendar-access-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.calendar-access-stack div {
+  display: grid;
+  grid-template-columns: minmax(88px, auto) auto;
+  gap: 2px 8px;
+  align-items: center;
+  padding: 8px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.calendar-access-stack strong,
+.calendar-access-stack span,
+.calendar-access-stack small {
+  margin-top: 0;
+}
+
+.calendar-access-stack strong {
+  color: #0f172a;
+  font-size: 12px;
+}
+
+.calendar-access-stack span {
+  justify-self: end;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.calendar-access-stack small {
+  grid-column: 1 / -1;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .inline-number {
@@ -3145,6 +3273,8 @@ td span {
     .finance-fiscal-list,
     .audit-detail-grid,
     .audit-json-grid,
+    .calendar-access-row,
+    .module-period-note,
     .form-grid {
     grid-template-columns: 1fr;
   }
@@ -3164,6 +3294,15 @@ td span {
 
   .access-countdown {
     width: 100%;
+    text-align: left;
+  }
+
+  .calendar-section-heading {
+    flex-direction: column;
+  }
+
+  .calendar-section-heading span {
+    max-width: none;
     text-align: left;
   }
 

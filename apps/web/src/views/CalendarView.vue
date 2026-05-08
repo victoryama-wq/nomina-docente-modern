@@ -715,44 +715,60 @@ onMounted(() => {
           <CalendarDays :size="22" />
         </div>
 
-        <div class="form-grid one">
-          <label>
-            <span>Etiqueta</span>
-            <input v-model="form.periodLabel" placeholder="2026-05-01 a 2026-05-15" />
-          </label>
+        <div class="calendar-form-section">
+          <div class="calendar-section-heading">
+            <strong>Quincena</strong>
+            <span>Periodo base para el cálculo de nómina.</span>
+          </div>
+          <div class="form-grid one">
+            <label>
+              <span>Etiqueta</span>
+              <input v-model="form.periodLabel" placeholder="2026-05-01 a 2026-05-15" />
+            </label>
+          </div>
+          <div class="form-grid">
+            <label>
+              <span>Inicio quincena</span>
+              <input v-model="form.payrollStart" type="date" @change="refreshPeriodLabel" />
+            </label>
+            <label>
+              <span>Cierre quincena</span>
+              <input v-model="form.payrollEnd" type="date" @change="refreshPeriodLabel" />
+            </label>
+          </div>
         </div>
 
-        <div class="form-grid">
-          <label>
-            <span>Inicio quincena</span>
-            <input v-model="form.payrollStart" type="date" @change="refreshPeriodLabel" />
-          </label>
-          <label>
-            <span>Cierre quincena</span>
-            <input v-model="form.payrollEnd" type="date" @change="refreshPeriodLabel" />
-          </label>
-          <label>
-            <span>Apertura incidencias</span>
-            <input v-model="form.incidencesAccessStartAt" type="datetime-local" />
-          </label>
-          <label>
-            <span>Días acceso incidencias</span>
-            <input v-model.number="form.incidencesAccessDays" type="number" min="0" max="31" />
-          </label>
-          <label>
-            <span>Apertura extras</span>
-            <input v-model="form.extrasAccessStartAt" type="datetime-local" />
-          </label>
-          <label>
-            <span>Días acceso extras</span>
-            <input v-model.number="form.extrasAccessDays" type="number" min="0" max="31" />
-          </label>
+        <div class="calendar-form-section">
+          <div class="calendar-section-heading">
+            <strong>Ventanas de captura</strong>
+            <span>Las horas corren desde la apertura configurada.</span>
+          </div>
+          <div class="calendar-access-row">
+            <label>
+              <span>Apertura incidencias</span>
+              <input v-model="form.incidencesAccessStartAt" type="datetime-local" />
+            </label>
+            <label>
+              <span>Días</span>
+              <input v-model.number="form.incidencesAccessDays" type="number" min="0" max="31" />
+            </label>
+          </div>
+          <div class="calendar-access-row">
+            <label>
+              <span>Apertura extras</span>
+              <input v-model="form.extrasAccessStartAt" type="datetime-local" />
+            </label>
+            <label>
+              <span>Días</span>
+              <input v-model.number="form.extrasAccessDays" type="number" min="0" max="31" />
+            </label>
+          </div>
         </div>
 
         <div class="module-period-note">
           <strong>Fechas modulares del cuatrimestre</strong>
-          <span>M1 {{ formatDate(activeCycle?.module1Start) }} - {{ formatDate(activeCycle?.module1End) }}</span>
-          <span>M2 {{ formatDate(activeCycle?.module2Start) }} - {{ formatDate(activeCycle?.module2End) }}</span>
+          <span><b>M1</b> {{ formatDate(activeCycle?.module1Start) }} - {{ formatDate(activeCycle?.module1End) }}</span>
+          <span><b>M2</b> {{ formatDate(activeCycle?.module2Start) }} - {{ formatDate(activeCycle?.module2End) }}</span>
         </div>
 
         <div class="blackout-editor">
@@ -821,17 +837,25 @@ onMounted(() => {
                 </td>
                 <td>
                   <span class="badge" :class="period.blackoutDates.length ? 'warning' : 'ok'">
-                    {{ period.blackoutDates.length }} dia{{ period.blackoutDates.length === 1 ? '' : 's' }}
+                    {{ period.blackoutDates.length }} día{{ period.blackoutDates.length === 1 ? '' : 's' }}
                   </span>
                   <small v-for="blackout in period.blackoutDates.slice(0, 2)" :key="blackout.id || blackout.blackoutDate">
                     {{ formatDate(blackout.blackoutDate) }} / {{ blackout.reason }}
                   </small>
                 </td>
-                <td>
-                  <strong>Inc {{ period.incidencesAccessDays }} días</strong>
-                  <span>{{ formatDateTime(period.incidencesAccessStartAt) }} - {{ formatDateTime(period.incidencesAccessEndAt) }}</span>
-                  <strong>Extras {{ period.extrasAccessDays }} días</strong>
-                  <span>{{ formatDateTime(period.extrasAccessStartAt) }} - {{ formatDateTime(period.extrasAccessEndAt) }}</span>
+                <td class="calendar-access-cell">
+                  <div class="calendar-access-stack">
+                    <div>
+                      <strong>Incidencias</strong>
+                      <span>{{ period.incidencesAccessDays }} días</span>
+                      <small>{{ formatDateTime(period.incidencesAccessStartAt) }} - {{ formatDateTime(period.incidencesAccessEndAt) }}</small>
+                    </div>
+                    <div>
+                      <strong>Extras</strong>
+                      <span>{{ period.extrasAccessDays }} días</span>
+                      <small>{{ formatDateTime(period.extrasAccessStartAt) }} - {{ formatDateTime(period.extrasAccessEndAt) }}</small>
+                    </div>
+                  </div>
                 </td>
                 <td class="row-actions">
                   <button class="icon-button" type="button" title="Editar" :disabled="activeCycle?.status === 'CERRADO'" @click="editPeriod(period)">
