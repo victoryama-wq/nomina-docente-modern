@@ -293,8 +293,12 @@ async function listFinanceRuns(
   const params: unknown[] = [cycleId];
   let visibility = '';
   if (!canViewAllFinance(actor)) {
-    params.push(actorCoordination?.id || null);
-    visibility = actorCoordination ? 'AND pl.coordination_id = $2' : 'AND false';
+    if (actorCoordination) {
+      params.push(actorCoordination.id);
+      visibility = 'AND pl.coordination_id = $2';
+    } else {
+      visibility = 'AND false';
+    }
   }
 
   const result = await client.query<
@@ -415,8 +419,12 @@ async function listFinanceLines(
   const params: unknown[] = [runId];
   let visibility = '';
   if (!canViewAllFinance(actor)) {
-    params.push(actorCoordination?.id || null);
-    visibility = actorCoordination ? 'AND pl.coordination_id = $2' : 'AND false';
+    if (actorCoordination) {
+      params.push(actorCoordination.id);
+      visibility = 'AND pl.coordination_id = $2';
+    } else {
+      visibility = 'AND false';
+    }
   }
 
   const result = await client.query<FinanceLineRow>(
@@ -484,8 +492,12 @@ async function listFinanceScheduleDetails(
   const params: unknown[] = [runId];
   let visibility = '';
   if (!canViewAllFinance(actor)) {
-    params.push(actorCoordination?.id || null);
-    visibility = actorCoordination ? 'AND coordination_id = $2' : 'AND false';
+    if (actorCoordination) {
+      params.push(actorCoordination.id);
+      visibility = 'AND coordination_id = $2';
+    } else {
+      visibility = 'AND false';
+    }
   }
 
   const result = await client.query<FinanceScheduleDetail>(
@@ -534,8 +546,12 @@ async function listFinanceExtraDetails(
   const params: unknown[] = [runId];
   let visibility = '';
   if (!canViewAllFinance(actor)) {
-    params.push(actorCoordination?.id || null);
-    visibility = actorCoordination ? 'AND coordination_id = $2' : 'AND false';
+    if (actorCoordination) {
+      params.push(actorCoordination.id);
+      visibility = 'AND coordination_id = $2';
+    } else {
+      visibility = 'AND false';
+    }
   }
 
   const result = await client.query<FinanceExtraDetail>(
