@@ -269,7 +269,7 @@ export async function registerAuditRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       await reply.code(400).send({
         error: 'VALIDATION_ERROR',
-        message: parsed.error.issues[0]?.message || 'Filtros de auditoria invalidos.'
+        message: parsed.error.issues[0]?.message || 'Filtros de auditoría inválidos.'
       });
       return;
     }
@@ -298,7 +298,7 @@ export async function registerAuditRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       await reply.code(400).send({
         error: 'VALIDATION_ERROR',
-        message: parsed.error.issues[0]?.message || 'Filtros de auditoria invalidos.'
+        message: parsed.error.issues[0]?.message || 'Filtros de auditoría inválidos.'
       });
       return;
     }

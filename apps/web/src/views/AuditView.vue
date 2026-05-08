@@ -63,7 +63,7 @@ const actionGroups: Array<{ value: AuditActionGroup; label: string }> = [
   { value: 'CREATE', label: 'Altas' },
   { value: 'UPDATE', label: 'Ediciones' },
   { value: 'DELETE', label: 'Eliminaciones' },
-  { value: 'PAYROLL', label: 'Nomina' },
+  { value: 'PAYROLL', label: 'Nómina' },
   { value: 'ACCESS', label: 'Accesos' },
   { value: 'FISCAL', label: 'Fiscal' }
 ];
@@ -74,7 +74,7 @@ const entityLabels: Record<string, string> = {
   schedule: 'Horarios',
   schedule_incidence: 'Incidencias',
   extra_hour: 'Extras',
-  payroll_run: 'Nomina',
+  payroll_run: 'Nómina',
   academic_cycle: 'Calendario',
   payroll_calendar_config: 'Calendario'
 };
@@ -99,9 +99,9 @@ const actionLabels: Record<string, string> = {
   CALENDAR_PERIOD_CREATED: 'Quincena creada',
   CALENDAR_PERIOD_UPDATED: 'Quincena actualizada',
   CALENDAR_PERIOD_DELETED: 'Quincena eliminada',
-  PAYROLL_CALCULATED: 'Nomina guardada',
-  PAYROLL_STATUS_UPDATED: 'Estado de nomina actualizado',
-  PAYROLL_CANCELLED_FOR_CORRECTION: 'Nomina cancelada para correccion'
+  PAYROLL_CALCULATED: 'Nómina guardada',
+  PAYROLL_STATUS_UPDATED: 'Estado de nómina actualizado',
+  PAYROLL_CANCELLED_FOR_CORRECTION: 'Nómina cancelada para corrección'
 };
 
 const canGoBack = computed(() => pagination.value.offset > 0);
@@ -146,7 +146,7 @@ async function loadAudit(resetOffset = false) {
     options.value = data.options;
     pagination.value = data.pagination;
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar la bitacora.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar la bitácora.');
   } finally {
     pageBusy.value = false;
   }
@@ -157,9 +157,9 @@ async function exportAudit() {
   notice.value = null;
   try {
     await downloadAuditExport(cleanFilters(false));
-    setNotice('ok', 'Bitacora exportada correctamente.');
+    setNotice('ok', 'Bitácora exportada correctamente.');
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar la bitacora.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar la bitácora.');
   } finally {
     exporting.value = false;
   }
@@ -283,7 +283,7 @@ onMounted(() => {
 <template>
   <section v-if="!authStore.canViewAudit" class="data-panel">
     <p class="eyebrow">Acceso restringido</p>
-    <h2>No tienes permisos para consultar auditoria.</h2>
+    <h2>No tienes permisos para consultar auditoría.</h2>
   </section>
 
   <section v-else class="single-grid">
@@ -291,7 +291,7 @@ onMounted(() => {
 
     <section class="toolbar-card">
       <div>
-        <p class="eyebrow">Auditoria / Bitacora</p>
+        <p class="eyebrow">Auditoría / Bitácora</p>
         <h2>Trazabilidad operativa del sistema</h2>
       </div>
       <div class="toolbar-actions">
@@ -325,7 +325,7 @@ onMounted(() => {
       </article>
       <article class="metric-card mini">
         <div class="metric-icon teal"><FileClock :size="20" /></div>
-        <p>Nomina</p>
+        <p>Nómina</p>
         <strong>{{ summary.payrollEvents }}</strong>
         <small>Corridas y cambios de estado</small>
       </article>
@@ -341,10 +341,10 @@ onMounted(() => {
       <form class="filters-row audit" @submit.prevent="loadAudit(true)">
         <label class="search-box audit-search">
           <Search :size="17" />
-          <input v-model="filters.search" placeholder="Buscar usuario, accion, docente, quincena o ID" />
+          <input v-model="filters.search" placeholder="Buscar usuario, acción, docente, quincena o ID" />
         </label>
         <select v-model="filters.entityType" title="Modulo">
-          <option value="">Todos los modulos</option>
+          <option value="">Todos los módulos</option>
           <option v-for="option in options.entityTypes" :key="option.value" :value="option.value">
             {{ optionLabel(option, entityLabels) }}
           </option>
@@ -399,7 +399,7 @@ onMounted(() => {
           </thead>
           <tbody>
             <tr v-if="pageBusy">
-              <td colspan="7" class="empty-cell">Cargando bitacora...</td>
+              <td colspan="7" class="empty-cell">Cargando bitácora...</td>
             </tr>
             <tr v-else-if="!logs.length">
               <td colspan="7" class="empty-cell">No hay eventos con los filtros seleccionados.</td>
@@ -453,7 +453,7 @@ onMounted(() => {
       <section class="modal-card large audit-detail-modal" role="dialog" aria-modal="true">
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Detalle de auditoria</p>
+            <p class="eyebrow">Detalle de auditoría</p>
             <h3>{{ actionLabel(selectedLog.action) }}</h3>
             <span>{{ formatDateTime(selectedLog.createdAt) }} - {{ selectedLog.actorEmail || 'Sistema' }}</span>
           </div>
@@ -500,7 +500,7 @@ onMounted(() => {
         </div>
 
         <details class="audit-json-details">
-          <summary>Ver JSON tecnico</summary>
+          <summary>Ver JSON técnico</summary>
           <div class="audit-json-grid">
             <pre>{{ formatJson(selectedLog.beforeData) }}</pre>
             <pre>{{ formatJson(selectedLog.afterData) }}</pre>

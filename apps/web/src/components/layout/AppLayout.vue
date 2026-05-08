@@ -49,11 +49,11 @@ const pageTitle = computed(() => {
   if (route.name === 'schedules') return 'Capturar Horarios';
   if (route.name === 'incidences') return 'Capturar Incidencias';
   if (route.name === 'extras') return 'Capturar Extras';
-  if (route.name === 'payroll') return 'Nomina';
+  if (route.name === 'payroll') return 'Nómina';
   if (route.name === 'financeReports') return 'Reportes y Finanzas';
   if (route.name === 'calendar') return 'Calendario Operativo';
   if (route.name === 'access') return 'Control de Accesos';
-  if (route.name === 'audit') return 'Auditoria y Bitacora';
+  if (route.name === 'audit') return 'Auditoría y Bitácora';
   return 'Centro de control';
 });
 
@@ -71,7 +71,7 @@ async function handleLogout() {
         <div class="sidebar-brand-main">
           <div class="brand-icon"><WalletCards :size="24" /></div>
           <div>
-            <strong>Nomina Docente</strong>
+            <strong>Nómina Docente</strong>
             <span>Panel ejecutivo</span>
           </div>
         </div>
@@ -165,7 +165,7 @@ async function handleLogout() {
           @click="menuOpen = false"
         >
           <CircleDollarSign :size="18" />
-          Nomina
+          Nómina
         </router-link>
 
         <router-link
@@ -198,7 +198,7 @@ async function handleLogout() {
           @click="menuOpen = false"
         >
           <ScrollText :size="18" />
-          Auditoria
+          Auditoría
         </router-link>
       </nav>
 
@@ -215,7 +215,7 @@ async function handleLogout() {
             <Menu :size="20" />
           </button>
           <div>
-            <p class="eyebrow">Operacion academica y financiera</p>
+            <p class="eyebrow">Operación académica y financiera</p>
             <h2>{{ pageTitle }}</h2>
           </div>
         </div>

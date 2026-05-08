@@ -1229,7 +1229,7 @@ export async function downloadAuditExport(filters: AuditFilters = {}): Promise<v
     } catch {
       body = {};
     }
-    throw new Error(body.message || 'No fue posible generar la bitacora.');
+    throw new Error(body.message || 'No fue posible generar la bitácora.');
   }
 
   const blob = await response.blob();
