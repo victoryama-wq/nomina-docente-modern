@@ -288,7 +288,7 @@ function scheduleSelectSql(whereClause = ''): string {
 
 async function listCycles(): Promise<CycleRow[]> {
   return query<CycleRow>(`
-    ${cycleSelectSql()}
+    ${cycleSelectSql("WHERE status IN ('ACTIVO', 'PLANEACION')")}
     ORDER BY
       CASE status
         WHEN 'ACTIVO' THEN 1

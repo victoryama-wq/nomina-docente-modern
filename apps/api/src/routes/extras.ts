@@ -476,6 +476,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
     const actor = request.user!;
     const extra = await withTransaction(async (client) => {
       const cycle = await ensureWritableCycle(client, actor, parsed.data.cycleId);
+      if (cycle.status !== 'ACTIVO') throw new Error('Solo se pueden capturar extras en un ciclo activo.');
       const teacher = await loadTeacherForExtra(client, parsed.data.teacherId);
       if (!teacher) throw new Error('El docente seleccionado no existe.');
       if (teacher.status !== 'ACTIVO') throw new Error('Solo se pueden capturar extras para docentes ACTIVO.');
@@ -545,6 +546,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
       if (!before.canEdit) throw new Error('Solo la coordinación que capturó este extra puede editarlo.');
 
       const cycle = await ensureWritableCycle(client, actor, parsed.data.cycleId || before.cycleId);
+      if (cycle.status !== 'ACTIVO') throw new Error('Solo se pueden modificar extras en un ciclo activo.');
       const teacher = await loadTeacherForExtra(client, parsed.data.teacherId);
       if (!teacher) throw new Error('El docente seleccionado no existe.');
       if (teacher.status !== 'ACTIVO') throw new Error('Solo se pueden capturar extras para docentes ACTIVO.');

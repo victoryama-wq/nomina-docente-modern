@@ -964,6 +964,7 @@ function publicCalculation(calculation: PayrollCalculation) {
 
 async function calculatePayroll(client: PoolClient, actor: SessionUser, body: PayrollBody): Promise<PayrollCalculation> {
   const cycle = await ensureWorkingCycle(client, actor, body.cycleId);
+  if (cycle.status !== 'ACTIVO') throw new Error('Solo se puede calcular nómina sobre un ciclo activo.');
   const actorCoordination = await loadActorCoordination(client, actor, false);
   const coordinationScope = canViewAllPayroll(actor) ? null : actorCoordination?.id || '';
   const resolved = await resolvePayrollBody(client, cycle, body);

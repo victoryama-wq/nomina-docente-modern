@@ -13,6 +13,8 @@ export interface CycleRow {
   module2Start: string;
   module2End: string;
   status: CycleStatus;
+  scheduleCount?: number;
+  calendarPeriodCount?: number;
 }
 
 export interface CoordinationRow {
@@ -43,15 +45,25 @@ export function categoryMaxHours(category: string): number {
 export function cycleSelectSql(whereClause = ''): string {
   return `
     SELECT
-      id,
-      period_label AS "periodLabel",
-      quarter_code AS "quarterCode",
-      module1_start AS "module1Start",
-      module1_end AS "module1End",
-      module2_start AS "module2Start",
-      module2_end AS "module2End",
-      status
-    FROM academic_cycles
+      ac.id,
+      ac.period_label AS "periodLabel",
+      ac.quarter_code AS "quarterCode",
+      ac.module1_start AS "module1Start",
+      ac.module1_end AS "module1End",
+      ac.module2_start AS "module2Start",
+      ac.module2_end AS "module2End",
+      ac.status,
+      (
+        SELECT count(*)::int
+        FROM schedules s
+        WHERE s.cycle_id = ac.id
+      ) AS "scheduleCount",
+      (
+        SELECT count(*)::int
+        FROM payroll_calendar_config pcc
+        WHERE pcc.cycle_id = ac.id
+      ) AS "calendarPeriodCount"
+    FROM academic_cycles ac
     ${whereClause}
   `;
 }

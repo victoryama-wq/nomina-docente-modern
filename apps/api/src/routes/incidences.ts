@@ -227,6 +227,7 @@ async function saveIncidenceRow(
   const before = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, actorCoordination);
   if (!before) throw new Error('No se encontró el horario seleccionado.');
   if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar incidencias de un ciclo cerrado.');
+  if (before.cycleStatus !== 'ACTIVO') throw new Error('Solo se pueden capturar incidencias en un ciclo activo.');
   if (before.payrollLocked) throw new Error('Esta quincena ya tiene nómina guardada. Las incidencias quedaron cerradas.');
   if (!before.canEdit) throw new Error('Solo la coordinación que capturó este horario puede editar sus incidencias.');
 

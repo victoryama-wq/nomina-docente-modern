@@ -113,6 +113,8 @@ export interface CycleOption {
   module2Start: string;
   module2End: string;
   status: 'PLANEACION' | 'ACTIVO' | 'CERRADO';
+  scheduleCount?: number;
+  calendarPeriodCount?: number;
 }
 
 export interface SubjectOption {
@@ -497,6 +499,11 @@ export interface CycleModuleDatesPayload {
   module1End: string;
   module2Start: string;
   module2End: string;
+}
+
+export interface AcademicCyclePayload extends CycleModuleDatesPayload {
+  periodLabel: string;
+  quarterCode: string;
 }
 
 export interface PayrollContext {
@@ -1262,6 +1269,29 @@ export async function updateCycleModuleDates(
   return request(`/calendar/cycles/${cycleId}/modules`, {
     method: 'PATCH',
     body: JSON.stringify(payload)
+  });
+}
+
+export async function createAcademicCycle(payload: AcademicCyclePayload): Promise<{ cycle: CycleOption; message: string }> {
+  return request('/calendar/cycles', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateAcademicCycle(
+  cycleId: string,
+  payload: AcademicCyclePayload
+): Promise<{ cycle: CycleOption; message: string }> {
+  return request(`/calendar/cycles/${cycleId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function activateAcademicCycle(cycleId: string): Promise<{ activeCycle: CycleOption; message: string }> {
+  return request(`/calendar/cycles/${cycleId}/activate`, {
+    method: 'POST'
   });
 }
 

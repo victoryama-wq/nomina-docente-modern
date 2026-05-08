@@ -5,6 +5,7 @@ import { requirePermission } from '../auth.js';
 import { withTransaction } from '../db.js';
 import {
   ensureWorkingCycle,
+  cycleSelectSql,
   loadCycleById,
   listCycles,
   type CycleRow
@@ -105,6 +106,20 @@ const cycleModuleDatesBodySchema = z
   });
 
 type CycleModuleDatesBody = z.infer<typeof cycleModuleDatesBodySchema>;
+
+const academicCycleBodySchema = cycleModuleDatesBodySchema.and(
+  z.object({
+    periodLabel: z.string().trim().min(3).max(120),
+    quarterCode: z
+      .string()
+      .trim()
+      .min(2)
+      .max(20)
+      .transform((value) => value.toUpperCase())
+  })
+);
+
+type AcademicCycleBody = z.infer<typeof academicCycleBodySchema>;
 
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
@@ -382,6 +397,178 @@ function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '23505';
 }
 
+async function createAcademicCycle(
+  client: PoolClient,
+  actorId: string,
+  actorEmail: string,
+  body: AcademicCycleBody
+): Promise<CycleRow> {
+  const created = await client.query<{ id: string }>(
+    `
+      INSERT INTO academic_cycles (
+        period_label,
+        quarter_code,
+        module1_start,
+        module1_end,
+        module2_start,
+        module2_end,
+        status,
+        created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, 'PLANEACION', $7)
+      RETURNING id
+    `,
+    [
+      body.periodLabel,
+      body.quarterCode,
+      body.module1Start,
+      body.module1End,
+      body.module2Start,
+      body.module2End,
+      actorId
+    ]
+  );
+
+  const cycle = await loadCycleById(client, created.rows[0].id);
+  if (!cycle) throw new Error('No fue posible leer el ciclo creado.');
+
+  await client.query(
+    `
+      INSERT INTO audit_log (actor_user_id, actor_email, action, entity_type, entity_id, before_data, after_data)
+      VALUES ($1, $2, 'CYCLE_CREATED', 'academic_cycle', $3, NULL, $4::jsonb)
+    `,
+    [actorId, actorEmail, cycle.id, JSON.stringify(cycle)]
+  );
+
+  return cycle;
+}
+
+async function updateAcademicCycle(
+  client: PoolClient,
+  actorId: string,
+  actorEmail: string,
+  cycleId: string,
+  body: AcademicCycleBody
+): Promise<CycleRow> {
+  const before = await loadCycleById(client, cycleId);
+  if (!before) throw new Error('El ciclo seleccionado no existe.');
+  if (before.status === 'CERRADO') throw new Error('No se puede editar un ciclo cerrado.');
+
+  const updated = await client.query<{ id: string }>(
+    `
+      UPDATE academic_cycles
+      SET
+        period_label = $1,
+        quarter_code = $2,
+        module1_start = $3,
+        module1_end = $4,
+        module2_start = $5,
+        module2_end = $6
+      WHERE id = $7
+      RETURNING id
+    `,
+    [
+      body.periodLabel,
+      body.quarterCode,
+      body.module1Start,
+      body.module1End,
+      body.module2Start,
+      body.module2End,
+      cycleId
+    ]
+  );
+  if (!updated.rows[0]) throw new Error('No fue posible actualizar el ciclo.');
+
+  await client.query(
+    `
+      UPDATE payroll_calendar_config
+      SET
+        module1_start = $1,
+        module1_end = $2,
+        module2_start = $3,
+        module2_end = $4,
+        updated_at = now()
+      WHERE cycle_id = $5
+    `,
+    [body.module1Start, body.module1End, body.module2Start, body.module2End, cycleId]
+  );
+
+  const cycle = await loadCycleById(client, cycleId);
+  if (!cycle) throw new Error('No fue posible leer el ciclo actualizado.');
+
+  await client.query(
+    `
+      INSERT INTO audit_log (actor_user_id, actor_email, action, entity_type, entity_id, before_data, after_data)
+      VALUES ($1, $2, 'CYCLE_UPDATED', 'academic_cycle', $3, $4::jsonb, $5::jsonb)
+    `,
+    [actorId, actorEmail, cycle.id, JSON.stringify(before), JSON.stringify(cycle)]
+  );
+
+  return cycle;
+}
+
+async function activateAcademicCycle(
+  client: PoolClient,
+  actorId: string,
+  actorEmail: string,
+  cycleId: string
+): Promise<CycleRow> {
+  const before = await loadCycleById(client, cycleId);
+  if (!before) throw new Error('El ciclo seleccionado no existe.');
+  if (before.status === 'CERRADO') throw new Error('No se puede activar un ciclo cerrado.');
+
+  const activeBefore = await client.query<CycleRow>(
+    `
+      ${cycleSelectSql("WHERE ac.status = 'ACTIVO'")}
+      ORDER BY ac.created_at DESC
+    `
+  );
+
+  await client.query(
+    `
+      UPDATE academic_cycles
+      SET
+        status = 'CERRADO',
+        closed_at = now(),
+        closed_by = $1
+      WHERE status = 'ACTIVO'
+        AND id <> $2
+    `,
+    [actorId, cycleId]
+  );
+
+  await client.query(
+    `
+      UPDATE academic_cycles
+      SET
+        status = 'ACTIVO',
+        closed_at = NULL,
+        closed_by = NULL
+      WHERE id = $1
+    `,
+    [cycleId]
+  );
+
+  const after = await loadCycleById(client, cycleId);
+  if (!after) throw new Error('No fue posible activar el ciclo.');
+
+  await client.query(
+    `
+      INSERT INTO audit_log (actor_user_id, actor_email, action, entity_type, entity_id, before_data, after_data)
+      VALUES ($1, $2, 'CYCLE_ACTIVATED', 'academic_cycle', $3, $4::jsonb, $5::jsonb)
+    `,
+    [
+      actorId,
+      actorEmail,
+      after.id,
+      JSON.stringify({ target: before, activeBefore: activeBefore.rows }),
+      JSON.stringify(after)
+    ]
+  );
+
+  return after;
+}
+
 export async function registerCalendarRoutes(app: FastifyInstance): Promise<void> {
   app.get('/calendar/context', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
     const parsed = contextQuerySchema.safeParse(request.query as CalendarContextQuery);
@@ -402,6 +589,76 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
       activeCycle: context.cycle,
       cycles,
       periods: context.periods
+    };
+  });
+
+  app.post('/calendar/cycles', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
+    const parsed = academicCycleBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      sendValidation(reply, parsed.error);
+      return;
+    }
+
+    try {
+      const cycle = await withTransaction((client) =>
+        createAcademicCycle(client, request.user!.id, request.user!.email, parsed.data)
+      );
+      await reply.code(201).send({ cycle, message: 'Ciclo escolar creado en planeación.' });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        await reply.code(409).send({
+          error: 'CYCLE_EXISTS',
+          message: 'Ya existe un ciclo con ese periodo y código.'
+        });
+        return;
+      }
+      throw error;
+    }
+  });
+
+  app.patch('/calendar/cycles/:id', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
+    const params = paramsSchema.safeParse(request.params as CalendarParams);
+    const parsed = academicCycleBodySchema.safeParse(request.body);
+    if (!params.success) {
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Ciclo inválido.' });
+      return;
+    }
+    if (!parsed.success) {
+      sendValidation(reply, parsed.error);
+      return;
+    }
+
+    try {
+      const cycle = await withTransaction((client) =>
+        updateAcademicCycle(client, request.user!.id, request.user!.email, params.data.id, parsed.data)
+      );
+      return { cycle, message: 'Ciclo escolar actualizado correctamente.' };
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        await reply.code(409).send({
+          error: 'CYCLE_EXISTS',
+          message: 'Ya existe un ciclo con ese periodo y código.'
+        });
+        return;
+      }
+      throw error;
+    }
+  });
+
+  app.post('/calendar/cycles/:id/activate', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
+    const params = paramsSchema.safeParse(request.params as CalendarParams);
+    if (!params.success) {
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Ciclo inválido.' });
+      return;
+    }
+
+    const cycle = await withTransaction((client) =>
+      activateAcademicCycle(client, request.user!.id, request.user!.email, params.data.id)
+    );
+
+    return {
+      activeCycle: cycle,
+      message: 'Ciclo activado correctamente. El ciclo activo anterior quedó cerrado.'
     };
   });
 
@@ -434,6 +691,7 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
     try {
       const period = await withTransaction(async (client) => {
         const cycle = await ensureWorkingCycle(client, request.user!, parsed.data.cycleId);
+        if (cycle.status === 'CERRADO') throw new Error('No se pueden crear quincenas en un ciclo cerrado.');
         return createPeriod(client, cycle, parsed.data);
       });
 
@@ -465,6 +723,7 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
     try {
       const period = await withTransaction(async (client) => {
         const cycle = await ensureWorkingCycle(client, request.user!, parsed.data.cycleId);
+        if (cycle.status === 'CERRADO') throw new Error('No se pueden modificar quincenas de un ciclo cerrado.');
         return updatePeriod(client, params.data.id, cycle, parsed.data);
       });
       return { period, message: 'Quincena de calendario actualizada correctamente.' };
@@ -490,6 +749,8 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
     const deleted = await withTransaction(async (client) => {
       const period = await loadCalendarPeriod(client, params.data.id);
       if (!period) throw new Error('No se encontró la quincena seleccionada.');
+      const cycle = await loadCycleById(client, period.cycleId);
+      if (cycle?.status === 'CERRADO') throw new Error('No se pueden eliminar quincenas de un ciclo cerrado.');
       if (await periodHasPayrollRun(client, period)) {
         throw new Error('Esta quincena ya tiene nómina calculada y no puede eliminarse.');
       }

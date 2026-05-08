@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { CalendarDays, Edit3, Plus, RefreshCw, Save, Trash2, X } from 'lucide-vue-next';
+import { CalendarDays, CheckCircle2, Edit3, Plus, RefreshCw, Save, Trash2, X } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
 import {
   createCalendarPeriod,
+  createAcademicCycle,
+  activateAcademicCycle,
   deleteCalendarPeriod,
   fetchCalendarContext,
+  updateAcademicCycle,
   updateCalendarPeriod,
   updateCycleModuleDates,
+  type AcademicCyclePayload,
   type CalendarPeriod,
   type CalendarPeriodPayload,
   type CycleModuleDatesPayload,
@@ -22,14 +26,19 @@ const activeCycle = ref<CycleOption | null>(null);
 const selectedCycleId = ref('');
 const periods = ref<CalendarPeriod[]>([]);
 const editingId = ref<string | null>(null);
+const editingCycleId = ref<string | null>(null);
 const pageBusy = ref(false);
 const saving = ref(false);
 const savingModules = ref(false);
+const savingCycle = ref(false);
+const activatingCycle = ref(false);
 const deletingPeriod = ref(false);
 const pendingDeletePeriod = ref<CalendarPeriod | null>(null);
+const pendingActivateCycle = ref<CycleOption | null>(null);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 const formError = ref('');
 const moduleError = ref('');
+const cycleError = ref('');
 const blackoutDraft = ref({ blackoutDate: '', reason: '' });
 
 function dateKey(date: Date) {
@@ -49,6 +58,59 @@ function currentFortnight() {
   return {
     payrollStart: dateKey(new Date(Date.UTC(year, month, startDay))),
     payrollEnd: dateKey(new Date(Date.UTC(year, month, endDay)))
+  };
+}
+
+function cycleDefaultsFromCode(code: string) {
+  const match = code.match(/^(\d{2,4})-(1|2|3)$/);
+  const rawYear = match ? Number(match[1]) : new Date().getFullYear() + 1;
+  const codeYear = rawYear < 100 ? 2000 + rawYear : rawYear;
+  const quarter = match ? Number(match[2]) : 1;
+  const calendarYear = quarter === 1 ? codeYear - 1 : codeYear;
+  if (quarter === 1) {
+    return {
+      periodLabel: `Septiembre - Diciembre ${calendarYear}`,
+      module1Start: `${calendarYear}-09-01`,
+      module1End: `${calendarYear}-10-31`,
+      module2Start: `${calendarYear}-11-01`,
+      module2End: `${calendarYear}-12-31`
+    };
+  }
+  if (quarter === 2) {
+    return {
+      periodLabel: `Enero - Abril ${calendarYear}`,
+      module1Start: `${calendarYear}-01-01`,
+      module1End: `${calendarYear}-02-28`,
+      module2Start: `${calendarYear}-03-01`,
+      module2End: `${calendarYear}-04-30`
+    };
+  }
+  return {
+    periodLabel: `Mayo - Agosto ${calendarYear}`,
+    module1Start: `${calendarYear}-05-01`,
+    module1End: `${calendarYear}-06-30`,
+    module2Start: `${calendarYear}-07-01`,
+    module2End: `${calendarYear}-08-31`
+  };
+}
+
+function suggestNextQuarterCode() {
+  const code = activeCycle.value?.quarterCode || '';
+  const match = code.match(/^(\d{2,4})-(1|2|3)$/);
+  if (!match) return `${String(new Date().getFullYear() + 1).slice(-2)}-1`;
+  const rawYear = Number(match[1]);
+  const quarter = Number(match[2]);
+  const nextQuarter = quarter === 3 ? 1 : quarter + 1;
+  const nextYear = quarter === 3 ? rawYear + 1 : rawYear;
+  return `${String(nextYear).slice(-2)}-${nextQuarter}`;
+}
+
+function blankCycleForm(): AcademicCyclePayload {
+  const quarterCode = suggestNextQuarterCode();
+  const defaults = cycleDefaultsFromCode(quarterCode);
+  return {
+    quarterCode,
+    ...defaults
   };
 }
 
@@ -77,6 +139,7 @@ const moduleForm = ref<CycleModuleDatesPayload>({
   module2Start: '',
   module2End: ''
 });
+const cycleForm = ref<AcademicCyclePayload>(blankCycleForm());
 
 const summary = computed(() => {
   const blackoutTotal = periods.value.reduce((sum, period) => sum + period.blackoutDates.length, 0);
@@ -118,6 +181,99 @@ function syncModuleForm(cycle: CycleOption | null) {
   moduleError.value = '';
 }
 
+function cycleStatusClass(status: CycleOption['status']) {
+  if (status === 'ACTIVO') return 'ok';
+  if (status === 'PLANEACION') return 'warning';
+  return 'muted';
+}
+
+function newCycle() {
+  editingCycleId.value = null;
+  cycleForm.value = blankCycleForm();
+  cycleError.value = '';
+  clearNotice();
+}
+
+function editCycle(cycle: CycleOption) {
+  if (cycle.status === 'CERRADO') return;
+  editingCycleId.value = cycle.id;
+  cycleForm.value = {
+    periodLabel: cycle.periodLabel,
+    quarterCode: cycle.quarterCode,
+    module1Start: dateOnly(cycle.module1Start),
+    module1End: dateOnly(cycle.module1End),
+    module2Start: dateOnly(cycle.module2Start),
+    module2End: dateOnly(cycle.module2End)
+  };
+  cycleError.value = '';
+  clearNotice();
+}
+
+function validateCycleForm() {
+  const cycle = cycleForm.value;
+  if (!cycle.periodLabel.trim()) return 'Captura el periodo del ciclo.';
+  if (!cycle.quarterCode.trim()) return 'Captura el código del ciclo.';
+  if (!cycle.module1Start || !cycle.module1End || !cycle.module2Start || !cycle.module2End) {
+    return 'Captura inicio y cierre de ambos módulos.';
+  }
+  if (cycle.module1Start > cycle.module1End) return 'El módulo 1 tiene fechas invertidas.';
+  if (cycle.module2Start > cycle.module2End) return 'El módulo 2 tiene fechas invertidas.';
+  if (cycle.module1End > cycle.module2End) return 'El cierre de módulo 1 no puede ser posterior al cierre de módulo 2.';
+  return '';
+}
+
+async function saveCycle() {
+  cycleError.value = validateCycleForm();
+  if (cycleError.value) return;
+  savingCycle.value = true;
+  clearNotice();
+  try {
+    const payload = {
+      ...cycleForm.value,
+      periodLabel: cycleForm.value.periodLabel.trim(),
+      quarterCode: cycleForm.value.quarterCode.trim().toUpperCase()
+    };
+    const response = editingCycleId.value
+      ? await updateAcademicCycle(editingCycleId.value, payload)
+      : await createAcademicCycle(payload);
+    editingCycleId.value = response.cycle.id;
+    await loadCalendar(response.cycle.id);
+    setNotice('ok', response.message);
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible guardar el ciclo.');
+  } finally {
+    savingCycle.value = false;
+  }
+}
+
+function requestActivateCycle(cycle: CycleOption) {
+  pendingActivateCycle.value = cycle;
+  clearNotice();
+}
+
+function closeActivateCycleModal() {
+  if (activatingCycle.value) return;
+  pendingActivateCycle.value = null;
+}
+
+async function confirmActivateCycle() {
+  const cycle = pendingActivateCycle.value;
+  if (!cycle) return;
+  activatingCycle.value = true;
+  clearNotice();
+  try {
+    const response = await activateAcademicCycle(cycle.id);
+    pendingActivateCycle.value = null;
+    editingCycleId.value = null;
+    await loadCalendar(response.activeCycle.id);
+    setNotice('ok', response.message);
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible activar el ciclo.');
+  } finally {
+    activatingCycle.value = false;
+  }
+}
+
 async function loadCalendar(cycleId = selectedCycleId.value || undefined) {
   if (!authStore.canManageCalendar) return;
   pageBusy.value = true;
@@ -142,6 +298,7 @@ async function loadCalendar(cycleId = selectedCycleId.value || undefined) {
       }))
     }));
     if (!editingId.value) form.value = blankForm();
+    if (!editingCycleId.value) cycleForm.value = blankCycleForm();
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar calendario.');
   } finally {
@@ -334,7 +491,7 @@ onMounted(() => {
           <RefreshCw :size="17" :class="{ spin: pageBusy }" />
           Actualizar
         </button>
-        <button class="primary-inline" type="button" @click="newPeriod">
+        <button class="primary-inline" type="button" :disabled="activeCycle?.status === 'CERRADO'" @click="newPeriod">
           <Plus :size="17" />
           Nueva quincena
         </button>
@@ -346,6 +503,122 @@ onMounted(() => {
       <article class="metric-card mini"><p>Días inhábiles</p><strong>{{ summary.blackoutTotal }}</strong><small>Dentro de quincenas</small></article>
       <article class="metric-card mini"><p>Próxima base</p><strong>{{ summary.nextPeriod }}</strong><small>Fuente para Nómina</small></article>
       <article class="metric-card mini"><p>Acceso</p><strong>Admin</strong><small>Calendario centralizado</small></article>
+    </section>
+
+    <section class="split-grid calendar">
+      <div class="editor-panel">
+        <div class="section-title compact">
+          <div>
+            <p class="eyebrow">{{ editingCycleId ? 'Editar ciclo' : 'Nuevo ciclo' }}</p>
+            <h3>Apertura de ciclo escolar</h3>
+          </div>
+          <CalendarDays :size="22" />
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Periodo</span>
+            <input v-model="cycleForm.periodLabel" placeholder="Septiembre - Diciembre 2026" />
+          </label>
+          <label>
+            <span>Código</span>
+            <input v-model="cycleForm.quarterCode" placeholder="27-1" />
+          </label>
+          <label>
+            <span>Inicio módulo 1</span>
+            <input v-model="cycleForm.module1Start" type="date" />
+          </label>
+          <label>
+            <span>Cierre módulo 1</span>
+            <input v-model="cycleForm.module1End" type="date" />
+          </label>
+          <label>
+            <span>Inicio módulo 2</span>
+            <input v-model="cycleForm.module2Start" type="date" />
+          </label>
+          <label>
+            <span>Cierre módulo 2</span>
+            <input v-model="cycleForm.module2End" type="date" />
+          </label>
+        </div>
+
+        <div class="module-period-note editable">
+          <strong>Planeación limpia</strong>
+          <span>El ciclo nuevo se crea sin horarios; cada coordinación captura su carga desde cero.</span>
+        </div>
+
+        <div v-if="cycleError" class="error-box wide">{{ cycleError }}</div>
+
+        <div class="form-actions">
+          <button class="secondary-action" type="button" :disabled="savingCycle" @click="newCycle">Nuevo ciclo</button>
+          <button class="primary-inline" type="button" :disabled="savingCycle" @click="saveCycle">
+            <Save :size="17" />
+            {{ editingCycleId ? 'Actualizar ciclo' : 'Crear en planeación' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="data-panel full">
+        <div class="section-title compact">
+          <div>
+            <p class="eyebrow">Ciclos escolares</p>
+            <h3>Operación actual y planeación</h3>
+          </div>
+        </div>
+
+        <div class="table-shell">
+          <table class="calendar-table">
+            <thead>
+              <tr>
+                <th>Ciclo</th>
+                <th>Estado</th>
+                <th>Módulos</th>
+                <th>Preparación</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="cycle in cycles" :key="cycle.id">
+                <td>
+                  <strong>{{ cycle.periodLabel }}</strong>
+                  <span>{{ cycle.quarterCode }}</span>
+                </td>
+                <td>
+                  <span class="badge" :class="cycleStatusClass(cycle.status)">{{ cycle.status }}</span>
+                </td>
+                <td>
+                  <strong>M1 {{ formatDate(cycle.module1Start) }} - {{ formatDate(cycle.module1End) }}</strong>
+                  <span>M2 {{ formatDate(cycle.module2Start) }} - {{ formatDate(cycle.module2End) }}</span>
+                </td>
+                <td>
+                  <strong>{{ cycle.scheduleCount || 0 }} horarios</strong>
+                  <span>{{ cycle.calendarPeriodCount || 0 }} quincenas</span>
+                </td>
+                <td class="row-actions">
+                  <button
+                    class="icon-button"
+                    type="button"
+                    title="Editar ciclo"
+                    :disabled="cycle.status === 'CERRADO'"
+                    @click="editCycle(cycle)"
+                  >
+                    <Edit3 :size="16" />
+                  </button>
+                  <button
+                    v-if="cycle.status === 'PLANEACION'"
+                    class="icon-button ok"
+                    type="button"
+                    title="Activar ciclo"
+                    @click="requestActivateCycle(cycle)"
+                  >
+                    <CheckCircle2 :size="16" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <section class="data-panel module-editor-panel">
@@ -387,7 +660,7 @@ onMounted(() => {
         <button class="secondary-action" type="button" :disabled="savingModules" @click="syncModuleForm(activeCycle)">
           Descartar
         </button>
-        <button class="primary-inline" type="button" :disabled="savingModules || !activeCycle" @click="saveModuleDates">
+        <button class="primary-inline" type="button" :disabled="savingModules || !activeCycle || activeCycle.status === 'CERRADO'" @click="saveModuleDates">
           <Save :size="17" />
           Guardar módulos
         </button>
@@ -461,7 +734,7 @@ onMounted(() => {
 
         <div class="form-actions">
           <button class="secondary-action" type="button" @click="newPeriod">Limpiar</button>
-          <button class="primary-inline" type="button" :disabled="saving" @click="savePeriod">
+          <button class="primary-inline" type="button" :disabled="saving || activeCycle?.status === 'CERRADO'" @click="savePeriod">
             <Save :size="17" />
             {{ editingId ? 'Actualizar' : 'Guardar' }}
           </button>
@@ -513,10 +786,10 @@ onMounted(() => {
                   <span>Extras {{ period.extrasAccessDays }} días</span>
                 </td>
                 <td class="row-actions">
-                  <button class="icon-button" type="button" title="Editar" @click="editPeriod(period)">
+                  <button class="icon-button" type="button" title="Editar" :disabled="activeCycle?.status === 'CERRADO'" @click="editPeriod(period)">
                     <Edit3 :size="16" />
                   </button>
-                  <button class="icon-button danger" type="button" title="Eliminar" @click="requestRemovePeriod(period)">
+                  <button class="icon-button danger" type="button" title="Eliminar" :disabled="activeCycle?.status === 'CERRADO'" @click="requestRemovePeriod(period)">
                     <Trash2 :size="16" />
                   </button>
                 </td>
@@ -545,6 +818,26 @@ onMounted(() => {
       :loading="deletingPeriod"
       @close="closeDeleteModal"
       @confirm="confirmRemovePeriod"
+    />
+
+    <ConfirmModal
+      :show="!!pendingActivateCycle"
+      eyebrow="Ciclo escolar"
+      title="Activar nuevo ciclo"
+      :subject="pendingActivateCycle ? `${pendingActivateCycle.periodLabel} - ${pendingActivateCycle.quarterCode}` : ''"
+      message="Este ciclo quedará como activo. El ciclo activo anterior se cerrará y Capturar Horarios mostrará el nuevo ciclo por defecto."
+      :details="pendingActivateCycle ? [
+        `${pendingActivateCycle.scheduleCount || 0} horarios capturados en el nuevo ciclo`,
+        `${pendingActivateCycle.calendarPeriodCount || 0} quincenas configuradas`,
+        'Los horarios del ciclo anterior no se eliminan; quedan asociados a su ciclo histórico.'
+      ] : []"
+      confirm-label="Activar ciclo"
+      cancel-label="Conservar planeación"
+      tone="warning"
+      icon="warning"
+      :loading="activatingCycle"
+      @close="closeActivateCycleModal"
+      @confirm="confirmActivateCycle"
     />
   </div>
 </template>
