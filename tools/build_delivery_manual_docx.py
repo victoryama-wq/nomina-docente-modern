@@ -213,8 +213,9 @@ def add_code_block(document: Document, block: list[str], language: str) -> None:
         run.font.color.rgb = RGBColor.from_string("334155")
 
 
-def add_markdown(document: Document, markdown: str) -> None:
+def add_markdown(document: Document, markdown: str, base_dir: Path | None = None) -> None:
     lines = markdown.splitlines()
+    base_dir = base_dir or SOURCE.parent
     i = 0
     in_code = False
     code_lang = ""
@@ -253,6 +254,26 @@ def add_markdown(document: Document, markdown: str) -> None:
             i += 1
             continue
 
+        image = re.match(r"^!\[(.*?)\]\((.*?)\)$", line.strip())
+        if image:
+            alt_text = image.group(1).strip()
+            image_path = image.group(2).strip()
+            resolved = (base_dir / image_path).resolve()
+            if resolved.exists():
+                p = document.add_paragraph()
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = p.add_run(alt_text)
+                set_run_font(run, 8.8, True, PRIMARY)
+                p.paragraph_format.keep_with_next = True
+                picture = document.add_picture(str(resolved), width=Inches(6.85))
+                document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            else:
+                p = document.add_paragraph()
+                run = p.add_run(f"[Imagen no encontrada: {image_path}]")
+                set_run_font(run, 9.2, True, "b91c1c")
+            i += 1
+            continue
+
         if line.strip().startswith("|"):
             rows, i = parse_markdown_table(lines, i)
             add_table(document, rows)
@@ -273,18 +294,19 @@ def add_markdown(document: Document, markdown: str) -> None:
 
         bullet = re.match(r"^[-*]\s+(.*)$", line)
         if bullet:
-            p = document.add_paragraph(style="List Bullet")
+            p = document.add_paragraph()
             p.paragraph_format.space_after = Pt(2)
-            run = p.add_run(bullet.group(1).replace("`", ""))
+            run = p.add_run(f"• {bullet.group(1).replace('`', '')}")
             set_run_font(run, 9.2, False, "334155")
             i += 1
             continue
 
         numbered = re.match(r"^\d+\.\s+(.*)$", line)
         if numbered:
-            p = document.add_paragraph(style="List Number")
+            p = document.add_paragraph()
             p.paragraph_format.space_after = Pt(2)
-            run = p.add_run(numbered.group(1).replace("`", ""))
+            number = line.split(".", 1)[0]
+            run = p.add_run(f"{number}. {numbered.group(1).replace('`', '')}")
             set_run_font(run, 9.2, False, "334155")
             i += 1
             continue
