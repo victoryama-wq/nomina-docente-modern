@@ -370,6 +370,7 @@ async function listFinanceRuns(
       LEFT JOIN app_users status_user ON status_user.id = pr.status_updated_by
       LEFT JOIN payroll_lines pl ON pl.payroll_run_id = pr.id ${visibility}
       WHERE pr.cycle_id = $1
+        AND pr.status <> 'CANCELADA'
       GROUP BY
         pr.id,
         ac.period_label,

@@ -423,6 +423,25 @@ BEGIN
   END IF;
 END $$;`,
   '',
+  `DELETE FROM extra_hours eh
+USING (
+  SELECT DISTINCT
+    ac.id AS cycle_id,
+    pcc.payroll_start,
+    pcc.payroll_end
+  FROM legacy_extra_import i
+  JOIN academic_cycles ac
+    ON ac.period_label = i.period_label
+    AND ac.quarter_code = i.quarter_code
+  JOIN payroll_calendar_config pcc
+    ON pcc.cycle_id = ac.id
+    AND i.activity_date BETWEEN pcc.payroll_start AND pcc.payroll_end
+) target_window
+WHERE eh.cycle_id = target_window.cycle_id
+  AND COALESCE(eh.activity_date, eh.captured_at::date) BETWEEN target_window.payroll_start AND target_window.payroll_end
+  AND eh.legacy_sheet_name = ''
+  AND eh.observations LIKE 'Restaurado desde%';`,
+  '',
   `WITH import_actor AS (
   SELECT id FROM app_users WHERE email = 'victor.yama@tecplayacar.edu.mx' LIMIT 1
 ),

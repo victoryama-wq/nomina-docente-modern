@@ -515,9 +515,11 @@ async function ensureNoPayrollDependency(client: PoolClient, extraId: string): P
   const result = await client.query<ExtraDependencyRow>(
     `
       SELECT count(*)::text AS "payrollLines"
-      FROM payroll_lines
-      WHERE logged_extra_hours > 0
-        AND alerts::text LIKE $1
+      FROM payroll_lines pl
+      JOIN payroll_runs pr ON pr.id = pl.payroll_run_id
+      WHERE pl.logged_extra_hours > 0
+        AND pr.status <> 'CANCELADA'
+        AND pl.alerts::text LIKE $1
     `,
     [`%${extraId}%`]
   );
