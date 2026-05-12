@@ -71,7 +71,7 @@ const selectedLineKey = ref('');
 const pageBusy = ref(false);
 const calculating = ref(false);
 const saving = ref(false);
-const exporting = ref<'summary' | 'schedules' | 'extras' | ''>('');
+const exporting = ref<'summary' | 'schedules' | 'extras' | 'detail' | ''>('');
 const loadingRunId = ref('');
 const selectedRunId = ref('');
 const confirmSavePayrollOpen = ref(false);
@@ -231,6 +231,33 @@ function setNotice(type: 'ok' | 'error', text: string) {
 
 function clearNotice() {
   notice.value = null;
+}
+
+function csvValue(value: unknown) {
+  const text = value === null || value === undefined ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(fileName: string, headers: string[], rows: unknown[][]) {
+  const content = `\uFEFF${[headers, ...rows].map((row) => row.map(csvValue).join(',')).join('\r\n')}\r\n`;
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+function safeFilePart(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 function defaultPeriodLabel() {
@@ -453,6 +480,206 @@ async function exportRun(kind: 'summary' | 'schedules' | 'extras') {
   }
 }
 
+function detailExportHeaders() {
+  return [
+    'Origen',
+    'Ciclo',
+    'Quincena',
+    'Estatus',
+    'Docente',
+    'Coordinación',
+    'Categoría',
+    'Tipo pago',
+    'Asignatura',
+    'Grupo',
+    'Motivo extra',
+    'Fecha extra',
+    'Tabulador',
+    'Monto tabulador',
+    'Horas L-V',
+    'Horas módulo 1',
+    'Horas módulo 2',
+    'Horas base',
+    'Bruto base',
+    'Faltas h',
+    'Retardos',
+    'Retardos h',
+    'Descuento faltas',
+    'Descuento retardos',
+    'Extras incidencia h',
+    'Extras incidencia monto',
+    'Neto base',
+    'Extra externo h',
+    'Extra externo monto',
+    'Total extras h docente',
+    'Total extras monto docente',
+    'Total docente',
+    'Alertas'
+  ];
+}
+
+function detailExportRows() {
+  const preview = currentPreview.value;
+  if (!preview) return [];
+  const detailsByLine = new Map<string, PayrollScheduleDetail[]>();
+  const extrasByLine = new Map<string, PayrollExtraDetail[]>();
+  for (const detail of preview.details) {
+    const current = detailsByLine.get(detail.lineKey) || [];
+    current.push(detail);
+    detailsByLine.set(detail.lineKey, current);
+  }
+  for (const detail of preview.extraDetails) {
+    const current = extrasByLine.get(detail.lineKey) || [];
+    current.push(detail);
+    extrasByLine.set(detail.lineKey, current);
+  }
+
+  const cycleLabel = activeCycle.value ? `${activeCycle.value.periodLabel} - ${activeCycle.value.quarterCode}` : '';
+  const run = selectedRun.value;
+  const periodLabel = preview.input.periodLabel || defaultPeriodLabel();
+  const status = run?.status || 'VISTA PREVIA';
+  const rows: unknown[][] = [];
+
+  for (const line of filteredLines.value) {
+    const scheduleDetails = detailsByLine.get(line.key) || [];
+    const extraDetails = extrasByLine.get(line.key) || [];
+    for (const detail of scheduleDetails) {
+      rows.push([
+        'Horario / incidencia',
+        cycleLabel,
+        periodLabel,
+        status,
+        line.teacherName,
+        line.coordinationName,
+        categoryLabel(line.category),
+        paymentLabel(line.paymentType),
+        detail.subjectName,
+        detail.groupCode,
+        '',
+        '',
+        detail.tabulatorName,
+        detail.tabulatorAmount,
+        detail.weekdayHours,
+        detail.module1Hours,
+        detail.module2Hours,
+        detail.baseHours,
+        detail.grossBaseAmount,
+        detail.absences,
+        detail.delays,
+        detail.delayDiscountHours,
+        detail.absenceDiscountAmount,
+        detail.delayDiscountAmount,
+        detail.scheduleExtraHours,
+        detail.scheduleExtraAmount,
+        detail.baseNetAmount,
+        '',
+        '',
+        line.totalExtraHours,
+        line.totalExtraAmount,
+        line.totalAmount,
+        line.alerts.join(' | ')
+      ]);
+    }
+    for (const detail of extraDetails) {
+      rows.push([
+        'Extra externo',
+        cycleLabel,
+        periodLabel,
+        status,
+        line.teacherName,
+        line.coordinationName,
+        categoryLabel(line.category),
+        paymentLabel(line.paymentType),
+        '',
+        '',
+        detail.reason,
+        formatDate(detail.activityDate),
+        '',
+        detail.tabulatorAmount,
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        detail.hours,
+        detail.totalAmount,
+        line.totalExtraHours,
+        line.totalExtraAmount,
+        line.totalAmount,
+        line.alerts.join(' | ')
+      ]);
+    }
+    if (!scheduleDetails.length && !extraDetails.length) {
+      rows.push([
+        'Resumen docente',
+        cycleLabel,
+        periodLabel,
+        status,
+        line.teacherName,
+        line.coordinationName,
+        categoryLabel(line.category),
+        paymentLabel(line.paymentType),
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        line.baseHours,
+        line.grossBaseAmount,
+        line.absences,
+        line.delays,
+        line.delayDiscountHours,
+        line.absenceDiscountAmount,
+        line.delayDiscountAmount,
+        line.scheduleExtraHours,
+        line.scheduleExtraAmount,
+        line.baseNetAmount,
+        line.loggedExtraHours,
+        line.loggedExtraAmount,
+        line.totalExtraHours,
+        line.totalExtraAmount,
+        line.totalAmount,
+        line.alerts.join(' | ')
+      ]);
+    }
+  }
+
+  return rows;
+}
+
+function exportDetailCsv() {
+  if (!currentPreview.value || !canExportPayrollRun.value) return;
+  const rows = detailExportRows();
+  if (!rows.length) {
+    setNotice('error', 'No hay detalle de nómina para exportar con los filtros actuales.');
+    return;
+  }
+  exporting.value = 'detail';
+  clearNotice();
+  try {
+    const period = safeFilePart(currentPreview.value.input.periodLabel || defaultPeriodLabel() || 'nomina');
+    const cycle = safeFilePart(activeCycle.value?.quarterCode || 'ciclo');
+    downloadCsv(`nomina-${cycle}-${period}-detalle-docente.csv`, detailExportHeaders(), rows);
+    setNotice('ok', 'Detalle por docente exportado en CSV.');
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar el detalle por docente.');
+  } finally {
+    exporting.value = '';
+  }
+}
+
 onMounted(() => {
   loadContext();
 });
@@ -637,7 +864,19 @@ onMounted(() => {
               Detalle por docente
             </button>
           </div>
-          <span class="subtle-pill">{{ runSourceLabel() }}</span>
+          <div class="payroll-detail-actions">
+            <button
+              v-if="viewMode === 'DETALLE' && canExportPayrollRun"
+              class="secondary-action"
+              type="button"
+              :disabled="!currentPreview || !filteredLines.length || exporting === 'detail'"
+              @click="exportDetailCsv"
+            >
+              <Download :size="16" />
+              Detalle CSV
+            </button>
+            <span class="subtle-pill">{{ runSourceLabel() }}</span>
+          </div>
         </div>
 
         <div v-if="viewMode === 'RESUMEN'" class="table-shell">

@@ -1340,6 +1340,14 @@ td span {
   margin-bottom: 14px;
 }
 
+.payroll-detail-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .segmented-control {
   display: inline-flex;
   width: fit-content;
