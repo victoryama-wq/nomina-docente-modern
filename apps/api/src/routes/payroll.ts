@@ -526,7 +526,7 @@ function exportFileName(run: PayrollRunRow, suffix: string): string {
 }
 
 function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  return Number.isFinite(value) ? value : 0;
 }
 
 function lineKey(teacherId: string, coordinationId: string): string {

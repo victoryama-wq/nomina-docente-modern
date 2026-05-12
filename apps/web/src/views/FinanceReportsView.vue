@@ -369,7 +369,7 @@ function formatDate(value: string | null | undefined) {
 }
 
 function round2(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  return Number.isFinite(value) ? value : 0;
 }
 
 function categoryLabel(category: string) {

@@ -116,7 +116,7 @@ function nullableTextSql(value) {
 
 function numberSql(value) {
   const numeric = Number(value) || 0;
-  return numeric.toFixed(2);
+  return Number.isFinite(numeric) ? `${numeric}` : '0';
 }
 
 function parseNumber(value) {
@@ -322,17 +322,17 @@ SET amount = EXCLUDED.amount,
   teacher_normalized text NOT NULL,
   group_code text NOT NULL,
   tabulator_name text NOT NULL,
-  tabulator_amount numeric(12, 2) NOT NULL DEFAULT 0,
-  hours_l numeric(6, 2) NOT NULL DEFAULT 0,
-  hours_m numeric(6, 2) NOT NULL DEFAULT 0,
-  hours_x numeric(6, 2) NOT NULL DEFAULT 0,
-  hours_j numeric(6, 2) NOT NULL DEFAULT 0,
-  hours_v numeric(6, 2) NOT NULL DEFAULT 0,
-  hours_s1 numeric(6, 2) NOT NULL DEFAULT 0,
-  hours_s2 numeric(6, 2) NOT NULL DEFAULT 0,
-  absences numeric(6, 2) NOT NULL DEFAULT 0,
-  delays numeric(6, 2) NOT NULL DEFAULT 0,
-  extras numeric(6, 2) NOT NULL DEFAULT 0,
+  tabulator_amount numeric NOT NULL DEFAULT 0,
+  hours_l numeric NOT NULL DEFAULT 0,
+  hours_m numeric NOT NULL DEFAULT 0,
+  hours_x numeric NOT NULL DEFAULT 0,
+  hours_j numeric NOT NULL DEFAULT 0,
+  hours_v numeric NOT NULL DEFAULT 0,
+  hours_s1 numeric NOT NULL DEFAULT 0,
+  hours_s2 numeric NOT NULL DEFAULT 0,
+  absences numeric NOT NULL DEFAULT 0,
+  delays numeric NOT NULL DEFAULT 0,
+  extras numeric NOT NULL DEFAULT 0,
   period_label text NOT NULL,
   quarter_code text NOT NULL,
   period_start date NOT NULL,

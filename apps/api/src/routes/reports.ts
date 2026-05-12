@@ -243,7 +243,7 @@ function isGlobalFinanceReadOnly(actor: SessionUser): boolean {
 }
 
 function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  return Number.isFinite(value) ? value : 0;
 }
 
 function parseAlerts(value: unknown): string[] {

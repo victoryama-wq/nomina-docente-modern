@@ -107,7 +107,7 @@ function textSql(value) {
 
 function numberSql(value) {
   const numeric = Number(value) || 0;
-  return numeric.toFixed(2);
+  return Number.isFinite(numeric) ? `${numeric}` : '0';
 }
 
 function dateSql(value) {
@@ -266,8 +266,8 @@ const output = [
   coordination text NOT NULL,
   teacher_name text NOT NULL,
   teacher_normalized text NOT NULL,
-  hours numeric(6, 2) NOT NULL,
-  tabulator_amount numeric(12, 2) NOT NULL,
+  hours numeric NOT NULL,
+  tabulator_amount numeric NOT NULL,
   reason text NOT NULL,
   activity_date date NOT NULL,
   reference text NOT NULL,
