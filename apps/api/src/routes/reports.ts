@@ -934,6 +934,57 @@ async function loadVisibleFinanceRun(client: PoolClient, actor: SessionUser, run
 }
 
 function paymentHeaders(): string[] {
+  return ['Nombre del docente', 'RFC', 'Tipo de pago', 'Horas pagadas', 'Total a pagar'];
+}
+
+function paidHours(line: FinanceLine): number {
+  return round2(line.baseHours - line.absences - line.delays * 0.5 + line.totalExtraHours);
+}
+
+function paymentRows(lines: FinanceLine[]): unknown[][] {
+  const grouped = new Map<
+    string,
+    {
+      teacherName: string;
+      rfc: string;
+      paymentType: string;
+      paidHours: number;
+      totalAmount: number;
+    }
+  >();
+
+  for (const line of lines) {
+    const key = line.teacherId;
+    const current =
+      grouped.get(key) ||
+      {
+        teacherName: line.teacherName,
+        rfc: line.rfc,
+        paymentType: line.paymentType,
+        paidHours: 0,
+        totalAmount: 0
+      };
+    current.paidHours += paidHours(line);
+    current.totalAmount += Number(line.totalAmount || 0);
+    grouped.set(key, current);
+  }
+
+  return [...grouped.values()]
+    .sort((left, right) => {
+      const paymentCompare = paymentTypeText(left.paymentType).localeCompare(paymentTypeText(right.paymentType), 'es');
+      if (paymentCompare) return paymentCompare;
+      return left.teacherName.localeCompare(right.teacherName, 'es');
+    })
+    .map((row) => [
+      row.teacherName,
+      row.rfc,
+      paymentTypeText(row.paymentType),
+      round2(row.paidHours),
+      round2(row.totalAmount)
+    ]);
+}
+
+function paymentDetailHeaders(): string[] {
   return [
     'Docente',
     'Coordinación',
@@ -954,7 +1005,7 @@ function paymentHeaders(): string[] {
   ];
 }
 
-function paymentRows(lines: FinanceLine[]): unknown[][] {
+function paymentDetailRows(lines: FinanceLine[]): unknown[][] {
   return lines.map((line) => [
     line.teacherName,
     line.coordinationName,
@@ -1599,13 +1650,15 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
         return;
       }
 
-      const rows = parsedParams.data.kind === 'fiscal'
-        ? context.lines.filter((line) => line.paymentStatus === 'PENDIENTE')
-        : context.lines;
+      const isFiscalExport = parsedParams.data.kind === 'fiscal';
+      const rows = isFiscalExport ? context.lines.filter((line) => line.paymentStatus === 'PENDIENTE') : context.lines;
       sendCsv(
         reply,
-        exportFileName(context.selectedRun, parsedParams.data.kind === 'fiscal' ? 'pendientes-fiscales' : 'pagos'),
-        buildCsv(paymentHeaders(), paymentRows(rows))
+        exportFileName(context.selectedRun, isFiscalExport ? 'pendientes-fiscales' : 'pagos'),
+        buildCsv(
+          isFiscalExport ? paymentDetailHeaders() : paymentHeaders(),
+          isFiscalExport ? paymentDetailRows(rows) : paymentRows(rows)
+        )
       );
     }
   );
