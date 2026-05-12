@@ -347,16 +347,10 @@ function closeScheduleModal() {
 }
 
 function applySelectedTeacherDefaults() {
-  if (!authStore.isAdmin) {
-    scheduleForm.value.coordinationId = currentUserCoordination.value?.id || null;
-    scheduleForm.value.coordinationName = currentCoordinatorName.value;
-    return;
-  }
+  if (authStore.isAdmin) return;
 
-  if (!scheduleForm.value.coordinationId && currentUserCoordination.value) {
-    scheduleForm.value.coordinationId = currentUserCoordination.value.id;
-    scheduleForm.value.coordinationName = currentUserCoordination.value.name;
-  }
+  scheduleForm.value.coordinationId = currentUserCoordination.value?.id || null;
+  scheduleForm.value.coordinationName = currentCoordinatorName.value;
 }
 
 function selectScheduleTeacher(teacher: ScheduleTeacher) {
@@ -435,6 +429,17 @@ async function saveSchedule() {
   }
   if (!scheduleForm.value.tabulatorId) {
     scheduleFormError.value = 'Selecciona un tabulador del catálogo.';
+    return;
+  }
+  if (authStore.isAdmin && !scheduleForm.value.coordinationId) {
+    scheduleFormError.value = 'Selecciona el coordinador responsable del horario.';
+    return;
+  }
+  if (
+    authStore.isAdmin &&
+    !scheduleCoordinations.value.some((coordination) => coordination.id === scheduleForm.value.coordinationId)
+  ) {
+    scheduleFormError.value = 'Selecciona un coordinador con acceso activo al sistema.';
     return;
   }
   if (scheduleFormProjection.value.exceeds) {

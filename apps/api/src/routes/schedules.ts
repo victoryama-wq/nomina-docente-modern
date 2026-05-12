@@ -39,6 +39,11 @@ interface TabulatorOptionRow extends OptionRow {
   sortOrder: number;
 }
 
+interface CoordinatorUserRow {
+  displayName: string;
+  legacyUsername: string;
+}
+
 interface TeacherScheduleRow {
   id: string;
   fullName: string;
@@ -624,16 +629,67 @@ async function listScheduleTeachers(cycleId: string): Promise<TeacherScheduleRow
   );
 }
 
+async function listScheduleCoordinatorOptions(client: PoolClient): Promise<CoordinationRow[]> {
+  const [users, existingCoordinations] = await Promise.all([
+    client.query<CoordinatorUserRow>(
+      `
+        SELECT
+          u.display_name AS "displayName",
+          COALESCE(u.legacy_username, '') AS "legacyUsername"
+        FROM app_users u
+        JOIN roles r ON r.id = u.role_id
+        WHERE u.status = 'ACTIVO'
+          AND r.code = 'coordinador'
+        ORDER BY u.display_name ASC
+      `
+    ),
+    client.query<CoordinationRow>("SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC")
+  ]);
+
+  const byNormalized = new Map<string, CoordinationRow>();
+  for (const coordination of existingCoordinations.rows) {
+    const key = normalizeComparable(coordination.name);
+    if (!byNormalized.has(key)) byNormalized.set(key, coordination);
+  }
+
+  const options: CoordinationRow[] = [];
+  const selectedIds = new Set<string>();
+
+  for (const user of users.rows) {
+    const candidates = [user.displayName, user.legacyUsername]
+      .map((value) => normalizeText(value || ''))
+      .filter((value) => value && !value.includes('@'));
+    const uniqueCandidates = [...new Map(candidates.map((candidate) => [normalizeComparable(candidate), candidate])).values()];
+    const key = normalizeComparable(uniqueCandidates[0] || user.displayName);
+    let coordination = byNormalized.get(key);
+
+    if (!coordination) {
+      const created = await client.query<CoordinationRow>(
+        'INSERT INTO coordinations (name, status) VALUES ($1, $2) RETURNING id, name',
+        [uniqueCandidates[0] || user.displayName, 'ACTIVO']
+      );
+      coordination = created.rows[0];
+      byNormalized.set(key, coordination);
+    }
+
+    if (!selectedIds.has(coordination.id)) {
+      options.push(coordination);
+      selectedIds.add(coordination.id);
+    }
+  }
+
+  return options.sort((left, right) => left.name.localeCompare(right.name, 'es'));
+}
+
 async function listContextOptions() {
-  const [coordinations, subjects, tabulators] = await Promise.all([
-    query<CoordinationRow>("SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC"),
+  const [subjects, tabulators] = await Promise.all([
     query<OptionRow>("SELECT id, name FROM subjects WHERE status = 'ACTIVO' ORDER BY name ASC"),
     query<TabulatorOptionRow>(
       "SELECT id, name, amount::float8 AS amount, sort_order AS \"sortOrder\" FROM tabulators WHERE status = 'ACTIVO' ORDER BY sort_order ASC, name ASC"
     )
   ]);
 
-  return { coordinations, subjects, tabulators };
+  return { subjects, tabulators };
 }
 
 function buildScheduleSummary(schedules: ScheduleRow[], teachers: TeacherScheduleRow[]) {
@@ -655,7 +711,8 @@ function buildScheduleSummary(schedules: ScheduleRow[], teachers: TeacherSchedul
 async function buildContext(actor: SessionUser, preferredCycleId?: string) {
   const setup = await withTransaction(async (client) => ({
     cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
-    actorCoordination: await loadActorCoordination(client, actor, false)
+    actorCoordination: await loadActorCoordination(client, actor, false),
+    coordinatorOptions: isSystemAdmin(actor) ? await listScheduleCoordinatorOptions(client) : []
   }));
   const [cycles, schedules, teachers, options] = await Promise.all([
     listCycles(),
@@ -665,7 +722,7 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
   ]);
   const coordinations =
     isSystemAdmin(actor)
-      ? options.coordinations
+      ? setup.coordinatorOptions
       : setup.actorCoordination
         ? [setup.actorCoordination]
         : [];

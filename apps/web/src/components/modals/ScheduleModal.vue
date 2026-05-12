@@ -112,8 +112,8 @@ function remainingHoursLabel(value: number, maxHours: number) {
         </label>
         <label>
           <span>Coordinación</span>
-          <select v-if="isAdmin" v-model="form.coordinationId">
-            <option :value="null">{{ form.coordinationName || currentCoordinatorName }}</option>
+          <select v-if="isAdmin" v-model="form.coordinationId" required>
+            <option :value="null" disabled>Selecciona coordinador</option>
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">
               {{ coordination.name }}
             </option>
