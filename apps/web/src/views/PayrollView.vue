@@ -482,181 +482,31 @@ async function exportRun(kind: 'summary' | 'schedules' | 'extras') {
 
 function detailExportHeaders() {
   return [
-    'Origen',
-    'Ciclo',
-    'Quincena',
-    'Estatus',
-    'Docente',
+    'Nombre del docente',
     'Coordinación',
-    'Categoría',
-    'Tipo pago',
-    'Asignatura',
-    'Grupo',
-    'Motivo extra',
-    'Fecha extra',
-    'Tabulador',
-    'Monto tabulador',
-    'Horas L-V',
-    'Horas módulo 1',
-    'Horas módulo 2',
-    'Horas base',
-    'Bruto base',
-    'Faltas h',
+    'Total de horas base con descuento',
+    'Total de horas extra',
+    'Faltas',
     'Retardos',
-    'Retardos h',
-    'Descuento faltas',
-    'Descuento retardos',
-    'Extras incidencia h',
-    'Extras incidencia monto',
-    'Neto base',
-    'Extra externo h',
-    'Extra externo monto',
-    'Total extras h docente',
-    'Total extras monto docente',
-    'Total docente',
-    'Alertas'
+    'Monto base con descuento',
+    'Monto extra',
+    'Total a pagar'
   ];
 }
 
 function detailExportRows() {
-  const preview = currentPreview.value;
-  if (!preview) return [];
-  const detailsByLine = new Map<string, PayrollScheduleDetail[]>();
-  const extrasByLine = new Map<string, PayrollExtraDetail[]>();
-  for (const detail of preview.details) {
-    const current = detailsByLine.get(detail.lineKey) || [];
-    current.push(detail);
-    detailsByLine.set(detail.lineKey, current);
-  }
-  for (const detail of preview.extraDetails) {
-    const current = extrasByLine.get(detail.lineKey) || [];
-    current.push(detail);
-    extrasByLine.set(detail.lineKey, current);
-  }
-
-  const cycleLabel = activeCycle.value ? `${activeCycle.value.periodLabel} - ${activeCycle.value.quarterCode}` : '';
-  const run = selectedRun.value;
-  const periodLabel = preview.input.periodLabel || defaultPeriodLabel();
-  const status = run?.status || 'VISTA PREVIA';
-  const rows: unknown[][] = [];
-
-  for (const line of filteredLines.value) {
-    const scheduleDetails = detailsByLine.get(line.key) || [];
-    const extraDetails = extrasByLine.get(line.key) || [];
-    for (const detail of scheduleDetails) {
-      rows.push([
-        'Horario / incidencia',
-        cycleLabel,
-        periodLabel,
-        status,
-        line.teacherName,
-        line.coordinationName,
-        categoryLabel(line.category),
-        paymentLabel(line.paymentType),
-        detail.subjectName,
-        detail.groupCode,
-        '',
-        '',
-        detail.tabulatorName,
-        detail.tabulatorAmount,
-        detail.weekdayHours,
-        detail.module1Hours,
-        detail.module2Hours,
-        detail.baseHours,
-        detail.grossBaseAmount,
-        detail.absences,
-        detail.delays,
-        detail.delayDiscountHours,
-        detail.absenceDiscountAmount,
-        detail.delayDiscountAmount,
-        detail.scheduleExtraHours,
-        detail.scheduleExtraAmount,
-        detail.baseNetAmount,
-        '',
-        '',
-        line.totalExtraHours,
-        line.totalExtraAmount,
-        line.totalAmount,
-        line.alerts.join(' | ')
-      ]);
-    }
-    for (const detail of extraDetails) {
-      rows.push([
-        'Extra externo',
-        cycleLabel,
-        periodLabel,
-        status,
-        line.teacherName,
-        line.coordinationName,
-        categoryLabel(line.category),
-        paymentLabel(line.paymentType),
-        '',
-        '',
-        detail.reason,
-        formatDate(detail.activityDate),
-        '',
-        detail.tabulatorAmount,
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        detail.hours,
-        detail.totalAmount,
-        line.totalExtraHours,
-        line.totalExtraAmount,
-        line.totalAmount,
-        line.alerts.join(' | ')
-      ]);
-    }
-    if (!scheduleDetails.length && !extraDetails.length) {
-      rows.push([
-        'Resumen docente',
-        cycleLabel,
-        periodLabel,
-        status,
-        line.teacherName,
-        line.coordinationName,
-        categoryLabel(line.category),
-        paymentLabel(line.paymentType),
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        '',
-        line.baseHours,
-        line.grossBaseAmount,
-        line.absences,
-        line.delays,
-        line.delayDiscountHours,
-        line.absenceDiscountAmount,
-        line.delayDiscountAmount,
-        line.scheduleExtraHours,
-        line.scheduleExtraAmount,
-        line.baseNetAmount,
-        line.loggedExtraHours,
-        line.loggedExtraAmount,
-        line.totalExtraHours,
-        line.totalExtraAmount,
-        line.totalAmount,
-        line.alerts.join(' | ')
-      ]);
-    }
-  }
-
-  return rows;
+  if (!currentPreview.value) return [];
+  return filteredLines.value.map((line) => [
+    line.teacherName,
+    line.coordinationName,
+    numberValue(line.baseHours) - numberValue(line.absences) - numberValue(line.delayDiscountHours),
+    line.totalExtraHours,
+    line.absences,
+    line.delays,
+    line.baseNetAmount,
+    line.totalExtraAmount,
+    line.totalAmount
+  ]);
 }
 
 function exportDetailCsv() {
