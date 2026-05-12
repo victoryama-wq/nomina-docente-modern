@@ -486,6 +486,7 @@ function detailExportHeaders() {
     'Coordinación',
     'Total de horas base con descuento',
     'Total de horas extra',
+    'Motivo del extra',
     'Faltas',
     'Retardos',
     'Monto base con descuento',
@@ -495,12 +496,23 @@ function detailExportHeaders() {
 }
 
 function detailExportRows() {
-  if (!currentPreview.value) return [];
+  const preview = currentPreview.value;
+  if (!preview) return [];
+  const extraReasonsByLine = new Map<string, string[]>();
+  for (const detail of preview.extraDetails) {
+    const reason = detail.reason.trim();
+    if (!reason) continue;
+    const current = extraReasonsByLine.get(detail.lineKey) || [];
+    current.push(`${reason} (${formatHours(detail.hours)} h)`);
+    extraReasonsByLine.set(detail.lineKey, current);
+  }
+
   return filteredLines.value.map((line) => [
     line.teacherName,
     line.coordinationName,
     numberValue(line.baseHours) - numberValue(line.absences) - numberValue(line.delayDiscountHours),
     line.totalExtraHours,
+    (extraReasonsByLine.get(line.key) || []).join(' | '),
     line.absences,
     line.delays,
     line.baseNetAmount,
