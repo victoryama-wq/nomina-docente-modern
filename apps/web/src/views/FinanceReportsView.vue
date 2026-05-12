@@ -28,6 +28,7 @@ import {
   type FinanceRun
 } from '../api';
 import ConfirmModal from '../components/modals/ConfirmModal.vue';
+import { moneyLabel } from '../utils/format';
 
 type FinanceTab = 'PAGOS' | 'COORDINACIONES' | 'FISCALES' | 'HISTORICO';
 type PaymentFilter = 'TODOS' | 'LISTO' | 'PENDIENTE';
@@ -339,13 +340,6 @@ const historicalSummary = computed(() => {
     teachers: activeRuns.reduce((sum, run) => sum + Number(run.summary.teachers || 0), 0)
   };
 });
-
-function moneyLabel(value: number | string | null | undefined) {
-  return (Number(value) || 0).toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  });
-}
 
 function formatHours(value: number | string | null | undefined) {
   const numeric = Number(value) || 0;

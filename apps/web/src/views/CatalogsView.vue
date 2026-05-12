@@ -25,6 +25,7 @@ import {
   type SubjectPayload,
   type TabulatorPayload
 } from '../api';
+import { moneyLabel } from '../utils/format';
 
 type CatalogTab = 'subjects' | 'tabulators';
 type StatusFilter = 'TODOS' | 'ACTIVO' | 'INACTIVO';
@@ -93,13 +94,6 @@ function setNotice(type: 'ok' | 'error', text: string) {
 
 function clearNotice() {
   notice.value = null;
-}
-
-function moneyLabel(value: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  }).format(value || 0);
 }
 
 async function loadCatalogs() {

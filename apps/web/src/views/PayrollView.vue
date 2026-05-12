@@ -19,6 +19,7 @@ import {
   type PayrollSummary
 } from '../api';
 import ConfirmModal from '../components/modals/ConfirmModal.vue';
+import { moneyLabel } from '../utils/format';
 
 type AlertFilter = 'TODOS' | 'CON_ALERTAS' | 'SIN_ALERTAS';
 type PayrollViewMode = 'RESUMEN' | 'DETALLE';
@@ -176,13 +177,6 @@ function dateOnly(value: string | null | undefined) {
 function formatHours(value: number | string | null | undefined) {
   const numeric = numberValue(value);
   return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-}
-
-function moneyLabel(value: number | string | null | undefined) {
-  return numberValue(value).toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  });
 }
 
 function formatDateTime(value: string | null | undefined) {

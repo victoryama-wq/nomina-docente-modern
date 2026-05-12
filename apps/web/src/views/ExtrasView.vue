@@ -18,6 +18,7 @@ import {
 } from '../api';
 import ExtraModal from '../components/modals/ExtraModal.vue';
 import ConfirmModal from '../components/modals/ConfirmModal.vue';
+import { moneyLabel } from '../utils/format';
 
 const authStore = useAuthStore();
 type LoadStatusFilter = 'TODOS' | ExtraTeacher['loadStatus'];
@@ -238,13 +239,6 @@ function numberValue(value: number | string | null | undefined) {
 function formatHours(value: number | string | null | undefined) {
   const numeric = numberValue(value);
   return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-}
-
-function moneyLabel(value: number | string | null | undefined) {
-  return numberValue(value).toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  });
 }
 
 function categoryLimitLabel(category: string) {

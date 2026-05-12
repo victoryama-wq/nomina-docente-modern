@@ -12,6 +12,7 @@ import {
   type IncidenceSchedule,
   type IncidenceSummary
 } from '../api';
+import { moneyLabel } from '../utils/format';
 
 const authStore = useAuthStore();
 type IncidenceFilter = 'TODOS' | 'CON' | 'SIN';
@@ -181,13 +182,6 @@ function numberValue(value: number | string | null | undefined) {
 function formatHours(value: number | string | null | undefined) {
   const numeric = numberValue(value);
   return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-}
-
-function moneyLabel(value: number | string | null | undefined) {
-  return numberValue(value).toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  });
 }
 
 function formatDateTime(value: string | null | undefined) {

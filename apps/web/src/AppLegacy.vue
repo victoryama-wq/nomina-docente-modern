@@ -484,7 +484,9 @@ function formatHours(value: number | string | null | undefined) {
 function moneyLabel(value: number | string | null | undefined) {
   return numberValue(value).toLocaleString('es-MX', {
     style: 'currency',
-    currency: 'MXN'
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6
   });
 }
 

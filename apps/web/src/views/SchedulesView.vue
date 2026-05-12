@@ -21,6 +21,7 @@ import {
 } from '../api';
 import ScheduleModal from '../components/modals/ScheduleModal.vue';
 import ConfirmModal from '../components/modals/ConfirmModal.vue';
+import { moneyLabel } from '../utils/format';
 
 const authStore = useAuthStore();
 type ScheduleLoadStatus = 'TODOS' | 'DISPONIBLE' | 'CERCA' | 'LIMITE' | 'EXCEDE';
@@ -230,13 +231,6 @@ function scheduleDayLoads(schedule: Schedule) {
     { key: 'S1', label: 'S1', value: schedule.hoursS1 },
     { key: 'S2', label: 'S2', value: schedule.hoursS2 }
   ];
-}
-
-function moneyLabel(value: number | string | null | undefined) {
-  return numberValue(value).toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  });
 }
 
 function categoryLimitLabel(category: string) {

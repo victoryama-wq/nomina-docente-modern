@@ -995,7 +995,9 @@ function coordinationRows(rows: CoordinationSummary[]): unknown[][] {
 function moneyText(value: number): string {
   return Number(value || 0).toLocaleString('es-MX', {
     style: 'currency',
-    currency: 'MXN'
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6
   });
 }
 

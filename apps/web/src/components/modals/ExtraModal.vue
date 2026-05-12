@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { X, AlertTriangle, Loader2, Save, Search } from 'lucide-vue-next';
 import type { CoordinationOption, CycleOption, ExtraPayload, ExtraTeacher, TabulatorOption } from '../../api';
+import { moneyLabel } from '../../utils/format';
 
 defineProps<{
   show: boolean;
@@ -35,13 +36,6 @@ defineEmits<{
 function formatHours(value: number | string | null | undefined) {
   const numeric = Number(value) || 0;
   return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-}
-
-function moneyLabel(value: number | string | null | undefined) {
-  return (Number(value) || 0).toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  });
 }
 
 function categoryLimitLabel(category: string) {
