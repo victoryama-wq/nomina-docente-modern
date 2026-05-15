@@ -183,7 +183,7 @@ function editTabulator(tabulator: CatalogTabulator) {
   editingTabulatorId.value = tabulator.id;
   tabulatorForm.value = {
     name: tabulator.name,
-    amount: tabulator.amount,
+    amount: Number(tabulator.amount || 0),
     status: tabulator.status,
     sortOrder: tabulator.sortOrder
   };

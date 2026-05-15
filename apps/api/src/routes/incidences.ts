@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { requirePermission } from '../auth.js';
 import { query, withTransaction } from '../db.js';
+import { addHours, hoursToApi, moneyToApi, toHoursDecimal } from '../lib/decimal.js';
 import type { SessionUser } from '../types.js';
 import {
   ensureWorkingCycle,
@@ -11,6 +12,8 @@ import {
   type CoordinationRow,
   type CycleRow
 } from './academic-context.js';
+
+type DecimalString = string;
 
 interface IncidenceScheduleRow {
   id: string;
@@ -33,14 +36,14 @@ interface IncidenceScheduleRow {
   subjectName: string;
   groupCode: string;
   tabulatorName: string;
-  tabulatorAmount: number;
+  tabulatorAmount: DecimalString;
   weekHours: number;
   mod1Hours: number;
   mod2Hours: number;
   baseHours: number;
-  absences: number;
-  delays: number;
-  extraHoursInSchedule: number;
+  absences: DecimalString;
+  delays: DecimalString;
+  extraHoursInSchedule: DecimalString;
   incidenceUpdatedAt: string | null;
   incidenceUpdatedByEmail: string;
   canEdit: boolean;
@@ -71,9 +74,48 @@ const incidenceParamsSchema = z.object({
 const incidencePayloadSchema = z.object({
   scheduleId: z.string().uuid().optional(),
   calendarConfigId: z.string().uuid(),
-  absences: z.coerce.number().min(0).max(999).default(0),
-  delays: z.coerce.number().min(0).max(999).default(0),
-  extraHoursInSchedule: z.coerce.number().min(0).max(999).default(0)
+  absences: z
+    .union([z.string(), z.number()])
+    .optional()
+    .default(0)
+    .transform((value, ctx): string => {
+      try {
+        const decimal = toHoursDecimal(value);
+        if (decimal.lt(0) || decimal.gt(999)) throw new Error();
+        return decimal.toString();
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Captura faltas validas.' });
+        return '0';
+      }
+    }),
+  delays: z
+    .union([z.string(), z.number()])
+    .optional()
+    .default(0)
+    .transform((value, ctx): string => {
+      try {
+        const decimal = toHoursDecimal(value);
+        if (decimal.lt(0) || decimal.gt(999)) throw new Error();
+        return decimal.toString();
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Captura retardos validos.' });
+        return '0';
+      }
+    }),
+  extraHoursInSchedule: z
+    .union([z.string(), z.number()])
+    .optional()
+    .default(0)
+    .transform((value, ctx): string => {
+      try {
+        const decimal = toHoursDecimal(value);
+        if (decimal.lt(0) || decimal.gt(999)) throw new Error();
+        return decimal.toString();
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Captura extras validos.' });
+        return '0';
+      }
+    })
 });
 
 const incidenceBatchSchema = z.object({
@@ -129,14 +171,14 @@ function incidenceSelectSql(whereClause = ''): string {
       s.subject_name AS "subjectName",
       s.group_code AS "groupCode",
       s.tabulator_name AS "tabulatorName",
-      s.tabulator_amount::float8 AS "tabulatorAmount",
+      s.tabulator_amount::text AS "tabulatorAmount",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v)::float8 AS "weekHours",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s1)::float8 AS "mod1Hours",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s1 + s.hours_s2)::float8 AS "baseHours",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s2)::float8 AS "mod2Hours",
-      COALESCE(si.absences, 0)::float8 AS absences,
-      COALESCE(si.delays, 0)::float8 AS delays,
-      COALESCE(si.extra_hours_in_schedule, 0)::float8 AS "extraHoursInSchedule",
+      COALESCE(si.absences, 0)::text AS absences,
+      COALESCE(si.delays, 0)::text AS delays,
+      COALESCE(si.extra_hours_in_schedule, 0)::text AS "extraHoursInSchedule",
       si.updated_at AS "incidenceUpdatedAt",
       COALESCE(updated.email, '') AS "incidenceUpdatedByEmail"
     FROM schedules s
@@ -157,6 +199,10 @@ function applyEditability(
 ): IncidenceScheduleRow[] {
   return rows.map((row) => ({
     ...row,
+    tabulatorAmount: moneyToApi(row.tabulatorAmount),
+    absences: hoursToApi(row.absences),
+    delays: hoursToApi(row.delays),
+    extraHoursInSchedule: hoursToApi(row.extraHoursInSchedule),
     canEdit:
       !row.payrollLocked &&
       row.accessOpen &&
@@ -286,7 +332,14 @@ async function saveIncidenceRow(
           updated_at = now(),
           updated_by = EXCLUDED.updated_by
     `,
-    [scheduleId, payload.calendarConfigId, payload.absences, payload.delays, payload.extraHoursInSchedule, actor.id]
+    [
+      scheduleId,
+      payload.calendarConfigId,
+      hoursToApi(payload.absences),
+      hoursToApi(payload.delays),
+      hoursToApi(payload.extraHoursInSchedule),
+      actor.id
+    ]
   );
 
   const after = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, actorCoordination);
@@ -301,10 +354,15 @@ function buildSummary(rows: IncidenceScheduleRow[]) {
     total: rows.length,
     teachers: teachers.size,
     editable: rows.filter((row) => row.canEdit).length,
-    withIncidences: rows.filter((row) => row.absences > 0 || row.delays > 0 || row.extraHoursInSchedule > 0).length,
-    absences: rows.reduce((sum, row) => sum + row.absences, 0),
-    delays: rows.reduce((sum, row) => sum + row.delays, 0),
-    extraHoursInSchedule: rows.reduce((sum, row) => sum + row.extraHoursInSchedule, 0)
+    withIncidences: rows.filter(
+      (row) =>
+        toHoursDecimal(row.absences).gt(0) ||
+        toHoursDecimal(row.delays).gt(0) ||
+        toHoursDecimal(row.extraHoursInSchedule).gt(0)
+    ).length,
+    absences: hoursToApi(addHours(...rows.map((row) => row.absences))),
+    delays: hoursToApi(addHours(...rows.map((row) => row.delays))),
+    extraHoursInSchedule: hoursToApi(addHours(...rows.map((row) => row.extraHoursInSchedule)))
   };
 }
 

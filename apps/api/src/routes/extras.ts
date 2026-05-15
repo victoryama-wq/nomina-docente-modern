@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { requirePermission } from '../auth.js';
 import { query, withTransaction } from '../db.js';
+import { addHours, addMoney, hoursToApi, moneyToApi, moneyToDb, toHoursDecimal, toMoneyDecimal } from '../lib/decimal.js';
 import type { SessionUser } from '../types.js';
 import {
   categoryMaxHours,
@@ -16,10 +17,12 @@ import {
   type CycleRow
 } from './academic-context.js';
 
+type DecimalString = string;
+
 interface TabulatorRow {
   id: string;
   name: string;
-  amount: number;
+  amount: DecimalString;
   sortOrder: number;
 }
 
@@ -31,7 +34,7 @@ interface ExtraTeacherRow {
   coordinationId: string | null;
   coordinationName: string;
   maxHours: number;
-  suggestedTabulatorAmount: number;
+  suggestedTabulatorAmount: DecimalString;
   scheduleWeekHours: number;
   scheduleMod1Hours: number;
   scheduleMod2Hours: number;
@@ -55,9 +58,9 @@ interface ExtraRow {
   teacherId: string;
   teacherName: string;
   teacherCategory: string;
-  hours: number;
-  tabulatorAmount: number;
-  totalAmount: number;
+  hours: DecimalString;
+  tabulatorAmount: DecimalString;
+  totalAmount: DecimalString;
   reason: string;
   activityDate: string | null;
   reference: string;
@@ -105,9 +108,31 @@ const extraBodySchema = z.object({
   cycleId: z.string().uuid().optional(),
   coordinationId: nullableUuid,
   teacherId: z.string().uuid(),
-  hours: z.coerce.number().positive().max(999),
+  hours: z
+    .union([z.string(), z.number()])
+    .transform((value, ctx): string => {
+      try {
+        const decimal = toHoursDecimal(value);
+        if (decimal.lte(0) || decimal.gt(999)) throw new Error();
+        return decimal.toString();
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Captura horas validas.' });
+        return '0';
+      }
+    }),
   tabulatorId: nullableUuid,
-  tabulatorAmount: z.coerce.number().positive().max(1_000_000),
+  tabulatorAmount: z
+    .union([z.string(), z.number()])
+    .transform((value, ctx): string => {
+      try {
+        const decimal = toMoneyDecimal(value);
+        if (decimal.lte(0) || decimal.gt(1_000_000)) throw new Error();
+        return moneyToDb(decimal);
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Captura un monto de tabulador valido.' });
+        return '0.00';
+      }
+    }),
   reason: z.string().trim().min(1).max(180),
   activityDate: z.preprocess((value) => (value === '' ? undefined : value), z.string().date().optional()),
   reference: z.string().trim().max(120).optional().default(''),
@@ -141,11 +166,11 @@ function isSystemAdmin(actor: SessionUser): boolean {
   return actor.role === 'admin' || actor.isProtectedSuperAdmin;
 }
 
-async function resolveTabulatorAmount(client: PoolClient, body: ExtraBody): Promise<number> {
+async function resolveTabulatorAmount(client: PoolClient, body: ExtraBody): Promise<DecimalString> {
   if (!body.tabulatorId) return body.tabulatorAmount;
 
-  const result = await client.query<{ amount: number }>(
-    "SELECT amount::float8 AS amount FROM tabulators WHERE id = $1 AND status = 'ACTIVO' LIMIT 1",
+  const result = await client.query<{ amount: DecimalString }>(
+    "SELECT amount::text AS amount FROM tabulators WHERE id = $1 AND status = 'ACTIVO' LIMIT 1",
     [body.tabulatorId]
   );
   if (!result.rows[0]) throw new Error('Selecciona un tabulador válido del catálogo.');
@@ -163,7 +188,7 @@ async function loadTeacherForExtra(client: PoolClient, teacherId: string): Promi
         t.coordination_id AS "coordinationId",
         COALESCE(c.name, '') AS "coordinationName",
         CASE t.category WHEN 'V' THEN 35 WHEN 'M' THEN 25 ELSE 15 END::float8 AS "maxHours",
-        0::float8 AS "suggestedTabulatorAmount",
+        '0'::text AS "suggestedTabulatorAmount",
         0::float8 AS "scheduleWeekHours",
         0::float8 AS "scheduleMod1Hours",
         0::float8 AS "scheduleMod2Hours",
@@ -223,9 +248,9 @@ function extraSelectSql(whereClause = ''): string {
       eh.teacher_id AS "teacherId",
       t.full_name AS "teacherName",
       t.category AS "teacherCategory",
-      eh.hours::float8 AS hours,
-      eh.tabulator_amount::float8 AS "tabulatorAmount",
-      (eh.hours * eh.tabulator_amount)::float8 AS "totalAmount",
+      eh.hours::text AS hours,
+      eh.tabulator_amount::text AS "tabulatorAmount",
+      (eh.hours * eh.tabulator_amount)::text AS "totalAmount",
       eh.reason,
       eh.activity_date::text AS "activityDate",
       eh.reference,
@@ -282,6 +307,9 @@ function applyExtraEditability(
 ): ExtraRow[] {
   return rows.map((row) => ({
     ...row,
+    hours: hoursToApi(row.hours),
+    tabulatorAmount: moneyToApi(row.tabulatorAmount),
+    totalAmount: moneyToApi(row.totalAmount),
     canEdit:
       row.cycleStatus !== 'CERRADO' &&
       !row.payrollLocked &&
@@ -360,7 +388,7 @@ async function listExtraTeachers(cycleId: string): Promise<ExtraTeacherRow[]> {
       suggested AS (
         SELECT DISTINCT ON (teacher_id)
           teacher_id,
-          tabulator_amount::float8 AS tabulator_amount
+          tabulator_amount::text AS tabulator_amount
         FROM schedules
         WHERE cycle_id = $1
           AND tabulator_amount > 0
@@ -373,7 +401,7 @@ async function listExtraTeachers(cycleId: string): Promise<ExtraTeacherRow[]> {
         t.status,
         t.coordination_id AS "coordinationId",
         COALESCE(c.name, '') AS "coordinationName",
-        COALESCE(suggested.tabulator_amount, 0)::float8 AS "suggestedTabulatorAmount",
+        COALESCE(suggested.tabulator_amount, '0') AS "suggestedTabulatorAmount",
         COALESCE(sl.week_hours, 0)::float8 AS "scheduleWeekHours",
         COALESCE(sl.mod1_hours, 0)::float8 AS "scheduleMod1Hours",
         COALESCE(sl.mod2_hours, 0)::float8 AS "scheduleMod2Hours",
@@ -410,7 +438,7 @@ async function listExtraTeachers(cycleId: string): Promise<ExtraTeacherRow[]> {
 
 async function listTabulators(): Promise<TabulatorRow[]> {
   return query<TabulatorRow>(
-    "SELECT id, name, amount::float8 AS amount, sort_order AS \"sortOrder\" FROM tabulators WHERE status = 'ACTIVO' ORDER BY sort_order ASC, name ASC"
+    "SELECT id, name, amount::text AS amount, sort_order AS \"sortOrder\" FROM tabulators WHERE status = 'ACTIVO' ORDER BY sort_order ASC, name ASC"
   );
 }
 
@@ -470,8 +498,8 @@ function buildSummary(extras: ExtraRow[], teachers: ExtraTeacherRow[]) {
   const impactedTeachers = new Set(extras.map((extra) => extra.teacherId));
   return {
     total: extras.length,
-    hours: extras.reduce((sum, extra) => sum + extra.hours, 0),
-    amount: extras.reduce((sum, extra) => sum + extra.totalAmount, 0),
+    hours: hoursToApi(addHours(...extras.map((extra) => extra.hours))),
+    amount: moneyToApi(addMoney(...extras.map((extra) => extra.totalAmount))),
     impactedTeachers: impactedTeachers.size,
     overloadedTeachers: teachers.filter((teacher) => teacher.loadStatus === 'EXCEDE').length
   };
@@ -630,8 +658,8 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
           cycle.id,
           coordinationId,
           teacher.id,
-          parsed.data.hours,
-          tabulatorAmount,
+          hoursToApi(parsed.data.hours),
+          moneyToDb(tabulatorAmount),
           normalizeText(parsed.data.reason),
           parsed.data.activityDate || null,
           parsed.data.reference,
@@ -703,8 +731,8 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
           cycle.id,
           coordinationId,
           teacher.id,
-          parsed.data.hours,
-          tabulatorAmount,
+          hoursToApi(parsed.data.hours),
+          moneyToDb(tabulatorAmount),
           normalizeText(parsed.data.reason),
           parsed.data.activityDate || null,
           parsed.data.reference,

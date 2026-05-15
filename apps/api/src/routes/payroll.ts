@@ -3,6 +3,17 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { requireAnyPermission, requirePermissionOrProtectedSuperAdmin } from '../auth.js';
 import { withTransaction } from '../db.js';
+import {
+  addHours,
+  addMoney,
+  hoursToApi,
+  moneyToApi,
+  moneyToDb,
+  multiplyHours,
+  multiplyMoney,
+  toHoursDecimal,
+  toMoneyDecimal
+} from '../lib/decimal.js';
 import type { SessionUser } from '../types.js';
 import {
   ensureWorkingCycle,
@@ -11,6 +22,8 @@ import {
   type CoordinationRow,
   type CycleRow
 } from './academic-context.js';
+
+type DecimalString = string;
 
 interface PayrollContextQuery {
   cycleId?: string;
@@ -64,17 +77,17 @@ interface PayrollScheduleRow {
   subjectName: string;
   groupCode: string;
   tabulatorName: string;
-  tabulatorAmount: number;
-  hoursL: number;
-  hoursM: number;
-  hoursX: number;
-  hoursJ: number;
-  hoursV: number;
-  hoursS1: number;
-  hoursS2: number;
-  absences: number;
-  delays: number;
-  extraHoursInSchedule: number;
+  tabulatorAmount: DecimalString;
+  hoursL: DecimalString;
+  hoursM: DecimalString;
+  hoursX: DecimalString;
+  hoursJ: DecimalString;
+  hoursV: DecimalString;
+  hoursS1: DecimalString;
+  hoursS2: DecimalString;
+  absences: DecimalString;
+  delays: DecimalString;
+  extraHoursInSchedule: DecimalString;
 }
 
 interface PayrollExtraRow {
@@ -89,9 +102,9 @@ interface PayrollExtraRow {
   teacherEmail: string;
   teacherBankDetail: string;
   hasConstancia: boolean;
-  hours: number;
-  tabulatorAmount: number;
-  totalAmount: number;
+  hours: DecimalString;
+  tabulatorAmount: DecimalString;
+  totalAmount: DecimalString;
   reason: string;
   activityDate: string | null;
 }
@@ -127,18 +140,18 @@ interface PayrollSummary {
   lines: number;
   teachers: number;
   coordinations: number;
-  baseHours: number;
-  grossBaseAmount: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  discountAmount: number;
-  scheduleExtraHours: number;
-  scheduleExtraAmount: number;
-  loggedExtraHours: number;
-  loggedExtraAmount: number;
-  totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  baseHours: DecimalString;
+  grossBaseAmount: DecimalString;
+  absenceDiscountAmount: DecimalString;
+  delayDiscountAmount: DecimalString;
+  discountAmount: DecimalString;
+  scheduleExtraHours: DecimalString;
+  scheduleExtraAmount: DecimalString;
+  loggedExtraHours: DecimalString;
+  loggedExtraAmount: DecimalString;
+  totalExtraHours: DecimalString;
+  totalExtraAmount: DecimalString;
+  totalAmount: DecimalString;
   alerts: number;
 }
 
@@ -150,21 +163,21 @@ interface PayrollLine {
   coordinationName: string;
   paymentType: string;
   category: string;
-  baseHours: number;
-  absences: number;
-  delays: number;
-  delayDiscountHours: number;
-  grossBaseAmount: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  baseNetAmount: number;
-  scheduleExtraHours: number;
-  scheduleExtraAmount: number;
-  loggedExtraHours: number;
-  loggedExtraAmount: number;
-  totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  baseHours: DecimalString;
+  absences: DecimalString;
+  delays: DecimalString;
+  delayDiscountHours: DecimalString;
+  grossBaseAmount: DecimalString;
+  absenceDiscountAmount: DecimalString;
+  delayDiscountAmount: DecimalString;
+  baseNetAmount: DecimalString;
+  scheduleExtraHours: DecimalString;
+  scheduleExtraAmount: DecimalString;
+  loggedExtraHours: DecimalString;
+  loggedExtraAmount: DecimalString;
+  totalExtraHours: DecimalString;
+  totalExtraAmount: DecimalString;
+  totalAmount: DecimalString;
   alerts: string[];
   scheduleCount: number;
   loggedExtraCount: number;
@@ -184,20 +197,20 @@ interface PayrollScheduleDetail {
   subjectName: string;
   groupCode: string;
   tabulatorName: string;
-  tabulatorAmount: number;
-  weekdayHours: number;
-  module1Hours: number;
-  module2Hours: number;
-  baseHours: number;
-  grossBaseAmount: number;
-  absences: number;
-  delays: number;
-  delayDiscountHours: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  scheduleExtraHours: number;
-  scheduleExtraAmount: number;
-  baseNetAmount: number;
+  tabulatorAmount: DecimalString;
+  weekdayHours: DecimalString;
+  module1Hours: DecimalString;
+  module2Hours: DecimalString;
+  baseHours: DecimalString;
+  grossBaseAmount: DecimalString;
+  absences: DecimalString;
+  delays: DecimalString;
+  delayDiscountHours: DecimalString;
+  absenceDiscountAmount: DecimalString;
+  delayDiscountAmount: DecimalString;
+  scheduleExtraHours: DecimalString;
+  scheduleExtraAmount: DecimalString;
+  baseNetAmount: DecimalString;
 }
 
 interface PayrollExtraDetail {
@@ -209,9 +222,9 @@ interface PayrollExtraDetail {
   coordinationName: string;
   reason: string;
   activityDate: string | null;
-  hours: number;
-  tabulatorAmount: number;
-  totalAmount: number;
+  hours: DecimalString;
+  tabulatorAmount: DecimalString;
+  totalAmount: DecimalString;
 }
 
 interface PayrollCalculation {
@@ -232,21 +245,21 @@ interface PayrollLineRow {
   coordinationName: string;
   paymentType: string;
   category: string;
-  baseHours: number;
-  absences: number;
-  delays: number;
-  delayDiscountHours: number;
-  grossBaseAmount: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  baseNetAmount: number;
-  scheduleExtraHours: number;
-  scheduleExtraAmount: number;
-  loggedExtraHours: number;
-  loggedExtraAmount: number;
-  totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  baseHours: DecimalString;
+  absences: DecimalString;
+  delays: DecimalString;
+  delayDiscountHours: DecimalString;
+  grossBaseAmount: DecimalString;
+  absenceDiscountAmount: DecimalString;
+  delayDiscountAmount: DecimalString;
+  baseNetAmount: DecimalString;
+  scheduleExtraHours: DecimalString;
+  scheduleExtraAmount: DecimalString;
+  loggedExtraHours: DecimalString;
+  loggedExtraAmount: DecimalString;
+  totalExtraHours: DecimalString;
+  totalExtraAmount: DecimalString;
+  totalAmount: DecimalString;
   alerts: unknown;
 }
 
@@ -525,8 +538,34 @@ function exportFileName(run: PayrollRunRow, suffix: string): string {
   return `nomina-${safePeriod || run.id}-${suffix}.csv`;
 }
 
-function round2(value: number): number {
-  return Number.isFinite(value) ? value : 0;
+function apiHours(value: unknown): DecimalString {
+  return hoursToApi(value as string | number | null | undefined);
+}
+
+function apiMoney(value: unknown): DecimalString {
+  return moneyToApi(value as string | number | null | undefined);
+}
+
+function normalizePayrollSummary(summary: PayrollSummary | Record<string, unknown> | null | undefined): PayrollSummary {
+  const source = summary || {};
+  return {
+    lines: Number(source.lines || 0),
+    teachers: Number(source.teachers || 0),
+    coordinations: Number(source.coordinations || 0),
+    baseHours: apiHours(source.baseHours),
+    grossBaseAmount: apiMoney(source.grossBaseAmount),
+    absenceDiscountAmount: apiMoney(source.absenceDiscountAmount),
+    delayDiscountAmount: apiMoney(source.delayDiscountAmount),
+    discountAmount: apiMoney(source.discountAmount),
+    scheduleExtraHours: apiHours(source.scheduleExtraHours),
+    scheduleExtraAmount: apiMoney(source.scheduleExtraAmount),
+    loggedExtraHours: apiHours(source.loggedExtraHours),
+    loggedExtraAmount: apiMoney(source.loggedExtraAmount),
+    totalExtraHours: apiHours(source.totalExtraHours),
+    totalExtraAmount: apiMoney(source.totalExtraAmount),
+    totalAmount: apiMoney(source.totalAmount),
+    alerts: Number(source.alerts || 0)
+  };
 }
 
 function lineKey(teacherId: string, coordinationId: string): string {
@@ -553,21 +592,21 @@ function emptyLine(row: PayrollScheduleRow | PayrollExtraRow): InternalPayrollLi
     coordinationName: row.coordinationName,
     paymentType: row.teacherPaymentType || '',
     category: row.teacherCategory || '',
-    baseHours: 0,
-    absences: 0,
-    delays: 0,
-    delayDiscountHours: 0,
-    grossBaseAmount: 0,
-    absenceDiscountAmount: 0,
-    delayDiscountAmount: 0,
-    baseNetAmount: 0,
-    scheduleExtraHours: 0,
-    scheduleExtraAmount: 0,
-    loggedExtraHours: 0,
-    loggedExtraAmount: 0,
-    totalExtraHours: 0,
-    totalExtraAmount: 0,
-    totalAmount: 0,
+    baseHours: '0',
+    absences: '0',
+    delays: '0',
+    delayDiscountHours: '0',
+    grossBaseAmount: '0.00',
+    absenceDiscountAmount: '0.00',
+    delayDiscountAmount: '0.00',
+    baseNetAmount: '0.00',
+    scheduleExtraHours: '0',
+    scheduleExtraAmount: '0.00',
+    loggedExtraHours: '0',
+    loggedExtraAmount: '0.00',
+    totalExtraHours: '0',
+    totalExtraAmount: '0.00',
+    totalAmount: '0.00',
     alerts: [],
     storageAlerts: [],
     scheduleCount: 0,
@@ -624,17 +663,17 @@ async function listPayrollSchedules(
         s.subject_name AS "subjectName",
         s.group_code AS "groupCode",
         s.tabulator_name AS "tabulatorName",
-        s.tabulator_amount::float8 AS "tabulatorAmount",
-        s.hours_l::float8 AS "hoursL",
-        s.hours_m::float8 AS "hoursM",
-        s.hours_x::float8 AS "hoursX",
-        s.hours_j::float8 AS "hoursJ",
-        s.hours_v::float8 AS "hoursV",
-        s.hours_s1::float8 AS "hoursS1",
-        s.hours_s2::float8 AS "hoursS2",
-        COALESCE(si.absences, 0)::float8 AS absences,
-        COALESCE(si.delays, 0)::float8 AS delays,
-        COALESCE(si.extra_hours_in_schedule, 0)::float8 AS "extraHoursInSchedule"
+        s.tabulator_amount::text AS "tabulatorAmount",
+        s.hours_l::text AS "hoursL",
+        s.hours_m::text AS "hoursM",
+        s.hours_x::text AS "hoursX",
+        s.hours_j::text AS "hoursJ",
+        s.hours_v::text AS "hoursV",
+        s.hours_s1::text AS "hoursS1",
+        s.hours_s2::text AS "hoursS2",
+        COALESCE(si.absences, 0)::text AS absences,
+        COALESCE(si.delays, 0)::text AS delays,
+        COALESCE(si.extra_hours_in_schedule, 0)::text AS "extraHoursInSchedule"
       FROM schedules s
       JOIN coordinations c ON c.id = s.coordination_id
       JOIN teachers t ON t.id = s.teacher_id
@@ -646,7 +685,20 @@ async function listPayrollSchedules(
     params
   );
 
-  return result.rows;
+  return result.rows.map((row) => ({
+    ...row,
+    tabulatorAmount: apiMoney(row.tabulatorAmount),
+    hoursL: apiHours(row.hoursL),
+    hoursM: apiHours(row.hoursM),
+    hoursX: apiHours(row.hoursX),
+    hoursJ: apiHours(row.hoursJ),
+    hoursV: apiHours(row.hoursV),
+    hoursS1: apiHours(row.hoursS1),
+    hoursS2: apiHours(row.hoursS2),
+    absences: apiHours(row.absences),
+    delays: apiHours(row.delays),
+    extraHoursInSchedule: apiHours(row.extraHoursInSchedule)
+  }));
 }
 
 async function listPayrollExtras(
@@ -685,9 +737,9 @@ async function listPayrollExtras(
             AND d.document_type = 'CONSTANCIA_FISCAL'
             AND d.is_current = true
         ) AS "hasConstancia",
-        eh.hours::float8 AS hours,
-        eh.tabulator_amount::float8 AS "tabulatorAmount",
-        (eh.hours * eh.tabulator_amount)::float8 AS "totalAmount",
+        eh.hours::text AS hours,
+        eh.tabulator_amount::text AS "tabulatorAmount",
+        (eh.hours * eh.tabulator_amount)::text AS "totalAmount",
         eh.reason,
         eh.activity_date AS "activityDate"
       FROM extra_hours eh
@@ -701,7 +753,12 @@ async function listPayrollExtras(
     params
   );
 
-  return result.rows;
+  return result.rows.map((detail) => ({
+    ...detail,
+    hours: apiHours(detail.hours),
+    tabulatorAmount: apiMoney(detail.tabulatorAmount),
+    totalAmount: apiMoney(detail.totalAmount)
+  }));
 }
 
 async function listCalendarConfigs(client: PoolClient, cycleId: string): Promise<PayrollCalendarConfigRow[]> {
@@ -829,32 +886,33 @@ function calculateSchedule(
   calendar: PayrollCalendar,
   line: InternalPayrollLine
 ): PayrollScheduleDetail {
-  const weekdayHours =
-    row.hoursL * calendar.dayCounts.L +
-    row.hoursM * calendar.dayCounts.M +
-    row.hoursX * calendar.dayCounts.X +
-    row.hoursJ * calendar.dayCounts.J +
-    row.hoursV * calendar.dayCounts.V;
-  const module1Hours = row.hoursS1 * calendar.module1Saturdays;
-  const module2Hours = row.hoursS2 * calendar.module2Saturdays;
-  const baseHours = weekdayHours + module1Hours + module2Hours;
-  const grossBaseAmount = baseHours * row.tabulatorAmount;
-  const delayDiscountHours = row.delays * 0.5;
-  const absenceDiscountAmount = row.absences * row.tabulatorAmount;
-  const delayDiscountAmount = delayDiscountHours * row.tabulatorAmount;
-  const baseNetAmount = grossBaseAmount - absenceDiscountAmount - delayDiscountAmount;
-  const scheduleExtraAmount = row.extraHoursInSchedule * row.tabulatorAmount;
+  const weekdayHours = addHours(
+    multiplyHours(row.hoursL, calendar.dayCounts.L),
+    multiplyHours(row.hoursM, calendar.dayCounts.M),
+    multiplyHours(row.hoursX, calendar.dayCounts.X),
+    multiplyHours(row.hoursJ, calendar.dayCounts.J),
+    multiplyHours(row.hoursV, calendar.dayCounts.V)
+  );
+  const module1Hours = multiplyHours(row.hoursS1, calendar.module1Saturdays);
+  const module2Hours = multiplyHours(row.hoursS2, calendar.module2Saturdays);
+  const baseHours = addHours(weekdayHours, module1Hours, module2Hours);
+  const grossBaseAmount = multiplyMoney(baseHours, row.tabulatorAmount);
+  const delayDiscountHours = multiplyHours(row.delays, '0.5');
+  const absenceDiscountAmount = multiplyMoney(row.absences, row.tabulatorAmount);
+  const delayDiscountAmount = multiplyMoney(delayDiscountHours, row.tabulatorAmount);
+  const baseNetAmount = toMoneyDecimal(grossBaseAmount).minus(absenceDiscountAmount).minus(delayDiscountAmount);
+  const scheduleExtraAmount = multiplyMoney(row.extraHoursInSchedule, row.tabulatorAmount);
 
-  line.baseHours += baseHours;
-  line.absences += row.absences;
-  line.delays += row.delays;
-  line.delayDiscountHours += delayDiscountHours;
-  line.grossBaseAmount += grossBaseAmount;
-  line.absenceDiscountAmount += absenceDiscountAmount;
-  line.delayDiscountAmount += delayDiscountAmount;
-  line.baseNetAmount += baseNetAmount;
-  line.scheduleExtraHours += row.extraHoursInSchedule;
-  line.scheduleExtraAmount += scheduleExtraAmount;
+  line.baseHours = apiHours(addHours(line.baseHours, baseHours));
+  line.absences = apiHours(addHours(line.absences, row.absences));
+  line.delays = apiHours(addHours(line.delays, row.delays));
+  line.delayDiscountHours = apiHours(addHours(line.delayDiscountHours, delayDiscountHours));
+  line.grossBaseAmount = apiMoney(addMoney(line.grossBaseAmount, grossBaseAmount));
+  line.absenceDiscountAmount = apiMoney(addMoney(line.absenceDiscountAmount, absenceDiscountAmount));
+  line.delayDiscountAmount = apiMoney(addMoney(line.delayDiscountAmount, delayDiscountAmount));
+  line.baseNetAmount = apiMoney(addMoney(line.baseNetAmount, baseNetAmount));
+  line.scheduleExtraHours = apiHours(addHours(line.scheduleExtraHours, row.extraHoursInSchedule));
+  line.scheduleExtraAmount = apiMoney(addMoney(line.scheduleExtraAmount, scheduleExtraAmount));
   line.scheduleCount += 1;
 
   return {
@@ -867,26 +925,27 @@ function calculateSchedule(
     subjectName: row.subjectName,
     groupCode: row.groupCode,
     tabulatorName: row.tabulatorName,
-    tabulatorAmount: row.tabulatorAmount,
-    weekdayHours,
-    module1Hours,
-    module2Hours,
-    baseHours,
-    grossBaseAmount,
-    absences: row.absences,
-    delays: row.delays,
-    delayDiscountHours,
-    absenceDiscountAmount,
-    delayDiscountAmount,
-    scheduleExtraHours: row.extraHoursInSchedule,
-    scheduleExtraAmount,
-    baseNetAmount
+    tabulatorAmount: apiMoney(row.tabulatorAmount),
+    weekdayHours: apiHours(weekdayHours),
+    module1Hours: apiHours(module1Hours),
+    module2Hours: apiHours(module2Hours),
+    baseHours: apiHours(baseHours),
+    grossBaseAmount: apiMoney(grossBaseAmount),
+    absences: apiHours(row.absences),
+    delays: apiHours(row.delays),
+    delayDiscountHours: apiHours(delayDiscountHours),
+    absenceDiscountAmount: apiMoney(absenceDiscountAmount),
+    delayDiscountAmount: apiMoney(delayDiscountAmount),
+    scheduleExtraHours: apiHours(row.extraHoursInSchedule),
+    scheduleExtraAmount: apiMoney(scheduleExtraAmount),
+    baseNetAmount: apiMoney(baseNetAmount)
   };
 }
 
 function applyExtra(row: PayrollExtraRow, line: InternalPayrollLine): PayrollExtraDetail {
-  line.loggedExtraHours += row.hours;
-  line.loggedExtraAmount += row.totalAmount;
+  const totalAmount = multiplyMoney(row.hours, row.tabulatorAmount);
+  line.loggedExtraHours = apiHours(addHours(line.loggedExtraHours, row.hours));
+  line.loggedExtraAmount = apiMoney(addMoney(line.loggedExtraAmount, totalAmount));
   line.loggedExtraCount += 1;
   addUniqueAlert(line.storageAlerts, `extra:${row.id}`);
 
@@ -899,37 +958,37 @@ function applyExtra(row: PayrollExtraRow, line: InternalPayrollLine): PayrollExt
     coordinationName: row.coordinationName,
     reason: row.reason,
     activityDate: row.activityDate,
-    hours: row.hours,
-    tabulatorAmount: row.tabulatorAmount,
-    totalAmount: row.totalAmount
+    hours: apiHours(row.hours),
+    tabulatorAmount: apiMoney(row.tabulatorAmount),
+    totalAmount: apiMoney(totalAmount)
   };
 }
 
 function finalizeLine(line: InternalPayrollLine): InternalPayrollLine {
-  line.totalExtraHours = line.scheduleExtraHours + line.loggedExtraHours;
-  line.totalExtraAmount = line.scheduleExtraAmount + line.loggedExtraAmount;
-  line.totalAmount = line.baseNetAmount + line.totalExtraAmount;
+  line.totalExtraHours = apiHours(addHours(line.scheduleExtraHours, line.loggedExtraHours));
+  line.totalExtraAmount = apiMoney(addMoney(line.scheduleExtraAmount, line.loggedExtraAmount));
+  line.totalAmount = apiMoney(addMoney(line.baseNetAmount, line.totalExtraAmount));
 
-  if (line.totalAmount < 0) addUniqueAlert(line.storageAlerts, 'Pago neto negativo');
+  if (toMoneyDecimal(line.totalAmount).isNegative()) addUniqueAlert(line.storageAlerts, 'Pago neto negativo');
   if (!line.scheduleCount && line.loggedExtraCount) addUniqueAlert(line.storageAlerts, 'Solo extras en la quincena');
 
   const rounded: InternalPayrollLine = {
     ...line,
-    baseHours: round2(line.baseHours),
-    absences: round2(line.absences),
-    delays: round2(line.delays),
-    delayDiscountHours: round2(line.delayDiscountHours),
-    grossBaseAmount: round2(line.grossBaseAmount),
-    absenceDiscountAmount: round2(line.absenceDiscountAmount),
-    delayDiscountAmount: round2(line.delayDiscountAmount),
-    baseNetAmount: round2(line.baseNetAmount),
-    scheduleExtraHours: round2(line.scheduleExtraHours),
-    scheduleExtraAmount: round2(line.scheduleExtraAmount),
-    loggedExtraHours: round2(line.loggedExtraHours),
-    loggedExtraAmount: round2(line.loggedExtraAmount),
-    totalExtraHours: round2(line.totalExtraHours),
-    totalExtraAmount: round2(line.totalExtraAmount),
-    totalAmount: round2(line.totalAmount),
+    baseHours: apiHours(line.baseHours),
+    absences: apiHours(line.absences),
+    delays: apiHours(line.delays),
+    delayDiscountHours: apiHours(line.delayDiscountHours),
+    grossBaseAmount: apiMoney(line.grossBaseAmount),
+    absenceDiscountAmount: apiMoney(line.absenceDiscountAmount),
+    delayDiscountAmount: apiMoney(line.delayDiscountAmount),
+    baseNetAmount: apiMoney(line.baseNetAmount),
+    scheduleExtraHours: apiHours(line.scheduleExtraHours),
+    scheduleExtraAmount: apiMoney(line.scheduleExtraAmount),
+    loggedExtraHours: apiHours(line.loggedExtraHours),
+    loggedExtraAmount: apiMoney(line.loggedExtraAmount),
+    totalExtraHours: apiHours(line.totalExtraHours),
+    totalExtraAmount: apiMoney(line.totalExtraAmount),
+    totalAmount: apiMoney(line.totalAmount),
     alerts: publicAlerts(line.storageAlerts),
     storageAlerts: line.storageAlerts
   };
@@ -944,18 +1003,20 @@ function buildSummary(lines: InternalPayrollLine[]): PayrollSummary {
     lines: lines.length,
     teachers: teachers.size,
     coordinations: coordinations.size,
-    baseHours: round2(lines.reduce((sum, line) => sum + line.baseHours, 0)),
-    grossBaseAmount: round2(lines.reduce((sum, line) => sum + line.grossBaseAmount, 0)),
-    absenceDiscountAmount: round2(lines.reduce((sum, line) => sum + line.absenceDiscountAmount, 0)),
-    delayDiscountAmount: round2(lines.reduce((sum, line) => sum + line.delayDiscountAmount, 0)),
-    discountAmount: round2(lines.reduce((sum, line) => sum + line.absenceDiscountAmount + line.delayDiscountAmount, 0)),
-    scheduleExtraHours: round2(lines.reduce((sum, line) => sum + line.scheduleExtraHours, 0)),
-    scheduleExtraAmount: round2(lines.reduce((sum, line) => sum + line.scheduleExtraAmount, 0)),
-    loggedExtraHours: round2(lines.reduce((sum, line) => sum + line.loggedExtraHours, 0)),
-    loggedExtraAmount: round2(lines.reduce((sum, line) => sum + line.loggedExtraAmount, 0)),
-    totalExtraHours: round2(lines.reduce((sum, line) => sum + line.totalExtraHours, 0)),
-    totalExtraAmount: round2(lines.reduce((sum, line) => sum + line.totalExtraAmount, 0)),
-    totalAmount: round2(lines.reduce((sum, line) => sum + line.totalAmount, 0)),
+    baseHours: apiHours(addHours(...lines.map((line) => line.baseHours))),
+    grossBaseAmount: apiMoney(addMoney(...lines.map((line) => line.grossBaseAmount))),
+    absenceDiscountAmount: apiMoney(addMoney(...lines.map((line) => line.absenceDiscountAmount))),
+    delayDiscountAmount: apiMoney(addMoney(...lines.map((line) => line.delayDiscountAmount))),
+    discountAmount: apiMoney(
+      addMoney(...lines.flatMap((line) => [line.absenceDiscountAmount, line.delayDiscountAmount]))
+    ),
+    scheduleExtraHours: apiHours(addHours(...lines.map((line) => line.scheduleExtraHours))),
+    scheduleExtraAmount: apiMoney(addMoney(...lines.map((line) => line.scheduleExtraAmount))),
+    loggedExtraHours: apiHours(addHours(...lines.map((line) => line.loggedExtraHours))),
+    loggedExtraAmount: apiMoney(addMoney(...lines.map((line) => line.loggedExtraAmount))),
+    totalExtraHours: apiHours(addHours(...lines.map((line) => line.totalExtraHours))),
+    totalExtraAmount: apiMoney(addMoney(...lines.map((line) => line.totalExtraAmount))),
+    totalAmount: apiMoney(addMoney(...lines.map((line) => line.totalAmount))),
     alerts: lines.reduce((sum, line) => sum + line.alerts.length, 0)
   };
 }
@@ -1004,20 +1065,8 @@ async function calculatePayroll(client: PoolClient, actor: SessionUser, body: Pa
     calendar,
     summary: buildSummary(lines),
     lines,
-    details: details.map((detail) => ({
-      ...detail,
-      weekdayHours: round2(detail.weekdayHours),
-      module1Hours: round2(detail.module1Hours),
-      module2Hours: round2(detail.module2Hours),
-      baseHours: round2(detail.baseHours),
-      grossBaseAmount: round2(detail.grossBaseAmount),
-      delayDiscountHours: round2(detail.delayDiscountHours),
-      absenceDiscountAmount: round2(detail.absenceDiscountAmount),
-      delayDiscountAmount: round2(detail.delayDiscountAmount),
-      scheduleExtraAmount: round2(detail.scheduleExtraAmount),
-      baseNetAmount: round2(detail.baseNetAmount)
-    })),
-    extraDetails: extraDetails.map((detail) => ({ ...detail, totalAmount: round2(detail.totalAmount) }))
+    details,
+    extraDetails
   };
 }
 
@@ -1061,7 +1110,7 @@ async function listRecentRuns(client: PoolClient, cycleId: string): Promise<Payr
     `,
     [cycleId]
   );
-  return result.rows;
+  return result.rows.map((run) => ({ ...run, summary: normalizePayrollSummary(run.summary) }));
 }
 
 async function loadPayrollRun(client: PoolClient, id: string): Promise<PayrollRunRow | null> {
@@ -1086,7 +1135,8 @@ async function loadPayrollRun(client: PoolClient, id: string): Promise<PayrollRu
     `,
     [id]
   );
-  return result.rows[0] || null;
+  const run = result.rows[0];
+  return run ? { ...run, summary: normalizePayrollSummary(run.summary) } : null;
 }
 
 async function loadPayrollLines(
@@ -1109,21 +1159,21 @@ async function loadPayrollLines(
         pl.coordination_name_snapshot AS "coordinationName",
         pl.payment_type_snapshot AS "paymentType",
         pl.category_snapshot AS category,
-        pl.base_hours::float8 AS "baseHours",
-        pl.absences::float8 AS absences,
-        pl.delays::float8 AS delays,
-        pl.delay_discount_hours::float8 AS "delayDiscountHours",
-        pl.gross_base_amount::float8 AS "grossBaseAmount",
-        pl.absence_discount_amount::float8 AS "absenceDiscountAmount",
-        pl.delay_discount_amount::float8 AS "delayDiscountAmount",
-        pl.base_net_amount::float8 AS "baseNetAmount",
-        pl.schedule_extra_hours::float8 AS "scheduleExtraHours",
-        pl.schedule_extra_amount::float8 AS "scheduleExtraAmount",
-        pl.logged_extra_hours::float8 AS "loggedExtraHours",
-        pl.logged_extra_amount::float8 AS "loggedExtraAmount",
-        pl.total_extra_hours::float8 AS "totalExtraHours",
-        pl.total_extra_amount::float8 AS "totalExtraAmount",
-        pl.total_amount::float8 AS "totalAmount",
+        pl.base_hours::text AS "baseHours",
+        pl.absences::text AS absences,
+        pl.delays::text AS delays,
+        pl.delay_discount_hours::text AS "delayDiscountHours",
+        pl.gross_base_amount::text AS "grossBaseAmount",
+        pl.absence_discount_amount::text AS "absenceDiscountAmount",
+        pl.delay_discount_amount::text AS "delayDiscountAmount",
+        pl.base_net_amount::text AS "baseNetAmount",
+        pl.schedule_extra_hours::text AS "scheduleExtraHours",
+        pl.schedule_extra_amount::text AS "scheduleExtraAmount",
+        pl.logged_extra_hours::text AS "loggedExtraHours",
+        pl.logged_extra_amount::text AS "loggedExtraAmount",
+        pl.total_extra_hours::text AS "totalExtraHours",
+        pl.total_extra_amount::text AS "totalExtraAmount",
+        pl.total_amount::text AS "totalAmount",
         pl.alerts
       FROM payroll_lines pl
       WHERE pl.payroll_run_id = $1
@@ -1143,21 +1193,21 @@ async function loadPayrollLines(
       coordinationName: row.coordinationName,
       paymentType: row.paymentType,
       category: row.category,
-      baseHours: row.baseHours,
-      absences: row.absences,
-      delays: row.delays,
-      delayDiscountHours: row.delayDiscountHours,
-      grossBaseAmount: row.grossBaseAmount,
-      absenceDiscountAmount: row.absenceDiscountAmount,
-      delayDiscountAmount: row.delayDiscountAmount,
-      baseNetAmount: row.baseNetAmount,
-      scheduleExtraHours: row.scheduleExtraHours,
-      scheduleExtraAmount: row.scheduleExtraAmount,
-      loggedExtraHours: row.loggedExtraHours,
-      loggedExtraAmount: row.loggedExtraAmount,
-      totalExtraHours: row.totalExtraHours,
-      totalExtraAmount: row.totalExtraAmount,
-      totalAmount: row.totalAmount,
+      baseHours: apiHours(row.baseHours),
+      absences: apiHours(row.absences),
+      delays: apiHours(row.delays),
+      delayDiscountHours: apiHours(row.delayDiscountHours),
+      grossBaseAmount: apiMoney(row.grossBaseAmount),
+      absenceDiscountAmount: apiMoney(row.absenceDiscountAmount),
+      delayDiscountAmount: apiMoney(row.delayDiscountAmount),
+      baseNetAmount: apiMoney(row.baseNetAmount),
+      scheduleExtraHours: apiHours(row.scheduleExtraHours),
+      scheduleExtraAmount: apiMoney(row.scheduleExtraAmount),
+      loggedExtraHours: apiHours(row.loggedExtraHours),
+      loggedExtraAmount: apiMoney(row.loggedExtraAmount),
+      totalExtraHours: apiHours(row.totalExtraHours),
+      totalExtraAmount: apiMoney(row.totalExtraAmount),
+      totalAmount: apiMoney(row.totalAmount),
       alerts: publicAlerts(alerts),
       scheduleCount: 0,
       loggedExtraCount: 0
@@ -1187,20 +1237,20 @@ async function loadPayrollScheduleDetails(
         subject_name_snapshot AS "subjectName",
         group_code_snapshot AS "groupCode",
         tabulator_name_snapshot AS "tabulatorName",
-        tabulator_amount::float8 AS "tabulatorAmount",
-        weekday_hours::float8 AS "weekdayHours",
-        module1_hours::float8 AS "module1Hours",
-        module2_hours::float8 AS "module2Hours",
-        base_hours::float8 AS "baseHours",
-        gross_base_amount::float8 AS "grossBaseAmount",
-        absences::float8 AS absences,
-        delays::float8 AS delays,
-        delay_discount_hours::float8 AS "delayDiscountHours",
-        absence_discount_amount::float8 AS "absenceDiscountAmount",
-        delay_discount_amount::float8 AS "delayDiscountAmount",
-        schedule_extra_hours::float8 AS "scheduleExtraHours",
-        schedule_extra_amount::float8 AS "scheduleExtraAmount",
-        base_net_amount::float8 AS "baseNetAmount"
+        tabulator_amount::text AS "tabulatorAmount",
+        weekday_hours::text AS "weekdayHours",
+        module1_hours::text AS "module1Hours",
+        module2_hours::text AS "module2Hours",
+        base_hours::text AS "baseHours",
+        gross_base_amount::text AS "grossBaseAmount",
+        absences::text AS absences,
+        delays::text AS delays,
+        delay_discount_hours::text AS "delayDiscountHours",
+        absence_discount_amount::text AS "absenceDiscountAmount",
+        delay_discount_amount::text AS "delayDiscountAmount",
+        schedule_extra_hours::text AS "scheduleExtraHours",
+        schedule_extra_amount::text AS "scheduleExtraAmount",
+        base_net_amount::text AS "baseNetAmount"
       FROM payroll_schedule_details
       WHERE payroll_run_id = $1
         ${visibility}
@@ -1232,9 +1282,9 @@ async function loadPayrollExtraDetails(
         coordination_name_snapshot AS "coordinationName",
         reason_snapshot AS reason,
         activity_date AS "activityDate",
-        hours::float8 AS hours,
-        tabulator_amount::float8 AS "tabulatorAmount",
-        total_amount::float8 AS "totalAmount"
+        hours::text AS hours,
+        tabulator_amount::text AS "tabulatorAmount",
+        total_amount::text AS "totalAmount"
       FROM payroll_extra_details
       WHERE payroll_run_id = $1
         ${visibility}
@@ -1479,21 +1529,21 @@ async function savePayrollRun(client: PoolClient, actor: SessionUser, calculatio
         line.coordinationName,
         line.paymentType,
         line.category,
-        line.baseHours,
-        line.absences,
-        line.delays,
-        line.delayDiscountHours,
-        line.grossBaseAmount,
-        line.absenceDiscountAmount,
-        line.delayDiscountAmount,
-        line.baseNetAmount,
-        line.scheduleExtraHours,
-        line.scheduleExtraAmount,
-        line.loggedExtraHours,
-        line.loggedExtraAmount,
-        line.totalExtraHours,
-        line.totalExtraAmount,
-        line.totalAmount,
+        hoursToApi(line.baseHours),
+        hoursToApi(line.absences),
+        hoursToApi(line.delays),
+        hoursToApi(line.delayDiscountHours),
+        moneyToDb(line.grossBaseAmount),
+        moneyToDb(line.absenceDiscountAmount),
+        moneyToDb(line.delayDiscountAmount),
+        moneyToDb(line.baseNetAmount),
+        hoursToApi(line.scheduleExtraHours),
+        moneyToDb(line.scheduleExtraAmount),
+        hoursToApi(line.loggedExtraHours),
+        moneyToDb(line.loggedExtraAmount),
+        hoursToApi(line.totalExtraHours),
+        moneyToDb(line.totalExtraAmount),
+        moneyToDb(line.totalAmount),
         JSON.stringify(line.storageAlerts)
       ]
     );
@@ -1545,20 +1595,20 @@ async function savePayrollRun(client: PoolClient, actor: SessionUser, calculatio
         detail.subjectName,
         detail.groupCode,
         detail.tabulatorName,
-        detail.tabulatorAmount,
-        detail.weekdayHours,
-        detail.module1Hours,
-        detail.module2Hours,
-        detail.baseHours,
-        detail.grossBaseAmount,
-        detail.absences,
-        detail.delays,
-        detail.delayDiscountHours,
-        detail.absenceDiscountAmount,
-        detail.delayDiscountAmount,
-        detail.scheduleExtraHours,
-        detail.scheduleExtraAmount,
-        detail.baseNetAmount,
+        moneyToDb(detail.tabulatorAmount),
+        hoursToApi(detail.weekdayHours),
+        hoursToApi(detail.module1Hours),
+        hoursToApi(detail.module2Hours),
+        hoursToApi(detail.baseHours),
+        moneyToDb(detail.grossBaseAmount),
+        hoursToApi(detail.absences),
+        hoursToApi(detail.delays),
+        hoursToApi(detail.delayDiscountHours),
+        moneyToDb(detail.absenceDiscountAmount),
+        moneyToDb(detail.delayDiscountAmount),
+        hoursToApi(detail.scheduleExtraHours),
+        moneyToDb(detail.scheduleExtraAmount),
+        moneyToDb(detail.baseNetAmount),
         JSON.stringify(detail)
       ]
     );
@@ -1592,9 +1642,9 @@ async function savePayrollRun(client: PoolClient, actor: SessionUser, calculatio
         detail.coordinationName,
         detail.reason,
         detail.activityDate,
-        detail.hours,
-        detail.tabulatorAmount,
-        detail.totalAmount,
+        hoursToApi(detail.hours),
+        moneyToDb(detail.tabulatorAmount),
+        moneyToDb(detail.totalAmount),
         JSON.stringify(detail)
       ]
     );

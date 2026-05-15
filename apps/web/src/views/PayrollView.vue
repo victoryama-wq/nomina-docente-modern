@@ -31,17 +31,17 @@ const zeroSummary = (): PayrollSummary => ({
   teachers: 0,
   coordinations: 0,
   baseHours: 0,
-  grossBaseAmount: 0,
-  absenceDiscountAmount: 0,
-  delayDiscountAmount: 0,
-  discountAmount: 0,
+  grossBaseAmount: '0.00',
+  absenceDiscountAmount: '0.00',
+  delayDiscountAmount: '0.00',
+  discountAmount: '0.00',
   scheduleExtraHours: 0,
-  scheduleExtraAmount: 0,
+  scheduleExtraAmount: '0.00',
   loggedExtraHours: 0,
-  loggedExtraAmount: 0,
+  loggedExtraAmount: '0.00',
   totalExtraHours: 0,
-  totalExtraAmount: 0,
-  totalAmount: 0,
+  totalExtraAmount: '0.00',
+  totalAmount: '0.00',
   alerts: 0
 });
 
@@ -130,9 +130,9 @@ const selectedLineDetailTotals = computed(() => {
     schedules: schedules.length,
     extras: extras.length,
     scheduleBaseHours: schedules.reduce((sum, detail) => sum + numberValue(detail.baseHours), 0),
-    scheduleBaseAmount: schedules.reduce((sum, detail) => sum + numberValue(detail.baseNetAmount), 0),
+    scheduleBaseAmount: schedules.reduce((sum, detail) => moneyAdd(sum, detail.baseNetAmount), '0.00'),
     extraHours: extras.reduce((sum, detail) => sum + numberValue(detail.hours), 0),
-    extraAmount: extras.reduce((sum, detail) => sum + numberValue(detail.totalAmount), 0)
+    extraAmount: extras.reduce((sum, detail) => moneyAdd(sum, detail.totalAmount), '0.00')
   };
 });
 
@@ -168,6 +168,27 @@ const canExportPayrollRun = computed(() => !isGlobalPayrollReadOnly.value);
 
 function numberValue(value: number | string | null | undefined) {
   return Number(value) || 0;
+}
+
+function moneyCents(value: number | string | null | undefined): bigint {
+  const raw = value === null || value === undefined || value === '' ? '0' : String(value).trim();
+  const negative = raw.startsWith('-');
+  const unsigned = negative ? raw.slice(1) : raw;
+  const [integer = '0', decimal = ''] = unsigned.split('.');
+  const cents = BigInt((integer.replace(/\D/g, '') || '0')) * 100n + BigInt(decimal.replace(/\D/g, '').padEnd(2, '0').slice(0, 2) || '0');
+  return negative ? -cents : cents;
+}
+
+function moneyFromCents(cents: bigint): string {
+  const negative = cents < 0n;
+  const absolute = negative ? -cents : cents;
+  const integer = absolute / 100n;
+  const decimal = (absolute % 100n).toString().padStart(2, '0');
+  return `${negative ? '-' : ''}${integer.toString()}.${decimal}`;
+}
+
+function moneyAdd(...values: Array<number | string | null | undefined>): string {
+  return moneyFromCents(values.reduce((sum, value) => sum + moneyCents(value), 0n));
 }
 
 function dateOnly(value: string | null | undefined) {
@@ -792,7 +813,7 @@ onMounted(() => {
                   <small>Neto base {{ moneyLabel(line.baseNetAmount) }}</small>
                 </td>
                 <td>
-                  <strong>{{ moneyLabel(line.absenceDiscountAmount + line.delayDiscountAmount) }}</strong>
+                  <strong>{{ moneyLabel(moneyAdd(line.absenceDiscountAmount, line.delayDiscountAmount)) }}</strong>
                   <span>Faltas {{ formatHours(line.absences) }} h</span>
                   <small>Retardos {{ formatHours(line.delays) }} / {{ formatHours(line.delayDiscountHours) }} h</small>
                 </td>

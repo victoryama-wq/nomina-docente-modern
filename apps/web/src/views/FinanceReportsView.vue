@@ -73,16 +73,16 @@ const selectedCoordinationId = ref('');
 const pendingStatus = ref<WorkflowTargetStatus | null>(null);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
-const zeroSummary = () => ({
+const zeroSummary = (): FinanceContext['summary'] => ({
   lines: 0,
   teachers: 0,
   coordinations: 0,
   baseHours: 0,
-  grossBaseAmount: 0,
-  discountAmount: 0,
+  grossBaseAmount: '0.00',
+  discountAmount: '0.00',
   totalExtraHours: 0,
-  totalExtraAmount: 0,
-  totalAmount: 0,
+  totalExtraAmount: '0.00',
+  totalAmount: '0.00',
   alerts: 0,
   fiscalPending: 0,
   readyPayments: 0
@@ -122,7 +122,7 @@ const selectedCoordinationExtraDetails = computed(() =>
 
 const cashLines = computed(() => lines.value.filter((line) => line.paymentType === 'E'));
 
-const cashAmount = computed(() => cashLines.value.reduce((sum, line) => sum + Number(line.totalAmount || 0), 0));
+const cashAmount = computed(() => cashLines.value.reduce((sum, line) => moneyAdd(sum, line.totalAmount), '0.00'));
 
 const canUseFinanceWorkflow = computed(
   () => authStore.isAdmin || authStore.canFinalizePayroll || authStore.session?.permissions?.includes('finance.view') || false
@@ -212,13 +212,13 @@ const workflowConfirmDetails = computed(() => {
 const readyAmount = computed(() =>
   lines.value
     .filter((line) => line.paymentStatus === 'LISTO')
-    .reduce((sum, line) => sum + Number(line.totalAmount || 0), 0)
+    .reduce((sum, line) => moneyAdd(sum, line.totalAmount), '0.00')
 );
 
 const pendingAmount = computed(() =>
   lines.value
     .filter((line) => line.paymentStatus === 'PENDIENTE')
-    .reduce((sum, line) => sum + Number(line.totalAmount || 0), 0)
+    .reduce((sum, line) => moneyAdd(sum, line.totalAmount), '0.00')
 );
 
 const searchPlaceholder = computed(() =>
@@ -233,13 +233,13 @@ const paymentTypeSummary = computed(() => {
     label: string;
     lines: number;
     teachers: number;
-    totalAmount: number;
+    totalAmount: string;
     ready: number;
     pending: number;
   }> = [
-    { code: '1', label: paymentTypeLabel('1'), lines: 0, teachers: 0, totalAmount: 0, ready: 0, pending: 0 },
-    { code: '2', label: paymentTypeLabel('2'), lines: 0, teachers: 0, totalAmount: 0, ready: 0, pending: 0 },
-    { code: 'E', label: paymentTypeLabel('E'), lines: 0, teachers: 0, totalAmount: 0, ready: 0, pending: 0 }
+    { code: '1', label: paymentTypeLabel('1'), lines: 0, teachers: 0, totalAmount: '0.00', ready: 0, pending: 0 },
+    { code: '2', label: paymentTypeLabel('2'), lines: 0, teachers: 0, totalAmount: '0.00', ready: 0, pending: 0 },
+    { code: 'E', label: paymentTypeLabel('E'), lines: 0, teachers: 0, totalAmount: '0.00', ready: 0, pending: 0 }
   ];
   const teacherSets = new Map<string, Set<string>>(groups.map((group) => [group.code, new Set<string>()]));
 
@@ -247,7 +247,7 @@ const paymentTypeSummary = computed(() => {
     const group = groups.find((item) => item.code === line.paymentType);
     if (!group) continue;
     group.lines += 1;
-    group.totalAmount += Number(line.totalAmount || 0);
+    group.totalAmount = moneyAdd(group.totalAmount, line.totalAmount);
     group.ready += line.paymentStatus === 'LISTO' ? 1 : 0;
     group.pending += line.paymentStatus === 'PENDIENTE' ? 1 : 0;
     teacherSets.get(group.code)?.add(line.teacherId);
@@ -256,7 +256,7 @@ const paymentTypeSummary = computed(() => {
   return groups.map((group) => ({
     ...group,
     teachers: teacherSets.get(group.code)?.size || 0,
-    totalAmount: round2(group.totalAmount)
+    totalAmount: moneyAdd(group.totalAmount)
   }));
 });
 
@@ -336,7 +336,7 @@ const historicalSummary = computed(() => {
     activeRuns: activeRuns.length,
     cancelledRuns: visibleRuns.filter((run) => run.status === 'CANCELADA').length,
     paidRuns: visibleRuns.filter((run) => run.status === 'PAGADA').length,
-    totalAmount: activeRuns.reduce((sum, run) => sum + Number(run.summary.totalAmount || 0), 0),
+    totalAmount: activeRuns.reduce((sum, run) => moneyAdd(sum, run.summary.totalAmount), '0.00'),
     teachers: activeRuns.reduce((sum, run) => sum + Number(run.summary.teachers || 0), 0)
   };
 });
@@ -344,6 +344,27 @@ const historicalSummary = computed(() => {
 function formatHours(value: number | string | null | undefined) {
   const numeric = Number(value) || 0;
   return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function moneyCents(value: number | string | null | undefined): bigint {
+  const raw = value === null || value === undefined || value === '' ? '0' : String(value).trim();
+  const negative = raw.startsWith('-');
+  const unsigned = negative ? raw.slice(1) : raw;
+  const [integer = '0', decimal = ''] = unsigned.split('.');
+  const cents = BigInt((integer.replace(/\D/g, '') || '0')) * 100n + BigInt(decimal.replace(/\D/g, '').padEnd(2, '0').slice(0, 2) || '0');
+  return negative ? -cents : cents;
+}
+
+function moneyFromCents(cents: bigint): string {
+  const negative = cents < 0n;
+  const absolute = negative ? -cents : cents;
+  const integer = absolute / 100n;
+  const decimal = (absolute % 100n).toString().padStart(2, '0');
+  return `${negative ? '-' : ''}${integer.toString()}.${decimal}`;
+}
+
+function moneyAdd(...values: Array<number | string | null | undefined>): string {
+  return moneyFromCents(values.reduce((sum, value) => sum + moneyCents(value), 0n));
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -360,10 +381,6 @@ function formatDate(value: string | null | undefined) {
   const [year, month, day] = text.split('-');
   if (!year || !month || !day) return text;
   return `${day}/${month}/${year}`;
-}
-
-function round2(value: number) {
-  return Number.isFinite(value) ? value : 0;
 }
 
 function categoryLabel(category: string) {
@@ -854,7 +871,7 @@ onMounted(() => {
                   <small>Neto base {{ moneyLabel(line.baseNetAmount) }}</small>
                 </td>
                 <td>
-                  <strong>{{ moneyLabel(line.absenceDiscountAmount + line.delayDiscountAmount) }}</strong>
+                  <strong>{{ moneyLabel(moneyAdd(line.absenceDiscountAmount, line.delayDiscountAmount)) }}</strong>
                   <span>F {{ formatHours(line.absences) }} h / R {{ formatHours(line.delays) }}</span>
                 </td>
                 <td>
@@ -1060,7 +1077,7 @@ onMounted(() => {
           </article>
           <article class="finance-detail-card">
             <span>Descuentos</span>
-            <strong>{{ moneyLabel(selectedLine.absenceDiscountAmount + selectedLine.delayDiscountAmount) }}</strong>
+            <strong>{{ moneyLabel(moneyAdd(selectedLine.absenceDiscountAmount, selectedLine.delayDiscountAmount)) }}</strong>
             <small>F {{ formatHours(selectedLine.absences) }} h / R {{ formatHours(selectedLine.delays) }}</small>
           </article>
           <article class="finance-detail-card">
@@ -1265,7 +1282,7 @@ onMounted(() => {
                     <span>{{ moneyLabel(line.baseNetAmount) }}</span>
                   </td>
                   <td>
-                    <strong>{{ moneyLabel(line.absenceDiscountAmount + line.delayDiscountAmount) }}</strong>
+                    <strong>{{ moneyLabel(moneyAdd(line.absenceDiscountAmount, line.delayDiscountAmount)) }}</strong>
                     <span>F {{ formatHours(line.absences) }} h / R {{ formatHours(line.delays) }}</span>
                   </td>
                   <td>

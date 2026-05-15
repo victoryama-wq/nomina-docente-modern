@@ -4,9 +4,21 @@ import PDFDocument from 'pdfkit';
 import { z } from 'zod';
 import { requireAnyPermission } from '../auth.js';
 import { withTransaction } from '../db.js';
+import {
+  addHours,
+  addMoney,
+  formatHours as formatHoursDecimal,
+  formatMoney,
+  hoursToApi,
+  moneyToApi,
+  multiplyHours,
+  toHoursDecimal,
+  toMoneyDecimal
+} from '../lib/decimal.js';
 import type { SessionUser } from '../types.js';
 import { listCycles, loadActorCoordination, type CoordinationRow, type CycleRow } from './academic-context.js';
 
+type DecimalString = string;
 type PayrollRunStatus = 'BORRADOR' | 'CALCULADA' | 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CERRADA' | 'CANCELADA';
 type PaymentStatus = 'LISTO' | 'PENDIENTE';
 type FinanceExportKind = 'payments' | 'fiscal' | 'coordinations';
@@ -37,12 +49,12 @@ interface FinanceSummary {
   lines: number;
   teachers: number;
   coordinations: number;
-  baseHours: number;
-  grossBaseAmount: number;
-  discountAmount: number;
-  totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  baseHours: DecimalString;
+  grossBaseAmount: DecimalString;
+  discountAmount: DecimalString;
+  totalExtraHours: DecimalString;
+  totalExtraAmount: DecimalString;
+  totalAmount: DecimalString;
   alerts: number;
   fiscalPending: number;
   readyPayments: number;
@@ -81,20 +93,20 @@ interface FinanceLineRow {
   email: string;
   bankDetail: string;
   hasConstancia: boolean;
-  baseHours: number;
-  grossBaseAmount: number;
-  absences: number;
-  delays: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  baseNetAmount: number;
-  scheduleExtraHours: number;
-  scheduleExtraAmount: number;
-  loggedExtraHours: number;
-  loggedExtraAmount: number;
-  totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  baseHours: DecimalString;
+  grossBaseAmount: DecimalString;
+  absences: DecimalString;
+  delays: DecimalString;
+  absenceDiscountAmount: DecimalString;
+  delayDiscountAmount: DecimalString;
+  baseNetAmount: DecimalString;
+  scheduleExtraHours: DecimalString;
+  scheduleExtraAmount: DecimalString;
+  loggedExtraHours: DecimalString;
+  loggedExtraAmount: DecimalString;
+  totalExtraHours: DecimalString;
+  totalExtraAmount: DecimalString;
+  totalAmount: DecimalString;
   alerts: unknown;
 }
 
@@ -114,20 +126,20 @@ interface FinanceScheduleDetail {
   subjectName: string;
   groupCode: string;
   tabulatorName: string;
-  tabulatorAmount: number;
-  weekdayHours: number;
-  module1Hours: number;
-  module2Hours: number;
-  baseHours: number;
-  grossBaseAmount: number;
-  absences: number;
-  delays: number;
-  delayDiscountHours: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  scheduleExtraHours: number;
-  scheduleExtraAmount: number;
-  baseNetAmount: number;
+  tabulatorAmount: DecimalString;
+  weekdayHours: DecimalString;
+  module1Hours: DecimalString;
+  module2Hours: DecimalString;
+  baseHours: DecimalString;
+  grossBaseAmount: DecimalString;
+  absences: DecimalString;
+  delays: DecimalString;
+  delayDiscountHours: DecimalString;
+  absenceDiscountAmount: DecimalString;
+  delayDiscountAmount: DecimalString;
+  scheduleExtraHours: DecimalString;
+  scheduleExtraAmount: DecimalString;
+  baseNetAmount: DecimalString;
 }
 
 interface FinanceExtraDetail {
@@ -139,9 +151,9 @@ interface FinanceExtraDetail {
   coordinationName: string;
   reason: string;
   activityDate: string | null;
-  hours: number;
-  tabulatorAmount: number;
-  totalAmount: number;
+  hours: DecimalString;
+  tabulatorAmount: DecimalString;
+  totalAmount: DecimalString;
 }
 
 interface CoordinationSummary {
@@ -149,10 +161,10 @@ interface CoordinationSummary {
   coordinationName: string;
   teachers: number;
   lines: number;
-  baseHours: number;
-  totalExtraHours: number;
-  discountAmount: number;
-  totalAmount: number;
+  baseHours: DecimalString;
+  totalExtraHours: DecimalString;
+  discountAmount: DecimalString;
+  totalAmount: DecimalString;
   fiscalPending: number;
   alerts: number;
 }
@@ -175,7 +187,7 @@ interface PaymentTypeSummary {
   teachers: number;
   ready: number;
   pending: number;
-  totalAmount: number;
+  totalAmount: DecimalString;
 }
 
 const querySchema = z.object({
@@ -199,12 +211,12 @@ const emptySummary = (): FinanceSummary => ({
   lines: 0,
   teachers: 0,
   coordinations: 0,
-  baseHours: 0,
-  grossBaseAmount: 0,
-  discountAmount: 0,
-  totalExtraHours: 0,
-  totalExtraAmount: 0,
-  totalAmount: 0,
+  baseHours: '0',
+  grossBaseAmount: '0.00',
+  discountAmount: '0.00',
+  totalExtraHours: '0',
+  totalExtraAmount: '0.00',
+  totalAmount: '0.00',
   alerts: 0,
   fiscalPending: 0,
   readyPayments: 0
@@ -242,8 +254,12 @@ function isGlobalFinanceReadOnly(actor: SessionUser): boolean {
   );
 }
 
-function round2(value: number): number {
-  return Number.isFinite(value) ? value : 0;
+function apiHours(value: unknown): DecimalString {
+  return hoursToApi(value as string | number | null | undefined);
+}
+
+function apiMoney(value: unknown): DecimalString {
+  return moneyToApi(value as string | number | null | undefined);
 }
 
 function parseAlerts(value: unknown): string[] {
@@ -315,12 +331,12 @@ async function listFinanceRuns(
       lines: number;
       teachers: number;
       coordinations: number;
-      baseHours: number;
-      grossBaseAmount: number;
-      discountAmount: number;
-      totalExtraHours: number;
-      totalExtraAmount: number;
-      totalAmount: number;
+      baseHours: DecimalString;
+      grossBaseAmount: DecimalString;
+      discountAmount: DecimalString;
+      totalExtraHours: DecimalString;
+      totalExtraAmount: DecimalString;
+      totalAmount: DecimalString;
       alerts: number;
     }
   >(
@@ -345,12 +361,12 @@ async function listFinanceRuns(
         count(pl.id)::int AS lines,
         count(DISTINCT pl.teacher_id)::int AS teachers,
         count(DISTINCT pl.coordination_id)::int AS coordinations,
-        COALESCE(sum(pl.base_hours), 0)::float8 AS "baseHours",
-        COALESCE(sum(pl.gross_base_amount), 0)::float8 AS "grossBaseAmount",
-        COALESCE(sum(pl.absence_discount_amount + pl.delay_discount_amount), 0)::float8 AS "discountAmount",
-        COALESCE(sum(pl.total_extra_hours), 0)::float8 AS "totalExtraHours",
-        COALESCE(sum(pl.total_extra_amount), 0)::float8 AS "totalExtraAmount",
-        COALESCE(sum(pl.total_amount), 0)::float8 AS "totalAmount",
+        COALESCE(sum(pl.base_hours), 0)::text AS "baseHours",
+        COALESCE(sum(pl.gross_base_amount), 0)::text AS "grossBaseAmount",
+        COALESCE(sum(pl.absence_discount_amount + pl.delay_discount_amount), 0)::text AS "discountAmount",
+        COALESCE(sum(pl.total_extra_hours), 0)::text AS "totalExtraHours",
+        COALESCE(sum(pl.total_extra_amount), 0)::text AS "totalExtraAmount",
+        COALESCE(sum(pl.total_amount), 0)::text AS "totalAmount",
         COALESCE(
           sum(
             CASE
@@ -407,12 +423,12 @@ async function listFinanceRuns(
       lines: Number(row.lines || 0),
       teachers: Number(row.teachers || 0),
       coordinations: Number(row.coordinations || 0),
-      baseHours: round2(Number(row.baseHours || 0)),
-      grossBaseAmount: round2(Number(row.grossBaseAmount || 0)),
-      discountAmount: round2(Number(row.discountAmount || 0)),
-      totalExtraHours: round2(Number(row.totalExtraHours || 0)),
-      totalExtraAmount: round2(Number(row.totalExtraAmount || 0)),
-      totalAmount: round2(Number(row.totalAmount || 0)),
+      baseHours: apiHours(row.baseHours),
+      grossBaseAmount: apiMoney(row.grossBaseAmount),
+      discountAmount: apiMoney(row.discountAmount),
+      totalExtraHours: apiHours(row.totalExtraHours),
+      totalExtraAmount: apiMoney(row.totalExtraAmount),
+      totalAmount: apiMoney(row.totalAmount),
       alerts: Number(row.alerts || 0),
       fiscalPending: 0,
       readyPayments: 0
@@ -458,20 +474,20 @@ async function listFinanceLines(
             AND d.document_type = 'CONSTANCIA_FISCAL'
             AND d.is_current = true
         ) AS "hasConstancia",
-        pl.base_hours::float8 AS "baseHours",
-        pl.gross_base_amount::float8 AS "grossBaseAmount",
-        pl.absences::float8 AS absences,
-        pl.delays::float8 AS delays,
-        pl.absence_discount_amount::float8 AS "absenceDiscountAmount",
-        pl.delay_discount_amount::float8 AS "delayDiscountAmount",
-        pl.base_net_amount::float8 AS "baseNetAmount",
-        pl.schedule_extra_hours::float8 AS "scheduleExtraHours",
-        pl.schedule_extra_amount::float8 AS "scheduleExtraAmount",
-        pl.logged_extra_hours::float8 AS "loggedExtraHours",
-        pl.logged_extra_amount::float8 AS "loggedExtraAmount",
-        pl.total_extra_hours::float8 AS "totalExtraHours",
-        pl.total_extra_amount::float8 AS "totalExtraAmount",
-        pl.total_amount::float8 AS "totalAmount",
+        pl.base_hours::text AS "baseHours",
+        pl.gross_base_amount::text AS "grossBaseAmount",
+        pl.absences::text AS absences,
+        pl.delays::text AS delays,
+        pl.absence_discount_amount::text AS "absenceDiscountAmount",
+        pl.delay_discount_amount::text AS "delayDiscountAmount",
+        pl.base_net_amount::text AS "baseNetAmount",
+        pl.schedule_extra_hours::text AS "scheduleExtraHours",
+        pl.schedule_extra_amount::text AS "scheduleExtraAmount",
+        pl.logged_extra_hours::text AS "loggedExtraHours",
+        pl.logged_extra_amount::text AS "loggedExtraAmount",
+        pl.total_extra_hours::text AS "totalExtraHours",
+        pl.total_extra_amount::text AS "totalExtraAmount",
+        pl.total_amount::text AS "totalAmount",
         pl.alerts
       FROM payroll_lines pl
       LEFT JOIN teachers t ON t.id = pl.teacher_id
@@ -486,6 +502,20 @@ async function listFinanceLines(
     const missing = fiscalMissing(row);
     return {
       ...row,
+      baseHours: apiHours(row.baseHours),
+      grossBaseAmount: apiMoney(row.grossBaseAmount),
+      absences: apiHours(row.absences),
+      delays: apiHours(row.delays),
+      absenceDiscountAmount: apiMoney(row.absenceDiscountAmount),
+      delayDiscountAmount: apiMoney(row.delayDiscountAmount),
+      baseNetAmount: apiMoney(row.baseNetAmount),
+      scheduleExtraHours: apiHours(row.scheduleExtraHours),
+      scheduleExtraAmount: apiMoney(row.scheduleExtraAmount),
+      loggedExtraHours: apiHours(row.loggedExtraHours),
+      loggedExtraAmount: apiMoney(row.loggedExtraAmount),
+      totalExtraHours: apiHours(row.totalExtraHours),
+      totalExtraAmount: apiMoney(row.totalExtraAmount),
+      totalAmount: apiMoney(row.totalAmount),
       alerts: parseAlerts(row.alerts),
       fiscalMissing: missing,
       paymentStatus: missing.length ? 'PENDIENTE' : 'LISTO'
@@ -522,20 +552,20 @@ async function listFinanceScheduleDetails(
         subject_name_snapshot AS "subjectName",
         group_code_snapshot AS "groupCode",
         tabulator_name_snapshot AS "tabulatorName",
-        tabulator_amount::float8 AS "tabulatorAmount",
-        weekday_hours::float8 AS "weekdayHours",
-        module1_hours::float8 AS "module1Hours",
-        module2_hours::float8 AS "module2Hours",
-        base_hours::float8 AS "baseHours",
-        gross_base_amount::float8 AS "grossBaseAmount",
-        absences::float8 AS absences,
-        delays::float8 AS delays,
-        delay_discount_hours::float8 AS "delayDiscountHours",
-        absence_discount_amount::float8 AS "absenceDiscountAmount",
-        delay_discount_amount::float8 AS "delayDiscountAmount",
-        schedule_extra_hours::float8 AS "scheduleExtraHours",
-        schedule_extra_amount::float8 AS "scheduleExtraAmount",
-        base_net_amount::float8 AS "baseNetAmount"
+        tabulator_amount::text AS "tabulatorAmount",
+        weekday_hours::text AS "weekdayHours",
+        module1_hours::text AS "module1Hours",
+        module2_hours::text AS "module2Hours",
+        base_hours::text AS "baseHours",
+        gross_base_amount::text AS "grossBaseAmount",
+        absences::text AS absences,
+        delays::text AS delays,
+        delay_discount_hours::text AS "delayDiscountHours",
+        absence_discount_amount::text AS "absenceDiscountAmount",
+        delay_discount_amount::text AS "delayDiscountAmount",
+        schedule_extra_hours::text AS "scheduleExtraHours",
+        schedule_extra_amount::text AS "scheduleExtraAmount",
+        base_net_amount::text AS "baseNetAmount"
       FROM payroll_schedule_details
       WHERE payroll_run_id = $1
         ${visibility}
@@ -544,7 +574,23 @@ async function listFinanceScheduleDetails(
     params
   );
 
-  return result.rows;
+  return result.rows.map((detail) => ({
+    ...detail,
+    tabulatorAmount: apiMoney(detail.tabulatorAmount),
+    weekdayHours: apiHours(detail.weekdayHours),
+    module1Hours: apiHours(detail.module1Hours),
+    module2Hours: apiHours(detail.module2Hours),
+    baseHours: apiHours(detail.baseHours),
+    grossBaseAmount: apiMoney(detail.grossBaseAmount),
+    absences: apiHours(detail.absences),
+    delays: apiHours(detail.delays),
+    delayDiscountHours: apiHours(detail.delayDiscountHours),
+    absenceDiscountAmount: apiMoney(detail.absenceDiscountAmount),
+    delayDiscountAmount: apiMoney(detail.delayDiscountAmount),
+    scheduleExtraHours: apiHours(detail.scheduleExtraHours),
+    scheduleExtraAmount: apiMoney(detail.scheduleExtraAmount),
+    baseNetAmount: apiMoney(detail.baseNetAmount)
+  }));
 }
 
 async function listFinanceExtraDetails(
@@ -575,9 +621,9 @@ async function listFinanceExtraDetails(
         coordination_name_snapshot AS "coordinationName",
         reason_snapshot AS reason,
         activity_date AS "activityDate",
-        hours::float8 AS hours,
-        tabulator_amount::float8 AS "tabulatorAmount",
-        total_amount::float8 AS "totalAmount"
+        hours::text AS hours,
+        tabulator_amount::text AS "tabulatorAmount",
+        total_amount::text AS "totalAmount"
       FROM payroll_extra_details
       WHERE payroll_run_id = $1
         ${visibility}
@@ -586,7 +632,12 @@ async function listFinanceExtraDetails(
     params
   );
 
-  return result.rows;
+  return result.rows.map((detail) => ({
+    ...detail,
+    hours: apiHours(detail.hours),
+    tabulatorAmount: apiMoney(detail.tabulatorAmount),
+    totalAmount: apiMoney(detail.totalAmount)
+  }));
 }
 
 function nextStatusMessage(status: FinanceRunStatusPayload['status']): string {
@@ -807,12 +858,14 @@ function summarizeLines(lines: FinanceLine[]): FinanceSummary {
     lines: lines.length,
     teachers: new Set(lines.map((line) => line.teacherId)).size,
     coordinations: new Set(lines.map((line) => line.coordinationId)).size,
-    baseHours: round2(lines.reduce((sum, line) => sum + line.baseHours, 0)),
-    grossBaseAmount: round2(lines.reduce((sum, line) => sum + line.grossBaseAmount, 0)),
-    discountAmount: round2(lines.reduce((sum, line) => sum + line.absenceDiscountAmount + line.delayDiscountAmount, 0)),
-    totalExtraHours: round2(lines.reduce((sum, line) => sum + line.totalExtraHours, 0)),
-    totalExtraAmount: round2(lines.reduce((sum, line) => sum + line.totalExtraAmount, 0)),
-    totalAmount: round2(lines.reduce((sum, line) => sum + line.totalAmount, 0)),
+    baseHours: apiHours(addHours(...lines.map((line) => line.baseHours))),
+    grossBaseAmount: apiMoney(addMoney(...lines.map((line) => line.grossBaseAmount))),
+    discountAmount: apiMoney(
+      addMoney(...lines.flatMap((line) => [line.absenceDiscountAmount, line.delayDiscountAmount]))
+    ),
+    totalExtraHours: apiHours(addHours(...lines.map((line) => line.totalExtraHours))),
+    totalExtraAmount: apiMoney(addMoney(...lines.map((line) => line.totalExtraAmount))),
+    totalAmount: apiMoney(addMoney(...lines.map((line) => line.totalAmount))),
     alerts: lines.reduce((sum, line) => sum + line.alerts.length, 0),
     fiscalPending: lines.filter((line) => line.paymentStatus === 'PENDIENTE').length,
     readyPayments: lines.filter((line) => line.paymentStatus === 'LISTO').length
@@ -830,20 +883,20 @@ function summarizeCoordinations(lines: FinanceLine[]): CoordinationSummary[] {
         teachers: 0,
         teacherIds: new Set<string>(),
         lines: 0,
-        baseHours: 0,
-        totalExtraHours: 0,
-        discountAmount: 0,
-        totalAmount: 0,
+        baseHours: '0',
+        totalExtraHours: '0',
+        discountAmount: '0.00',
+        totalAmount: '0.00',
         fiscalPending: 0,
         alerts: 0
       } satisfies CoordinationSummary & { teacherIds: Set<string> });
 
     existing.teacherIds.add(line.teacherId);
     existing.lines += 1;
-    existing.baseHours += line.baseHours;
-    existing.totalExtraHours += line.totalExtraHours;
-    existing.discountAmount += line.absenceDiscountAmount + line.delayDiscountAmount;
-    existing.totalAmount += line.totalAmount;
+    existing.baseHours = apiHours(addHours(existing.baseHours, line.baseHours));
+    existing.totalExtraHours = apiHours(addHours(existing.totalExtraHours, line.totalExtraHours));
+    existing.discountAmount = apiMoney(addMoney(existing.discountAmount, line.absenceDiscountAmount, line.delayDiscountAmount));
+    existing.totalAmount = apiMoney(addMoney(existing.totalAmount, line.totalAmount));
     existing.fiscalPending += line.paymentStatus === 'PENDIENTE' ? 1 : 0;
     existing.alerts += line.alerts.length;
     summaries.set(line.coordinationId, existing);
@@ -853,12 +906,12 @@ function summarizeCoordinations(lines: FinanceLine[]): CoordinationSummary[] {
     .map(({ teacherIds, ...summary }) => ({
       ...summary,
       teachers: teacherIds.size,
-      baseHours: round2(summary.baseHours),
-      totalExtraHours: round2(summary.totalExtraHours),
-      discountAmount: round2(summary.discountAmount),
-      totalAmount: round2(summary.totalAmount)
+      baseHours: apiHours(summary.baseHours),
+      totalExtraHours: apiHours(summary.totalExtraHours),
+      discountAmount: apiMoney(summary.discountAmount),
+      totalAmount: apiMoney(summary.totalAmount)
     }))
-    .sort((left, right) => right.totalAmount - left.totalAmount);
+    .sort((left, right) => toMoneyDecimal(right.totalAmount).cmp(toMoneyDecimal(left.totalAmount)));
 }
 
 async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
@@ -937,8 +990,13 @@ function paymentHeaders(): string[] {
   return ['Nombre del docente', 'RFC', 'Tipo de pago', 'Horas pagadas', 'Total a pagar'];
 }
 
-function paidHours(line: FinanceLine): number {
-  return round2(line.baseHours - line.absences - line.delays * 0.5 + line.totalExtraHours);
+function paidHours(line: FinanceLine): DecimalString {
+  return apiHours(
+    toHoursDecimal(line.baseHours)
+      .minus(line.absences)
+      .minus(multiplyHours(line.delays, '0.5'))
+      .plus(toHoursDecimal(line.totalExtraHours))
+  );
 }
 
 function paymentRows(lines: FinanceLine[]): unknown[][] {
@@ -948,8 +1006,8 @@ function paymentRows(lines: FinanceLine[]): unknown[][] {
       teacherName: string;
       rfc: string;
       paymentType: string;
-      paidHours: number;
-      totalAmount: number;
+      paidHours: DecimalString;
+      totalAmount: DecimalString;
     }
   >();
 
@@ -961,11 +1019,11 @@ function paymentRows(lines: FinanceLine[]): unknown[][] {
         teacherName: line.teacherName,
         rfc: line.rfc,
         paymentType: line.paymentType,
-        paidHours: 0,
-        totalAmount: 0
+        paidHours: '0',
+        totalAmount: '0.00'
       };
-    current.paidHours += paidHours(line);
-    current.totalAmount += Number(line.totalAmount || 0);
+    current.paidHours = apiHours(addHours(current.paidHours, paidHours(line)));
+    current.totalAmount = apiMoney(addMoney(current.totalAmount, line.totalAmount));
     grouped.set(key, current);
   }
 
@@ -979,8 +1037,8 @@ function paymentRows(lines: FinanceLine[]): unknown[][] {
       row.teacherName,
       row.rfc,
       paymentTypeText(row.paymentType),
-      round2(row.paidHours),
-      round2(row.totalAmount)
+      apiHours(row.paidHours),
+      apiMoney(row.totalAmount)
     ]);
 }
 
@@ -1016,7 +1074,7 @@ function paymentDetailRows(lines: FinanceLine[]): unknown[][] {
     line.category,
     line.baseHours,
     line.grossBaseAmount,
-    round2(line.absenceDiscountAmount + line.delayDiscountAmount),
+    apiMoney(addMoney(line.absenceDiscountAmount, line.delayDiscountAmount)),
     line.totalExtraHours,
     line.totalExtraAmount,
     line.totalAmount,
@@ -1044,22 +1102,16 @@ function coordinationRows(rows: CoordinationSummary[]): unknown[][] {
   ]);
 }
 
-function moneyText(value: number): string {
-  return Number(value || 0).toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6
-  });
+function moneyText(value: string | number): string {
+  return formatMoney(value);
 }
 
 function numberText(value: number): string {
   return Number(value || 0).toLocaleString('es-MX');
 }
 
-function hourText(value: number): string {
-  const numeric = Number(value || 0);
-  return Number.isInteger(numeric) ? `${numeric} h` : `${numeric.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')} h`;
+function hourText(value: string | number): string {
+  return `${formatHoursDecimal(value)} h`;
 }
 
 function dateTimeText(value: string | null | undefined): string {
@@ -1119,13 +1171,13 @@ function summarizePaymentTypes(lines: FinanceLine[]): PaymentTypeSummary[] {
         teacherIds: new Set<string>(),
         ready: 0,
         pending: 0,
-        totalAmount: 0
+        totalAmount: '0.00'
       } satisfies PaymentTypeSummary & { teacherIds: Set<string> });
     existing.lines += 1;
     existing.teacherIds.add(line.teacherId);
     existing.ready += line.paymentStatus === 'LISTO' ? 1 : 0;
     existing.pending += line.paymentStatus === 'PENDIENTE' ? 1 : 0;
-    existing.totalAmount += line.totalAmount;
+    existing.totalAmount = apiMoney(addMoney(existing.totalAmount, line.totalAmount));
     groups.set(code, existing);
   }
 
@@ -1134,7 +1186,7 @@ function summarizePaymentTypes(lines: FinanceLine[]): PaymentTypeSummary[] {
     .map(({ teacherIds, ...summary }) => ({
       ...summary,
       teachers: teacherIds.size,
-      totalAmount: round2(summary.totalAmount)
+      totalAmount: apiMoney(summary.totalAmount)
     }))
     .sort((left, right) => {
       const leftIndex = preferred.indexOf(left.code);
@@ -1349,7 +1401,10 @@ function buildCoordinationReportPdf(run: FinanceRun, lines: FinanceLine[], coord
       });
       doc.fillColor('#334155').font('Helvetica').fontSize(7.5).text(paymentTypeText(line.paymentType), 236, y + 8, { width: 58 });
       doc.text(hourText(line.baseHours), 304, y + 8, { width: 58 });
-      doc.text(moneyText(line.absenceDiscountAmount + line.delayDiscountAmount), 372, y + 8, { width: 58, align: 'right' });
+      doc.text(moneyText(apiMoney(addMoney(line.absenceDiscountAmount, line.delayDiscountAmount))), 372, y + 8, {
+        width: 58,
+        align: 'right'
+      });
       doc.text(moneyText(line.totalExtraAmount), 440, y + 8, { width: 58, align: 'right' });
       doc.font('Helvetica-Bold').text(moneyText(line.totalAmount), 508, y + 8, { width: 54, align: 'right' });
       doc.moveTo(pdfMargin, y + 30).lineTo(pdfRight, y + 30).strokeColor('#E2E8F0').stroke();

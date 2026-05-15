@@ -3,9 +3,11 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { authenticate } from '../auth.js';
 import { query, withTransaction } from '../db.js';
+import { moneyToApi, moneyToDb, toMoneyDecimal } from '../lib/decimal.js';
 import type { SessionUser } from '../types.js';
 import { normalizeText } from './academic-context.js';
 
+type DecimalString = string;
 type CatalogStatus = 'ACTIVO' | 'INACTIVO';
 
 interface SubjectRow {
@@ -19,7 +21,7 @@ interface SubjectRow {
 interface TabulatorRow {
   id: string;
   name: string;
-  amount: number;
+  amount: DecimalString;
   status: CatalogStatus;
   sortOrder: number;
   scheduleCount: number;
@@ -35,7 +37,18 @@ const subjectBodySchema = z.object({
 
 const tabulatorBodySchema = z.object({
   name: z.string().trim().min(1).max(120),
-  amount: z.coerce.number().positive().max(1_000_000),
+  amount: z
+    .union([z.string(), z.number()])
+    .transform((value, ctx): string => {
+      try {
+        const decimal = toMoneyDecimal(value);
+        if (decimal.lte(0) || decimal.gt(1_000_000)) throw new Error();
+        return moneyToDb(decimal);
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Captura un monto de tabulador valido.' });
+        return '0.00';
+      }
+    }),
   status: catalogStatusSchema.default('ACTIVO'),
   sortOrder: z.coerce.number().int().min(0).max(9999).default(100)
 });
@@ -120,7 +133,7 @@ async function listTabulators(client?: PoolClient): Promise<TabulatorRow[]> {
     SELECT
       t.id,
       t.name,
-      t.amount::float8 AS amount,
+      t.amount::text AS amount,
       t.status,
       t.sort_order AS "sortOrder",
       count(sc.id)::int AS "scheduleCount",
@@ -137,7 +150,8 @@ async function listTabulators(client?: PoolClient): Promise<TabulatorRow[]> {
       t.name ASC
   `;
   const result = client ? await client.query<TabulatorRow>(sql) : await query<TabulatorRow>(sql);
-  return Array.isArray(result) ? result : result.rows;
+  const rows = Array.isArray(result) ? result : result.rows;
+  return rows.map((row) => ({ ...row, amount: moneyToApi(row.amount) }));
 }
 
 async function loadSubjectById(client: PoolClient, id: string): Promise<SubjectRow | null> {
@@ -169,7 +183,7 @@ async function loadTabulatorById(client: PoolClient, id: string): Promise<Tabula
       SELECT
         t.id,
         t.name,
-        t.amount::float8 AS amount,
+        t.amount::text AS amount,
         t.status,
         t.sort_order AS "sortOrder",
         count(sc.id)::int AS "scheduleCount",
@@ -185,7 +199,8 @@ async function loadTabulatorById(client: PoolClient, id: string): Promise<Tabula
     `,
     [id]
   );
-  return result.rows[0] || null;
+  const row = result.rows[0];
+  return row ? { ...row, amount: moneyToApi(row.amount) } : null;
 }
 
 async function assertUniqueSubjectName(client: PoolClient, name: string, exceptId?: string): Promise<void> {

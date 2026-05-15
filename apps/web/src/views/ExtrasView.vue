@@ -36,7 +36,7 @@ const activeExtraAccessPeriod = ref<ExtraAccessPeriod | null>(null);
 const summary = ref<ExtraSummary>({
   total: 0,
   hours: 0,
-  amount: 0,
+  amount: '0.00',
   impactedTeachers: 0,
   overloadedTeachers: 0
 });
@@ -383,9 +383,9 @@ function selectTeacher(teacher: ExtraTeacher) {
     const suggested = tabulators.value.find((tabulator) => tabulator.amount === teacher.suggestedTabulatorAmount);
     if (suggested) {
       form.value.tabulatorId = suggested.id;
-      form.value.tabulatorAmount = suggested.amount;
+      form.value.tabulatorAmount = Number(suggested.amount || 0);
     } else {
-      form.value.tabulatorAmount = teacher.suggestedTabulatorAmount;
+      form.value.tabulatorAmount = Number(teacher.suggestedTabulatorAmount || 0);
     }
   }
 }
@@ -402,7 +402,7 @@ function onTeacherSearchInput() {
 
 function applyTabulator() {
   const selected = tabulators.value.find((tabulator) => tabulator.id === form.value.tabulatorId);
-  form.value.tabulatorAmount = selected?.amount || 0;
+  form.value.tabulatorAmount = Number(selected?.amount || 0);
 }
 
 function editExtra(extra: ExtraRecord) {
@@ -418,7 +418,7 @@ function editExtra(extra: ExtraRecord) {
     teacherId: extra.teacherId,
     hours: extra.hours,
     tabulatorId: tabulators.value.find((tabulator) => tabulator.amount === extra.tabulatorAmount)?.id || '',
-    tabulatorAmount: extra.tabulatorAmount,
+    tabulatorAmount: Number(extra.tabulatorAmount || 0),
     reason: extra.reason,
     activityDate: extra.activityDate?.slice(0, 10) || '',
     reference: extra.reference,

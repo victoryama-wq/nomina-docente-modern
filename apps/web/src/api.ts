@@ -1,6 +1,8 @@
 import { auth } from './firebase';
 import { apiBaseUrl } from './config';
 
+export type MoneyString = string;
+
 export interface SessionUser {
   id: string;
   firebaseUid: string;
@@ -125,7 +127,7 @@ export interface SubjectOption {
 export interface TabulatorOption {
   id: string;
   name: string;
-  amount: number;
+  amount: MoneyString;
   sortOrder: number;
 }
 
@@ -140,7 +142,7 @@ export interface CatalogSubject {
 export interface CatalogTabulator {
   id: string;
   name: string;
-  amount: number;
+  amount: MoneyString;
   status: 'ACTIVO' | 'INACTIVO';
   sortOrder: number;
   scheduleCount: number;
@@ -206,7 +208,7 @@ export interface Schedule {
   groupCode: string;
   tabulatorId: string | null;
   tabulatorName: string;
-  tabulatorAmount: number;
+  tabulatorAmount: MoneyString;
   hoursL: number;
   hoursM: number;
   hoursX: number;
@@ -273,7 +275,7 @@ export interface IncidenceSchedule {
   subjectName: string;
   groupCode: string;
   tabulatorName: string;
-  tabulatorAmount: number;
+  tabulatorAmount: MoneyString;
   weekHours: number;
   mod1Hours: number;
   mod2Hours: number;
@@ -338,7 +340,7 @@ export interface ExtraTeacher {
   coordinationId: string | null;
   coordinationName: string;
   maxHours: number;
-  suggestedTabulatorAmount: number;
+  suggestedTabulatorAmount: MoneyString;
   scheduleWeekHours: number;
   scheduleMod1Hours: number;
   scheduleMod2Hours: number;
@@ -363,8 +365,8 @@ export interface ExtraRecord {
   teacherName: string;
   teacherCategory: 'V' | 'M' | 'N' | '';
   hours: number;
-  tabulatorAmount: number;
-  totalAmount: number;
+  tabulatorAmount: MoneyString;
+  totalAmount: MoneyString;
   reason: string;
   activityDate: string | null;
   reference: string;
@@ -384,7 +386,7 @@ export interface ExtraRecord {
 export interface ExtraSummary {
   total: number;
   hours: number;
-  amount: number;
+  amount: MoneyString;
   impactedTeachers: number;
   overloadedTeachers: number;
 }
@@ -432,17 +434,17 @@ export interface PayrollSummary {
   teachers: number;
   coordinations: number;
   baseHours: number;
-  grossBaseAmount: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  discountAmount: number;
+  grossBaseAmount: MoneyString;
+  absenceDiscountAmount: MoneyString;
+  delayDiscountAmount: MoneyString;
+  discountAmount: MoneyString;
   scheduleExtraHours: number;
-  scheduleExtraAmount: number;
+  scheduleExtraAmount: MoneyString;
   loggedExtraHours: number;
-  loggedExtraAmount: number;
+  loggedExtraAmount: MoneyString;
   totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  totalExtraAmount: MoneyString;
+  totalAmount: MoneyString;
   alerts: number;
 }
 
@@ -458,17 +460,17 @@ export interface PayrollLine {
   absences: number;
   delays: number;
   delayDiscountHours: number;
-  grossBaseAmount: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  baseNetAmount: number;
+  grossBaseAmount: MoneyString;
+  absenceDiscountAmount: MoneyString;
+  delayDiscountAmount: MoneyString;
+  baseNetAmount: MoneyString;
   scheduleExtraHours: number;
-  scheduleExtraAmount: number;
+  scheduleExtraAmount: MoneyString;
   loggedExtraHours: number;
-  loggedExtraAmount: number;
+  loggedExtraAmount: MoneyString;
   totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  totalExtraAmount: MoneyString;
+  totalAmount: MoneyString;
   alerts: string[];
   scheduleCount: number;
   loggedExtraCount: number;
@@ -484,20 +486,20 @@ export interface PayrollScheduleDetail {
   subjectName: string;
   groupCode: string;
   tabulatorName: string;
-  tabulatorAmount: number;
+  tabulatorAmount: MoneyString;
   weekdayHours: number;
   module1Hours: number;
   module2Hours: number;
   baseHours: number;
-  grossBaseAmount: number;
+  grossBaseAmount: MoneyString;
   absences: number;
   delays: number;
   delayDiscountHours: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
+  absenceDiscountAmount: MoneyString;
+  delayDiscountAmount: MoneyString;
   scheduleExtraHours: number;
-  scheduleExtraAmount: number;
-  baseNetAmount: number;
+  scheduleExtraAmount: MoneyString;
+  baseNetAmount: MoneyString;
 }
 
 export interface PayrollExtraDetail {
@@ -510,8 +512,8 @@ export interface PayrollExtraDetail {
   reason: string;
   activityDate: string | null;
   hours: number;
-  tabulatorAmount: number;
-  totalAmount: number;
+  tabulatorAmount: MoneyString;
+  totalAmount: MoneyString;
 }
 
 export interface PayrollRun {
@@ -608,11 +610,11 @@ export interface FinanceSummary {
   teachers: number;
   coordinations: number;
   baseHours: number;
-  grossBaseAmount: number;
-  discountAmount: number;
+  grossBaseAmount: MoneyString;
+  discountAmount: MoneyString;
   totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  totalExtraAmount: MoneyString;
+  totalAmount: MoneyString;
   alerts: number;
   fiscalPending: number;
   readyPayments: number;
@@ -652,19 +654,19 @@ export interface FinanceLine {
   bankDetail: string;
   hasConstancia: boolean;
   baseHours: number;
-  grossBaseAmount: number;
+  grossBaseAmount: MoneyString;
   absences: number;
   delays: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
-  baseNetAmount: number;
+  absenceDiscountAmount: MoneyString;
+  delayDiscountAmount: MoneyString;
+  baseNetAmount: MoneyString;
   scheduleExtraHours: number;
-  scheduleExtraAmount: number;
+  scheduleExtraAmount: MoneyString;
   loggedExtraHours: number;
-  loggedExtraAmount: number;
+  loggedExtraAmount: MoneyString;
   totalExtraHours: number;
-  totalExtraAmount: number;
-  totalAmount: number;
+  totalExtraAmount: MoneyString;
+  totalAmount: MoneyString;
   alerts: string[];
   fiscalMissing: string[];
   paymentStatus: 'LISTO' | 'PENDIENTE';
@@ -680,20 +682,20 @@ export interface FinanceScheduleDetail {
   subjectName: string;
   groupCode: string;
   tabulatorName: string;
-  tabulatorAmount: number;
+  tabulatorAmount: MoneyString;
   weekdayHours: number;
   module1Hours: number;
   module2Hours: number;
   baseHours: number;
-  grossBaseAmount: number;
+  grossBaseAmount: MoneyString;
   absences: number;
   delays: number;
   delayDiscountHours: number;
-  absenceDiscountAmount: number;
-  delayDiscountAmount: number;
+  absenceDiscountAmount: MoneyString;
+  delayDiscountAmount: MoneyString;
   scheduleExtraHours: number;
-  scheduleExtraAmount: number;
-  baseNetAmount: number;
+  scheduleExtraAmount: MoneyString;
+  baseNetAmount: MoneyString;
 }
 
 export interface FinanceExtraDetail {
@@ -706,8 +708,8 @@ export interface FinanceExtraDetail {
   reason: string;
   activityDate: string | null;
   hours: number;
-  tabulatorAmount: number;
-  totalAmount: number;
+  tabulatorAmount: MoneyString;
+  totalAmount: MoneyString;
 }
 
 export interface FinanceCoordinationSummary {
@@ -717,8 +719,8 @@ export interface FinanceCoordinationSummary {
   lines: number;
   baseHours: number;
   totalExtraHours: number;
-  discountAmount: number;
-  totalAmount: number;
+  discountAmount: MoneyString;
+  totalAmount: MoneyString;
   fiscalPending: number;
   alerts: number;
 }

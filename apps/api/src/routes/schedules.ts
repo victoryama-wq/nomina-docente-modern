@@ -3,8 +3,10 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { requirePermission } from '../auth.js';
 import { query, withTransaction } from '../db.js';
+import { addHours, formatHours as formatDecimalHours, hoursToApi, moneyToApi, moneyToDb, toHoursDecimal, toMoneyDecimal } from '../lib/decimal.js';
 import type { SessionUser } from '../types.js';
 
+type DecimalString = string;
 type CycleStatus = 'PLANEACION' | 'ACTIVO' | 'CERRADO';
 type TeacherStatus = 'ACTIVO' | 'INACTIVO';
 
@@ -35,7 +37,7 @@ interface OptionRow {
 }
 
 interface TabulatorOptionRow extends OptionRow {
-  amount: number;
+  amount: DecimalString;
   sortOrder: number;
 }
 
@@ -76,14 +78,14 @@ interface ScheduleRow {
   groupCode: string;
   tabulatorId: string | null;
   tabulatorName: string;
-  tabulatorAmount: number;
-  hoursL: number;
-  hoursM: number;
-  hoursX: number;
-  hoursJ: number;
-  hoursV: number;
-  hoursS1: number;
-  hoursS2: number;
+  tabulatorAmount: DecimalString;
+  hoursL: DecimalString;
+  hoursM: DecimalString;
+  hoursX: DecimalString;
+  hoursJ: DecimalString;
+  hoursV: DecimalString;
+  hoursS1: DecimalString;
+  hoursS2: DecimalString;
   weekHours: number;
   mod1Hours: number;
   mod2Hours: number;
@@ -122,14 +124,25 @@ const scheduleBodySchema = z.object({
     .transform((value) => normalizeUpper(value)),
   tabulatorId: z.preprocess((value) => (value === '' ? undefined : value), z.string().uuid().optional()),
   tabulatorName: z.string().trim().min(1).max(120),
-  tabulatorAmount: z.coerce.number().min(0).max(1_000_000),
-  hoursL: z.coerce.number().min(0).max(99).default(0),
-  hoursM: z.coerce.number().min(0).max(99).default(0),
-  hoursX: z.coerce.number().min(0).max(99).default(0),
-  hoursJ: z.coerce.number().min(0).max(99).default(0),
-  hoursV: z.coerce.number().min(0).max(99).default(0),
-  hoursS1: z.coerce.number().min(0).max(99).default(0),
-  hoursS2: z.coerce.number().min(0).max(99).default(0)
+  tabulatorAmount: z
+    .union([z.string(), z.number()])
+    .transform((value, ctx): string => {
+      try {
+        const decimal = toMoneyDecimal(value);
+        if (decimal.lt(0) || decimal.gt(1_000_000)) throw new Error();
+        return moneyToDb(decimal);
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Captura un monto de tabulador valido.' });
+        return '0.00';
+      }
+    }),
+  hoursL: z.union([z.string(), z.number()]).optional().default(0).transform(decimalHourValue),
+  hoursM: z.union([z.string(), z.number()]).optional().default(0).transform(decimalHourValue),
+  hoursX: z.union([z.string(), z.number()]).optional().default(0).transform(decimalHourValue),
+  hoursJ: z.union([z.string(), z.number()]).optional().default(0).transform(decimalHourValue),
+  hoursV: z.union([z.string(), z.number()]).optional().default(0).transform(decimalHourValue),
+  hoursS1: z.union([z.string(), z.number()]).optional().default(0).transform(decimalHourValue),
+  hoursS2: z.union([z.string(), z.number()]).optional().default(0).transform(decimalHourValue)
 });
 
 type ScheduleBody = z.infer<typeof scheduleBodySchema>;
@@ -173,19 +186,30 @@ function categoryForMessage(category: string): string {
   return 'N';
 }
 
-function formatHours(value: number): string {
-  return Number.isInteger(value) ? `${value}` : value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+function decimalHourValue(value: string | number, ctx: z.RefinementCtx): string {
+  try {
+    const decimal = toHoursDecimal(value);
+    if (decimal.lt(0) || decimal.gt(99)) throw new Error();
+    return decimal.toString();
+  } catch {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Captura horas validas.' });
+    return '0';
+  }
+}
+
+function formatHours(value: string | number | { toString(): string }): string {
+  return formatDecimalHours(value.toString());
 }
 
 function newLoad(body: ScheduleBody) {
-  const weekHours = body.hoursL + body.hoursM + body.hoursX + body.hoursJ + body.hoursV;
+  const weekHours = addHours(body.hoursL, body.hoursM, body.hoursX, body.hoursJ, body.hoursV);
   return {
     weekHours,
-    s1Hours: body.hoursS1,
-    s2Hours: body.hoursS2,
-    mod1Hours: weekHours + body.hoursS1,
-    mod2Hours: weekHours + body.hoursS2,
-    baseHours: weekHours + body.hoursS1 + body.hoursS2
+    s1Hours: toHoursDecimal(body.hoursS1),
+    s2Hours: toHoursDecimal(body.hoursS2),
+    mod1Hours: weekHours.plus(body.hoursS1),
+    mod2Hours: weekHours.plus(body.hoursS2),
+    baseHours: weekHours.plus(body.hoursS1).plus(body.hoursS2)
   };
 }
 
@@ -195,17 +219,17 @@ function validateScheduleLoad(teacher: TeacherScheduleRow, existing: LoadRow, bo
   }
 
   const load = newLoad(body);
-  if (load.baseHours <= 0) {
+  if (load.baseHours.lte(0)) {
     throw new Error('Captura al menos una hora para guardar el horario.');
   }
 
   const category = categoryForMessage(teacher.category);
   const maxHours = categoryMaxHours(category);
-  const weekFinal = existing.weekHours + load.weekHours;
-  const mod1Final = weekFinal + existing.s1Hours + load.s1Hours;
-  const mod2Final = weekFinal + existing.s2Hours + load.s2Hours;
+  const weekFinal = toHoursDecimal(existing.weekHours).plus(load.weekHours);
+  const mod1Final = weekFinal.plus(existing.s1Hours).plus(load.s1Hours);
+  const mod2Final = weekFinal.plus(existing.s2Hours).plus(load.s2Hours);
 
-  if (weekFinal > maxHours) {
+  if (weekFinal.gt(maxHours)) {
     throw new Error(
       `EXCEDE LIMITE SEMANAL. El docente ${teacher.fullName} (${category}) tiene maximo de ${maxHours}h. Con este registro quedaria en ${formatHours(
         weekFinal
@@ -213,7 +237,7 @@ function validateScheduleLoad(teacher: TeacherScheduleRow, existing: LoadRow, bo
     );
   }
 
-  if (mod1Final > maxHours) {
+  if (mod1Final.gt(maxHours)) {
     throw new Error(
       `EXCEDE LIMITE MOD 1. El docente ${teacher.fullName} (${category}) tiene maximo de ${maxHours}h. Con este registro quedaria en ${formatHours(
         mod1Final
@@ -221,7 +245,7 @@ function validateScheduleLoad(teacher: TeacherScheduleRow, existing: LoadRow, bo
     );
   }
 
-  if (mod2Final > maxHours) {
+  if (mod2Final.gt(maxHours)) {
     throw new Error(
       `EXCEDE LIMITE MOD 2. El docente ${teacher.fullName} (${category}) tiene maximo de ${maxHours}h. Con este registro quedaria en ${formatHours(
         mod2Final
@@ -265,14 +289,14 @@ function scheduleSelectSql(whereClause = ''): string {
       s.group_code AS "groupCode",
       s.tabulator_id AS "tabulatorId",
       s.tabulator_name AS "tabulatorName",
-      s.tabulator_amount::float8 AS "tabulatorAmount",
-      s.hours_l::float8 AS "hoursL",
-      s.hours_m::float8 AS "hoursM",
-      s.hours_x::float8 AS "hoursX",
-      s.hours_j::float8 AS "hoursJ",
-      s.hours_v::float8 AS "hoursV",
-      s.hours_s1::float8 AS "hoursS1",
-      s.hours_s2::float8 AS "hoursS2",
+      s.tabulator_amount::text AS "tabulatorAmount",
+      s.hours_l::text AS "hoursL",
+      s.hours_m::text AS "hoursM",
+      s.hours_x::text AS "hoursX",
+      s.hours_j::text AS "hoursJ",
+      s.hours_v::text AS "hoursV",
+      s.hours_s1::text AS "hoursS1",
+      s.hours_s2::text AS "hoursS2",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v)::float8 AS "weekHours",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s1)::float8 AS "mod1Hours",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s2)::float8 AS "mod2Hours",
@@ -487,11 +511,11 @@ async function getOrCreateSubject(client: PoolClient, subjectName: string): Prom
   return created.rows[0].id;
 }
 
-async function resolveTabulator(client: PoolClient, body: ScheduleBody): Promise<{ id: string; name: string; amount: number }> {
+async function resolveTabulator(client: PoolClient, body: ScheduleBody): Promise<{ id: string; name: string; amount: DecimalString }> {
   const name = normalizeText(body.tabulatorName);
-  const existing = await client.query<{ id: string; name: string; amount: number }>(
+  const existing = await client.query<{ id: string; name: string; amount: DecimalString }>(
     `
-      SELECT id, name, amount::float8 AS amount
+      SELECT id, name, amount::text AS amount
       FROM tabulators
       WHERE status = 'ACTIVO'
         AND (
@@ -508,7 +532,7 @@ async function resolveTabulator(client: PoolClient, body: ScheduleBody): Promise
     throw new Error('Selecciona un tabulador válido del catálogo.');
   }
 
-  if (existing.rows[0].amount <= 0) {
+  if (toMoneyDecimal(existing.rows[0].amount).lte(0)) {
     throw new Error('El tabulador seleccionado no tiene un monto válido.');
   }
 
@@ -555,7 +579,22 @@ async function loadTeacherForSchedule(client: PoolClient, teacherId: string, cyc
 
 async function loadScheduleById(client: PoolClient, id: string): Promise<ScheduleRow | null> {
   const result = await client.query<ScheduleRow>(`${scheduleSelectSql('WHERE s.id = $1')} LIMIT 1`, [id]);
-  return result.rows[0] || null;
+  const row = result.rows[0];
+  return row ? normalizeScheduleRow(row) : null;
+}
+
+function normalizeScheduleRow(row: ScheduleRow): ScheduleRow {
+  return {
+    ...row,
+    tabulatorAmount: moneyToApi(row.tabulatorAmount),
+    hoursL: hoursToApi(row.hoursL),
+    hoursM: hoursToApi(row.hoursM),
+    hoursX: hoursToApi(row.hoursX),
+    hoursJ: hoursToApi(row.hoursJ),
+    hoursV: hoursToApi(row.hoursV),
+    hoursS1: hoursToApi(row.hoursS1),
+    hoursS2: hoursToApi(row.hoursS2)
+  };
 }
 
 async function loadExistingTeacherLoad(
@@ -584,13 +623,14 @@ async function loadExistingTeacherLoad(
 async function listSchedules(cycleId: string, coordinationId?: string | null): Promise<ScheduleRow[]> {
   const where = coordinationId ? 'WHERE s.cycle_id = $1 AND s.coordination_id = $2' : 'WHERE s.cycle_id = $1';
   const params = coordinationId ? [cycleId, coordinationId] : [cycleId];
-  return query<ScheduleRow>(
+  const rows = await query<ScheduleRow>(
     `
       ${scheduleSelectSql(where)}
       ORDER BY c.name ASC, t.full_name ASC, s.group_code ASC, s.subject_name ASC
     `,
     params
   );
+  return rows.map(normalizeScheduleRow);
 }
 
 async function listScheduleTeachers(cycleId: string): Promise<TeacherScheduleRow[]> {
@@ -685,7 +725,7 @@ async function listContextOptions() {
   const [subjects, tabulators] = await Promise.all([
     query<OptionRow>("SELECT id, name FROM subjects WHERE status = 'ACTIVO' ORDER BY name ASC"),
     query<TabulatorOptionRow>(
-      "SELECT id, name, amount::float8 AS amount, sort_order AS \"sortOrder\" FROM tabulators WHERE status = 'ACTIVO' ORDER BY sort_order ASC, name ASC"
+      "SELECT id, name, amount::text AS amount, sort_order AS \"sortOrder\" FROM tabulators WHERE status = 'ACTIVO' ORDER BY sort_order ASC, name ASC"
     )
   ]);
 
@@ -822,14 +862,14 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
           parsed.data.groupCode,
           tabulator.id,
           tabulator.name,
-          tabulator.amount,
-          parsed.data.hoursL,
-          parsed.data.hoursM,
-          parsed.data.hoursX,
-          parsed.data.hoursJ,
-          parsed.data.hoursV,
-          parsed.data.hoursS1,
-          parsed.data.hoursS2,
+          moneyToDb(tabulator.amount),
+          hoursToApi(parsed.data.hoursL),
+          hoursToApi(parsed.data.hoursM),
+          hoursToApi(parsed.data.hoursX),
+          hoursToApi(parsed.data.hoursJ),
+          hoursToApi(parsed.data.hoursV),
+          hoursToApi(parsed.data.hoursS1),
+          hoursToApi(parsed.data.hoursS2),
           actor.id
         ]
       );
@@ -904,14 +944,14 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
           parsed.data.groupCode,
           tabulator.id,
           tabulator.name,
-          tabulator.amount,
-          parsed.data.hoursL,
-          parsed.data.hoursM,
-          parsed.data.hoursX,
-          parsed.data.hoursJ,
-          parsed.data.hoursV,
-          parsed.data.hoursS1,
-          parsed.data.hoursS2,
+          moneyToDb(tabulator.amount),
+          hoursToApi(parsed.data.hoursL),
+          hoursToApi(parsed.data.hoursM),
+          hoursToApi(parsed.data.hoursX),
+          hoursToApi(parsed.data.hoursJ),
+          hoursToApi(parsed.data.hoursV),
+          hoursToApi(parsed.data.hoursS1),
+          hoursToApi(parsed.data.hoursS2),
           actor.id,
           before.id
         ]

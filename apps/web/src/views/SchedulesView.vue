@@ -374,7 +374,7 @@ function onScheduleTeacherSearchInput() {
 function applySelectedTabulator() {
   const selected = scheduleTabulators.value.find((tabulator) => tabulator.id === scheduleForm.value.tabulatorId);
   scheduleForm.value.tabulatorName = selected?.name || '';
-  scheduleForm.value.tabulatorAmount = selected?.amount || 0;
+  scheduleForm.value.tabulatorAmount = Number(selected?.amount || 0);
 }
 
 function editSchedule(schedule: Schedule) {
@@ -404,7 +404,7 @@ function editSchedule(schedule: Schedule) {
     groupCode: schedule.groupCode,
     tabulatorId: schedule.tabulatorId || '',
     tabulatorName: schedule.tabulatorName,
-    tabulatorAmount: schedule.tabulatorAmount,
+    tabulatorAmount: Number(schedule.tabulatorAmount || 0),
     hoursL: schedule.hoursL,
     hoursM: schedule.hoursM,
     hoursX: schedule.hoursX,
