@@ -3,6 +3,18 @@ import { apiBaseUrl } from './config';
 
 export type MoneyString = string;
 
+export interface ActorCoordination {
+  id: string;
+  name: string;
+  isPrimary?: boolean;
+}
+
+export type UserCoordinationAssignment = {
+  id: string;
+  name: string;
+  isPrimary: boolean;
+};
+
 export interface SessionUser {
   id: string;
   firebaseUid: string;
@@ -12,6 +24,7 @@ export interface SessionUser {
   status: 'ACTIVO' | 'INACTIVO';
   isProtectedSuperAdmin: boolean;
   permissions: string[];
+  actorCoordinations: ActorCoordination[];
 }
 
 export interface DashboardMetrics {
@@ -49,6 +62,7 @@ export interface AccessUser {
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
+  coordinations: UserCoordinationAssignment[];
 }
 
 export interface AccessSummary {
@@ -104,6 +118,7 @@ export interface TeacherSummary {
 export interface CoordinationOption {
   id: string;
   name: string;
+  isPrimary?: boolean;
 }
 
 export interface CycleOption {
@@ -799,17 +814,17 @@ export interface TeacherPayload {
   paternalLastName: string;
   maternalLastName: string;
   degree: string;
-  paymentType: 'E' | '1' | '2';
+  paymentType?: 'E' | '1' | '2' | '';
   category: 'V' | 'M' | 'N';
   location: string;
   comment: string;
   observation: string;
   coordinationName: string;
   phone: string;
-  email: string;
-  rfc: string;
+  email?: string;
+  rfc?: string;
   externalIdentifier: string;
-  bankDetail: string;
+  bankDetail?: string;
   status: 'ACTIVO' | 'INACTIVO';
   legacyTeacherId?: string;
 }
@@ -828,6 +843,7 @@ export interface UserPayload {
   status: 'ACTIVO' | 'INACTIVO';
   notes: string;
   legacyUsername: string;
+  coordinationIds?: string[];
 }
 
 async function getIdToken(): Promise<string> {
@@ -887,6 +903,7 @@ export async function fetchTeachers(): Promise<{
   summary: TeacherSummary;
   coordinations: CoordinationOption[];
   actorCoordination: CoordinationOption | null;
+  actorCoordinations?: CoordinationOption[];
 }> {
   return request('/teachers');
 }
@@ -1062,6 +1079,7 @@ export async function fetchSchedulesContext(cycleId?: string): Promise<{
   teachers: ScheduleTeacher[];
   coordinations: CoordinationOption[];
   actorCoordination: CoordinationOption | null;
+  actorCoordinations?: CoordinationOption[];
   subjects: SubjectOption[];
   tabulators: TabulatorOption[];
   summary: ScheduleSummary;
@@ -1099,6 +1117,7 @@ export async function fetchIncidencesContext(cycleId?: string, calendarConfigId?
   calendarPeriods: IncidenceCalendarPeriod[];
   activeCalendarPeriod: IncidenceCalendarPeriod | null;
   actorCoordination: CoordinationOption | null;
+  actorCoordinations?: CoordinationOption[];
   schedules: IncidenceSchedule[];
   summary: IncidenceSummary;
 }> {
@@ -1132,6 +1151,7 @@ export async function fetchExtrasContext(cycleId?: string): Promise<{
   activeCycle: CycleOption;
   cycles: CycleOption[];
   actorCoordination: CoordinationOption | null;
+  actorCoordinations?: CoordinationOption[];
   coordinations: CoordinationOption[];
   teachers: ExtraTeacher[];
   extras: ExtraRecord[];
@@ -1447,6 +1467,7 @@ export async function deleteCalendarPeriod(id: string): Promise<{ period: Calend
 export async function fetchAccessUsers(): Promise<{
   users: AccessUser[];
   roles: RoleOption[];
+  coordinations: CoordinationOption[];
   summary: AccessSummary;
 }> {
   return request('/users');

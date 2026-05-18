@@ -35,6 +35,7 @@ const teacherSummary = ref<TeacherSummary>({
 });
 const coordinations = ref<CoordinationOption[]>([]);
 const actorCoordination = ref<CoordinationOption | null>(null);
+const actorScopeCoordinations = ref<CoordinationOption[]>([]);
 const teacherSearch = ref('');
 const teacherStatusFilter = ref<'TODOS' | 'ACTIVO' | 'INACTIVO'>('TODOS');
 const onlyEditableTeachers = ref(false);
@@ -50,13 +51,18 @@ const editingTeacherId = ref<string | null>(null);
 const selectedConstancia = ref<File | null>(null);
 const pendingDeleteTeacher = ref<Teacher | null>(null);
 const deletingTeacher = ref(false);
+const canViewTeacherFiscal = computed(() => authStore.canViewFiscal);
+const canManageTeacherFiscal = computed(() => authStore.canManageFiscal);
+const canViewTeacherDocuments = computed(() => authStore.canViewFiscalDocuments);
+const canManageTeacherDocuments = computed(() => authStore.canManageFiscalDocuments);
+const canChooseTeacherCoordination = computed(() => authStore.isAdmin || actorScopeCoordinations.value.length > 1);
 
 const blankTeacher = (): TeacherPayload => ({
   firstNames: '',
   paternalLastName: '',
   maternalLastName: '',
   degree: 'Licenciatura',
-  paymentType: '1',
+  paymentType: canManageTeacherFiscal.value ? '1' : '',
   category: 'N',
   location: 'Local',
   comment: 'Docente activo',
@@ -79,8 +85,8 @@ const filteredTeachers = computed(() => {
     const matchesEditable = !onlyEditableTeachers.value || canEditTeacher(teacher);
     const haystack = [
       teacher.fullName,
-      teacher.rfc,
-      teacher.email,
+      canViewTeacherFiscal.value ? teacher.rfc : '',
+      canViewTeacherFiscal.value ? teacher.email : '',
       teacher.phone,
       teacher.externalIdentifier,
       teacher.bankDetail,
@@ -110,24 +116,18 @@ function paymentLabel(value: string) {
 }
 
 function fiscalPercent(teacher: Teacher) {
+  if (!canViewTeacherFiscal.value) return 0;
   const checks = [teacher.rfc, teacher.bankDetail, teacher.email, teacher.phone, teacher.externalIdentifier, teacher.documentId];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
 function canEditTeacher(teacher: Teacher) {
   if (authStore.isAdmin) return true;
-  return !!actorCoordination.value?.id && teacher.coordinationId === actorCoordination.value.id;
+  return actorScopeCoordinations.value.some((coordination) => coordination.id === teacher.coordinationId);
 }
 
 function canAccessTeacherDocument(teacher: Teacher) {
-  if (
-    authStore.isAdmin ||
-    authStore.session?.permissions?.includes('finance.view') ||
-    authStore.session?.permissions?.includes('fiscal.manage')
-  ) {
-    return true;
-  }
-  return canEditTeacher(teacher);
+  return canViewTeacherDocuments.value && !!teacher.documentId;
 }
 
 async function loadTeachers() {
@@ -139,6 +139,10 @@ async function loadTeachers() {
     teacherSummary.value = data.summary;
     coordinations.value = data.coordinations;
     actorCoordination.value = data.actorCoordination;
+    actorScopeCoordinations.value =
+      data.actorCoordinations ||
+      authStore.session?.actorCoordinations ||
+      (data.actorCoordination ? [data.actorCoordination] : []);
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar docentes.');
   } finally {
@@ -147,14 +151,14 @@ async function loadTeachers() {
 }
 
 function newTeacher() {
-  if (!authStore.isAdmin && !actorCoordination.value) {
+  if (!authStore.isAdmin && !actorScopeCoordinations.value.length) {
     setNotice('error', 'Tu usuario no tiene una coordinación vinculada para capturar docentes.');
     return;
   }
   editingTeacherId.value = null;
   teacherForm.value = {
     ...blankTeacher(),
-    coordinationName: authStore.isAdmin ? '' : actorCoordination.value?.name || ''
+    coordinationName: !authStore.isAdmin && actorScopeCoordinations.value.length === 1 ? actorScopeCoordinations.value[0].name : ''
   };
   selectedConstancia.value = null;
   teacherModalOpen.value = true;
@@ -179,7 +183,7 @@ function editTeacher(teacher: Teacher) {
     paternalLastName: teacher.paternalLastName,
     maternalLastName: teacher.maternalLastName,
     degree: teacher.degree || 'Licenciatura',
-    paymentType: teacher.paymentType === 'E' || teacher.paymentType === '1' || teacher.paymentType === '2' ? teacher.paymentType : '1',
+    paymentType: canManageTeacherFiscal.value && (teacher.paymentType === 'E' || teacher.paymentType === '1' || teacher.paymentType === '2') ? teacher.paymentType : '',
     category: teacher.category === 'V' || teacher.category === 'M' || teacher.category === 'N' ? teacher.category : 'N',
     location: teacher.location || 'Local',
     comment: teacher.comment,
@@ -203,12 +207,19 @@ async function saveTeacher() {
   teacherSaving.value = true;
   clearNotice();
   try {
-    if (!authStore.isAdmin && actorCoordination.value) {
-      teacherForm.value.coordinationName = actorCoordination.value.name;
+    if (!authStore.isAdmin && actorScopeCoordinations.value.length === 1) {
+      teacherForm.value.coordinationName = actorScopeCoordinations.value[0].name;
+    }
+    const payload: TeacherPayload = { ...teacherForm.value };
+    if (!canManageTeacherFiscal.value) {
+      delete payload.paymentType;
+      delete payload.email;
+      delete payload.rfc;
+      delete payload.bankDetail;
     }
     const response = editingTeacherId.value
-      ? await updateTeacher(editingTeacherId.value, teacherForm.value)
-      : await createTeacher(teacherForm.value);
+      ? await updateTeacher(editingTeacherId.value, payload)
+      : await createTeacher(payload);
     setNotice('ok', response.message);
     closeTeacherModal();
     await loadTeachers();
@@ -237,7 +248,7 @@ function readFileAsBase64(file: File): Promise<string> {
 }
 
 async function uploadConstancia() {
-  if (!editingTeacherId.value || !selectedConstancia.value) return;
+  if (!editingTeacherId.value || !selectedConstancia.value || !canManageTeacherDocuments.value) return;
   teacherUploading.value = true;
   clearNotice();
   try {
@@ -259,6 +270,7 @@ async function uploadConstancia() {
 }
 
 async function openConstancia(teacher: Teacher) {
+  if (!canAccessTeacherDocument(teacher)) return;
   try {
     await openTeacherConstancia(teacher.id);
   } catch (err) {
@@ -267,6 +279,7 @@ async function openConstancia(teacher: Teacher) {
 }
 
 async function exportTeachers(kind: 'active' | 'history') {
+  if (kind === 'active' && !canViewTeacherFiscal.value) return;
   teacherExporting.value = kind;
   clearNotice();
   try {
@@ -342,8 +355,8 @@ onMounted(() => {
     <section class="metric-grid compact">
       <article class="metric-card mini"><p>Total</p><strong>{{ teacherSummary.total }}</strong></article>
       <article class="metric-card mini"><p>Activos</p><strong>{{ teacherSummary.active }}</strong></article>
-      <article class="metric-card mini"><p>Con RFC</p><strong>{{ teacherSummary.withRfc }}</strong></article>
-      <article class="metric-card mini"><p>Expediente fiscal</p><strong>{{ teacherSummary.fiscalReady }}</strong></article>
+      <article v-if="canViewTeacherFiscal" class="metric-card mini"><p>Con RFC</p><strong>{{ teacherSummary.withRfc }}</strong></article>
+      <article v-if="canViewTeacherFiscal" class="metric-card mini"><p>Expediente fiscal</p><strong>{{ teacherSummary.fiscalReady }}</strong></article>
     </section>
 
     <section class="single-grid">
@@ -351,7 +364,10 @@ onMounted(() => {
         <div class="filters-row with-actions">
           <label class="search-box">
             <Search :size="17" />
-            <input v-model="teacherSearch" placeholder="Buscar docente, RFC, correo o coordinación" />
+            <input
+              v-model="teacherSearch"
+              :placeholder="canViewTeacherFiscal ? 'Buscar docente, RFC, correo o coordinacion' : 'Buscar docente, telefono o coordinacion'"
+            />
           </label>
           <select v-model="teacherStatusFilter">
             <option value="TODOS">Todos</option>
@@ -363,7 +379,13 @@ onMounted(() => {
               <input v-model="onlyEditableTeachers" type="checkbox" />
               Solo editables por mí
             </label>
-            <button class="secondary-action" type="button" :disabled="teacherExporting === 'active'" @click="exportTeachers('active')">
+            <button
+              v-if="canViewTeacherFiscal"
+              class="secondary-action"
+              type="button"
+              :disabled="teacherExporting === 'active'"
+              @click="exportTeachers('active')"
+            >
               <Loader2 v-if="teacherExporting === 'active'" class="spin" :size="16" />
               <Download v-else :size="16" />
               Exportar activos
@@ -387,29 +409,29 @@ onMounted(() => {
             <thead>
               <tr>
                 <th>Docente</th>
-                <th>Fiscal</th>
-                <th>Pago</th>
+                <th v-if="canViewTeacherFiscal">Fiscal</th>
+                <th v-if="canViewTeacherFiscal">Pago</th>
                 <th>Estatus</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!filteredTeachers.length">
-                <td colspan="5" class="empty-cell">No hay docentes con el filtro actual.</td>
+                <td :colspan="canViewTeacherFiscal ? 5 : 3" class="empty-cell">No hay docentes con el filtro actual.</td>
               </tr>
               <tr v-for="teacher in filteredTeachers" :key="teacher.id">
                 <td>
                   <strong>{{ teacher.fullName }}</strong>
                   <span><Building2 :size="13" /> {{ teacher.coordinationName || 'Sin coordinación' }}</span>
-                  <span><Mail :size="13" /> {{ teacher.email || 'Sin correo' }}</span>
+                  <span v-if="canViewTeacherFiscal"><Mail :size="13" /> {{ teacher.email || 'Sin correo' }}</span>
                 </td>
-                <td>
+                <td v-if="canViewTeacherFiscal">
                   <div class="progress-line">
                     <span :style="{ width: fiscalPercent(teacher) + '%' }"></span>
                   </div>
                   <small>{{ fiscalPercent(teacher) }}% completo</small>
                 </td>
-                <td>
+                <td v-if="canViewTeacherFiscal">
                   <span class="badge neutral"><CreditCard :size="13" /> {{ paymentLabel(teacher.paymentType) }}</span>
                   <small>Categoría {{ teacher.category || '-' }}</small>
                 </td>
@@ -418,11 +440,11 @@ onMounted(() => {
                 </td>
                 <td class="row-actions">
                   <button
-                    v-if="teacher.documentId"
+                    v-if="teacher.documentId && canViewTeacherDocuments"
                     class="icon-button"
                     type="button"
                     :disabled="!canAccessTeacherDocument(teacher)"
-                    :title="canAccessTeacherDocument(teacher) ? 'Abrir constancia' : 'Constancia restringida a la coordinación responsable'"
+                    :title="canAccessTeacherDocument(teacher) ? 'Abrir constancia' : 'Constancia fiscal restringida'"
                     @click="openConstancia(teacher)"
                   >
                     <FileText :size="16" />
@@ -455,8 +477,11 @@ onMounted(() => {
       :uploading="teacherUploading"
       :form="teacherForm"
       :coordinations="coordinations"
-      :can-choose-coordination="authStore.isAdmin"
-      :current-coordinator-name="actorCoordination?.name || ''"
+      :can-choose-coordination="canChooseTeacherCoordination"
+      :current-coordinator-name="actorScopeCoordinations.map((coordination) => coordination.name).join(', ')"
+      :can-manage-fiscal="canManageTeacherFiscal"
+      :can-view-fiscal-documents="canViewTeacherDocuments"
+      :can-manage-fiscal-documents="canManageTeacherDocuments"
       :selected-constancia="selectedConstancia"
       @close="closeTeacherModal"
       @save="saveTeacher"

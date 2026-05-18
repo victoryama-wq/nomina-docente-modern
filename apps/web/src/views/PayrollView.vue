@@ -164,7 +164,14 @@ const isGlobalPayrollReadOnly = computed(
     !authStore.isAdmin
 );
 
-const canExportPayrollRun = computed(() => !isGlobalPayrollReadOnly.value);
+const isPayrollPreviewOnly = computed(() => authStore.canPreviewPayroll && !authStore.canFinalizePayroll);
+const actorScopeLabel = computed(() => {
+  const coordinations = authStore.session?.actorCoordinations || [];
+  return coordinations.length ? coordinations.map((coordination) => coordination.name).join(', ') : 'coordinaciones asignadas';
+});
+const canExportPayrollRun = computed(
+  () => !isGlobalPayrollReadOnly.value && (authStore.canFinalizePayroll || authStore.canExportFinance)
+);
 
 function numberValue(value: number | string | null | undefined) {
   return Number(value) || 0;
@@ -578,6 +585,7 @@ onMounted(() => {
       <div>
         <p class="eyebrow">Nómina</p>
         <h3>Cálculo quincenal docente</h3>
+        <span v-if="isPayrollPreviewOnly" class="subtle-pill">Vista de {{ actorScopeLabel }}</span>
       </div>
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadContext(selectedCycleId)">

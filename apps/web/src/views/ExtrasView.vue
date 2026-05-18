@@ -72,6 +72,7 @@ const form = ref<ExtraPayload>(blankExtra());
 
 const selectedTeacher = computed(() => teachers.value.find((teacher) => teacher.id === form.value.teacherId) || null);
 const editingExtra = computed(() => extras.value.find((extra) => extra.id === editingExtraId.value) || null);
+const canChooseExtraCoordination = computed(() => authStore.isAdmin || coordinations.value.length > 1);
 
 const filteredTeacherOptions = computed(() => {
   const text = teacherSearchText.value.toLowerCase().trim();
@@ -364,7 +365,7 @@ function newExtra() {
   form.value = {
     ...blankExtra(),
     cycleId: selectedCycleId.value || activeCycle.value?.id,
-    coordinationId: authStore.isAdmin ? actorCoordination.value?.id || '' : ''
+    coordinationId: canChooseExtraCoordination.value ? actorCoordination.value?.id || '' : ''
   };
   teacherSearchText.value = '';
   teacherPickerOpen.value = false;
@@ -414,7 +415,7 @@ function editExtra(extra: ExtraRecord) {
   editingExtraId.value = extra.id;
   form.value = {
     cycleId: extra.cycleId,
-    coordinationId: authStore.isAdmin ? extra.coordinationId : '',
+    coordinationId: canChooseExtraCoordination.value ? extra.coordinationId : '',
     teacherId: extra.teacherId,
     hours: extra.hours,
     tabulatorId: tabulators.value.find((tabulator) => tabulator.amount === extra.tabulatorAmount)?.id || '',
@@ -450,6 +451,10 @@ async function saveExtra() {
     formError.value = 'Captura el motivo del extra.';
     return;
   }
+  if (canChooseExtraCoordination.value && !form.value.coordinationId) {
+    formError.value = 'Selecciona una coordinacion asignada.';
+    return;
+  }
 
   saving.value = true;
   clearNotice();
@@ -458,7 +463,7 @@ async function saveExtra() {
     const payload = {
       ...form.value,
       cycleId: form.value.cycleId || selectedCycleId.value || activeCycle.value?.id,
-      coordinationId: authStore.isAdmin ? form.value.coordinationId : undefined
+      coordinationId: canChooseExtraCoordination.value ? form.value.coordinationId : undefined
     };
     const response = editingExtraId.value
       ? await updateExtra(editingExtraId.value, payload)
@@ -688,7 +693,7 @@ onUnmounted(() => {
       :show="modalOpen"
       :is-editing="!!editingExtraId"
       :saving="saving"
-      :is-admin="authStore.isAdmin"
+      :is-admin="canChooseExtraCoordination"
       :form="form"
       v-model:teacher-search-text="teacherSearchText"
       :teacher-picker-open="teacherPickerOpen"

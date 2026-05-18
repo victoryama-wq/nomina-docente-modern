@@ -98,7 +98,7 @@ const teacherBodySchema = z.object({
   paternalLastName: z.string().trim().min(1).max(80),
   maternalLastName: z.string().trim().max(80).optional().default(''),
   degree: z.string().trim().max(60).optional().default(''),
-  paymentType: z.enum(['E', '1', '2']),
+  paymentType: z.union([z.enum(['E', '1', '2']), z.literal('')]).optional().default(''),
   category: z.enum(['V', 'M', 'N']),
   location: z.string().trim().max(40).optional().default('Local'),
   comment: z.string().trim().max(120).optional().default(''),
@@ -180,6 +180,37 @@ function canViewTeacherFiscal(actor: SessionUser): boolean {
 
 function canManageTeacherFiscal(actor: SessionUser): boolean {
   return isSystemAdmin(actor) || actor.permissions.includes('fiscal.manage');
+}
+
+const fiscalSensitiveTeacherFields: Record<string, string> = {
+  paymentType: 'tipo de pago',
+  email: 'correo fiscal',
+  rfc: 'RFC',
+  bankDetail: 'datos bancarios'
+};
+
+function submittedFiscalTeacherFields(payload: unknown): string[] {
+  if (!payload || typeof payload !== 'object') return [];
+  const source = payload as Record<string, unknown>;
+  return Object.entries(fiscalSensitiveTeacherFields)
+    .filter(([field]) => Object.prototype.hasOwnProperty.call(source, field))
+    .map(([, label]) => label);
+}
+
+async function blockUnauthorizedFiscalFields(
+  reply: FastifyReply,
+  actor: SessionUser,
+  payload: unknown
+): Promise<boolean> {
+  if (canManageTeacherFiscal(actor)) return false;
+  const fields = submittedFiscalTeacherFields(payload);
+  if (!fields.length) return false;
+
+  await reply.code(403).send({
+    error: 'FORBIDDEN',
+    message: `No tienes permiso para establecer datos fiscales/financieros (${fields.join(', ')}).`
+  });
+  return true;
 }
 
 function canViewTeacherDocuments(actor: SessionUser): boolean {
@@ -489,7 +520,8 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
         teachers: teachers.map((teacher) => sanitizeTeacherForActor(actor, teacher)),
         summary: buildSummary(teachers),
         coordinations,
-        actorCoordination
+        actorCoordination,
+        actorCoordinations: actor.actorCoordinations || []
       };
     }
   );
@@ -599,13 +631,15 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       return;
     }
 
+    const actor = request.user!;
+    if (await blockUnauthorizedFiscalFields(reply, actor, request.body)) return;
+
     const businessError = validateTeacherBusinessRules(parsed.data);
     if (businessError) {
       await reply.code(400).send({ error: 'VALIDATION_ERROR', message: businessError });
       return;
     }
 
-    const actor = request.user!;
     const teacher = await withTransaction(async (client) => {
       const coordination = await resolveTeacherCoordinationForActor(client, actor, parsed.data.coordinationName);
       const fullName = buildFullName(parsed.data);
@@ -618,7 +652,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
             bankDetail: parsed.data.bankDetail
           }
         : {
-            paymentType: parsed.data.paymentType,
+            paymentType: '',
             email: '',
             rfc: '',
             bankDetail: ''
@@ -698,13 +732,15 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       return;
     }
 
+    const actor = request.user!;
+    if (await blockUnauthorizedFiscalFields(reply, actor, request.body)) return;
+
     const businessError = validateTeacherBusinessRules(parsed.data);
     if (businessError) {
       await reply.code(400).send({ error: 'VALIDATION_ERROR', message: businessError });
       return;
     }
 
-    const actor = request.user!;
     const teacher = await withTransaction(async (client) => {
       const before = await loadTeacherById(client, params.data.id);
       if (!before) throw new Error('No se encontró el docente.');

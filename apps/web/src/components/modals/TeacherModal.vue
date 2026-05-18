@@ -11,6 +11,9 @@ defineProps<{
   coordinations: CoordinationOption[];
   canChooseCoordination: boolean;
   currentCoordinatorName: string;
+  canManageFiscal: boolean;
+  canViewFiscalDocuments: boolean;
+  canManageFiscalDocuments: boolean;
   selectedConstancia: File | null;
 }>();
 
@@ -52,7 +55,7 @@ defineEmits<{
           <span>Grado</span>
           <input v-model.trim="form.degree" />
         </label>
-        <label>
+        <label v-if="canManageFiscal">
           <span>Tipo de pago</span>
           <select v-model="form.paymentType" required>
             <option value="E">Efectivo</option>
@@ -96,11 +99,11 @@ defineEmits<{
           <span>Telefono</span>
           <input v-model.trim="form.phone" />
         </label>
-        <label>
+        <label v-if="canManageFiscal">
           <span>Correo</span>
           <input v-model.trim="form.email" type="email" />
         </label>
-        <label>
+        <label v-if="canManageFiscal">
           <span>RFC</span>
           <input v-model.trim="form.rfc" />
         </label>
@@ -108,10 +111,13 @@ defineEmits<{
           <span>Identificador</span>
           <input v-model.trim="form.externalIdentifier" />
         </label>
-        <label>
+        <label v-if="canManageFiscal">
           <span>Banco / cuenta</span>
           <input v-model.trim="form.bankDetail" />
         </label>
+        <p v-if="!canManageFiscal" class="span-2 field-hint">
+          Los datos fiscales y financieros son gestionados por RH, Finanzas o Admin.
+        </p>
         <label class="span-2">
           <span>Comentario</span>
           <input v-model.trim="form.comment" />
@@ -122,7 +128,7 @@ defineEmits<{
         </label>
       </div>
 
-      <div v-if="isEditing" class="upload-box">
+      <div v-if="isEditing && canManageFiscalDocuments" class="upload-box">
         <div>
           <strong>Constancia fiscal</strong>
           <span>{{ selectedConstancia?.name || 'Sin archivo seleccionado' }}</span>

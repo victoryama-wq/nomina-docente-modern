@@ -13,55 +13,46 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!session.value && !!firebaseUser.value);
   const isAdmin = computed(() => session.value?.role === 'admin' || session.value?.isProtectedSuperAdmin || false);
+  const hasPermission = (permission: string) => session.value?.permissions?.includes(permission) || false;
   
   // Computed permissions helpers
-  const canManageAccess = computed(() => session.value?.permissions?.includes('access.manage') || false);
-  const canManageTeachers = computed(() => session.value?.permissions?.includes('teachers.manage') || false);
-  const canManageSchedules = computed(() => session.value?.permissions?.includes('schedules.manage') || false);
-  const canManageIncidences = computed(() => session.value?.permissions?.includes('incidences.manage') || false);
-  const canManageExtras = computed(() => session.value?.permissions?.includes('extras.manage') || false);
-  const canViewPayroll = computed(() => session.value?.permissions?.includes('payroll.view') || false);
-  const canCalculatePayroll = computed(() => session.value?.permissions?.includes('payroll.calculate') || false);
-  const canFinalizePayroll = computed(
-    () => session.value?.isProtectedSuperAdmin || session.value?.permissions?.includes('payroll.finalize') || false
-  );
-  const canManageCalendar = computed(() => session.value?.permissions?.includes('calendar.manage') || false);
+  const canManageAccess = computed(() => hasPermission('access.manage'));
+  const canManageTeachers = computed(() => hasPermission('teachers.manage'));
+  const canManageSchedules = computed(() => hasPermission('schedules.manage'));
+  const canManageIncidences = computed(() => hasPermission('incidences.manage'));
+  const canManageExtras = computed(() => hasPermission('extras.manage'));
+  const canPreviewPayroll = computed(() => isAdmin.value || hasPermission('payroll.preview') || hasPermission('payroll.calculate'));
+  const canViewPayroll = computed(() => isAdmin.value || hasPermission('payroll.view') || canPreviewPayroll.value);
+  const canCalculatePayroll = computed(() => hasPermission('payroll.calculate'));
+  const canFinalizePayroll = computed(() => isAdmin.value || hasPermission('payroll.finalize'));
+  const canManageCalendar = computed(() => hasPermission('calendar.manage'));
   const canManageCatalogs = computed(() => isAdmin.value);
+  const canExportFinance = computed(() => isAdmin.value || hasPermission('finance.export'));
+  const canFinanceWorkflow = computed(() => isAdmin.value || hasPermission('finance.workflow'));
   const canViewFinanceReports = computed(
     () =>
-      session.value?.isProtectedSuperAdmin ||
-      session.value?.permissions?.includes('finance.view') ||
-      session.value?.permissions?.includes('finance.global_view') ||
-      session.value?.permissions?.includes('reports.view') ||
-      false
+      isAdmin.value ||
+      hasPermission('finance.view') ||
+      hasPermission('finance.global_view') ||
+      canExportFinance.value
   );
-  const canViewFiscalRecords = computed(
-    () =>
-      session.value?.isProtectedSuperAdmin ||
-      session.value?.permissions?.includes('teachers.manage') ||
-      session.value?.permissions?.includes('finance.view') ||
-      session.value?.permissions?.includes('fiscal.manage') ||
-      session.value?.permissions?.includes('reports.view') ||
-      false
+  const canViewFiscal = computed(() => isAdmin.value || hasPermission('fiscal.view') || hasPermission('fiscal.manage'));
+  const canManageFiscal = computed(() => isAdmin.value || hasPermission('fiscal.manage'));
+  const canViewFiscalDocuments = computed(
+    () => isAdmin.value || hasPermission('fiscal.document.view') || hasPermission('fiscal.document.manage')
   );
-  const canManageFiscalRecords = computed(
-    () =>
-      session.value?.isProtectedSuperAdmin ||
-      session.value?.permissions?.includes('teachers.manage') ||
-      session.value?.permissions?.includes('finance.view') ||
-      session.value?.permissions?.includes('fiscal.manage') ||
-      false
-  );
-  const canExportTeacherHistory = computed(() => session.value?.permissions?.includes('audit.view') || false);
+  const canManageFiscalDocuments = computed(() => isAdmin.value || hasPermission('fiscal.document.manage'));
+  const canViewFiscalRecords = computed(() => canViewFiscal.value);
+  const canManageFiscalRecords = computed(() => canManageFiscal.value);
+  const canExportTeacherHistory = computed(() => hasPermission('audit.view'));
   const canViewAudit = computed(
-    () => session.value?.isProtectedSuperAdmin || session.value?.permissions?.includes('audit.view') || false
+    () => session.value?.isProtectedSuperAdmin || hasPermission('audit.view')
   );
   const canViewTeachers = computed(() => 
     canManageTeachers.value || 
-    session.value?.permissions?.includes('finance.view') || 
-    session.value?.permissions?.includes('fiscal.manage') || 
-    session.value?.permissions?.includes('reports.view') || 
-    false
+    canViewFiscal.value ||
+    hasPermission('finance.view') ||
+    hasPermission('finance.global_view')
   );
 
   async function loadProtectedData() {
@@ -133,12 +124,19 @@ export const useAuthStore = defineStore('auth', () => {
     canManageSchedules,
     canManageIncidences,
     canManageExtras,
+    canPreviewPayroll,
     canViewPayroll,
     canCalculatePayroll,
     canFinalizePayroll,
     canManageCalendar,
     canManageCatalogs,
+    canExportFinance,
+    canFinanceWorkflow,
     canViewFinanceReports,
+    canViewFiscal,
+    canManageFiscal,
+    canViewFiscalDocuments,
+    canManageFiscalDocuments,
     canViewFiscalRecords,
     canManageFiscalRecords,
     canExportTeacherHistory,

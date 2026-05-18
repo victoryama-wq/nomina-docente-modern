@@ -124,24 +124,21 @@ const cashLines = computed(() => lines.value.filter((line) => line.paymentType =
 
 const cashAmount = computed(() => cashLines.value.reduce((sum, line) => moneyAdd(sum, line.totalAmount), '0.00'));
 
-const canUseFinanceWorkflow = computed(
-  () => authStore.isAdmin || authStore.canFinalizePayroll || authStore.session?.permissions?.includes('finance.view') || false
-);
+const canUseFinanceWorkflow = computed(() => authStore.canFinanceWorkflow);
 
 const isGlobalFinanceReadOnly = computed(
   () =>
     authStore.session?.permissions?.includes('finance.global_view') &&
     !authStore.isAdmin &&
-    !authStore.session?.permissions?.includes('finance.view') &&
-    !authStore.canFinalizePayroll
+    !authStore.canFinanceWorkflow
 );
 
-const canExportFinanceSummaryPdf = computed(() => !isGlobalFinanceReadOnly.value);
-const canExportCoordinationPdf = computed(() => true);
-const canExportCashReceipts = computed(() => !isGlobalFinanceReadOnly.value);
-const canExportFinanceCsv = computed(() => !isGlobalFinanceReadOnly.value);
+const canExportFinanceSummaryPdf = computed(() => authStore.canExportFinance && !isGlobalFinanceReadOnly.value);
+const canExportCoordinationPdf = computed(() => authStore.canExportFinance);
+const canExportCashReceipts = computed(() => authStore.canExportFinance && !isGlobalFinanceReadOnly.value);
+const canExportFinanceCsv = computed(() => authStore.canExportFinance && !isGlobalFinanceReadOnly.value);
 
-const canCancelForCorrection = computed(() => authStore.isAdmin || authStore.canFinalizePayroll);
+const canCancelForCorrection = computed(() => authStore.canFinanceWorkflow);
 
 const nextWorkflowAction = computed(() => {
   if (!canUseFinanceWorkflow.value) return null;
@@ -224,7 +221,9 @@ const pendingAmount = computed(() =>
 const searchPlaceholder = computed(() =>
   activeTab.value === 'HISTORICO'
     ? 'Buscar quincena, estado o usuario'
-    : 'Buscar docente, coordinación, RFC o pendiente'
+    : authStore.canViewFiscal
+      ? 'Buscar docente, coordinacion, RFC o pendiente'
+      : 'Buscar docente, coordinacion o pendiente'
 );
 
 const paymentTypeSummary = computed(() => {
@@ -266,9 +265,9 @@ const filteredLines = computed(() => {
     const haystack = [
       line.teacherName,
       line.coordinationName,
-      line.rfc,
-      line.email,
-      line.bankDetail,
+      authStore.canViewFiscal ? line.rfc : '',
+      authStore.canViewFiscal ? line.email : '',
+      authStore.canViewFiscal ? line.bankDetail : '',
       line.paymentType,
       line.category,
       line.fiscalMissing.join(' '),
@@ -290,9 +289,9 @@ const filteredFiscalLines = computed(() => {
     return [
       line.teacherName,
       line.coordinationName,
-      line.rfc,
-      line.email,
-      line.bankDetail,
+      authStore.canViewFiscal ? line.rfc : '',
+      authStore.canViewFiscal ? line.email : '',
+      authStore.canViewFiscal ? line.bankDetail : '',
       line.fiscalMissing.join(' ')
     ]
       .join(' ')
@@ -534,6 +533,7 @@ async function confirmStatusChange() {
 
 async function exportReport(kind: ExportKind) {
   if (!selectedRun.value || !canExportFinanceCsv.value) return;
+  if (kind === 'fiscal' && !authStore.canViewFiscal) return;
   exporting.value = kind;
   notice.value = null;
   try {
@@ -712,7 +712,13 @@ onMounted(() => {
               <FileSpreadsheet :size="16" />
               Pagos
             </button>
-            <button class="secondary-action" type="button" :disabled="!selectedRun || exporting === 'fiscal'" @click="exportReport('fiscal')">
+            <button
+              v-if="authStore.canViewFiscal"
+              class="secondary-action"
+              type="button"
+              :disabled="!selectedRun || exporting === 'fiscal'"
+              @click="exportReport('fiscal')"
+            >
               <FileSpreadsheet :size="16" />
               Pendientes
             </button>
@@ -825,7 +831,7 @@ onMounted(() => {
             <button type="button" :class="{ active: activeTab === 'COORDINACIONES' }" @click="activeTab = 'COORDINACIONES'">
               Coordinaciones
             </button>
-            <button type="button" :class="{ active: activeTab === 'FISCALES' }" @click="activeTab = 'FISCALES'">
+            <button v-if="authStore.canViewFiscal" type="button" :class="{ active: activeTab === 'FISCALES' }" @click="activeTab = 'FISCALES'">
               Pendientes
             </button>
             <button type="button" :class="{ active: activeTab === 'HISTORICO' }" @click="activeTab = 'HISTORICO'">
@@ -839,7 +845,7 @@ onMounted(() => {
             <thead>
               <tr>
                 <th>Docente</th>
-                <th>Fiscal</th>
+                <th v-if="authStore.canViewFiscal">Fiscal</th>
                 <th>Base</th>
                 <th>Descuentos</th>
                 <th>Extras</th>
@@ -850,12 +856,12 @@ onMounted(() => {
             </thead>
             <tbody>
               <tr v-if="!filteredLines.length">
-                <td colspan="8" class="empty-cell">
+                <td :colspan="authStore.canViewFiscal ? 8 : 7" class="empty-cell">
                   {{ selectedRun ? 'No hay pagos con el filtro actual.' : 'No hay nóminas guardadas para mostrar.' }}
                 </td>
               </tr>
               <tr v-for="line in filteredLines" :key="line.id">
-                <td>
+                <td v-if="authStore.canViewFiscal">
                   <strong>{{ line.teacherName }}</strong>
                   <span><Building2 :size="13" /> {{ line.coordinationName }}</span>
                   <small>{{ categoryLabel(line.category) }} / {{ paymentTypeLabel(line.paymentType) }}</small>
@@ -886,7 +892,7 @@ onMounted(() => {
                   <span class="badge" :class="line.paymentStatus === 'LISTO' ? 'ok' : 'warning'">
                     {{ line.paymentStatus === 'LISTO' ? 'Listo' : 'Pendiente' }}
                   </span>
-                  <small v-if="line.fiscalMissing.length">{{ line.fiscalMissing.join(', ') }}</small>
+                  <small v-if="authStore.canViewFiscal && line.fiscalMissing.length">{{ line.fiscalMissing.join(', ') }}</small>
                 </td>
                 <td class="row-actions">
                   <button class="icon-button" type="button" title="Ver detalle" @click="openLineDetail(line)">
@@ -1088,7 +1094,7 @@ onMounted(() => {
         </div>
 
         <div class="finance-detail-sections">
-          <section class="finance-detail-section">
+          <section v-if="authStore.canViewFiscal" class="finance-detail-section">
             <div class="section-title compact">
               <div>
                 <p class="eyebrow">Expediente fiscal</p>

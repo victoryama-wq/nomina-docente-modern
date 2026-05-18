@@ -9,6 +9,7 @@ export interface SessionUser {
   status: 'ACTIVO' | 'INACTIVO';
   isProtectedSuperAdmin: boolean;
   permissions: string[];
+  actorCoordinations: ActorCoordination[];
 }
 
 export interface ActorCoordination {

@@ -1095,7 +1095,28 @@ async function latestPayrollDefaults(client: PoolClient, cycle: CycleRow): Promi
   };
 }
 
-async function listRecentRuns(client: PoolClient, cycleId: string): Promise<PayrollRunRow[]> {
+async function listRecentRuns(
+  client: PoolClient,
+  cycleId: string,
+  coordinationScope: CoordinationScope
+): Promise<PayrollRunRow[]> {
+  const params: unknown[] = [cycleId];
+  const summaryExpression = coordinationScope ? "'{}'::jsonb" : 'pr.summary';
+  let visibility = '';
+
+  if (coordinationScope) {
+    if (!coordinationScope.length) return [];
+    params.push(coordinationScope);
+    visibility = `
+        AND EXISTS (
+          SELECT 1
+          FROM payroll_lines pl
+          WHERE pl.payroll_run_id = pr.id
+            AND pl.coordination_id = ANY($2::uuid[])
+        )
+    `;
+  }
+
   const result = await client.query<PayrollRunRow>(
     `
       SELECT
@@ -1105,7 +1126,7 @@ async function listRecentRuns(client: PoolClient, cycleId: string): Promise<Payr
         pr.period_label AS "periodLabel",
         pr.status,
         pr.weights,
-        pr.summary,
+        ${summaryExpression} AS summary,
         pr.calculated_at AS "calculatedAt",
         COALESCE(u.email, '') AS "calculatedByEmail",
         pr.created_at AS "createdAt"
@@ -1113,10 +1134,11 @@ async function listRecentRuns(client: PoolClient, cycleId: string): Promise<Payr
       JOIN academic_cycles ac ON ac.id = pr.cycle_id
       LEFT JOIN app_users u ON u.id = pr.calculated_by
       WHERE pr.cycle_id = $1
+        ${visibility}
       ORDER BY pr.created_at DESC
       LIMIT 36
     `,
-    [cycleId]
+    params
   );
   return result.rows.map((run) => ({ ...run, summary: normalizePayrollSummary(run.summary) }));
 }
@@ -1731,7 +1753,8 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
     const context = await withTransaction(async (client) => {
       const cycle = await ensureWorkingCycle(client, actor, parsed.data.cycleId);
       const defaults = await latestPayrollDefaults(client, cycle);
-      const runs = await listRecentRuns(client, cycle.id);
+      const actorScope = await loadActorScope(client, actor, { module: 'payroll.context' });
+      const runs = await listRecentRuns(client, cycle.id, payrollCoordinationScope(actor, actorScope));
       const calendarPeriods = await listCalendarConfigs(client, cycle.id);
       return { cycle, defaults, runs, calendarPeriods };
     });

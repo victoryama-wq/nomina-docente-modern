@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { requirePermission } from '../auth.js';
 import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
-import type { RoleCode, SessionUser } from '../types.js';
+import type { ActorCoordination, RoleCode, SessionUser } from '../types.js';
 
 interface RoleRow {
   id: string;
@@ -28,6 +28,7 @@ interface UserRow {
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
+  coordinations: ActorCoordination[];
 }
 
 const userBodySchema = z.object({
@@ -36,11 +37,18 @@ const userBodySchema = z.object({
   roleCode: z.string().trim().toLowerCase().default('coordinador'),
   status: z.enum(['ACTIVO', 'INACTIVO']).default('ACTIVO'),
   notes: z.string().trim().max(250).optional().default(''),
-  legacyUsername: z.string().trim().max(120).optional().default('')
+  legacyUsername: z.string().trim().max(120).optional().default(''),
+  coordinationIds: z.array(z.string().uuid()).optional().default([])
 });
 
-const userPatchSchema = userBodySchema.partial().extend({
-  roleCode: z.string().trim().toLowerCase().optional()
+const userPatchSchema = z.object({
+  email: z.string().email().transform((value) => value.trim().toLowerCase()).optional(),
+  displayName: z.string().trim().min(2).max(120).optional(),
+  roleCode: z.string().trim().toLowerCase().optional(),
+  status: z.enum(['ACTIVO', 'INACTIVO']).optional(),
+  notes: z.string().trim().max(250).optional(),
+  legacyUsername: z.string().trim().max(120).optional(),
+  coordinationIds: z.array(z.string().uuid()).optional()
 });
 
 function normalizeDomain(email: string): boolean {
@@ -60,6 +68,70 @@ async function getRole(client: PoolClient, roleCode: string): Promise<RoleRow | 
     [roleCode]
   );
   return result.rows[0] || null;
+}
+
+function normalizedCoordinationIds(coordinationIds: string[] | undefined): string[] {
+  return Array.from(new Set((coordinationIds || []).filter(Boolean)));
+}
+
+function requiresAssignedCoordination(role: RoleCode, status: 'ACTIVO' | 'INACTIVO'): boolean {
+  return status === 'ACTIVO' && role === 'coordinador';
+}
+
+async function assertCoordinationIdsAreActive(client: PoolClient, coordinationIds: string[]): Promise<void> {
+  if (!coordinationIds.length) return;
+
+  const result = await client.query<{ total: string }>(
+    `
+      SELECT count(*)::text AS total
+      FROM coordinations
+      WHERE id = ANY($1::uuid[])
+        AND status = 'ACTIVO'
+    `,
+    [coordinationIds]
+  );
+
+  if (Number(result.rows[0]?.total || 0) !== coordinationIds.length) {
+    throw new Error('Selecciona coordinaciones activas validas.');
+  }
+}
+
+async function replaceUserCoordinations(
+  client: PoolClient,
+  actor: SessionUser,
+  userId: string,
+  role: RoleCode,
+  status: 'ACTIVO' | 'INACTIVO',
+  coordinationIds: string[]
+): Promise<void> {
+  const uniqueIds = normalizedCoordinationIds(coordinationIds);
+  if (requiresAssignedCoordination(role, status) && !uniqueIds.length) {
+    throw new Error('El rol Coordinador requiere al menos una coordinacion asignada.');
+  }
+
+  await assertCoordinationIdsAreActive(client, uniqueIds);
+  await client.query('DELETE FROM user_coordinations WHERE user_id = $1', [userId]);
+
+  for (const [index, coordinationId] of uniqueIds.entries()) {
+    await client.query(
+      `
+        INSERT INTO user_coordinations (
+          user_id,
+          coordination_id,
+          is_primary,
+          created_by_user_id,
+          updated_at,
+          updated_by_user_id
+        )
+        VALUES ($1, $2, $3, $4, now(), $4)
+        ON CONFLICT (user_id, coordination_id) DO UPDATE
+        SET is_primary = EXCLUDED.is_primary,
+            updated_at = now(),
+            updated_by_user_id = EXCLUDED.updated_by_user_id
+      `,
+      [userId, coordinationId, index === 0, actor.id]
+    );
+  }
 }
 
 async function ensureActiveAdminRemains(client: PoolClient, userId: string): Promise<void> {
@@ -135,12 +207,68 @@ async function listUsers(): Promise<UserRow[]> {
         u.is_protected_super_admin AS "isProtectedSuperAdmin",
         u.last_login_at AS "lastLoginAt",
         u.created_at AS "createdAt",
-        u.updated_at AS "updatedAt"
+        u.updated_at AS "updatedAt",
+        COALESCE(
+          jsonb_agg(
+            jsonb_build_object('id', c.id, 'name', c.name, 'isPrimary', uc.is_primary)
+            ORDER BY uc.is_primary DESC, c.name ASC
+          ) FILTER (WHERE c.id IS NOT NULL),
+          '[]'::jsonb
+        ) AS coordinations
       FROM app_users u
       JOIN roles r ON r.id = u.role_id
+      LEFT JOIN user_coordinations uc ON uc.user_id = u.id
+      LEFT JOIN coordinations c ON c.id = uc.coordination_id
+        AND c.status = 'ACTIVO'
+      GROUP BY u.id, r.code, r.name
       ORDER BY u.is_protected_super_admin DESC, u.status ASC, u.display_name ASC
     `
   );
+}
+
+async function listActiveCoordinations() {
+  return query<{ id: string; name: string }>(
+    "SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC"
+  );
+}
+
+async function loadUserById(client: PoolClient, userId: string): Promise<UserRow | null> {
+  const result = await client.query<UserRow>(
+    `
+      SELECT
+        u.id,
+        u.firebase_uid AS "firebaseUid",
+        u.email,
+        u.display_name AS "displayName",
+        r.code AS role,
+        r.name AS "roleName",
+        u.status,
+        u.notes,
+        COALESCE(u.legacy_username, '') AS "legacyUsername",
+        u.legacy_row_number AS "legacyRowNumber",
+        u.is_protected_super_admin AS "isProtectedSuperAdmin",
+        u.last_login_at AS "lastLoginAt",
+        u.created_at AS "createdAt",
+        u.updated_at AS "updatedAt",
+        COALESCE(
+          jsonb_agg(
+            jsonb_build_object('id', c.id, 'name', c.name, 'isPrimary', uc.is_primary)
+            ORDER BY uc.is_primary DESC, c.name ASC
+          ) FILTER (WHERE c.id IS NOT NULL),
+          '[]'::jsonb
+        ) AS coordinations
+      FROM app_users u
+      JOIN roles r ON r.id = u.role_id
+      LEFT JOIN user_coordinations uc ON uc.user_id = u.id
+      LEFT JOIN coordinations c ON c.id = uc.coordination_id
+        AND c.status = 'ACTIVO'
+      WHERE u.id = $1
+      GROUP BY u.id, r.code, r.name
+      LIMIT 1
+    `,
+    [userId]
+  );
+  return result.rows[0] || null;
 }
 
 function buildSummary(users: UserRow[]) {
@@ -154,8 +282,8 @@ function buildSummary(users: UserRow[]) {
 
 export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
   app.get('/users', { preHandler: requirePermission('access.manage') }, async () => {
-    const [users, roles] = await Promise.all([listUsers(), listRoles()]);
-    return { users, roles, summary: buildSummary(users) };
+    const [users, roles, coordinations] = await Promise.all([listUsers(), listRoles(), listActiveCoordinations()]);
+    return { users, roles, coordinations, summary: buildSummary(users) };
   });
 
   app.post('/users', { preHandler: requirePermission('access.manage') }, async (request, reply) => {
@@ -178,6 +306,10 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
     const created = await withTransaction(async (client) => {
       const role = await getRole(client, body.roleCode);
       if (!role) throw new Error('El rol seleccionado no existe.');
+      const coordinationIds = normalizedCoordinationIds(body.coordinationIds);
+      if (requiresAssignedCoordination(role.code, body.status) && !coordinationIds.length) {
+        throw new Error('El rol Coordinador requiere al menos una coordinacion asignada.');
+      }
 
       const result = await client.query<UserRow>(
         `
@@ -212,8 +344,10 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
         ]
       );
 
-      await auditUser(client, actor, 'USER_CREATED', result.rows[0].id, null, result.rows[0]);
-      return result.rows[0];
+      await replaceUserCoordinations(client, actor, result.rows[0].id, role.code, body.status, coordinationIds);
+      const after = await loadUserById(client, result.rows[0].id);
+      await auditUser(client, actor, 'USER_CREATED', result.rows[0].id, null, after);
+      return after || result.rows[0];
     });
 
     await reply.code(201).send({ user: created, message: 'Usuario autorizado correctamente.' });
@@ -250,10 +384,21 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
             u.is_protected_super_admin AS "isProtectedSuperAdmin",
             u.last_login_at AS "lastLoginAt",
             u.created_at AS "createdAt",
-            u.updated_at AS "updatedAt"
+            u.updated_at AS "updatedAt",
+            COALESCE(
+              jsonb_agg(
+                jsonb_build_object('id', c.id, 'name', c.name, 'isPrimary', uc.is_primary)
+                ORDER BY uc.is_primary DESC, c.name ASC
+              ) FILTER (WHERE c.id IS NOT NULL),
+              '[]'::jsonb
+            ) AS coordinations
           FROM app_users u
           JOIN roles r ON r.id = u.role_id
+          LEFT JOIN user_coordinations uc ON uc.user_id = u.id
+          LEFT JOIN coordinations c ON c.id = uc.coordination_id
+            AND c.status = 'ACTIVO'
           WHERE u.id = $1
+          GROUP BY u.id, r.code, r.name
           LIMIT 1
         `,
         [params.data.id]
@@ -283,6 +428,11 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
       if (before.role === 'admin' && before.status === 'ACTIVO' && (role.code !== 'admin' || nextStatus !== 'ACTIVO')) {
         await ensureActiveAdminRemains(client, before.id);
       }
+
+      const nextCoordinationIds =
+        parsed.data.coordinationIds === undefined
+          ? normalizedCoordinationIds(before.coordinations.map((coordination) => coordination.id))
+          : normalizedCoordinationIds(parsed.data.coordinationIds);
 
       const result = await client.query<UserRow>(
         `
@@ -327,8 +477,10 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
         ]
       );
 
-      await auditUser(client, actor, 'USER_UPDATED', before.id, before, result.rows[0]);
-      return result.rows[0];
+      await replaceUserCoordinations(client, actor, before.id, role.code, nextStatus, nextCoordinationIds);
+      const after = await loadUserById(client, before.id);
+      await auditUser(client, actor, 'USER_UPDATED', before.id, before, after);
+      return after || result.rows[0];
     });
 
     return { user: updated, message: 'Usuario actualizado correctamente.' };
@@ -343,33 +495,8 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
 
     const actor = request.user!;
     await withTransaction(async (client) => {
-      const existing = await client.query<UserRow>(
-        `
-          SELECT
-            u.id,
-            u.firebase_uid AS "firebaseUid",
-            u.email,
-            u.display_name AS "displayName",
-            r.code AS role,
-            r.name AS "roleName",
-            u.status,
-            u.notes,
-            COALESCE(u.legacy_username, '') AS "legacyUsername",
-            u.legacy_row_number AS "legacyRowNumber",
-            u.is_protected_super_admin AS "isProtectedSuperAdmin",
-            u.last_login_at AS "lastLoginAt",
-            u.created_at AS "createdAt",
-            u.updated_at AS "updatedAt"
-          FROM app_users u
-          JOIN roles r ON r.id = u.role_id
-          WHERE u.id = $1
-          LIMIT 1
-        `,
-        [params.data.id]
-      );
-
-      const before = existing.rows[0];
-      if (!before) throw new Error('No se encontró el usuario.');
+      const before = await loadUserById(client, params.data.id);
+      if (!before) throw new Error('No se encontro el usuario.');
       if (before.id === actor.id) throw new Error('No puedes eliminar tu propio acceso.');
       if (before.isProtectedSuperAdmin) throw new Error('El administrador general protegido no puede ser eliminado.');
       if (before.role === 'admin' && before.status === 'ACTIVO') {

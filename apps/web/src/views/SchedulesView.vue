@@ -79,10 +79,13 @@ const scheduleForm = ref<SchedulePayload>(blankSchedule());
 
 const currentUserCoordination = computed(() => {
   if (actorScheduleCoordination.value) return actorScheduleCoordination.value;
+  if (!authStore.isAdmin && scheduleCoordinations.value.length === 1) return scheduleCoordinations.value[0];
   const currentName = normalizeMatch(authStore.session?.displayName || '');
   if (!currentName) return null;
   return scheduleCoordinations.value.find((coordination) => normalizeMatch(coordination.name) === currentName) || null;
 });
+
+const canChooseScheduleCoordination = computed(() => authStore.isAdmin || scheduleCoordinations.value.length > 1);
 
 const currentCoordinatorName = computed(
   () => currentUserCoordination.value?.name || authStore.session?.displayName || 'Coordinador conectado'
@@ -286,7 +289,7 @@ function scheduleLoadStatus(schedule: Schedule): { code: ScheduleLoadStatus; lab
 
 function canEditSchedule(schedule: Schedule) {
   if (authStore.isAdmin) return true;
-  return !!currentUserCoordination.value && currentUserCoordination.value.id === schedule.coordinationId;
+  return scheduleCoordinations.value.some((coordination) => coordination.id === schedule.coordinationId);
 }
 
 
@@ -331,7 +334,7 @@ function newSchedule() {
     ...blankSchedule(),
     cycleId: selectedScheduleCycleId.value || activeScheduleCycle.value?.id,
     coordinationId: currentUserCoordination.value?.id || null,
-    coordinationName: currentUserCoordination.value?.name || (!authStore.isAdmin ? currentCoordinatorName.value : '')
+    coordinationName: currentUserCoordination.value?.name || ''
   };
   scheduleModalOpen.value = true;
   clearNotice();
@@ -347,7 +350,7 @@ function closeScheduleModal() {
 }
 
 function applySelectedTeacherDefaults() {
-  if (authStore.isAdmin) return;
+  if (canChooseScheduleCoordination.value) return;
 
   scheduleForm.value.coordinationId = currentUserCoordination.value?.id || null;
   scheduleForm.value.coordinationName = currentCoordinatorName.value;
@@ -398,8 +401,8 @@ function editSchedule(schedule: Schedule) {
   scheduleForm.value = {
     cycleId: schedule.cycleId,
     teacherId: schedule.teacherId,
-    coordinationId: authStore.isAdmin ? schedule.coordinationId : currentUserCoordination.value?.id || null,
-    coordinationName: authStore.isAdmin ? schedule.coordinationName : currentCoordinatorName.value,
+    coordinationId: canChooseScheduleCoordination.value ? schedule.coordinationId : currentUserCoordination.value?.id || null,
+    coordinationName: canChooseScheduleCoordination.value ? schedule.coordinationName : currentCoordinatorName.value,
     subjectName: schedule.subjectName,
     groupCode: schedule.groupCode,
     tabulatorId: schedule.tabulatorId || '',
@@ -431,12 +434,12 @@ async function saveSchedule() {
     scheduleFormError.value = 'Selecciona un tabulador del catálogo.';
     return;
   }
-  if (authStore.isAdmin && !scheduleForm.value.coordinationId) {
+  if (canChooseScheduleCoordination.value && !scheduleForm.value.coordinationId) {
     scheduleFormError.value = 'Selecciona el coordinador responsable del horario.';
     return;
   }
   if (
-    authStore.isAdmin &&
+    canChooseScheduleCoordination.value &&
     !scheduleCoordinations.value.some((coordination) => coordination.id === scheduleForm.value.coordinationId)
   ) {
     scheduleFormError.value = 'Selecciona un coordinador con acceso activo al sistema.';
@@ -452,8 +455,8 @@ async function saveSchedule() {
     const payload = {
       ...scheduleForm.value,
       cycleId: scheduleForm.value.cycleId || selectedScheduleCycleId.value || activeScheduleCycle.value?.id,
-      coordinationId: authStore.isAdmin ? scheduleForm.value.coordinationId : currentUserCoordination.value?.id || null,
-      coordinationName: authStore.isAdmin ? scheduleForm.value.coordinationName : currentCoordinatorName.value
+      coordinationId: canChooseScheduleCoordination.value ? scheduleForm.value.coordinationId : currentUserCoordination.value?.id || null,
+      coordinationName: canChooseScheduleCoordination.value ? scheduleForm.value.coordinationName : currentCoordinatorName.value
     };
     const response = editingScheduleId.value
       ? await updateSchedule(editingScheduleId.value, payload)
@@ -666,7 +669,7 @@ onMounted(() => {
       :show="scheduleModalOpen"
       :is-editing="!!editingScheduleId"
       :saving="scheduleSaving"
-      :is-admin="authStore.isAdmin"
+      :is-admin="canChooseScheduleCoordination"
       :form="scheduleForm"
       v-model:teacher-search-text="scheduleTeacherSearch"
       :teacher-picker-open="scheduleTeacherPickerOpen"

@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { X, Loader2, Save } from 'lucide-vue-next';
-import type { UserPayload, RoleOption } from '../../api';
+import { computed } from 'vue';
+import type { UserPayload, RoleOption, CoordinationOption } from '../../api';
 
-defineProps<{
+const props = defineProps<{
   show: boolean;
   isEditing: boolean;
   saving: boolean;
   form: UserPayload;
   roles: RoleOption[];
+  coordinations: CoordinationOption[];
 }>();
+
+const requiresCoordination = computed(() => props.form.roleCode === 'coordinador' && props.form.status === 'ACTIVO');
 
 defineEmits<{
   (e: 'close'): void;
@@ -51,6 +55,21 @@ defineEmits<{
             <option value="INACTIVO">INACTIVO</option>
           </select>
         </label>
+        <fieldset class="coordination-checks">
+          <legend>Coordinaciones asignadas</legend>
+          <p v-if="requiresCoordination && !form.coordinationIds?.length" class="field-warning">
+            Coordinador activo requiere al menos una coordinacion.
+          </p>
+          <p v-else class="field-hint">Admin, Finanzas, RH, Contador y Contabilidad no requieren coordinacion operativa.</p>
+          <label v-for="coordination in coordinations" :key="coordination.id" class="checkbox-line">
+            <input
+              v-model="form.coordinationIds"
+              type="checkbox"
+              :value="coordination.id"
+            />
+            <span>{{ coordination.name }}</span>
+          </label>
+        </fieldset>
         <label>
           <span>Usuario legacy</span>
           <input v-model.trim="form.legacyUsername" />

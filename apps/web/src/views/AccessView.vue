@@ -9,6 +9,7 @@ import {
   deleteAccessUser,
   type AccessUser,
   type AccessSummary,
+  type CoordinationOption,
   type RoleOption,
   type UserPayload
 } from '../api';
@@ -19,6 +20,7 @@ const authStore = useAuthStore();
 
 const accessUsers = ref<AccessUser[]>([]);
 const accessRoles = ref<RoleOption[]>([]);
+const accessCoordinations = ref<CoordinationOption[]>([]);
 const accessSummary = ref<AccessSummary>({ total: 0, active: 0, inactive: 0, admins: 0 });
 const accessSearch = ref('');
 const accessStatusFilter = ref<'TODOS' | 'ACTIVO' | 'INACTIVO'>('TODOS');
@@ -38,7 +40,8 @@ const blankAccessUser = (): UserPayload => ({
   roleCode: 'coordinador',
   status: 'ACTIVO',
   notes: '',
-  legacyUsername: ''
+  legacyUsername: '',
+  coordinationIds: []
 });
 
 const accessForm = ref<UserPayload>(blankAccessUser());
@@ -47,7 +50,15 @@ const filteredAccessUsers = computed(() => {
   const text = accessSearch.value.toLowerCase().trim();
   return accessUsers.value.filter((user) => {
     const matchesStatus = accessStatusFilter.value === 'TODOS' || user.status === accessStatusFilter.value;
-    const haystack = [user.displayName, user.email, user.roleName, user.role, user.notes, user.legacyUsername]
+    const haystack = [
+      user.displayName,
+      user.email,
+      user.roleName,
+      user.role,
+      user.notes,
+      user.legacyUsername,
+      user.coordinations.map((coordination) => coordination.name).join(' ')
+    ]
       .join(' ')
       .toLowerCase();
     return matchesStatus && (!text || haystack.includes(text));
@@ -70,6 +81,7 @@ async function loadAccessUsers() {
     const data = await fetchAccessUsers();
     accessUsers.value = data.users;
     accessRoles.value = data.roles;
+    accessCoordinations.value = data.coordinations;
     accessSummary.value = data.summary;
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar usuarios.');
@@ -99,7 +111,8 @@ function editAccessUser(user: AccessUser) {
     roleCode: user.role,
     status: user.status,
     notes: user.notes,
-    legacyUsername: user.legacyUsername
+    legacyUsername: user.legacyUsername,
+    coordinationIds: user.coordinations.map((coordination) => coordination.id)
   };
   accessModalOpen.value = true;
   clearNotice();
@@ -210,13 +223,14 @@ onMounted(() => {
               <tr>
                 <th>Usuario</th>
                 <th>Rol</th>
+                <th>Coordinaciones</th>
                 <th>Estatus</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!filteredAccessUsers.length">
-                <td colspan="4" class="empty-cell">No hay usuarios con el filtro actual.</td>
+                <td colspan="5" class="empty-cell">No hay usuarios con el filtro actual.</td>
               </tr>
               <tr v-for="user in filteredAccessUsers" :key="user.id">
                 <td>
@@ -227,6 +241,15 @@ onMounted(() => {
                 <td>
                   <span class="badge neutral">{{ user.roleName }}</span>
                   <small>{{ user.legacyUsername || 'Sin usuario legacy' }}</small>
+                </td>
+                <td>
+                  <span v-if="user.coordinations.length" class="inline-list">
+                    {{ user.coordinations.map((coordination) => coordination.name).join(', ') }}
+                  </span>
+                  <small v-else-if="user.role === 'coordinador' && user.status === 'ACTIVO'" class="danger-text">
+                    Requiere configuracion
+                  </small>
+                  <small v-else>Sin coordinacion operativa requerida</small>
                 </td>
                 <td>
                   <span class="badge" :class="user.status === 'ACTIVO' ? 'ok' : 'muted'">{{ user.status }}</span>
@@ -258,6 +281,7 @@ onMounted(() => {
       :saving="accessSaving"
       :form="accessForm"
       :roles="accessRoles"
+      :coordinations="accessCoordinations"
       @close="closeAccessModal"
       @save="saveAccessUser"
     />

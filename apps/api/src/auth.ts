@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { config } from './config.js';
 import { query } from './db.js';
 import { firebaseAdmin } from './firebase.js';
-import type { SessionUser } from './types.js';
+import type { ActorCoordination, SessionUser } from './types.js';
 
 interface UserRow {
   id: string;
@@ -13,6 +13,12 @@ interface UserRow {
   is_protected_super_admin: boolean;
   role_code: SessionUser['role'];
   permissions: string[];
+}
+
+interface UserCoordinationRow {
+  id: string;
+  name: string;
+  isPrimary: boolean;
 }
 
 function getBearerToken(request: FastifyRequest): string | null {
@@ -71,8 +77,27 @@ async function loadUserByEmail(email: string, firebaseUid: string): Promise<Sess
     role: row.role_code,
     status: row.status,
     isProtectedSuperAdmin: row.is_protected_super_admin,
-    permissions: row.permissions || []
+    permissions: row.permissions || [],
+    actorCoordinations: await loadUserCoordinations(row.id)
   };
+}
+
+async function loadUserCoordinations(userId: string): Promise<ActorCoordination[]> {
+  const rows = await query<UserCoordinationRow>(
+    `
+      SELECT
+        c.id,
+        c.name,
+        uc.is_primary AS "isPrimary"
+      FROM user_coordinations uc
+      JOIN coordinations c ON c.id = uc.coordination_id
+      WHERE uc.user_id = $1
+        AND c.status = 'ACTIVO'
+      ORDER BY uc.is_primary DESC, c.name ASC
+    `,
+    [userId]
+  );
+  return rows.map((row) => ({ id: row.id, name: row.name, isPrimary: row.isPrimary }));
 }
 
 export async function authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void> {

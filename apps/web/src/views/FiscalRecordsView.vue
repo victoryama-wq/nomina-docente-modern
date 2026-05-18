@@ -21,7 +21,6 @@ import {
   fetchTeachers,
   updateTeacherFiscal,
   uploadTeacherConstancia,
-  type CoordinationOption,
   type Teacher,
   type TeacherFiscalPayload,
   type TeacherSummary
@@ -54,7 +53,6 @@ interface FiscalForm extends TeacherFiscalPayload {}
 const authStore = useAuthStore();
 
 const teachers = ref<Teacher[]>([]);
-const actorCoordination = ref<CoordinationOption | null>(null);
 const summary = ref<TeacherSummary>({
   total: 0,
   active: 0,
@@ -162,15 +160,7 @@ function fiscalPayloadFromTeacher(teacher: Teacher): FiscalForm {
 }
 
 function canManageRecord(record: FiscalRecord) {
-  if (!authStore.canManageFiscalRecords) return false;
-  if (
-    authStore.isAdmin ||
-    authStore.session?.permissions?.includes('finance.view') ||
-    authStore.session?.permissions?.includes('fiscal.manage')
-  ) {
-    return true;
-  }
-  return !!actorCoordination.value?.id && record.teacher.coordinationId === actorCoordination.value.id;
+  return authStore.canManageFiscalRecords && !!record.teacher.id;
 }
 
 function openFiscalEdit(record: FiscalRecord) {
@@ -245,7 +235,7 @@ async function saveFiscalEdit() {
     });
     message = response.message;
 
-    if (selectedConstancia.value) {
+    if (selectedConstancia.value && authStore.canManageFiscalDocuments) {
       const file = selectedConstancia.value;
       const base64Data = await readFileAsBase64(file);
       const uploadResponse = await uploadTeacherConstancia(record.teacher.id, {
@@ -394,7 +384,7 @@ function closePreview() {
 }
 
 async function previewConstancia(record: FiscalRecord) {
-  if (!record.teacher.documentId || !canManageRecord(record)) return;
+  if (!record.teacher.documentId || !authStore.canViewFiscalDocuments) return;
   previewBusyId.value = record.teacher.id;
   try {
     closePreview();
@@ -414,7 +404,7 @@ async function previewConstancia(record: FiscalRecord) {
 }
 
 async function downloadConstancia(record: FiscalRecord) {
-  if (!record.teacher.documentId || !canManageRecord(record)) return;
+  if (!record.teacher.documentId || !authStore.canViewFiscalDocuments) return;
   downloadingId.value = record.teacher.id;
   try {
     await downloadTeacherConstancia(record.teacher.id);
@@ -427,7 +417,7 @@ async function downloadConstancia(record: FiscalRecord) {
 }
 
 async function downloadPreviewConstancia() {
-  if (!constanciaPreview.value) return;
+  if (!constanciaPreview.value || !authStore.canViewFiscalDocuments) return;
   downloadingId.value = constanciaPreview.value.teacher.id;
   try {
     await downloadTeacherConstancia(constanciaPreview.value.teacher.id);
@@ -447,7 +437,6 @@ async function loadFiscalRecords() {
     const data = await fetchTeachers();
     teachers.value = data.teachers;
     summary.value = data.summary;
-    actorCoordination.value = data.actorCoordination;
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar expedientes fiscales.');
   } finally {
@@ -565,7 +554,7 @@ onUnmounted(() => {
                 <td>
                   <strong>{{ record.teacher.documentName || 'Sin constancia' }}</strong>
                   <span>{{ documentDate(record.teacher.documentUploadedAt) }}</span>
-                  <div v-if="record.teacher.documentId && canManageRecord(record)" class="fiscal-document-actions">
+                  <div v-if="record.teacher.documentId && authStore.canViewFiscalDocuments" class="fiscal-document-actions">
                     <button
                       class="secondary-action"
                       type="button"
@@ -643,7 +632,7 @@ onUnmounted(() => {
           </label>
         </div>
 
-        <div class="upload-box fiscal-edit-upload">
+        <div v-if="authStore.canManageFiscalDocuments" class="upload-box fiscal-edit-upload">
           <FileText :size="22" />
           <div>
             <strong>Constancia fiscal</strong>
