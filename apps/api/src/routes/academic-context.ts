@@ -1,4 +1,5 @@
 import type { PoolClient } from 'pg';
+import { loadActorScope, selectCompatibleActorCoordination } from '../actor-scope.js';
 import { query } from '../db.js';
 import type { SessionUser } from '../types.js';
 
@@ -162,37 +163,21 @@ export async function loadActorCoordination(
   actor: SessionUser,
   createIfMissing: boolean
 ): Promise<CoordinationRow | null> {
-  const user = await client.query<{ displayName: string; legacyUsername: string }>(
-    `
-      SELECT display_name AS "displayName", COALESCE(legacy_username, '') AS "legacyUsername"
-      FROM app_users
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [actor.id]
-  );
+  const scope = await loadActorScope(client, actor, {
+    module: 'academic-context.loadActorCoordination'
+  });
 
-  const candidates = [user.rows[0]?.displayName, user.rows[0]?.legacyUsername, actor.displayName]
-    .map((value) => normalizeText(value || ''))
-    .filter(Boolean);
-  const uniqueCandidates = [...new Map(candidates.map((candidate) => [normalizeComparable(candidate), candidate])).values()];
-
-  for (const candidate of uniqueCandidates) {
-    const existing = await client.query<CoordinationRow>(
-      'SELECT id, name FROM coordinations WHERE lower(name) = lower($1) LIMIT 1',
-      [candidate]
-    );
-    if (existing.rows[0]) return existing.rows[0];
+  if (createIfMissing && scope.coordinations.length === 0) {
+    console.warn('H02_COMPAT_COORDINATION_NOT_CREATED', {
+      actorEmail: actor.email,
+      role: actor.role,
+      module: 'academic-context.loadActorCoordination'
+    });
   }
 
-  if (!createIfMissing) return null;
-
-  const name = uniqueCandidates[0] || actor.displayName || actor.email;
-  const created = await client.query<CoordinationRow>(
-    'INSERT INTO coordinations (name, status) VALUES ($1, $2) RETURNING id, name',
-    [name, 'ACTIVO']
-  );
-  return created.rows[0];
+  // TODO H02: migrar este uso a actorCoordinations[] en fases posteriores.
+  const selected = selectCompatibleActorCoordination(scope);
+  return selected ? { id: selected.id, name: selected.name } : null;
 }
 
 export async function listActiveCoordinations(): Promise<CoordinationRow[]> {
