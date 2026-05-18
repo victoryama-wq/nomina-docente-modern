@@ -174,6 +174,42 @@ function isSystemAdmin(actor: SessionUser): boolean {
   return actor.role === 'admin' || actor.isProtectedSuperAdmin;
 }
 
+function canViewTeacherFiscal(actor: SessionUser): boolean {
+  return isSystemAdmin(actor) || actor.permissions.includes('fiscal.view') || actor.permissions.includes('fiscal.manage');
+}
+
+function canManageTeacherFiscal(actor: SessionUser): boolean {
+  return isSystemAdmin(actor) || actor.permissions.includes('fiscal.manage');
+}
+
+function canViewTeacherDocuments(actor: SessionUser): boolean {
+  return (
+    isSystemAdmin(actor) ||
+    actor.permissions.includes('fiscal.document.view') ||
+    actor.permissions.includes('fiscal.document.manage')
+  );
+}
+
+function canManageTeacherDocuments(actor: SessionUser): boolean {
+  return isSystemAdmin(actor) || actor.permissions.includes('fiscal.document.manage');
+}
+
+function sanitizeTeacherForActor(actor: SessionUser, teacher: TeacherRow): TeacherRow {
+  if (canViewTeacherFiscal(actor)) return teacher;
+
+  return {
+    ...teacher,
+    paymentType: '',
+    email: '',
+    rfc: '',
+    bankDetail: '',
+    documentId: null,
+    documentName: '',
+    documentMimeType: '',
+    documentUploadedAt: null
+  };
+}
+
 async function assertTeacherOwnedByActorCoordination(
   client: PoolClient,
   actor: SessionUser,
@@ -182,7 +218,8 @@ async function assertTeacherOwnedByActorCoordination(
 ): Promise<ActorScope | null> {
   if (
     isSystemAdmin(actor) ||
-    (options.allowFinance && (actor.permissions.includes('finance.view') || actor.permissions.includes('fiscal.manage')))
+    (options.allowFinance &&
+      (canViewTeacherFiscal(actor) || canViewTeacherDocuments(actor) || canManageTeacherDocuments(actor)))
   ) {
     return null;
   }
@@ -404,8 +441,9 @@ async function loadTeacherById(client: PoolClient, id: string): Promise<TeacherR
 export async function registerTeacherRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/teachers',
-    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'reports.view']) },
+    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'reports.view', 'fiscal.view']) },
     async (request) => {
+      const actor = request.user!;
       const parsed = z
         .object({
           q: z.string().trim().optional(),
@@ -424,9 +462,15 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
       if (filters.q) {
         params.push(`%${filters.q.toLowerCase()}%`);
-        where.push(
-          `(lower(t.full_name) LIKE $${params.length} OR lower(t.rfc) LIKE $${params.length} OR lower(t.email) LIKE $${params.length} OR lower(t.external_identifier) LIKE $${params.length} OR lower(COALESCE(c.name, '')) LIKE $${params.length})`
-        );
+        const searchFields = [
+          `lower(t.full_name) LIKE $${params.length}`,
+          `lower(t.external_identifier) LIKE $${params.length}`,
+          `lower(COALESCE(c.name, '')) LIKE $${params.length}`
+        ];
+        if (canViewTeacherFiscal(actor)) {
+          searchFields.push(`lower(t.rfc) LIKE $${params.length}`, `lower(t.email) LIKE $${params.length}`);
+        }
+        where.push(`(${searchFields.join(' OR ')})`);
       }
 
       const teachers = await query<TeacherRow>(
@@ -437,17 +481,22 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
         "SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC"
       );
       const actorCoordination = await withTransaction(async (client) => {
-        const scope = await loadActorScope(client, request.user!, { module: 'teachers.list' });
+        const scope = await loadActorScope(client, actor, { module: 'teachers.list' });
         return selectCompatibleActorCoordination(scope);
       });
 
-      return { teachers, summary: buildSummary(teachers), coordinations, actorCoordination };
+      return {
+        teachers: teachers.map((teacher) => sanitizeTeacherForActor(actor, teacher)),
+        summary: buildSummary(teachers),
+        coordinations,
+        actorCoordination
+      };
     }
   );
 
   app.get(
     '/teachers/export/active',
-    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'reports.view']) },
+    { preHandler: requireAnyPermission(['fiscal.view']) },
     async (_request, reply) => {
       const teachers = await query<TeacherRow>(
         `${teacherSelectSql("WHERE t.status = 'ACTIVO'")} ORDER BY t.full_name ASC`
@@ -561,6 +610,19 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const coordination = await resolveTeacherCoordinationForActor(client, actor, parsed.data.coordinationName);
       const fullName = buildFullName(parsed.data);
       const normalizedName = normalizeComparable(fullName);
+      const fiscalValues = canManageTeacherFiscal(actor)
+        ? {
+            paymentType: parsed.data.paymentType,
+            email: parsed.data.email,
+            rfc: parsed.data.rfc,
+            bankDetail: parsed.data.bankDetail
+          }
+        : {
+            paymentType: parsed.data.paymentType,
+            email: '',
+            rfc: '',
+            bankDetail: ''
+          };
 
       const created = await client.query<{ id: string }>(
         `
@@ -600,17 +662,17 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           normalizeUpper(parsed.data.paternalLastName),
           normalizeUpper(parsed.data.maternalLastName),
           parsed.data.degree,
-          parsed.data.paymentType,
+          fiscalValues.paymentType,
           parsed.data.category,
           parsed.data.location || 'Local',
           parsed.data.comment,
           parsed.data.observation,
           coordination.id,
           parsed.data.phone.replace(/[^0-9+]/g, ''),
-          parsed.data.email,
-          parsed.data.rfc,
+          fiscalValues.email,
+          fiscalValues.rfc,
           parsed.data.externalIdentifier,
-          parsed.data.bankDetail,
+          fiscalValues.bankDetail,
           parsed.data.status,
           actor.id
         ]
@@ -621,7 +683,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       return after;
     });
 
-    await reply.code(201).send({ teacher, message: 'Docente registrado correctamente.' });
+    await reply.code(201).send({ teacher: teacher ? sanitizeTeacherForActor(actor, teacher) : teacher, message: 'Docente registrado correctamente.' });
   });
 
   app.patch('/teachers/:id', { preHandler: requirePermission('teachers.manage') }, async (request, reply) => {
@@ -651,6 +713,19 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const coordination = await resolveTeacherCoordinationForActor(client, actor, parsed.data.coordinationName);
       const fullName = buildFullName(parsed.data);
       const normalizedName = normalizeComparable(fullName);
+      const fiscalValues = canManageTeacherFiscal(actor)
+        ? {
+            paymentType: parsed.data.paymentType,
+            email: parsed.data.email,
+            rfc: parsed.data.rfc,
+            bankDetail: parsed.data.bankDetail
+          }
+        : {
+            paymentType: before.paymentType,
+            email: before.email,
+            rfc: before.rfc,
+            bankDetail: before.bankDetail
+          };
 
       await client.query(
         `
@@ -689,17 +764,17 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           normalizeUpper(parsed.data.paternalLastName),
           normalizeUpper(parsed.data.maternalLastName),
           parsed.data.degree,
-          parsed.data.paymentType,
+          fiscalValues.paymentType,
           parsed.data.category,
           parsed.data.location || 'Local',
           parsed.data.comment,
           parsed.data.observation,
           coordination.id,
           parsed.data.phone.replace(/[^0-9+]/g, ''),
-          parsed.data.email,
-          parsed.data.rfc,
+          fiscalValues.email,
+          fiscalValues.rfc,
           parsed.data.externalIdentifier,
-          parsed.data.bankDetail,
+          fiscalValues.bankDetail,
           parsed.data.status,
           actor.id,
           before.id
@@ -711,12 +786,12 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       return after;
     });
 
-    return { teacher, message: 'Docente actualizado correctamente.' };
+    return { teacher: teacher ? sanitizeTeacherForActor(actor, teacher) : teacher, message: 'Docente actualizado correctamente.' };
   });
 
   app.patch(
     '/teachers/:id/fiscal',
-    { preHandler: requireAnyPermission(['finance.view', 'fiscal.manage']) },
+    { preHandler: requirePermission('fiscal.manage') },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = teacherFiscalBodySchema.safeParse(request.body);
@@ -842,7 +917,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.post(
     '/teachers/:id/documents/constancia',
-    { preHandler: requireAnyPermission(['finance.view', 'fiscal.manage']) },
+    { preHandler: requirePermission('fiscal.document.manage') },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = documentBodySchema.safeParse(request.body);
@@ -922,7 +997,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.get(
     '/teachers/:id/documents/current',
-    { preHandler: requireAnyPermission(['finance.view', 'reports.view', 'fiscal.manage']) },
+    { preHandler: requirePermission('fiscal.document.view') },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       if (!params.success) {

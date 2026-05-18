@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
+import { loadActorScope } from '../actor-scope.js';
 import { requireAnyPermission, requirePermissionOrProtectedSuperAdmin } from '../auth.js';
 import { withTransaction } from '../db.js';
 import {
@@ -14,16 +15,15 @@ import {
   toHoursDecimal,
   toMoneyDecimal
 } from '../lib/decimal.js';
-import type { SessionUser } from '../types.js';
+import type { ActorScope, SessionUser } from '../types.js';
 import {
   ensureWorkingCycle,
   listCycles,
-  loadActorCoordination,
-  type CoordinationRow,
   type CycleRow
 } from './academic-context.js';
 
 type DecimalString = string;
+type CoordinationScope = string[] | null;
 
 interface PayrollContextQuery {
   cycleId?: string;
@@ -504,6 +504,10 @@ function isGlobalPayrollReadOnly(actor: SessionUser): boolean {
   );
 }
 
+function payrollCoordinationScope(actor: SessionUser, scope: ActorScope): CoordinationScope {
+  return canViewAllPayroll(actor) ? null : scope.coordinationIds;
+}
+
 function publicAlerts(alerts: string[]): string[] {
   return alerts.filter((alert) => !alert.startsWith('extra:'));
 }
@@ -629,15 +633,17 @@ async function listPayrollSchedules(
   client: PoolClient,
   cycleId: string,
   calendarConfigId: string | null,
-  coordinationId: string | null
+  coordinationScope: CoordinationScope
 ): Promise<PayrollScheduleRow[]> {
   const params: unknown[] = [cycleId, calendarConfigId];
   let visibility = '';
-  if (coordinationId) {
-    params.push(coordinationId);
-    visibility = 'AND s.coordination_id = $3';
-  } else if (coordinationId === '') {
-    visibility = 'AND false';
+  if (coordinationScope) {
+    if (coordinationScope.length === 0) {
+      visibility = 'AND false';
+    } else {
+      params.push(coordinationScope);
+      visibility = 'AND s.coordination_id = ANY($3::uuid[])';
+    }
   }
 
   const result = await client.query<PayrollScheduleRow>(
@@ -706,15 +712,17 @@ async function listPayrollExtras(
   cycleId: string,
   payrollStart: string,
   payrollEnd: string,
-  coordinationId: string | null
+  coordinationScope: CoordinationScope
 ): Promise<PayrollExtraRow[]> {
   const params: unknown[] = [cycleId, payrollStart, payrollEnd];
   let visibility = '';
-  if (coordinationId) {
-    params.push(coordinationId);
-    visibility = 'AND eh.coordination_id = $4';
-  } else if (coordinationId === '') {
-    visibility = 'AND false';
+  if (coordinationScope) {
+    if (coordinationScope.length === 0) {
+      visibility = 'AND false';
+    } else {
+      params.push(coordinationScope);
+      visibility = 'AND eh.coordination_id = ANY($4::uuid[])';
+    }
   }
 
   const result = await client.query<PayrollExtraRow>(
@@ -1036,8 +1044,8 @@ function publicCalculation(calculation: PayrollCalculation) {
 async function calculatePayroll(client: PoolClient, actor: SessionUser, body: PayrollBody): Promise<PayrollCalculation> {
   const cycle = await ensureWorkingCycle(client, actor, body.cycleId);
   if (cycle.status !== 'ACTIVO') throw new Error('Solo se puede calcular nómina sobre un ciclo activo.');
-  const actorCoordination = await loadActorCoordination(client, actor, false);
-  const coordinationScope = canViewAllPayroll(actor) ? null : actorCoordination?.id || '';
+  const actorScope = await loadActorScope(client, actor, { module: 'payroll.calculatePayroll' });
+  const coordinationScope = payrollCoordinationScope(actor, actorScope);
   const resolved = await resolvePayrollBody(client, cycle, body);
   const input = normalizePayrollInput(resolved.body, cycle);
   const calendar = buildPayrollCalendar(resolved.body, resolved.blackoutDates);
@@ -1143,11 +1151,18 @@ async function loadPayrollLines(
   client: PoolClient,
   runId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  coordinationScope: CoordinationScope
 ): Promise<PayrollLine[]> {
   const params: unknown[] = [runId];
-  const visibility = canViewAllPayroll(actor) ? '' : 'AND pl.coordination_id = $2';
-  if (visibility) params.push(actorCoordination?.id || null);
+  let visibility = '';
+  if (!canViewAllPayroll(actor)) {
+    if (coordinationScope && coordinationScope.length > 0) {
+      params.push(coordinationScope);
+      visibility = 'AND pl.coordination_id = ANY($2::uuid[])';
+    } else {
+      visibility = 'AND false';
+    }
+  }
 
   const result = await client.query<PayrollLineRow>(
     `
@@ -1219,11 +1234,18 @@ async function loadPayrollScheduleDetails(
   client: PoolClient,
   runId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  coordinationScope: CoordinationScope
 ): Promise<PayrollScheduleDetail[]> {
   const params: unknown[] = [runId];
-  const visibility = canViewAllPayroll(actor) ? '' : 'AND coordination_id = $2';
-  if (visibility) params.push(actorCoordination?.id || null);
+  let visibility = '';
+  if (!canViewAllPayroll(actor)) {
+    if (coordinationScope && coordinationScope.length > 0) {
+      params.push(coordinationScope);
+      visibility = 'AND coordination_id = ANY($2::uuid[])';
+    } else {
+      visibility = 'AND false';
+    }
+  }
 
   const result = await client.query<PayrollScheduleDetail>(
     `
@@ -1265,11 +1287,18 @@ async function loadPayrollExtraDetails(
   client: PoolClient,
   runId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  coordinationScope: CoordinationScope
 ): Promise<PayrollExtraDetail[]> {
   const params: unknown[] = [runId];
-  const visibility = canViewAllPayroll(actor) ? '' : 'AND coordination_id = $2';
-  if (visibility) params.push(actorCoordination?.id || null);
+  let visibility = '';
+  if (!canViewAllPayroll(actor)) {
+    if (coordinationScope && coordinationScope.length > 0) {
+      params.push(coordinationScope);
+      visibility = 'AND coordination_id = ANY($2::uuid[])';
+    } else {
+      visibility = 'AND false';
+    }
+  }
 
   const result = await client.query<PayrollExtraDetail>(
     `
@@ -1688,7 +1717,10 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 export async function registerPayrollRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/payroll/context', { preHandler: requireAnyPermission(['payroll.view', 'payroll.calculate']) }, async (request, reply) => {
+  app.get(
+    '/payroll/context',
+    { preHandler: requireAnyPermission(['payroll.view', 'payroll.preview', 'payroll.calculate']) },
+    async (request, reply) => {
     const parsed = contextQuerySchema.safeParse(request.query as PayrollContextQuery);
     if (!parsed.success) {
       sendValidation(reply, parsed.error);
@@ -1705,16 +1737,17 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
     });
 
     const cycles = await listCycles();
-    return {
-      activeCycle: context.cycle,
-      cycles,
-      defaults: context.defaults,
-      calendarPeriods: context.calendarPeriods,
-      recentRuns: context.runs
-    };
-  });
+      return {
+        activeCycle: context.cycle,
+        cycles,
+        defaults: context.defaults,
+        calendarPeriods: context.calendarPeriods,
+        recentRuns: context.runs
+      };
+    }
+  );
 
-  app.post('/payroll/preview', { preHandler: requireAnyPermission(['payroll.view', 'payroll.calculate']) }, async (request, reply) => {
+  app.post('/payroll/preview', { preHandler: requireAnyPermission(['payroll.preview', 'payroll.calculate']) }, async (request, reply) => {
     const parsed = payrollBodySchema.safeParse(request.body);
     if (!parsed.success) {
       sendValidation(reply, parsed.error);
@@ -1756,7 +1789,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
     }
   });
 
-  app.get('/payroll/runs/:id', { preHandler: requireAnyPermission(['payroll.view', 'payroll.calculate']) }, async (request, reply) => {
+  app.get('/payroll/runs/:id', { preHandler: requireAnyPermission(['payroll.view', 'payroll.preview', 'payroll.calculate']) }, async (request, reply) => {
     const parsed = runParamsSchema.safeParse(request.params as PayrollRunParams);
     if (!parsed.success) {
       sendValidation(reply, parsed.error);
@@ -1767,10 +1800,11 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
     const result = await withTransaction(async (client) => {
       const run = await loadPayrollRun(client, parsed.data.id);
       if (!run) return null;
-      const actorCoordination = await loadActorCoordination(client, actor, false);
-      const lines = await loadPayrollLines(client, run.id, actor, actorCoordination);
-      const details = await loadPayrollScheduleDetails(client, run.id, actor, actorCoordination);
-      const extraDetails = await loadPayrollExtraDetails(client, run.id, actor, actorCoordination);
+      const actorScope = await loadActorScope(client, actor, { module: 'payroll.getRun' });
+      const coordinationScope = payrollCoordinationScope(actor, actorScope);
+      const lines = await loadPayrollLines(client, run.id, actor, coordinationScope);
+      const details = await loadPayrollScheduleDetails(client, run.id, actor, coordinationScope);
+      const extraDetails = await loadPayrollExtraDetails(client, run.id, actor, coordinationScope);
       return { run, lines, details, extraDetails };
     });
 
@@ -1808,7 +1842,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
 
   app.get(
     '/payroll/runs/:id/export/:kind',
-    { preHandler: requireAnyPermission(['payroll.view', 'payroll.calculate', 'reports.view', 'finance.view']) },
+    { preHandler: requireAnyPermission(['payroll.finalize', 'finance.export']) },
     async (request, reply) => {
       const parsed = exportParamsSchema.safeParse(request.params as PayrollExportParams);
       if (!parsed.success) {
@@ -1828,10 +1862,11 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       const result = await withTransaction(async (client) => {
         const run = await loadPayrollRun(client, parsed.data.id);
         if (!run) return null;
-        const actorCoordination = await loadActorCoordination(client, actor, false);
-        const lines = await loadPayrollLines(client, run.id, actor, actorCoordination);
-        const details = await loadPayrollScheduleDetails(client, run.id, actor, actorCoordination);
-        const extraDetails = await loadPayrollExtraDetails(client, run.id, actor, actorCoordination);
+        const actorScope = await loadActorScope(client, actor, { module: 'payroll.exportRun' });
+        const coordinationScope = payrollCoordinationScope(actor, actorScope);
+        const lines = await loadPayrollLines(client, run.id, actor, coordinationScope);
+        const details = await loadPayrollScheduleDetails(client, run.id, actor, coordinationScope);
+        const extraDetails = await loadPayrollExtraDetails(client, run.id, actor, coordinationScope);
         return { run, lines, details, extraDetails };
       });
 

@@ -237,12 +237,20 @@ function canViewAllFinance(actor: SessionUser): boolean {
   return isSystemAdmin(actor) || actor.permissions.includes('finance.view') || actor.permissions.includes('finance.global_view');
 }
 
+function canExportFinance(actor: SessionUser): boolean {
+  return isSystemAdmin(actor) || actor.permissions.includes('finance.export');
+}
+
+function canAccessFinanceData(actor: SessionUser): boolean {
+  return canViewAllFinance(actor) || canExportFinance(actor);
+}
+
 function canManageFinanceWorkflow(actor: SessionUser): boolean {
-  return isSystemAdmin(actor) || actor.permissions.includes('finance.view') || actor.permissions.includes('payroll.finalize');
+  return isSystemAdmin(actor) || actor.permissions.includes('finance.workflow');
 }
 
 function canCancelPayrollForCorrection(actor: SessionUser): boolean {
-  return isSystemAdmin(actor) || actor.permissions.includes('payroll.finalize');
+  return isSystemAdmin(actor) || actor.permissions.includes('finance.workflow');
 }
 
 function isGlobalFinanceReadOnly(actor: SessionUser): boolean {
@@ -252,6 +260,28 @@ function isGlobalFinanceReadOnly(actor: SessionUser): boolean {
     !actor.permissions.includes('finance.view') &&
     !actor.permissions.includes('payroll.finalize')
   );
+}
+
+function canViewFiscalSensitive(actor: SessionUser): boolean {
+  return (
+    isSystemAdmin(actor) ||
+    actor.permissions.includes('fiscal.view') ||
+    actor.permissions.includes('fiscal.manage')
+  );
+}
+
+function sanitizeFinanceLineForActor(actor: SessionUser, line: FinanceLine): FinanceLine {
+  if (canViewFiscalSensitive(actor)) return line;
+
+  return {
+    ...line,
+    rfc: '',
+    email: '',
+    bankDetail: '',
+    hasConstancia: false,
+    fiscalMissing: [],
+    paymentStatus: 'LISTO'
+  };
 }
 
 function apiHours(value: unknown): DecimalString {
@@ -317,7 +347,7 @@ async function listFinanceRuns(
 ): Promise<FinanceRun[]> {
   const params: unknown[] = [cycleId];
   let visibility = '';
-  if (!canViewAllFinance(actor)) {
+  if (!canAccessFinanceData(actor)) {
     if (actorCoordination) {
       params.push(actorCoordination.id);
       visibility = 'AND pl.coordination_id = $2';
@@ -444,7 +474,7 @@ async function listFinanceLines(
 ): Promise<FinanceLine[]> {
   const params: unknown[] = [runId];
   let visibility = '';
-  if (!canViewAllFinance(actor)) {
+  if (!canAccessFinanceData(actor)) {
     if (actorCoordination) {
       params.push(actorCoordination.id);
       visibility = 'AND pl.coordination_id = $2';
@@ -531,7 +561,7 @@ async function listFinanceScheduleDetails(
 ): Promise<FinanceScheduleDetail[]> {
   const params: unknown[] = [runId];
   let visibility = '';
-  if (!canViewAllFinance(actor)) {
+  if (!canAccessFinanceData(actor)) {
     if (actorCoordination) {
       params.push(actorCoordination.id);
       visibility = 'AND coordination_id = $2';
@@ -601,7 +631,7 @@ async function listFinanceExtraDetails(
 ): Promise<FinanceExtraDetail[]> {
   const params: unknown[] = [runId];
   let visibility = '';
-  if (!canViewAllFinance(actor)) {
+  if (!canAccessFinanceData(actor)) {
     if (actorCoordination) {
       params.push(actorCoordination.id);
       visibility = 'AND coordination_id = $2';
@@ -951,6 +981,7 @@ async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
       : [];
     const extraDetails = selectedRun ? await listFinanceExtraDetails(client, selectedRun.id, actor, actorCoordination) : [];
     const summary = summarizeLines(lines);
+    const visibleLines = lines.map((line) => sanitizeFinanceLineForActor(actor, line));
     if (selectedRun) selectedRun.summary = summary;
 
     return {
@@ -960,7 +991,7 @@ async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
       runs,
       selectedRun,
       summary,
-      lines,
+      lines: visibleLines,
       coordinationSummary: summarizeCoordinations(lines),
       scheduleDetails,
       extraDetails
@@ -979,9 +1010,10 @@ async function loadVisibleFinanceRun(client: PoolClient, actor: SessionUser, run
 
   const lines = await listFinanceLines(client, run.id, actor, actorCoordination);
   run.summary = summarizeLines(lines);
+  const visibleLines = lines.map((line) => sanitizeFinanceLineForActor(actor, line));
   return {
     run,
-    lines,
+    lines: visibleLines,
     coordinationSummary: summarizeCoordinations(lines)
   };
 }
@@ -1509,7 +1541,7 @@ function buildCashReceiptsPdf(run: FinanceRun, lines: FinanceLine[]): Promise<Bu
 export async function registerReportRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/reports/finance/context',
-    { preHandler: requireAnyPermission(['reports.view', 'finance.view']) },
+    { preHandler: requireAnyPermission(['finance.view', 'finance.global_view']) },
     async (request, reply) => {
       const parsed = querySchema.safeParse(request.query as FinanceQuery);
       if (!parsed.success) {
@@ -1523,7 +1555,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
 
   app.patch(
     '/reports/finance/runs/:id/status',
-    { preHandler: requireAnyPermission(['finance.view', 'payroll.finalize']) },
+    { preHandler: requireAnyPermission(['finance.workflow']) },
     async (request, reply) => {
       const parsedParams = runParamsSchema.safeParse(request.params as FinanceRunParams);
       const parsedBody = statusPayloadSchema.safeParse(request.body as FinanceRunStatusPayload);
@@ -1542,7 +1574,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
         return;
       }
       if (parsedBody.data.status === 'CANCELADA' && !canCancelPayrollForCorrection(actor)) {
-        await reply.code(403).send({ error: 'FORBIDDEN', message: 'Solo Admin puede cancelar una nómina para corrección.' });
+        await reply.code(403).send({ error: 'FORBIDDEN', message: 'Solo Admin o Finanzas pueden cancelar una nómina para corrección.' });
         return;
       }
 
@@ -1563,7 +1595,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
 
   app.get(
     '/reports/finance/runs/:id/summary-pdf',
-    { preHandler: requireAnyPermission(['reports.view', 'finance.view']) },
+    { preHandler: requireAnyPermission(['finance.export']) },
     async (request, reply) => {
       const parsedParams = runParamsSchema.safeParse(request.params as FinanceRunParams);
       if (!parsedParams.success) {
@@ -1593,7 +1625,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
 
   app.get(
     '/reports/finance/runs/:id/coordinations-pdf',
-    { preHandler: requireAnyPermission(['reports.view', 'finance.view']) },
+    { preHandler: requireAnyPermission(['finance.export']) },
     async (request, reply) => {
       const parsedParams = runParamsSchema.safeParse(request.params as FinanceRunParams);
       if (!parsedParams.success) {
@@ -1615,7 +1647,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
 
   app.get(
     '/reports/finance/runs/:id/cash-receipts',
-    { preHandler: requireAnyPermission(['reports.view', 'finance.view']) },
+    { preHandler: requireAnyPermission(['finance.export']) },
     async (request, reply) => {
       const parsedParams = runParamsSchema.safeParse(request.params as FinanceRunParams);
       if (!parsedParams.success) {
@@ -1668,7 +1700,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
 
   app.get(
     '/reports/finance/export/:kind',
-    { preHandler: requireAnyPermission(['reports.view', 'finance.view']) },
+    { preHandler: requireAnyPermission(['finance.export']) },
     async (request, reply) => {
       const parsedParams = exportParamsSchema.safeParse(request.params as FinanceExportParams);
       const parsedQuery = querySchema.safeParse(request.query as FinanceQuery);
@@ -1682,6 +1714,13 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       }
 
       const actor = request.user!;
+      if (parsedParams.data.kind === 'fiscal' && !canViewFiscalSensitive(actor)) {
+        await reply.code(403).send({
+          error: 'FORBIDDEN',
+          message: 'No tienes permiso para exportar pendientes fiscales.'
+        });
+        return;
+      }
       if (isGlobalFinanceReadOnly(actor)) {
         await reply.code(403).send({
           error: 'FORBIDDEN',
