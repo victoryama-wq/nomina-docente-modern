@@ -1,17 +1,22 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
+import {
+  assertCoordinationAllowed,
+  isOwnRecord,
+  loadActorScope,
+  selectCompatibleActorCoordination
+} from '../actor-scope.js';
 import { requirePermission } from '../auth.js';
 import { query, withTransaction } from '../db.js';
 import { addHours, addMoney, hoursToApi, moneyToApi, moneyToDb, toHoursDecimal, toMoneyDecimal } from '../lib/decimal.js';
-import type { SessionUser } from '../types.js';
+import type { ActorScope, SessionUser } from '../types.js';
 import {
   categoryMaxHours,
   ensureWorkingCycle,
   ensureWritableCycle,
   listActiveCoordinations,
   listCycles,
-  loadActorCoordination,
   normalizeText,
   type CoordinationRow,
   type CycleRow
@@ -66,6 +71,7 @@ interface ExtraRow {
   reference: string;
   observations: string;
   capturedAt: string;
+  capturedById: string | null;
   capturedByEmail: string;
   updatedAt: string;
   updatedByEmail: string;
@@ -210,31 +216,41 @@ async function loadTeacherForExtra(client: PoolClient, teacherId: string): Promi
   return result.rows[0] || null;
 }
 
+async function loadActiveExtraCoordination(client: PoolClient, id: string): Promise<CoordinationRow | null> {
+  const result = await client.query<CoordinationRow>(
+    "SELECT id, name FROM coordinations WHERE id = $1 AND status = 'ACTIVO' LIMIT 1",
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
 async function resolveExtraCoordination(
   client: PoolClient,
   actor: SessionUser,
   body: ExtraBody,
   teacher: ExtraTeacherRow
 ): Promise<string> {
-  if (!isSystemAdmin(actor)) {
-    const actorCoordination = await loadActorCoordination(client, actor, true);
-    if (!actorCoordination) throw new Error('No se pudo resolver la coordinación del usuario conectado.');
-    return actorCoordination.id;
+  const scope = await loadActorScope(client, actor, { module: 'extras.resolveExtraCoordination' });
+
+  if (body.coordinationId) {
+    const coordination = await loadActiveExtraCoordination(client, body.coordinationId);
+    if (!coordination) throw new Error('La coordinacion seleccionada no existe o no esta activa.');
+    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, coordination.id);
+    return coordination.id;
   }
 
-  if (body.coordinationId) return body.coordinationId;
-  if (teacher.coordinationId) return teacher.coordinationId;
+  if (teacher.coordinationId) {
+    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, teacher.coordinationId);
+    return teacher.coordinationId;
+  }
 
-  const actorCoordination = await loadActorCoordination(client, actor, false);
-  if (actorCoordination) return actorCoordination.id;
+  if (!isSystemAdmin(actor)) {
+    const actorCoordination = selectCompatibleActorCoordination(scope);
+    if (actorCoordination) return actorCoordination.id;
+  }
 
-  const created = await client.query<CoordinationRow>(
-    'INSERT INTO coordinations (name, status) VALUES ($1, $2) RETURNING id, name',
-    [actor.displayName || actor.email, 'ACTIVO']
-  );
-  return created.rows[0].id;
+  throw new Error('Selecciona una coordinacion existente para registrar el extra.');
 }
-
 function extraSelectSql(whereClause = ''): string {
   return `
     SELECT
@@ -256,6 +272,7 @@ function extraSelectSql(whereClause = ''): string {
       eh.reference,
       eh.observations,
       eh.captured_at AS "capturedAt",
+      eh.captured_by AS "capturedById",
       COALESCE(captured.email, '') AS "capturedByEmail",
       eh.updated_at AS "updatedAt",
       COALESCE(updated.email, '') AS "updatedByEmail",
@@ -303,7 +320,7 @@ function extraSelectSql(whereClause = ''): string {
 function applyExtraEditability(
   rows: Omit<ExtraRow, 'canEdit'>[],
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  scope: ActorScope
 ): ExtraRow[] {
   return rows.map((row) => ({
     ...row,
@@ -314,14 +331,32 @@ function applyExtraEditability(
       row.cycleStatus !== 'CERRADO' &&
       !row.payrollLocked &&
       row.accessOpen &&
-      (isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId))
+      (isSystemAdmin(actor) ||
+        (actor.role === 'direccion'
+          ? isOwnRecord(scope, row.capturedById)
+          : scope.coordinationIds.includes(row.coordinationId) && isOwnRecord(scope, row.capturedById)))
   }));
 }
 
-async function listExtraRows(cycleId: string, actor: SessionUser, actorCoordination: CoordinationRow | null): Promise<ExtraRow[]> {
+async function listExtraRows(cycleId: string, actor: SessionUser, scope: ActorScope): Promise<ExtraRow[]> {
   const params: unknown[] = [cycleId];
-  const visibility = isSystemAdmin(actor) ? '' : 'AND eh.coordination_id = $2';
-  if (visibility) params.push(actorCoordination?.id || null);
+  let visibility = '';
+
+  if (!isSystemAdmin(actor)) {
+    if (actor.role === 'direccion') {
+      if (scope.coordinationIds.length > 0) {
+        visibility = 'AND (eh.coordination_id = ANY($2::uuid[]) OR eh.captured_by = $3)';
+        params.push(scope.coordinationIds, actor.id);
+      } else {
+        visibility = 'AND eh.captured_by = $2';
+        params.push(actor.id);
+      }
+    } else {
+      if (scope.coordinationIds.length === 0) return [];
+      visibility = 'AND eh.coordination_id = ANY($2::uuid[])';
+      params.push(scope.coordinationIds);
+    }
+  }
 
   const rows = await query<Omit<ExtraRow, 'canEdit'>>(
     `
@@ -331,18 +366,18 @@ async function listExtraRows(cycleId: string, actor: SessionUser, actorCoordinat
     params
   );
 
-  return applyExtraEditability(rows, actor, actorCoordination);
+  return applyExtraEditability(rows, actor, scope);
 }
 
 async function loadExtraById(
   client: PoolClient,
   id: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  scope: ActorScope
 ): Promise<ExtraRow | null> {
   const result = await client.query<Omit<ExtraRow, 'canEdit'>>(`${extraSelectSql('WHERE eh.id = $1')} LIMIT 1`, [id]);
   const row = result.rows[0];
-  return row ? applyExtraEditability([row], actor, actorCoordination)[0] : null;
+  return row ? applyExtraEditability([row], actor, scope)[0] : null;
 }
 
 async function listExtraTeachers(cycleId: string): Promise<ExtraTeacherRow[]> {
@@ -506,16 +541,20 @@ function buildSummary(extras: ExtraRow[], teachers: ExtraTeacherRow[]) {
 }
 
 async function buildContext(actor: SessionUser, preferredCycleId?: string) {
-  const setup = await withTransaction(async (client) => ({
-    cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
-    actorCoordination: await loadActorCoordination(client, actor, false)
-  }));
+  const setup = await withTransaction(async (client) => {
+    const scope = await loadActorScope(client, actor, { module: 'extras.buildContext' });
+    return {
+      cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
+      scope,
+      actorCoordination: selectCompatibleActorCoordination(scope)
+    };
+  });
 
   const [cycles, coordinations, teachers, extras, tabulators, extraAccessPeriods] = await Promise.all([
     listCycles(),
     listActiveCoordinations(),
     listExtraTeachers(setup.cycle.id),
-    listExtraRows(setup.cycle.id, actor, setup.actorCoordination),
+    listExtraRows(setup.cycle.id, actor, setup.scope),
     listTabulators(),
     listExtraAccessPeriods(setup.cycle.id)
   ]);
@@ -529,7 +568,10 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
     activeCycle: setup.cycle,
     cycles,
     actorCoordination: setup.actorCoordination,
-    coordinations: isSystemAdmin(actor) ? coordinations : setup.actorCoordination ? [setup.actorCoordination] : [],
+    coordinations:
+      isSystemAdmin(actor) || actor.role === 'direccion'
+        ? coordinations
+        : setup.scope.coordinations.map((coordination) => ({ id: coordination.id, name: coordination.name })),
     teachers,
     extras,
     extraAccessPeriods,
@@ -668,8 +710,8 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
         ]
       );
 
-      const actorCoordination = await loadActorCoordination(client, actor, false);
-      const after = await loadExtraById(client, created.rows[0].id, actor, actorCoordination);
+      const scope = await loadActorScope(client, actor, { module: 'extras.post.after' });
+      const after = await loadExtraById(client, created.rows[0].id, actor, scope);
       await auditExtra(client, actor, 'EXTRA_CREATED', created.rows[0].id, null, after);
       return after;
     });
@@ -691,8 +733,8 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
 
     const actor = request.user!;
     const extra = await withTransaction(async (client) => {
-      const actorCoordination = await loadActorCoordination(client, actor, false);
-      const before = await loadExtraById(client, params.data.id, actor, actorCoordination);
+      const scope = await loadActorScope(client, actor, { module: 'extras.patch' });
+      const before = await loadExtraById(client, params.data.id, actor, scope);
       if (!before) throw new Error('No se encontró el registro de extra.');
       if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar extras de un ciclo cerrado.');
       if (!before.canEdit) throw new Error('Solo la coordinación que capturó este extra puede editarlo.');
@@ -742,7 +784,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
         ]
       );
 
-      const after = await loadExtraById(client, before.id, actor, actorCoordination);
+      const after = await loadExtraById(client, before.id, actor, scope);
       await auditExtra(client, actor, 'EXTRA_UPDATED', before.id, before, after);
       return after;
     });
@@ -759,8 +801,8 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
 
     const actor = request.user!;
     const deleted = await withTransaction(async (client) => {
-      const actorCoordination = await loadActorCoordination(client, actor, false);
-      const before = await loadExtraById(client, params.data.id, actor, actorCoordination);
+      const scope = await loadActorScope(client, actor, { module: 'extras.delete' });
+      const before = await loadExtraById(client, params.data.id, actor, scope);
       if (!before) throw new Error('No se encontró el registro de extra.');
       if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden eliminar extras de un ciclo cerrado.');
       if (!before.canEdit) throw new Error('Solo la coordinación que capturó este extra puede eliminarlo.');

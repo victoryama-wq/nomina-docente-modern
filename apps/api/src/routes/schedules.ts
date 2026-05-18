@@ -1,10 +1,16 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
+import {
+  assertCoordinationAllowed,
+  isOwnRecord,
+  loadActorScope,
+  selectCompatibleActorCoordination
+} from '../actor-scope.js';
 import { requirePermission } from '../auth.js';
 import { query, withTransaction } from '../db.js';
 import { addHours, formatHours as formatDecimalHours, hoursToApi, moneyToApi, moneyToDb, toHoursDecimal, toMoneyDecimal } from '../lib/decimal.js';
-import type { SessionUser } from '../types.js';
+import type { ActorScope, SessionUser } from '../types.js';
 
 type DecimalString = string;
 type CycleStatus = 'PLANEACION' | 'ACTIVO' | 'CERRADO';
@@ -26,11 +32,6 @@ interface CoordinationRow {
   name: string;
 }
 
-interface ActorCoordinationRow {
-  id: string;
-  name: string;
-}
-
 interface OptionRow {
   id: string;
   name: string;
@@ -39,11 +40,6 @@ interface OptionRow {
 interface TabulatorOptionRow extends OptionRow {
   amount: DecimalString;
   sortOrder: number;
-}
-
-interface CoordinatorUserRow {
-  displayName: string;
-  legacyUsername: string;
 }
 
 interface TeacherScheduleRow {
@@ -92,6 +88,7 @@ interface ScheduleRow {
   baseHours: number;
   createdAt: string;
   updatedAt: string;
+  createdById: string | null;
   createdByEmail: string;
   updatedByEmail: string;
 }
@@ -153,15 +150,6 @@ function normalizeText(value: string): string {
 
 function normalizeUpper(value: string): string {
   return normalizeText(value).toUpperCase();
-}
-
-function normalizeComparable(value: string): string {
-  return normalizeUpper(value)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
@@ -303,6 +291,7 @@ function scheduleSelectSql(whereClause = ''): string {
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s1 + s.hours_s2)::float8 AS "baseHours",
       s.created_at AS "createdAt",
       s.updated_at AS "updatedAt",
+      s.created_by AS "createdById",
       COALESCE(created.email, '') AS "createdByEmail",
       COALESCE(updated.email, '') AS "updatedByEmail"
     FROM schedules s
@@ -404,63 +393,23 @@ async function ensureWritableCycle(client: PoolClient, actor: SessionUser, prefe
   return cycle;
 }
 
-async function getOrCreateCoordination(
-  client: PoolClient,
-  teacher: TeacherScheduleRow,
-  body: ScheduleBody
-): Promise<string> {
-  if (body.coordinationId) return body.coordinationId;
-  if (teacher.coordinationId) return teacher.coordinationId;
-
-  const name = normalizeText(body.coordinationName || teacher.coordinationName || 'Sin coordinación');
-  const existing = await client.query<{ id: string }>('SELECT id FROM coordinations WHERE lower(name) = lower($1) LIMIT 1', [
-    name
-  ]);
-  if (existing.rows[0]) return existing.rows[0].id;
-
-  const created = await client.query<{ id: string }>(
-    'INSERT INTO coordinations (name, status) VALUES ($1, $2) RETURNING id',
-    [name, 'ACTIVO']
+async function loadActiveCoordinationById(client: PoolClient, id: string): Promise<CoordinationRow | null> {
+  const result = await client.query<CoordinationRow>(
+    "SELECT id, name FROM coordinations WHERE id = $1 AND status = 'ACTIVO' LIMIT 1",
+    [id]
   );
-  return created.rows[0].id;
+  return result.rows[0] || null;
 }
 
-async function loadActorCoordination(
-  client: PoolClient,
-  actor: SessionUser,
-  createIfMissing: boolean
-): Promise<ActorCoordinationRow | null> {
-  const user = await client.query<{ displayName: string; legacyUsername: string }>(
-    `
-      SELECT display_name AS "displayName", COALESCE(legacy_username, '') AS "legacyUsername"
-      FROM app_users
-      WHERE id = $1
-      LIMIT 1
-    `,
-    [actor.id]
+async function loadActiveCoordinationByName(client: PoolClient, name: string): Promise<CoordinationRow | null> {
+  const normalized = normalizeText(name);
+  if (!normalized) return null;
+
+  const result = await client.query<CoordinationRow>(
+    "SELECT id, name FROM coordinations WHERE lower(name) = lower($1) AND status = 'ACTIVO' LIMIT 1",
+    [normalized]
   );
-
-  const candidates = [user.rows[0]?.displayName, user.rows[0]?.legacyUsername, actor.displayName]
-    .map((value) => normalizeText(value || ''))
-    .filter(Boolean);
-  const uniqueCandidates = [...new Map(candidates.map((candidate) => [normalizeComparable(candidate), candidate])).values()];
-
-  for (const candidate of uniqueCandidates) {
-    const existing = await client.query<ActorCoordinationRow>(
-      'SELECT id, name FROM coordinations WHERE lower(name) = lower($1) LIMIT 1',
-      [candidate]
-    );
-    if (existing.rows[0]) return existing.rows[0];
-  }
-
-  if (!createIfMissing) return null;
-
-  const name = uniqueCandidates[0] || actor.displayName || actor.email;
-  const created = await client.query<ActorCoordinationRow>(
-    'INSERT INTO coordinations (name, status) VALUES ($1, $2) RETURNING id, name',
-    [name, 'ACTIVO']
-  );
-  return created.rows[0];
+  return result.rows[0] || null;
 }
 
 async function resolveScheduleCoordination(
@@ -469,13 +418,32 @@ async function resolveScheduleCoordination(
   teacher: TeacherScheduleRow,
   body: ScheduleBody
 ): Promise<string> {
-  if (!isSystemAdmin(actor)) {
-    const actorCoordination = await loadActorCoordination(client, actor, true);
-    if (!actorCoordination) throw new Error('No se pudo resolver la coordinación del usuario conectado.');
-    return actorCoordination.id;
+  const scope = await loadActorScope(client, actor, { module: 'schedules.resolveScheduleCoordination' });
+
+  if (body.coordinationId) {
+    const coordination = await loadActiveCoordinationById(client, body.coordinationId);
+    if (!coordination) throw new Error('La coordinacion seleccionada no existe o no esta activa.');
+    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, coordination.id);
+    return coordination.id;
   }
 
-  return getOrCreateCoordination(client, teacher, body);
+  if (teacher.coordinationId) {
+    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, teacher.coordinationId);
+    return teacher.coordinationId;
+  }
+
+  const coordinationByName = await loadActiveCoordinationByName(client, body.coordinationName || teacher.coordinationName || '');
+  if (coordinationByName) {
+    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, coordinationByName.id);
+    return coordinationByName.id;
+  }
+
+  if (!isSystemAdmin(actor)) {
+    const actorCoordination = selectCompatibleActorCoordination(scope);
+    if (actorCoordination) return actorCoordination.id;
+  }
+
+  throw new Error('Selecciona una coordinacion existente para registrar el horario.');
 }
 
 async function assertScheduleWritableByActor(
@@ -485,12 +453,14 @@ async function assertScheduleWritableByActor(
 ): Promise<void> {
   if (isSystemAdmin(actor)) return;
 
-  const actorCoordination = await loadActorCoordination(client, actor, false);
-  if (!actorCoordination || actorCoordination.id !== schedule.coordinationId) {
-    throw new Error('Solo la coordinación que capturó este horario puede editarlo o eliminarlo.');
+  const scope = await loadActorScope(client, actor, { module: 'schedules.assertScheduleWritableByActor' });
+  if (actor.role === 'direccion') {
+    if (isOwnRecord(scope, schedule.createdById)) return;
+    throw new Error('Direccion solo puede editar o eliminar horarios propios.');
   }
-}
 
+  assertCoordinationAllowed(scope, schedule.coordinationId);
+}
 async function getOrCreateSubject(client: PoolClient, subjectName: string): Promise<string | null> {
   const name = normalizeText(subjectName);
   if (!name) return null;
@@ -620,12 +590,29 @@ async function loadExistingTeacherLoad(
   return result.rows[0] || { weekHours: 0, s1Hours: 0, s2Hours: 0 };
 }
 
-async function listSchedules(cycleId: string, coordinationId?: string | null): Promise<ScheduleRow[]> {
-  const where = coordinationId ? 'WHERE s.cycle_id = $1 AND s.coordination_id = $2' : 'WHERE s.cycle_id = $1';
-  const params = coordinationId ? [cycleId, coordinationId] : [cycleId];
+async function listSchedules(cycleId: string, actor: SessionUser, scope: ActorScope): Promise<ScheduleRow[]> {
+  const params: unknown[] = [cycleId];
+  let visibility = '';
+
+  if (!isSystemAdmin(actor)) {
+    if (actor.role === 'direccion') {
+      if (scope.coordinationIds.length > 0) {
+        visibility = 'AND (s.coordination_id = ANY($2::uuid[]) OR s.created_by = $3)';
+        params.push(scope.coordinationIds, actor.id);
+      } else {
+        visibility = 'AND s.created_by = $2';
+        params.push(actor.id);
+      }
+    } else {
+      if (scope.coordinationIds.length === 0) return [];
+      visibility = 'AND s.coordination_id = ANY($2::uuid[])';
+      params.push(scope.coordinationIds);
+    }
+  }
+
   const rows = await query<ScheduleRow>(
     `
-      ${scheduleSelectSql(where)}
+      ${scheduleSelectSql(`WHERE s.cycle_id = $1 ${visibility}`)}
       ORDER BY c.name ASC, t.full_name ASC, s.group_code ASC, s.subject_name ASC
     `,
     params
@@ -670,55 +657,25 @@ async function listScheduleTeachers(cycleId: string): Promise<TeacherScheduleRow
 }
 
 async function listScheduleCoordinatorOptions(client: PoolClient): Promise<CoordinationRow[]> {
-  const [users, existingCoordinations] = await Promise.all([
-    client.query<CoordinatorUserRow>(
-      `
-        SELECT
-          u.display_name AS "displayName",
-          COALESCE(u.legacy_username, '') AS "legacyUsername"
-        FROM app_users u
-        JOIN roles r ON r.id = u.role_id
-        WHERE u.status = 'ACTIVO'
-          AND r.code = 'coordinador'
-        ORDER BY u.display_name ASC
-      `
-    ),
-    client.query<CoordinationRow>("SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC")
-  ]);
+  const assigned = await client.query<CoordinationRow>(
+    `
+      SELECT DISTINCT c.id, c.name
+      FROM user_coordinations uc
+      JOIN app_users u ON u.id = uc.user_id
+      JOIN roles r ON r.id = u.role_id
+      JOIN coordinations c ON c.id = uc.coordination_id
+      WHERE u.status = 'ACTIVO'
+        AND c.status = 'ACTIVO'
+        AND r.code <> 'admin'
+      ORDER BY c.name ASC
+    `
+  );
 
-  const byNormalized = new Map<string, CoordinationRow>();
-  for (const coordination of existingCoordinations.rows) {
-    const key = normalizeComparable(coordination.name);
-    if (!byNormalized.has(key)) byNormalized.set(key, coordination);
-  }
+  if (assigned.rows.length > 0) return assigned.rows;
 
-  const options: CoordinationRow[] = [];
-  const selectedIds = new Set<string>();
-
-  for (const user of users.rows) {
-    const candidates = [user.displayName, user.legacyUsername]
-      .map((value) => normalizeText(value || ''))
-      .filter((value) => value && !value.includes('@'));
-    const uniqueCandidates = [...new Map(candidates.map((candidate) => [normalizeComparable(candidate), candidate])).values()];
-    const key = normalizeComparable(uniqueCandidates[0] || user.displayName);
-    let coordination = byNormalized.get(key);
-
-    if (!coordination) {
-      const created = await client.query<CoordinationRow>(
-        'INSERT INTO coordinations (name, status) VALUES ($1, $2) RETURNING id, name',
-        [uniqueCandidates[0] || user.displayName, 'ACTIVO']
-      );
-      coordination = created.rows[0];
-      byNormalized.set(key, coordination);
-    }
-
-    if (!selectedIds.has(coordination.id)) {
-      options.push(coordination);
-      selectedIds.add(coordination.id);
-    }
-  }
-
-  return options.sort((left, right) => left.name.localeCompare(right.name, 'es'));
+  return client
+    .query<CoordinationRow>("SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC")
+    .then((result) => result.rows);
 }
 
 async function listContextOptions() {
@@ -749,23 +706,27 @@ function buildScheduleSummary(schedules: ScheduleRow[], teachers: TeacherSchedul
 }
 
 async function buildContext(actor: SessionUser, preferredCycleId?: string) {
-  const setup = await withTransaction(async (client) => ({
-    cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
-    actorCoordination: await loadActorCoordination(client, actor, false),
-    coordinatorOptions: isSystemAdmin(actor) ? await listScheduleCoordinatorOptions(client) : []
-  }));
+  const setup = await withTransaction(async (client) => {
+    const scope = await loadActorScope(client, actor, { module: 'schedules.buildContext' });
+    return {
+      cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
+      scope,
+      actorCoordination: selectCompatibleActorCoordination(scope),
+      coordinatorOptions: isSystemAdmin(actor) || actor.role === 'direccion' ? await listScheduleCoordinatorOptions(client) : []
+    };
+  });
   const [cycles, schedules, teachers, options] = await Promise.all([
     listCycles(),
-    listSchedules(setup.cycle.id),
+    listSchedules(setup.cycle.id, actor, setup.scope),
     listScheduleTeachers(setup.cycle.id),
     listContextOptions()
   ]);
   const coordinations =
     isSystemAdmin(actor)
       ? setup.coordinatorOptions
-      : setup.actorCoordination
-        ? [setup.actorCoordination]
-        : [];
+      : actor.role === 'direccion'
+        ? setup.coordinatorOptions
+      : setup.scope.coordinations.map((coordination) => ({ id: coordination.id, name: coordination.name }));
 
   return {
     activeCycle: setup.cycle,

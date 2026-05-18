@@ -1,15 +1,14 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
+import { loadActorScope, selectCompatibleActorCoordination } from '../actor-scope.js';
 import { requirePermission } from '../auth.js';
 import { query, withTransaction } from '../db.js';
 import { addHours, hoursToApi, moneyToApi, toHoursDecimal } from '../lib/decimal.js';
-import type { SessionUser } from '../types.js';
+import type { ActorScope, SessionUser } from '../types.js';
 import {
   ensureWorkingCycle,
   listCycles,
-  loadActorCoordination,
-  type CoordinationRow,
   type CycleRow
 } from './academic-context.js';
 
@@ -33,6 +32,7 @@ interface IncidenceScheduleRow {
   teacherId: string;
   teacherName: string;
   teacherCategory: string;
+  scheduleCreatedById: string | null;
   subjectName: string;
   groupCode: string;
   tabulatorName: string;
@@ -168,6 +168,7 @@ function incidenceSelectSql(whereClause = ''): string {
       s.teacher_id AS "teacherId",
       t.full_name AS "teacherName",
       t.category AS "teacherCategory",
+      s.created_by AS "scheduleCreatedById",
       s.subject_name AS "subjectName",
       s.group_code AS "groupCode",
       s.tabulator_name AS "tabulatorName",
@@ -195,7 +196,7 @@ function incidenceSelectSql(whereClause = ''): string {
 function applyEditability(
   rows: Omit<IncidenceScheduleRow, 'canEdit'>[],
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  scope: ActorScope
 ): IncidenceScheduleRow[] {
   return rows.map((row) => ({
     ...row,
@@ -207,7 +208,9 @@ function applyEditability(
       !row.payrollLocked &&
       row.accessOpen &&
       row.cycleStatus !== 'CERRADO' &&
-      (isSystemAdmin(actor) || (!!actorCoordination && actorCoordination.id === row.coordinationId))
+      (isSystemAdmin(actor) ||
+        scope.coordinationIds.includes(row.coordinationId) ||
+        (actor.role === 'direccion' && row.scheduleCreatedById === actor.id))
   }));
 }
 
@@ -250,16 +253,35 @@ async function listIncidenceSchedules(
   cycleId: string,
   calendarConfigId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  scope: ActorScope
 ): Promise<IncidenceScheduleRow[]> {
+  const params: unknown[] = [cycleId, calendarConfigId];
+  let visibility = '';
+
+  if (!isSystemAdmin(actor)) {
+    if (actor.role === 'direccion') {
+      if (scope.coordinationIds.length > 0) {
+        visibility = 'AND (s.coordination_id = ANY($3::uuid[]) OR s.created_by = $4)';
+        params.push(scope.coordinationIds, actor.id);
+      } else {
+        visibility = 'AND s.created_by = $3';
+        params.push(actor.id);
+      }
+    } else {
+      if (scope.coordinationIds.length === 0) return [];
+      visibility = 'AND s.coordination_id = ANY($3::uuid[])';
+      params.push(scope.coordinationIds);
+    }
+  }
+
   const rows = await query<Omit<IncidenceScheduleRow, 'canEdit'>>(
     `
-      ${incidenceSelectSql('WHERE s.cycle_id = $1')}
+      ${incidenceSelectSql(`WHERE s.cycle_id = $1 ${visibility}`)}
       ORDER BY t.full_name ASC, c.name ASC, s.subject_name ASC, s.group_code ASC
     `,
-    [cycleId, calendarConfigId]
+    params
   );
-  return applyEditability(rows, actor, actorCoordination);
+  return applyEditability(rows, actor, scope);
 }
 
 async function loadIncidenceScheduleById(
@@ -267,14 +289,14 @@ async function loadIncidenceScheduleById(
   scheduleId: string,
   calendarConfigId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  scope: ActorScope
 ): Promise<IncidenceScheduleRow | null> {
   const result = await client.query<Omit<IncidenceScheduleRow, 'canEdit'>>(
     `${incidenceSelectSql('WHERE s.id = $1')} LIMIT 1`,
     [scheduleId, calendarConfigId]
   );
   const row = result.rows[0];
-  return row ? applyEditability([row], actor, actorCoordination)[0] : null;
+  return row ? applyEditability([row], actor, scope)[0] : null;
 }
 
 async function auditIncidence(
@@ -297,11 +319,11 @@ async function auditIncidence(
 async function saveIncidenceRow(
   client: PoolClient,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null,
+  scope: ActorScope,
   scheduleId: string,
   payload: IncidencePayload
 ): Promise<IncidenceScheduleRow> {
-  const before = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, actorCoordination);
+  const before = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, scope);
   if (!before) throw new Error('No se encontró el horario seleccionado.');
   if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar incidencias de un ciclo cerrado.');
   if (before.cycleStatus !== 'ACTIVO') throw new Error('Solo se pueden capturar incidencias en un ciclo activo.');
@@ -342,7 +364,7 @@ async function saveIncidenceRow(
     ]
   );
 
-  const after = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, actorCoordination);
+  const after = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, scope);
   await auditIncidence(client, actor, 'INCIDENCE_UPDATED', `${scheduleId}:${payload.calendarConfigId}`, before, after);
   if (!after) throw new Error('No fue posible leer la incidencia actualizada.');
   return after;
@@ -367,10 +389,14 @@ function buildSummary(rows: IncidenceScheduleRow[]) {
 }
 
 async function buildContext(actor: SessionUser, preferredCycleId?: string, preferredCalendarConfigId?: string) {
-  const setup = await withTransaction(async (client) => ({
-    cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
-    actorCoordination: await loadActorCoordination(client, actor, false)
-  }));
+  const setup = await withTransaction(async (client) => {
+    const scope = await loadActorScope(client, actor, { module: 'incidences.buildContext' });
+    return {
+      cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
+      scope,
+      actorCoordination: selectCompatibleActorCoordination(scope)
+    };
+  });
 
   const calendarPeriods = await listIncidenceCalendarPeriods(setup.cycle.id);
   const activeCalendarPeriod =
@@ -379,7 +405,7 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string, prefe
   const [cycles, schedules] = await Promise.all([
     listCycles(),
     activeCalendarPeriod
-      ? listIncidenceSchedules(setup.cycle.id, activeCalendarPeriod.id, actor, setup.actorCoordination)
+      ? listIncidenceSchedules(setup.cycle.id, activeCalendarPeriod.id, actor, setup.scope)
       : Promise.resolve([])
   ]);
 
@@ -422,8 +448,8 @@ export async function registerIncidenceRoutes(app: FastifyInstance): Promise<voi
 
       const actor = request.user!;
       const schedule = await withTransaction(async (client) => {
-        const actorCoordination = await loadActorCoordination(client, actor, false);
-        return saveIncidenceRow(client, actor, actorCoordination, params.data.scheduleId, parsed.data);
+        const scope = await loadActorScope(client, actor, { module: 'incidences.patchOne' });
+        return saveIncidenceRow(client, actor, scope, params.data.scheduleId, parsed.data);
       });
 
       return { schedule, message: 'Incidencia guardada correctamente.' };
@@ -439,10 +465,10 @@ export async function registerIncidenceRoutes(app: FastifyInstance): Promise<voi
 
     const actor = request.user!;
     const schedules = await withTransaction(async (client) => {
-      const actorCoordination = await loadActorCoordination(client, actor, false);
+      const scope = await loadActorScope(client, actor, { module: 'incidences.patchBatch' });
       const updated: IncidenceScheduleRow[] = [];
       for (const row of parsed.data.rows) {
-        updated.push(await saveIncidenceRow(client, actor, actorCoordination, row.scheduleId, row));
+        updated.push(await saveIncidenceRow(client, actor, scope, row.scheduleId, row));
       }
       return updated;
     });

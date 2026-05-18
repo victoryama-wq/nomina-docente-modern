@@ -1,12 +1,13 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
+import { assertCoordinationAllowed, isOwnRecord, loadActorScope, selectCompatibleActorCoordination } from '../actor-scope.js';
 import { requireAnyPermission, requirePermission } from '../auth.js';
 import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
 import { firebaseAdmin } from '../firebase.js';
-import type { SessionUser } from '../types.js';
-import { loadActorCoordination, type CoordinationRow } from './academic-context.js';
+import type { ActorScope, SessionUser } from '../types.js';
+import { type CoordinationRow } from './academic-context.js';
 
 type TeacherStatus = 'ACTIVO' | 'INACTIVO';
 
@@ -35,6 +36,7 @@ interface TeacherRow {
   status: TeacherStatus;
   createdAt: string;
   updatedAt: string;
+  createdById: string | null;
   createdByEmail: string;
   updatedByEmail: string;
   documentId: string | null;
@@ -177,7 +179,7 @@ async function assertTeacherOwnedByActorCoordination(
   actor: SessionUser,
   teacher: TeacherRow,
   options: { allowFinance?: boolean } = {}
-): Promise<CoordinationRow | null> {
+): Promise<ActorScope | null> {
   if (
     isSystemAdmin(actor) ||
     (options.allowFinance && (actor.permissions.includes('finance.view') || actor.permissions.includes('fiscal.manage')))
@@ -185,11 +187,25 @@ async function assertTeacherOwnedByActorCoordination(
     return null;
   }
 
-  const actorCoordination = await loadActorCoordination(client, actor, false);
-  if (!actorCoordination || !teacher.coordinationId || actorCoordination.id !== teacher.coordinationId) {
-    throw new Error('Solo la coordinación responsable puede modificar este docente.');
+  const scope = await loadActorScope(client, actor, { module: 'teachers.assertTeacherOwnedByActorCoordination' });
+  if (actor.role === 'direccion') {
+    if (isOwnRecord(scope, teacher.createdById)) return scope;
+    throw new Error('Direccion solo puede modificar docentes propios.');
   }
-  return actorCoordination;
+
+  assertCoordinationAllowed(scope, teacher.coordinationId);
+  return scope;
+}
+
+async function loadExistingTeacherCoordinationByName(client: PoolClient, coordinationName: string): Promise<CoordinationRow | null> {
+  const name = normalizeText(coordinationName);
+  if (!name) return null;
+
+  const result = await client.query<CoordinationRow>(
+    "SELECT id, name FROM coordinations WHERE lower(name) = lower($1) AND status = 'ACTIVO' LIMIT 1",
+    [name]
+  );
+  return result.rows[0] || null;
 }
 
 async function resolveTeacherCoordinationForActor(
@@ -197,25 +213,36 @@ async function resolveTeacherCoordinationForActor(
   actor: SessionUser,
   submittedCoordinationName: string
 ): Promise<{ id: string | null; name: string }> {
+  const requestedCoordination = await loadExistingTeacherCoordinationByName(client, submittedCoordinationName);
+
   if (isSystemAdmin(actor)) {
-    const name = normalizeText(submittedCoordinationName);
+    if (normalizeText(submittedCoordinationName) && !requestedCoordination) {
+      throw new Error('La coordinacion indicada no existe o no esta activa.');
+    }
     return {
-      id: await getOrCreateCoordination(client, name),
-      name
+      id: requestedCoordination?.id || null,
+      name: requestedCoordination?.name || normalizeText(submittedCoordinationName)
     };
   }
 
-  const actorCoordination = await loadActorCoordination(client, actor, false);
-  if (!actorCoordination) {
-    throw new Error('Tu usuario no tiene una coordinación vinculada para capturar docentes.');
+  const scope = await loadActorScope(client, actor, { module: 'teachers.resolveTeacherCoordinationForActor' });
+  if (actor.role === 'direccion') {
+    if (requestedCoordination) return { id: requestedCoordination.id, name: requestedCoordination.name };
+    const compatible = selectCompatibleActorCoordination(scope);
+    if (compatible) return { id: compatible.id, name: compatible.name };
+    return { id: null, name: normalizeText(submittedCoordinationName) };
   }
 
-  return {
-    id: actorCoordination.id,
-    name: actorCoordination.name
-  };
-}
+  if (requestedCoordination) {
+    assertCoordinationAllowed(scope, requestedCoordination.id);
+    return { id: requestedCoordination.id, name: requestedCoordination.name };
+  }
 
+  const compatible = selectCompatibleActorCoordination(scope);
+  if (compatible) return { id: compatible.id, name: compatible.name };
+
+  throw new Error('Tu usuario no tiene una coordinacion vinculada para capturar docentes.');
+}
 function buildSummary(teachers: TeacherRow[]) {
   return {
     total: teachers.length,
@@ -306,22 +333,6 @@ const teacherExportHeaders = [
   'Actualizado por'
 ];
 
-async function getOrCreateCoordination(client: PoolClient, coordinationName: string): Promise<string | null> {
-  const name = normalizeText(coordinationName);
-  if (!name) return null;
-
-  const existing = await client.query<{ id: string }>('SELECT id FROM coordinations WHERE lower(name) = lower($1) LIMIT 1', [
-    name
-  ]);
-  if (existing.rows[0]) return existing.rows[0].id;
-
-  const created = await client.query<{ id: string }>(
-    'INSERT INTO coordinations (name, status) VALUES ($1, $2) RETURNING id',
-    [name, 'ACTIVO']
-  );
-  return created.rows[0].id;
-}
-
 async function auditTeacher(
   client: PoolClient,
   actor: SessionUser,
@@ -366,6 +377,7 @@ function teacherSelectSql(whereClause = ''): string {
       t.status,
       t.created_at AS "createdAt",
       t.updated_at AS "updatedAt",
+      t.created_by AS "createdById",
       COALESCE(created.email, '') AS "createdByEmail",
       COALESCE(updated.email, '') AS "updatedByEmail",
       d.id AS "documentId",
@@ -424,7 +436,10 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const coordinations = await query<{ id: string; name: string }>(
         "SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC"
       );
-      const actorCoordination = await withTransaction((client) => loadActorCoordination(client, request.user!, false));
+      const actorCoordination = await withTransaction(async (client) => {
+        const scope = await loadActorScope(client, request.user!, { module: 'teachers.list' });
+        return selectCompatibleActorCoordination(scope);
+      });
 
       return { teachers, summary: buildSummary(teachers), coordinations, actorCoordination };
     }
@@ -701,7 +716,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.patch(
     '/teachers/:id/fiscal',
-    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'fiscal.manage']) },
+    { preHandler: requireAnyPermission(['finance.view', 'fiscal.manage']) },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = teacherFiscalBodySchema.safeParse(request.body);
@@ -827,7 +842,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.post(
     '/teachers/:id/documents/constancia',
-    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'fiscal.manage']) },
+    { preHandler: requireAnyPermission(['finance.view', 'fiscal.manage']) },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = documentBodySchema.safeParse(request.body);
@@ -907,7 +922,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.get(
     '/teachers/:id/documents/current',
-    { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'reports.view', 'fiscal.manage']) },
+    { preHandler: requireAnyPermission(['finance.view', 'reports.view', 'fiscal.manage']) },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       if (!params.success) {
