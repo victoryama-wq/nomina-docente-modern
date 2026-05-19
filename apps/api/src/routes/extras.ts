@@ -344,13 +344,7 @@ async function listExtraRows(cycleId: string, actor: SessionUser, scope: ActorSc
 
   if (!isSystemAdmin(actor)) {
     if (actor.role === 'direccion') {
-      if (scope.coordinationIds.length > 0) {
-        visibility = 'AND (eh.coordination_id = ANY($2::uuid[]) OR eh.captured_by = $3)';
-        params.push(scope.coordinationIds, actor.id);
-      } else {
-        visibility = 'AND eh.captured_by = $2';
-        params.push(actor.id);
-      }
+      visibility = '';
     } else {
       if (scope.coordinationIds.length === 0) return [];
       visibility = 'AND eh.coordination_id = ANY($2::uuid[])';

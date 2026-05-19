@@ -2,7 +2,7 @@
 import { X, Upload, Loader2, Save } from 'lucide-vue-next';
 import type { TeacherPayload, CoordinationOption } from '../../api';
 
-defineProps<{
+const props = defineProps<{
   show: boolean;
   isEditing: boolean;
   saving: boolean;
@@ -16,6 +16,11 @@ defineProps<{
   canManageFiscalDocuments: boolean;
   selectedConstancia: File | null;
 }>();
+
+function syncCoordinationName() {
+  const selected = props.coordinations.find((coordination) => coordination.id === props.form.coordinationId);
+  props.form.coordinationName = selected?.name || '';
+}
 
 defineEmits<{
   (e: 'close'): void;
@@ -84,15 +89,13 @@ defineEmits<{
         </label>
         <label>
           <span>Coordinación</span>
-          <input
-            v-model.trim="form.coordinationName"
-            :disabled="!canChooseCoordination"
-            list="coordinations-list"
-            :placeholder="canChooseCoordination ? 'Coordinación responsable' : currentCoordinatorName"
-          />
-          <datalist id="coordinations-list">
-            <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.name" />
-          </datalist>
+          <select v-if="canChooseCoordination" v-model="form.coordinationId" @change="syncCoordinationName">
+            <option value="">Selecciona coordinación</option>
+            <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">
+              {{ coordination.name }}
+            </option>
+          </select>
+          <input v-else :value="form.coordinationName || currentCoordinatorName" disabled />
           <small v-if="!canChooseCoordination">Se asigna a tu coordinación.</small>
         </label>
         <label>

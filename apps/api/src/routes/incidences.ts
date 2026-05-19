@@ -305,14 +305,32 @@ async function auditIncidence(
   action: string,
   entityId: string,
   beforeData: unknown,
-  afterData: unknown
+  afterData: unknown,
+  metadata: unknown = {}
 ): Promise<void> {
   await client.query(
     `
-      INSERT INTO audit_log (actor_user_id, actor_email, action, entity_type, entity_id, before_data, after_data)
-      VALUES ($1, $2, $3, 'schedule_incidence', $4, $5::jsonb, $6::jsonb)
+      INSERT INTO audit_log (
+        actor_user_id,
+        actor_email,
+        action,
+        entity_type,
+        entity_id,
+        before_data,
+        after_data,
+        metadata
+      )
+      VALUES ($1, $2, $3, 'schedule_incidence', $4, $5::jsonb, $6::jsonb, $7::jsonb)
     `,
-    [actor.id, actor.email, action, entityId, JSON.stringify(beforeData || null), JSON.stringify(afterData || null)]
+    [
+      actor.id,
+      actor.email,
+      action,
+      entityId,
+      JSON.stringify(beforeData || null),
+      JSON.stringify(afterData || null),
+      JSON.stringify(metadata || {})
+    ]
   );
 }
 
@@ -365,7 +383,9 @@ async function saveIncidenceRow(
   );
 
   const after = await loadIncidenceScheduleById(client, scheduleId, payload.calendarConfigId, actor, scope);
-  await auditIncidence(client, actor, 'INCIDENCE_UPDATED', `${scheduleId}:${payload.calendarConfigId}`, before, after);
+  await auditIncidence(client, actor, 'INCIDENCE_UPDATED', scheduleId, before, after, {
+    calendarConfigId: payload.calendarConfigId
+  });
   if (!after) throw new Error('No fue posible leer la incidencia actualizada.');
   return after;
 }

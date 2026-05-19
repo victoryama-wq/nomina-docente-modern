@@ -446,6 +446,25 @@ async function resolveScheduleCoordination(
   throw new Error('Selecciona una coordinacion existente para registrar el horario.');
 }
 
+function assertTeacherMatchesScheduleCoordination(
+  actor: SessionUser,
+  teacher: TeacherScheduleRow,
+  coordinationId: string
+): void {
+  if (isSystemAdmin(actor) || actor.role === 'direccion') return;
+
+  if (!teacher.coordinationId) {
+    throw new Error('El docente seleccionado no tiene una coordinacion operativa asignada.');
+  }
+
+  if (teacher.coordinationId !== coordinationId) {
+    const message = teacher.coordinationName
+      ? `El docente pertenece a ${teacher.coordinationName}. Solo puedes crear horarios en la coordinacion responsable del docente.`
+      : 'Solo puedes crear horarios en la coordinacion responsable del docente.';
+    throw new Error(message);
+  }
+}
+
 async function assertScheduleWritableByActor(
   client: PoolClient,
   actor: SessionUser,
@@ -620,7 +639,16 @@ async function listSchedules(cycleId: string, actor: SessionUser, scope: ActorSc
   return rows.map(normalizeScheduleRow);
 }
 
-async function listScheduleTeachers(cycleId: string): Promise<TeacherScheduleRow[]> {
+async function listScheduleTeachers(cycleId: string, actor: SessionUser, scope: ActorScope): Promise<TeacherScheduleRow[]> {
+  const params: unknown[] = [cycleId];
+  let visibility = '';
+
+  if (!isSystemAdmin(actor) && actor.role !== 'direccion') {
+    if (scope.coordinationIds.length === 0) return [];
+    params.push(scope.coordinationIds);
+    visibility = 'AND t.coordination_id = ANY($2::uuid[])';
+  }
+
   return query<TeacherScheduleRow>(
     `
       WITH schedule_load AS (
@@ -650,9 +678,10 @@ async function listScheduleTeachers(cycleId: string): Promise<TeacherScheduleRow
       LEFT JOIN coordinations c ON c.id = t.coordination_id
       LEFT JOIN schedule_load sl ON sl.teacher_id = t.id
       WHERE t.status = 'ACTIVO'
+        ${visibility}
       ORDER BY t.full_name ASC
     `,
-    [cycleId]
+    params
   );
 }
 
@@ -718,7 +747,7 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
   const [cycles, schedules, teachers, options] = await Promise.all([
     listCycles(),
     listSchedules(setup.cycle.id, actor, setup.scope),
-    listScheduleTeachers(setup.cycle.id),
+    listScheduleTeachers(setup.cycle.id, actor, setup.scope),
     listContextOptions()
   ]);
   const coordinations =
@@ -786,6 +815,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
       validateScheduleLoad(teacher, existing, parsed.data);
 
       const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data);
+      assertTeacherMatchesScheduleCoordination(actor, teacher, coordinationId);
       const subjectId = await getOrCreateSubject(client, parsed.data.subjectName);
       const tabulator = await resolveTabulator(client, parsed.data);
 
@@ -869,6 +899,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
       validateScheduleLoad(teacher, existing, parsed.data);
 
       const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data);
+      assertTeacherMatchesScheduleCoordination(actor, teacher, coordinationId);
       const subjectId = await getOrCreateSubject(client, parsed.data.subjectName);
       const tabulator = await resolveTabulator(client, parsed.data);
 

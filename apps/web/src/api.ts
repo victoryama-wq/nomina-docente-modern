@@ -819,6 +819,7 @@ export interface TeacherPayload {
   location: string;
   comment: string;
   observation: string;
+  coordinationId?: string | null;
   coordinationName: string;
   phone: string;
   email?: string;

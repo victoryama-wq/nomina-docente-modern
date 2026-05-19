@@ -56,6 +56,9 @@ const canManageTeacherFiscal = computed(() => authStore.canManageFiscal);
 const canViewTeacherDocuments = computed(() => authStore.canViewFiscalDocuments);
 const canManageTeacherDocuments = computed(() => authStore.canManageFiscalDocuments);
 const canChooseTeacherCoordination = computed(() => authStore.isAdmin || actorScopeCoordinations.value.length > 1);
+const assignableTeacherCoordinations = computed(() =>
+  authStore.isAdmin ? coordinations.value : actorScopeCoordinations.value
+);
 
 const blankTeacher = (): TeacherPayload => ({
   firstNames: '',
@@ -67,6 +70,7 @@ const blankTeacher = (): TeacherPayload => ({
   location: 'Local',
   comment: 'Docente activo',
   observation: '',
+  coordinationId: null,
   coordinationName: '',
   phone: '',
   email: '',
@@ -158,6 +162,7 @@ function newTeacher() {
   editingTeacherId.value = null;
   teacherForm.value = {
     ...blankTeacher(),
+    coordinationId: !authStore.isAdmin && actorScopeCoordinations.value.length === 1 ? actorScopeCoordinations.value[0].id : null,
     coordinationName: !authStore.isAdmin && actorScopeCoordinations.value.length === 1 ? actorScopeCoordinations.value[0].name : ''
   };
   selectedConstancia.value = null;
@@ -188,6 +193,7 @@ function editTeacher(teacher: Teacher) {
     location: teacher.location || 'Local',
     comment: teacher.comment,
     observation: teacher.observation,
+    coordinationId: teacher.coordinationId,
     coordinationName: teacher.coordinationName,
     phone: teacher.phone,
     email: teacher.email,
@@ -208,7 +214,12 @@ async function saveTeacher() {
   clearNotice();
   try {
     if (!authStore.isAdmin && actorScopeCoordinations.value.length === 1) {
+      teacherForm.value.coordinationId = actorScopeCoordinations.value[0].id;
       teacherForm.value.coordinationName = actorScopeCoordinations.value[0].name;
+    }
+    if (!authStore.isAdmin && actorScopeCoordinations.value.length > 1 && !teacherForm.value.coordinationId) {
+      setNotice('error', 'Selecciona una coordinacion asignada para el docente.');
+      return;
     }
     const payload: TeacherPayload = { ...teacherForm.value };
     if (!canManageTeacherFiscal.value) {
@@ -476,7 +487,7 @@ onMounted(() => {
       :saving="teacherSaving"
       :uploading="teacherUploading"
       :form="teacherForm"
-      :coordinations="coordinations"
+      :coordinations="assignableTeacherCoordinations"
       :can-choose-coordination="canChooseTeacherCoordination"
       :current-coordinator-name="actorScopeCoordinations.map((coordination) => coordination.name).join(', ')"
       :can-manage-fiscal="canManageTeacherFiscal"

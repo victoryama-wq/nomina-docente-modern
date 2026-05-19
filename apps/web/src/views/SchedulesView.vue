@@ -165,7 +165,9 @@ const scheduleOverallLoadClass = computed(() => {
 const filteredScheduleTeacherOptions = computed(() => {
   const text = scheduleTeacherSearch.value.toLowerCase().trim();
   const selectedId = scheduleForm.value.teacherId;
+  const selectedCoordinationId = canChooseScheduleCoordination.value ? scheduleForm.value.coordinationId : currentUserCoordination.value?.id;
   const teachers = scheduleTeachers.value.filter((teacher) => {
+    if (selectedCoordinationId && teacher.coordinationId !== selectedCoordinationId) return false;
     if (!text) return true;
     const haystack = [teacher.fullName, teacher.category, teacher.coordinationName].join(' ').toLowerCase();
     return haystack.includes(text);
@@ -361,6 +363,14 @@ function selectScheduleTeacher(teacher: ScheduleTeacher) {
   scheduleTeacherSearch.value = `${teacher.fullName} / ${categoryLimitLabel(teacher.category)}`;
   scheduleTeacherPickerOpen.value = false;
   scheduleFormError.value = '';
+  if (
+    canChooseScheduleCoordination.value &&
+    teacher.coordinationId &&
+    scheduleCoordinations.value.some((coordination) => coordination.id === teacher.coordinationId)
+  ) {
+    scheduleForm.value.coordinationId = teacher.coordinationId;
+    scheduleForm.value.coordinationName = teacher.coordinationName;
+  }
   applySelectedTeacherDefaults();
 }
 

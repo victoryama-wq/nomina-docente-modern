@@ -24,6 +24,8 @@ await app.register(cors, {
     }
     callback(new Error(`Origin not allowed: ${origin}`), false);
   },
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
   credentials: true
 });
 

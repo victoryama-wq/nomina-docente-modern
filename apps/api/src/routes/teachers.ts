@@ -103,6 +103,7 @@ const teacherBodySchema = z.object({
   location: z.string().trim().max(40).optional().default('Local'),
   comment: z.string().trim().max(120).optional().default(''),
   observation: z.string().trim().max(250).optional().default(''),
+  coordinationId: z.string().uuid().optional().nullable(),
   coordinationName: z.string().trim().max(120).optional().default(''),
   phone: z.string().trim().max(20).optional().default(''),
   email: z.string().trim().toLowerCase().max(160).optional().default(''),
@@ -276,12 +277,27 @@ async function loadExistingTeacherCoordinationByName(client: PoolClient, coordin
   return result.rows[0] || null;
 }
 
+async function loadExistingTeacherCoordinationById(client: PoolClient, coordinationId: string): Promise<CoordinationRow | null> {
+  const result = await client.query<CoordinationRow>(
+    "SELECT id, name FROM coordinations WHERE id = $1 AND status = 'ACTIVO' LIMIT 1",
+    [coordinationId]
+  );
+  return result.rows[0] || null;
+}
+
 async function resolveTeacherCoordinationForActor(
   client: PoolClient,
   actor: SessionUser,
+  submittedCoordinationId: string | null | undefined,
   submittedCoordinationName: string
 ): Promise<{ id: string | null; name: string }> {
-  const requestedCoordination = await loadExistingTeacherCoordinationByName(client, submittedCoordinationName);
+  const requestedCoordination = submittedCoordinationId
+    ? await loadExistingTeacherCoordinationById(client, submittedCoordinationId)
+    : await loadExistingTeacherCoordinationByName(client, submittedCoordinationName);
+
+  if (submittedCoordinationId && !requestedCoordination) {
+    throw new Error('La coordinacion indicada no existe o no esta activa.');
+  }
 
   if (isSystemAdmin(actor)) {
     if (normalizeText(submittedCoordinationName) && !requestedCoordination) {
@@ -641,7 +657,12 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     }
 
     const teacher = await withTransaction(async (client) => {
-      const coordination = await resolveTeacherCoordinationForActor(client, actor, parsed.data.coordinationName);
+      const coordination = await resolveTeacherCoordinationForActor(
+        client,
+        actor,
+        parsed.data.coordinationId,
+        parsed.data.coordinationName
+      );
       const fullName = buildFullName(parsed.data);
       const normalizedName = normalizeComparable(fullName);
       const fiscalValues = canManageTeacherFiscal(actor)
@@ -746,7 +767,12 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       if (!before) throw new Error('No se encontró el docente.');
 
       await assertTeacherOwnedByActorCoordination(client, actor, before);
-      const coordination = await resolveTeacherCoordinationForActor(client, actor, parsed.data.coordinationName);
+      const coordination = await resolveTeacherCoordinationForActor(
+        client,
+        actor,
+        parsed.data.coordinationId,
+        parsed.data.coordinationName
+      );
       const fullName = buildFullName(parsed.data);
       const normalizedName = normalizeComparable(fullName);
       const fiscalValues = canManageTeacherFiscal(actor)
