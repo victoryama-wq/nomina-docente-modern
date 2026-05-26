@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import {
@@ -55,7 +55,7 @@ const canViewTeacherFiscal = computed(() => authStore.canViewFiscal);
 const canManageTeacherFiscal = computed(() => authStore.canManageFiscal);
 const canViewTeacherDocuments = computed(() => authStore.canViewFiscalDocuments);
 const canManageTeacherDocuments = computed(() => authStore.canManageFiscalDocuments);
-const canChooseTeacherCoordination = computed(() => authStore.isAdmin || actorScopeCoordinations.value.length > 1);
+const canChooseTeacherCoordination = computed(() => authStore.isAdmin);
 const assignableTeacherCoordinations = computed(() =>
   authStore.isAdmin ? coordinations.value : actorScopeCoordinations.value
 );
@@ -127,7 +127,7 @@ function fiscalPercent(teacher: Teacher) {
 
 function canEditTeacher(teacher: Teacher) {
   if (authStore.isAdmin) return true;
-  return actorScopeCoordinations.value.some((coordination) => coordination.id === teacher.coordinationId);
+  return teacher.createdById === authStore.session?.id;
 }
 
 function canAccessTeacherDocument(teacher: Teacher) {
@@ -155,15 +155,11 @@ async function loadTeachers() {
 }
 
 function newTeacher() {
-  if (!authStore.isAdmin && !actorScopeCoordinations.value.length) {
-    setNotice('error', 'Tu usuario no tiene una coordinación vinculada para capturar docentes.');
-    return;
-  }
   editingTeacherId.value = null;
   teacherForm.value = {
     ...blankTeacher(),
-    coordinationId: !authStore.isAdmin && actorScopeCoordinations.value.length === 1 ? actorScopeCoordinations.value[0].id : null,
-    coordinationName: !authStore.isAdmin && actorScopeCoordinations.value.length === 1 ? actorScopeCoordinations.value[0].name : ''
+    coordinationId: null,
+    coordinationName: authStore.isAdmin ? '' : authStore.session?.displayName || ''
   };
   selectedConstancia.value = null;
   teacherModalOpen.value = true;
@@ -179,7 +175,7 @@ function closeTeacherModal() {
 
 function editTeacher(teacher: Teacher) {
   if (!canEditTeacher(teacher)) {
-    setNotice('error', 'Solo la coordinación responsable puede editar este docente.');
+    setNotice('error', 'Solo puedes editar docentes capturados por tu usuario.');
     return;
   }
   editingTeacherId.value = teacher.id;
@@ -213,13 +209,9 @@ async function saveTeacher() {
   teacherSaving.value = true;
   clearNotice();
   try {
-    if (!authStore.isAdmin && actorScopeCoordinations.value.length === 1) {
-      teacherForm.value.coordinationId = actorScopeCoordinations.value[0].id;
-      teacherForm.value.coordinationName = actorScopeCoordinations.value[0].name;
-    }
-    if (!authStore.isAdmin && actorScopeCoordinations.value.length > 1 && !teacherForm.value.coordinationId) {
-      setNotice('error', 'Selecciona una coordinacion asignada para el docente.');
-      return;
+    if (!authStore.isAdmin) {
+      teacherForm.value.coordinationId = null;
+      teacherForm.value.coordinationName = authStore.session?.displayName || '';
     }
     const payload: TeacherPayload = { ...teacherForm.value };
     if (!canManageTeacherFiscal.value) {
@@ -433,7 +425,7 @@ onMounted(() => {
               <tr v-for="teacher in filteredTeachers" :key="teacher.id">
                 <td>
                   <strong>{{ teacher.fullName }}</strong>
-                  <span><Building2 :size="13" /> {{ teacher.coordinationName || 'Sin coordinación' }}</span>
+                  <span><Building2 :size="13" /> {{ teacher.coordinationName || 'Sin responsable' }}</span>
                   <span v-if="canViewTeacherFiscal"><Mail :size="13" /> {{ teacher.email || 'Sin correo' }}</span>
                 </td>
                 <td v-if="canViewTeacherFiscal">
@@ -465,7 +457,7 @@ onMounted(() => {
                     class="icon-button"
                     type="button"
                     :disabled="!canEditTeacher(teacher)"
-                    :title="canEditTeacher(teacher) ? 'Editar' : 'Solo editable por la coordinación responsable'"
+                    :title="canEditTeacher(teacher) ? 'Editar' : 'Solo editable por el usuario capturador'"
                     @click="editTeacher(teacher)"
                   >
                     <Edit3 :size="16" />
@@ -489,7 +481,7 @@ onMounted(() => {
       :form="teacherForm"
       :coordinations="assignableTeacherCoordinations"
       :can-choose-coordination="canChooseTeacherCoordination"
-      :current-coordinator-name="actorScopeCoordinations.map((coordination) => coordination.name).join(', ')"
+      :current-coordinator-name="authStore.session?.displayName || 'Usuario capturador'"
       :can-manage-fiscal="canManageTeacherFiscal"
       :can-view-fiscal-documents="canViewTeacherDocuments"
       :can-manage-fiscal-documents="canManageTeacherDocuments"

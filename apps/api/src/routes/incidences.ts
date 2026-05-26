@@ -209,7 +209,7 @@ function applyEditability(
       row.accessOpen &&
       row.cycleStatus !== 'CERRADO' &&
       (isSystemAdmin(actor) ||
-        scope.coordinationIds.includes(row.coordinationId) ||
+        row.scheduleCreatedById === actor.id ||
         (actor.role === 'direccion' && row.scheduleCreatedById === actor.id))
   }));
 }
@@ -268,9 +268,8 @@ async function listIncidenceSchedules(
         params.push(actor.id);
       }
     } else {
-      if (scope.coordinationIds.length === 0) return [];
-      visibility = 'AND s.coordination_id = ANY($3::uuid[])';
-      params.push(scope.coordinationIds);
+      visibility = 'AND s.created_by = $3';
+      params.push(actor.id);
     }
   }
 
@@ -352,7 +351,7 @@ async function saveIncidenceRow(
     }
     throw new Error(`La ventana de captura de incidencias cerró el ${new Date(before.accessEndAt).toLocaleString('es-MX')}.`);
   }
-  if (!before.canEdit) throw new Error('Solo la coordinación que capturó este horario puede editar sus incidencias.');
+  if (!before.canEdit) throw new Error('Solo el usuario que capturo este horario puede editar sus incidencias.');
 
   await client.query(
     `

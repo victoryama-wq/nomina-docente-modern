@@ -97,6 +97,7 @@ export interface Teacher {
   status: 'ACTIVO' | 'INACTIVO';
   createdAt: string;
   updatedAt: string;
+  createdById: string | null;
   createdByEmail: string;
   updatedByEmail: string;
   documentId: string | null;
@@ -237,8 +238,10 @@ export interface Schedule {
   baseHours: number;
   createdAt: string;
   updatedAt: string;
+  createdById?: string | null;
   createdByEmail: string;
   updatedByEmail: string;
+  canEdit: boolean;
 }
 
 export interface ScheduleSummary {

@@ -78,6 +78,27 @@ Observacion de datos:
 | API local `/auth/session` sin token | Paso | HTTP 401 esperado |
 | Busqueda de suite automatizada | Observacion | No se detectaron tests `test/spec/vitest/jest/cypress/playwright` en el repo |
 
+## 3.1 Conciliacion de nomina mayo 2026
+
+Durante la validacion local con los CSV de Horarios y Extras se calculo la quincena `2026-05-15` a `2026-05-28`.
+
+Resultado:
+
+- Total calculado por sistema nuevo: `$517,510.00`.
+- Total reportado por programa anterior: `$515,920.00`.
+- Diferencia: `$1,590.00`.
+
+La diferencia quedo conciliada contra dos registros del CSV de Extras que el programa anterior no contemplo:
+
+| Fila CSV | Coordinacion | Docente | Importe |
+|---:|---|---|---:|
+| 50 | Oriana Nah Rosado | LUCIANO COCOM UHH | `$1,500.00` |
+| 55 | Merit Berenice Bazan Garcia | PEDRO ANTONIO RUIZ MARTINEZ | `$90.00` |
+
+La evidencia detallada queda documentada en:
+
+- `docs/auditoria/H02_H03_Conciliacion_Nomina_Mayo_2026.md`
+
 ## 4. Matriz de pruebas por rol
 
 Leyenda:
@@ -380,20 +401,19 @@ Coordinador una coordinacion:
 
 - [ ] Login correcto.
 - [ ] Menu sin Fiscal ni Finanzas global.
-- [ ] Horarios muestra/permite `Idiomas`.
-- [ ] Horarios bloquea coordinacion fuera de alcance.
-- [ ] Incidencias sobre horarios de `Idiomas`.
-- [ ] Extras muestra propio y ajeno; solo propio editable.
+- [ ] Horarios muestra/permite registros capturados por el usuario.
+- [ ] Horarios no muestra asignaturas capturadas por otros coordinadores para el mismo docente.
+- [ ] Incidencias sobre horarios capturados por el usuario.
+- [ ] Extras muestra registros capturados por el usuario; solo propios editables.
 - [ ] Nomina preview visible en solo lectura.
 - [ ] Guardar nomina no visible/no usable.
 
-Coordinador multiples coordinaciones:
+Coordinador con docentes compartidos:
 
 - [ ] Login correcto.
-- [ ] `actorCoordinations[]` contiene varias coordinaciones.
-- [ ] Selector permite `ADETUR` y `ARQ`.
-- [ ] Selector no permite `Idiomas` ni `CINTER`.
-- [ ] Preview incluye coordinaciones asignadas.
+- [ ] Puede seleccionar cualquier docente activo.
+- [ ] No puede seleccionar manualmente nombres/combinaciones de coordinadores como alcance operativo.
+- [ ] Preview incluye registros capturados por el usuario.
 - [ ] Guardar/aprobar/pagar/cancelar bloqueado.
 
 RH:
@@ -699,10 +719,12 @@ Durante la validacion local con API, frontend y BD de revision se detectaron aju
 |---|---|---|---|
 | Usuarios / Admin | Se ajusto CORS para permitir metodos `PATCH` y `DELETE` desde el frontend local. | `apps/api/src/server.ts` | Evita `failed to fetch` al modificar o eliminar usuarios desde Control de Accesos. |
 | Incidencias | La auditoria de incidencias dejo de guardar un valor compuesto en `audit_log.entity_id`; ahora conserva el UUID del horario y manda `calendarConfigId` en metadata. | `apps/api/src/routes/incidences.ts` | Corrige `invalid input syntax for type uuid` al editar/guardar incidencias. |
-| Control de Accesos | Se alinearon visualmente los checkboxes de coordinaciones asignadas. | `apps/web/src/styles.css` | Evita seleccion confusa de coordinaciones en alta/edicion de usuario. |
-| Directorio / Docentes | El alta/edicion de docente acepta `coordinationId` formal y valida que roles no globales solo usen coordinaciones dentro de su alcance. | `apps/api/src/routes/teachers.ts`, `apps/web/src/api.ts`, `apps/web/src/views/TeachersView.vue`, `apps/web/src/components/modals/TeacherModal.vue` | Evita que Coordinador cree, modifique o elimine docentes de coordinaciones ajenas. |
-| Directorio / UI | Para Coordinador con una coordinacion, el modal preselecciona su coordinacion asignada y no permite cambiarla fuera de alcance. Para multiples coordinaciones, solo permite elegir entre sus coordinaciones asignadas. | `apps/web/src/views/TeachersView.vue`, `apps/web/src/components/modals/TeacherModal.vue` | Alinea el flujo original: el coordinador captura docentes dentro de su coordinacion. |
-| Horarios | Se valida que el docente asignado a un horario pertenezca a la misma coordinacion del horario para roles no globales. | `apps/api/src/routes/schedules.ts`, `apps/web/src/views/SchedulesView.vue` | Evita que Coordinador asigne horarios a docentes de otra coordinacion. |
+| Control de Accesos | Se retiro el selector manual de coordinaciones asignadas para alta/edicion de usuarios; el alcance operativo de Coordinador se basa en rol y usuario capturador. | `apps/api/src/routes/users.ts`, `apps/web/src/components/modals/AccessModal.vue`, `apps/web/src/views/AccessView.vue` | Evita que Admin tenga que elegir nombres de personas o combinaciones legacy como si fueran permisos operativos. |
+| Directorio / Docentes | El alta/edicion de docente para Coordinador muestra responsable operativo automatico y valida edicion por `teachers.created_by`. | `apps/api/src/routes/teachers.ts`, `apps/web/src/api.ts`, `apps/web/src/views/TeachersView.vue`, `apps/web/src/components/modals/TeacherModal.vue` | Evita que Coordinador cree o modifique docentes bajo responsables ajenos; conserva docente compartido por captura. |
+| Directorio / UI | Para Coordinador, el modal ya no permite elegir coordinaciones/nombres de coordinadores; muestra al usuario capturador como responsable operativo. | `apps/web/src/views/TeachersView.vue`, `apps/web/src/components/modals/TeacherModal.vue` | Alinea el flujo original: el coordinador captura docentes bajo su propio usuario. |
+| Horarios | Coordinador puede seleccionar cualquier docente activo; visibilidad y edicion/eliminacion se limitan a horarios capturados por su usuario (`schedules.created_by`). | `apps/api/src/routes/schedules.ts`, `apps/web/src/views/SchedulesView.vue`, `apps/web/src/components/modals/ScheduleModal.vue` | Permite docentes compartidos sin exponer asignaturas capturadas por otros coordinadores. |
+| Incidencias | Coordinador solo ve/edita incidencias de horarios capturados por su usuario. | `apps/api/src/routes/incidences.ts` | Evita usar la coordinacion legacy como permiso cuando el docente es compartido. |
+| Extras | Coordinador ve/modifica extras capturados por su usuario; Direccion/Subdireccion puede ver listado amplio, pero edita/elimina solo propios. | `apps/api/src/routes/extras.ts`, `apps/web/src/views/ExtrasView.vue`, `apps/web/src/components/modals/ExtraModal.vue` | Respeta la regla de propiedad por `captured_by` para docentes compartidos. |
 | Extras / Direccion | Direccion/Subdireccion puede ver el listado de Extras, pero la edicion/eliminacion sigue limitada a registros capturados por el propio usuario. | `apps/api/src/routes/extras.ts` | Respeta la decision aprobada: vista amplia operativa, modificacion solo propia. |
 | Validacion local | La validacion de asignaciones usa `Coordinación General` con acento. | `database/validation/h02_h03_phase1_validation.sql` | Evita falso positivo de coordinacion faltante por diferencia de acento. |
 | Dataset sintetico | Se agregaron seed y validacion sintetica local para ciclo, quincena, docentes, horarios, incidencias, extras propios/ajenos y preview. | `database/validation/h02_h03_synthetic_operational_seed.sql`, `database/validation/h02_h03_synthetic_dataset_validation.sql` | Permite repetir Fase 6 sin importar datos fiscales, monetarios reales ni documentos. |

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { X, Upload, Loader2, Save } from 'lucide-vue-next';
 import type { TeacherPayload, CoordinationOption } from '../../api';
 
@@ -88,15 +88,15 @@ defineEmits<{
           </select>
         </label>
         <label>
-          <span>Coordinación</span>
+          <span>Responsable operativo</span>
           <select v-if="canChooseCoordination" v-model="form.coordinationId" @change="syncCoordinationName">
-            <option value="">Selecciona coordinación</option>
+            <option value="">Selecciona responsable/ambito</option>
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">
               {{ coordination.name }}
             </option>
           </select>
           <input v-else :value="form.coordinationName || currentCoordinatorName" disabled />
-          <small v-if="!canChooseCoordination">Se asigna a tu coordinación.</small>
+          <small v-if="!canChooseCoordination">Se asigna automaticamente al usuario que captura.</small>
         </label>
         <label>
           <span>Telefono</span>

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { X, AlertTriangle, Loader2, Save, Search } from 'lucide-vue-next';
 import type {
   SchedulePayload,
@@ -91,7 +91,7 @@ function remainingHoursLabel(value: number, maxHours: number) {
               :value="teacherSearchText"
               @input="$emit('update:teacherSearchText', ($event.target as HTMLInputElement).value); $emit('inputTeacherSearch')"
               autocomplete="off"
-              placeholder="Buscar por nombre, categoría o coordinación"
+              placeholder="Buscar por nombre, categoria o responsable"
               required
               @focus="$emit('focusTeacherSearch')"
               @keydown.escape="$emit('escapeTeacherSearch')"
@@ -104,16 +104,16 @@ function remainingHoursLabel(value: number, maxHours: number) {
                 @mousedown.prevent="$emit('selectTeacher', teacher)"
               >
                 <strong>{{ teacher.fullName }}</strong>
-                <span>{{ categoryLimitLabel(teacher.category) }} / {{ teacher.coordinationName || 'Sin coordinación' }}</span>
+                <span>{{ categoryLimitLabel(teacher.category) }} / {{ teacher.coordinationName || 'Sin responsable' }}</span>
               </button>
               <p v-if="!filteredTeacherOptions.length">Sin coincidencias.</p>
             </div>
           </div>
         </label>
         <label>
-          <span>Coordinación</span>
+          <span>Responsable operativo</span>
           <select v-if="isAdmin" v-model="form.coordinationId" required>
-            <option :value="null" disabled>Selecciona coordinador</option>
+            <option :value="null" disabled>Selecciona responsable/ambito</option>
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">
               {{ coordination.name }}
             </option>

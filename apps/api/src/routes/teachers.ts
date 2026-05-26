@@ -257,9 +257,9 @@ async function assertTeacherOwnedByActorCoordination(
   }
 
   const scope = await loadActorScope(client, actor, { module: 'teachers.assertTeacherOwnedByActorCoordination' });
-  if (actor.role === 'direccion') {
+  if (actor.role === 'direccion' || actor.role === 'coordinador') {
     if (isOwnRecord(scope, teacher.createdById)) return scope;
-    throw new Error('Direccion solo puede modificar docentes propios.');
+    throw new Error('Solo puedes modificar docentes capturados por tu usuario.');
   }
 
   assertCoordinationAllowed(scope, teacher.coordinationId);
@@ -310,11 +310,17 @@ async function resolveTeacherCoordinationForActor(
   }
 
   const scope = await loadActorScope(client, actor, { module: 'teachers.resolveTeacherCoordinationForActor' });
+  if (actor.role === 'coordinador') {
+    const compatible = selectCompatibleActorCoordination(scope);
+    if (compatible) return { id: compatible.id, name: compatible.name };
+    return { id: null, name: actor.displayName };
+  }
+
   if (actor.role === 'direccion') {
     if (requestedCoordination) return { id: requestedCoordination.id, name: requestedCoordination.name };
     const compatible = selectCompatibleActorCoordination(scope);
     if (compatible) return { id: compatible.id, name: compatible.name };
-    return { id: null, name: normalizeText(submittedCoordinationName) };
+    return { id: null, name: actor.displayName };
   }
 
   if (requestedCoordination) {

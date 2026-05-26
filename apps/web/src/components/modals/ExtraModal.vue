@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { X, AlertTriangle, Loader2, Save, Search } from 'lucide-vue-next';
 import type { CoordinationOption, CycleOption, ExtraPayload, ExtraTeacher, TabulatorOption } from '../../api';
 import { moneyLabel } from '../../utils/format';
@@ -13,6 +13,7 @@ defineProps<{
   teacherPickerOpen: boolean;
   filteredTeacherOptions: ExtraTeacher[];
   coordinations: CoordinationOption[];
+  currentCoordinatorName: string;
   cycles: CycleOption[];
   activeCycle: CycleOption | null;
   tabulators: TabulatorOption[];
@@ -81,7 +82,7 @@ function remainingHoursLabel(value: number, maxHours: number) {
             <input
               :value="teacherSearchText"
               autocomplete="off"
-              placeholder="Buscar por nombre, categoría o coordinación"
+              placeholder="Buscar por nombre, categoria o responsable"
               required
               @focus="$emit('focusTeacherSearch')"
               @input="$emit('update:teacherSearchText', ($event.target as HTMLInputElement).value); $emit('inputTeacherSearch')"
@@ -95,7 +96,7 @@ function remainingHoursLabel(value: number, maxHours: number) {
                 @mousedown.prevent="$emit('selectTeacher', teacher)"
               >
                 <strong>{{ teacher.fullName }}</strong>
-                <span>{{ categoryLimitLabel(teacher.category) }} / {{ teacher.coordinationName || 'Sin coordinación' }}</span>
+                <span>{{ categoryLimitLabel(teacher.category) }} / {{ teacher.coordinationName || 'Sin responsable' }}</span>
               </button>
               <p v-if="!filteredTeacherOptions.length">Sin coincidencias.</p>
             </div>
@@ -103,14 +104,14 @@ function remainingHoursLabel(value: number, maxHours: number) {
         </label>
 
         <label>
-          <span>Coordinación</span>
+          <span>Responsable operativo</span>
           <select v-if="isAdmin" v-model="form.coordinationId">
-            <option value="">Según docente</option>
+            <option value="" disabled>Selecciona responsable/ambito</option>
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">
               {{ coordination.name }}
             </option>
           </select>
-          <input v-else :value="selectedTeacher?.coordinationName || 'Coordinación conectada'" disabled />
+          <input v-else :value="currentCoordinatorName" disabled />
         </label>
         <label>
           <span>Ciclo</span>

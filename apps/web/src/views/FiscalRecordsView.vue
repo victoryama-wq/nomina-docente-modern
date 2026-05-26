@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import {
   AlertTriangle,
@@ -165,7 +165,7 @@ function canManageRecord(record: FiscalRecord) {
 
 function openFiscalEdit(record: FiscalRecord) {
   if (!canManageRecord(record)) {
-    setNotice('error', 'Solo la coordinación responsable puede actualizar este expediente.');
+    setNotice('error', 'No tienes permiso para actualizar este expediente fiscal.');
     return;
   }
   editingRecord.value = record;
@@ -581,7 +581,7 @@ onUnmounted(() => {
                       class="primary-inline fiscal-edit-button"
                       type="button"
                       :disabled="!canManageRecord(record)"
-                      :title="canManageRecord(record) ? 'Actualizar fiscal' : 'Solo editable por la coordinación responsable'"
+                      :title="canManageRecord(record) ? 'Actualizar fiscal' : 'Requiere permiso fiscal de edicion'"
                       @click="openFiscalEdit(record)"
                     >
                       <Edit3 :size="15" />

@@ -72,7 +72,15 @@ const form = ref<ExtraPayload>(blankExtra());
 
 const selectedTeacher = computed(() => teachers.value.find((teacher) => teacher.id === form.value.teacherId) || null);
 const editingExtra = computed(() => extras.value.find((extra) => extra.id === editingExtraId.value) || null);
-const canChooseExtraCoordination = computed(() => authStore.isAdmin || coordinations.value.length > 1);
+const canChooseExtraCoordination = computed(() => authStore.isAdmin || authStore.session?.role === 'direccion');
+const currentExtraCoordination = computed(() => {
+  if (actorCoordination.value) return actorCoordination.value;
+  if (!authStore.isAdmin && coordinations.value.length === 1) return coordinations.value[0];
+  return null;
+});
+const currentExtraCoordinationName = computed(
+  () => currentExtraCoordination.value?.name || authStore.session?.displayName || 'Usuario capturador'
+);
 
 const filteredTeacherOptions = computed(() => {
   const text = teacherSearchText.value.toLowerCase().trim();
@@ -365,7 +373,7 @@ function newExtra() {
   form.value = {
     ...blankExtra(),
     cycleId: selectedCycleId.value || activeCycle.value?.id,
-    coordinationId: canChooseExtraCoordination.value ? actorCoordination.value?.id || '' : ''
+    coordinationId: canChooseExtraCoordination.value ? currentExtraCoordination.value?.id || '' : ''
   };
   teacherSearchText.value = '';
   teacherPickerOpen.value = false;
@@ -408,7 +416,7 @@ function applyTabulator() {
 
 function editExtra(extra: ExtraRecord) {
   if (!canEditExtra(extra)) {
-    setNotice('error', extra.canEdit ? 'La ventana de captura de este extra no está abierta.' : 'Solo la coordinación que capturó este extra puede editarlo.');
+    setNotice('error', extra.canEdit ? 'La ventana de captura de este extra no está abierta.' : 'Solo el usuario que capturó este extra puede editarlo.');
     return;
   }
 
@@ -452,7 +460,7 @@ async function saveExtra() {
     return;
   }
   if (canChooseExtraCoordination.value && !form.value.coordinationId) {
-    formError.value = 'Selecciona una coordinacion asignada.';
+    formError.value = 'Selecciona un responsable operativo.';
     return;
   }
 
@@ -463,7 +471,7 @@ async function saveExtra() {
     const payload = {
       ...form.value,
       cycleId: form.value.cycleId || selectedCycleId.value || activeCycle.value?.id,
-      coordinationId: canChooseExtraCoordination.value ? form.value.coordinationId : undefined
+      coordinationId: canChooseExtraCoordination.value ? form.value.coordinationId : currentExtraCoordination.value?.id || undefined
     };
     const response = editingExtraId.value
       ? await updateExtra(editingExtraId.value, payload)
@@ -480,7 +488,7 @@ async function saveExtra() {
 
 function requestRemoveExtra(extra: ExtraRecord) {
   if (!canEditExtra(extra)) {
-    setNotice('error', extra.canEdit ? 'La ventana de captura de este extra no está abierta.' : 'Solo la coordinación que capturó este extra puede eliminarlo.');
+    setNotice('error', extra.canEdit ? 'La ventana de captura de este extra no está abierta.' : 'Solo el usuario que capturó este extra puede eliminarlo.');
     return;
   }
   pendingDeleteExtra.value = extra;
@@ -699,6 +707,7 @@ onUnmounted(() => {
       :teacher-picker-open="teacherPickerOpen"
       :filtered-teacher-options="filteredTeacherOptions"
       :coordinations="coordinations"
+      :current-coordinator-name="currentExtraCoordinationName"
       :cycles="cycles"
       :active-cycle="activeCycle"
       :tabulators="tabulators"

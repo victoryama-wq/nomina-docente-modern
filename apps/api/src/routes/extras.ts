@@ -2,7 +2,6 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import {
-  assertCoordinationAllowed,
   isOwnRecord,
   loadActorScope,
   selectCompatibleActorCoordination
@@ -232,21 +231,20 @@ async function resolveExtraCoordination(
 ): Promise<string> {
   const scope = await loadActorScope(client, actor, { module: 'extras.resolveExtraCoordination' });
 
+  if (!isSystemAdmin(actor) && actor.role !== 'direccion') {
+    const actorCoordination = selectCompatibleActorCoordination(scope);
+    if (actorCoordination) return actorCoordination.id;
+    throw new Error('Tu usuario no tiene un ambito operativo tecnico para capturar extras. Actualiza el usuario desde Control de Accesos.');
+  }
+
   if (body.coordinationId) {
     const coordination = await loadActiveExtraCoordination(client, body.coordinationId);
     if (!coordination) throw new Error('La coordinacion seleccionada no existe o no esta activa.');
-    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, coordination.id);
     return coordination.id;
   }
 
   if (teacher.coordinationId) {
-    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, teacher.coordinationId);
     return teacher.coordinationId;
-  }
-
-  if (!isSystemAdmin(actor)) {
-    const actorCoordination = selectCompatibleActorCoordination(scope);
-    if (actorCoordination) return actorCoordination.id;
   }
 
   throw new Error('Selecciona una coordinacion existente para registrar el extra.');
@@ -334,7 +332,7 @@ function applyExtraEditability(
       (isSystemAdmin(actor) ||
         (actor.role === 'direccion'
           ? isOwnRecord(scope, row.capturedById)
-          : scope.coordinationIds.includes(row.coordinationId) && isOwnRecord(scope, row.capturedById)))
+          : isOwnRecord(scope, row.capturedById)))
   }));
 }
 
@@ -346,9 +344,8 @@ async function listExtraRows(cycleId: string, actor: SessionUser, scope: ActorSc
     if (actor.role === 'direccion') {
       visibility = '';
     } else {
-      if (scope.coordinationIds.length === 0) return [];
-      visibility = 'AND eh.coordination_id = ANY($2::uuid[])';
-      params.push(scope.coordinationIds);
+      visibility = 'AND eh.captured_by = $2';
+      params.push(actor.id);
     }
   }
 

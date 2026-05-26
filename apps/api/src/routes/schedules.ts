@@ -2,7 +2,6 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import {
-  assertCoordinationAllowed,
   isOwnRecord,
   loadActorScope,
   selectCompatibleActorCoordination
@@ -91,6 +90,7 @@ interface ScheduleRow {
   createdById: string | null;
   createdByEmail: string;
   updatedByEmail: string;
+  canEdit?: boolean;
 }
 
 interface LoadRow {
@@ -420,49 +420,28 @@ async function resolveScheduleCoordination(
 ): Promise<string> {
   const scope = await loadActorScope(client, actor, { module: 'schedules.resolveScheduleCoordination' });
 
+  if (!isSystemAdmin(actor) && actor.role !== 'direccion') {
+    const actorCoordination = selectCompatibleActorCoordination(scope);
+    if (actorCoordination) return actorCoordination.id;
+    throw new Error('Tu usuario no tiene un ambito operativo tecnico para capturar horarios. Actualiza el usuario desde Control de Accesos.');
+  }
+
   if (body.coordinationId) {
     const coordination = await loadActiveCoordinationById(client, body.coordinationId);
     if (!coordination) throw new Error('La coordinacion seleccionada no existe o no esta activa.');
-    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, coordination.id);
     return coordination.id;
   }
 
   if (teacher.coordinationId) {
-    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, teacher.coordinationId);
     return teacher.coordinationId;
   }
 
   const coordinationByName = await loadActiveCoordinationByName(client, body.coordinationName || teacher.coordinationName || '');
   if (coordinationByName) {
-    if (!isSystemAdmin(actor) && actor.role !== 'direccion') assertCoordinationAllowed(scope, coordinationByName.id);
     return coordinationByName.id;
   }
 
-  if (!isSystemAdmin(actor)) {
-    const actorCoordination = selectCompatibleActorCoordination(scope);
-    if (actorCoordination) return actorCoordination.id;
-  }
-
   throw new Error('Selecciona una coordinacion existente para registrar el horario.');
-}
-
-function assertTeacherMatchesScheduleCoordination(
-  actor: SessionUser,
-  teacher: TeacherScheduleRow,
-  coordinationId: string
-): void {
-  if (isSystemAdmin(actor) || actor.role === 'direccion') return;
-
-  if (!teacher.coordinationId) {
-    throw new Error('El docente seleccionado no tiene una coordinacion operativa asignada.');
-  }
-
-  if (teacher.coordinationId !== coordinationId) {
-    const message = teacher.coordinationName
-      ? `El docente pertenece a ${teacher.coordinationName}. Solo puedes crear horarios en la coordinacion responsable del docente.`
-      : 'Solo puedes crear horarios en la coordinacion responsable del docente.';
-    throw new Error(message);
-  }
 }
 
 async function assertScheduleWritableByActor(
@@ -478,7 +457,8 @@ async function assertScheduleWritableByActor(
     throw new Error('Direccion solo puede editar o eliminar horarios propios.');
   }
 
-  assertCoordinationAllowed(scope, schedule.coordinationId);
+  if (isOwnRecord(scope, schedule.createdById)) return;
+  throw new Error('Solo puedes editar o eliminar horarios capturados por tu usuario.');
 }
 async function getOrCreateSubject(client: PoolClient, subjectName: string): Promise<string | null> {
   const name = normalizeText(subjectName);
@@ -586,6 +566,21 @@ function normalizeScheduleRow(row: ScheduleRow): ScheduleRow {
   };
 }
 
+function applyScheduleEditability(
+  rows: ScheduleRow[],
+  actor: SessionUser,
+  scope: ActorScope
+): ScheduleRow[] {
+  return rows.map((row) => ({
+    ...normalizeScheduleRow(row),
+    canEdit:
+      isSystemAdmin(actor) ||
+      (actor.role === 'direccion'
+        ? isOwnRecord(scope, row.createdById)
+        : isOwnRecord(scope, row.createdById))
+  }));
+}
+
 async function loadExistingTeacherLoad(
   client: PoolClient,
   cycleId: string,
@@ -623,9 +618,8 @@ async function listSchedules(cycleId: string, actor: SessionUser, scope: ActorSc
         params.push(actor.id);
       }
     } else {
-      if (scope.coordinationIds.length === 0) return [];
-      visibility = 'AND s.coordination_id = ANY($2::uuid[])';
-      params.push(scope.coordinationIds);
+      visibility = 'AND s.created_by = $2';
+      params.push(actor.id);
     }
   }
 
@@ -636,19 +630,10 @@ async function listSchedules(cycleId: string, actor: SessionUser, scope: ActorSc
     `,
     params
   );
-  return rows.map(normalizeScheduleRow);
+  return applyScheduleEditability(rows, actor, scope);
 }
 
-async function listScheduleTeachers(cycleId: string, actor: SessionUser, scope: ActorScope): Promise<TeacherScheduleRow[]> {
-  const params: unknown[] = [cycleId];
-  let visibility = '';
-
-  if (!isSystemAdmin(actor) && actor.role !== 'direccion') {
-    if (scope.coordinationIds.length === 0) return [];
-    params.push(scope.coordinationIds);
-    visibility = 'AND t.coordination_id = ANY($2::uuid[])';
-  }
-
+async function listScheduleTeachers(cycleId: string): Promise<TeacherScheduleRow[]> {
   return query<TeacherScheduleRow>(
     `
       WITH schedule_load AS (
@@ -678,10 +663,9 @@ async function listScheduleTeachers(cycleId: string, actor: SessionUser, scope: 
       LEFT JOIN coordinations c ON c.id = t.coordination_id
       LEFT JOIN schedule_load sl ON sl.teacher_id = t.id
       WHERE t.status = 'ACTIVO'
-        ${visibility}
       ORDER BY t.full_name ASC
     `,
-    params
+    [cycleId]
   );
 }
 
@@ -747,7 +731,7 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
   const [cycles, schedules, teachers, options] = await Promise.all([
     listCycles(),
     listSchedules(setup.cycle.id, actor, setup.scope),
-    listScheduleTeachers(setup.cycle.id, actor, setup.scope),
+    listScheduleTeachers(setup.cycle.id),
     listContextOptions()
   ]);
   const coordinations =
@@ -755,7 +739,9 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
       ? setup.coordinatorOptions
       : actor.role === 'direccion'
         ? setup.coordinatorOptions
-      : setup.scope.coordinations.map((coordination) => ({ id: coordination.id, name: coordination.name }));
+      : setup.actorCoordination
+        ? [{ id: setup.actorCoordination.id, name: setup.actorCoordination.name }]
+        : [];
 
   return {
     activeCycle: setup.cycle,
@@ -815,7 +801,6 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
       validateScheduleLoad(teacher, existing, parsed.data);
 
       const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data);
-      assertTeacherMatchesScheduleCoordination(actor, teacher, coordinationId);
       const subjectId = await getOrCreateSubject(client, parsed.data.subjectName);
       const tabulator = await resolveTabulator(client, parsed.data);
 
@@ -899,7 +884,6 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
       validateScheduleLoad(teacher, existing, parsed.data);
 
       const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data);
-      assertTeacherMatchesScheduleCoordination(actor, teacher, coordinationId);
       const subjectId = await getOrCreateSubject(client, parsed.data.subjectName);
       const tabulator = await resolveTabulator(client, parsed.data);
 

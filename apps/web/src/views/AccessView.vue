@@ -223,7 +223,7 @@ onMounted(() => {
               <tr>
                 <th>Usuario</th>
                 <th>Rol</th>
-                <th>Coordinaciones</th>
+                <th>Alcance operativo</th>
                 <th>Estatus</th>
                 <th></th>
               </tr>
@@ -243,13 +243,11 @@ onMounted(() => {
                   <small>{{ user.legacyUsername || 'Sin usuario legacy' }}</small>
                 </td>
                 <td>
-                  <span v-if="user.coordinations.length" class="inline-list">
-                    {{ user.coordinations.map((coordination) => coordination.name).join(', ') }}
+                  <span v-if="user.role === 'coordinador' && user.status === 'ACTIVO'" class="inline-list">
+                    Por usuario capturador
                   </span>
-                  <small v-else-if="user.role === 'coordinador' && user.status === 'ACTIVO'" class="danger-text">
-                    Requiere configuracion
-                  </small>
-                  <small v-else>Sin coordinacion operativa requerida</small>
+                  <span v-else-if="user.role === 'admin'" class="inline-list">Global</span>
+                  <small v-else>No requerido por rol</small>
                 </td>
                 <td>
                   <span class="badge" :class="user.status === 'ACTIVO' ? 'ok' : 'muted'">{{ user.status }}</span>

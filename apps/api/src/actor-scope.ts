@@ -54,7 +54,7 @@ function hasGlobalCapability(actor: SessionUser): boolean {
 }
 
 function requiresOperationalCoordination(actor: SessionUser): boolean {
-  return actor.role === 'coordinador' && !actor.isProtectedSuperAdmin;
+  return false;
 }
 
 function uniqueCandidateNames(values: Array<string | null | undefined>): string[] {

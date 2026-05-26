@@ -167,7 +167,7 @@ const isGlobalPayrollReadOnly = computed(
 const isPayrollPreviewOnly = computed(() => authStore.canPreviewPayroll && !authStore.canFinalizePayroll);
 const actorScopeLabel = computed(() => {
   const coordinations = authStore.session?.actorCoordinations || [];
-  return coordinations.length ? coordinations.map((coordination) => coordination.name).join(', ') : 'coordinaciones asignadas';
+  return coordinations.length ? coordinations.map((coordination) => coordination.name).join(', ') : 'registros capturados por tu usuario';
 });
 const canExportPayrollRun = computed(
   () => !isGlobalPayrollReadOnly.value && (authStore.canFinalizePayroll || authStore.canExportFinance)

@@ -74,10 +74,6 @@ function normalizedCoordinationIds(coordinationIds: string[] | undefined): strin
   return Array.from(new Set((coordinationIds || []).filter(Boolean)));
 }
 
-function requiresAssignedCoordination(role: RoleCode, status: 'ACTIVO' | 'INACTIVO'): boolean {
-  return status === 'ACTIVO' && role === 'coordinador';
-}
-
 async function assertCoordinationIdsAreActive(client: PoolClient, coordinationIds: string[]): Promise<void> {
   if (!coordinationIds.length) return;
 
@@ -105,9 +101,6 @@ async function replaceUserCoordinations(
   coordinationIds: string[]
 ): Promise<void> {
   const uniqueIds = normalizedCoordinationIds(coordinationIds);
-  if (requiresAssignedCoordination(role, status) && !uniqueIds.length) {
-    throw new Error('El rol Coordinador requiere al menos una coordinacion asignada.');
-  }
 
   await assertCoordinationIdsAreActive(client, uniqueIds);
   await client.query('DELETE FROM user_coordinations WHERE user_id = $1', [userId]);
@@ -132,6 +125,60 @@ async function replaceUserCoordinations(
       [userId, coordinationId, index === 0, actor.id]
     );
   }
+}
+
+async function ensurePersonalOperationalScope(
+  client: PoolClient,
+  actor: SessionUser,
+  userId: string,
+  role: RoleCode,
+  status: 'ACTIVO' | 'INACTIVO',
+  displayName: string,
+  coordinationIds: string[]
+): Promise<void> {
+  const uniqueIds = normalizedCoordinationIds(coordinationIds);
+  if (role !== 'coordinador' || status !== 'ACTIVO') {
+    await replaceUserCoordinations(client, actor, userId, role, status, []);
+    return;
+  }
+
+  if (uniqueIds.length > 0) {
+    await replaceUserCoordinations(client, actor, userId, role, status, uniqueIds);
+    return;
+  }
+
+  const scopeName = displayName.replace(/\s+/g, ' ').trim();
+  if (!scopeName) {
+    await replaceUserCoordinations(client, actor, userId, role, status, []);
+    return;
+  }
+
+  const existing = await client.query<{ id: string }>(
+    `
+      SELECT id
+      FROM coordinations
+      WHERE lower(name) = lower($1)
+      ORDER BY CASE WHEN name = $1 THEN 0 ELSE 1 END, created_at ASC
+      LIMIT 1
+    `,
+    [scopeName]
+  );
+
+  const coordinationId =
+    existing.rows[0]?.id ||
+    (
+      await client.query<{ id: string }>(
+        `
+          INSERT INTO coordinations (name, status)
+          VALUES ($1, 'ACTIVO')
+          ON CONFLICT (name) DO UPDATE SET status = EXCLUDED.status
+          RETURNING id
+        `,
+        [scopeName]
+      )
+    ).rows[0].id;
+
+  await replaceUserCoordinations(client, actor, userId, role, status, [coordinationId]);
 }
 
 async function ensureActiveAdminRemains(client: PoolClient, userId: string): Promise<void> {
@@ -307,9 +354,6 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
       const role = await getRole(client, body.roleCode);
       if (!role) throw new Error('El rol seleccionado no existe.');
       const coordinationIds = normalizedCoordinationIds(body.coordinationIds);
-      if (requiresAssignedCoordination(role.code, body.status) && !coordinationIds.length) {
-        throw new Error('El rol Coordinador requiere al menos una coordinacion asignada.');
-      }
 
       const result = await client.query<UserRow>(
         `
@@ -344,7 +388,15 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
         ]
       );
 
-      await replaceUserCoordinations(client, actor, result.rows[0].id, role.code, body.status, coordinationIds);
+      await ensurePersonalOperationalScope(
+        client,
+        actor,
+        result.rows[0].id,
+        role.code,
+        body.status,
+        body.displayName,
+        coordinationIds
+      );
       const after = await loadUserById(client, result.rows[0].id);
       await auditUser(client, actor, 'USER_CREATED', result.rows[0].id, null, after);
       return after || result.rows[0];
@@ -477,7 +529,15 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
         ]
       );
 
-      await replaceUserCoordinations(client, actor, before.id, role.code, nextStatus, nextCoordinationIds);
+      await ensurePersonalOperationalScope(
+        client,
+        actor,
+        before.id,
+        role.code,
+        nextStatus,
+        parsed.data.displayName || before.displayName,
+        nextCoordinationIds
+      );
       const after = await loadUserById(client, before.id);
       await auditUser(client, actor, 'USER_UPDATED', before.id, before, after);
       return after || result.rows[0];

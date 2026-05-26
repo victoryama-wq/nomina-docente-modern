@@ -12,7 +12,19 @@ const props = defineProps<{
   coordinations: CoordinationOption[];
 }>();
 
-const requiresCoordination = computed(() => props.form.roleCode === 'coordinador' && props.form.status === 'ACTIVO');
+const roleScopeMessage = computed(() => {
+  if (props.form.roleCode === 'coordinador' && props.form.status === 'ACTIVO') {
+    return 'El alcance operativo se toma del usuario capturador. No selecciones nombres de coordinadores manualmente.';
+  }
+  if (props.form.roleCode === 'admin') return 'Admin conserva alcance global.';
+  if (['rh', 'finanzas', 'contador', 'contabilidad'].includes(props.form.roleCode)) {
+    return 'Este rol no requiere alcance operativo para capturar Horarios, Incidencias o Extras.';
+  }
+  if (props.form.roleCode === 'direccion') {
+    return 'Direccion/Subdireccion opera por rol y por registros propios cuando aplique.';
+  }
+  return 'El acceso se controla por rol y permisos.';
+});
 
 defineEmits<{
   (e: 'close'): void;
@@ -55,21 +67,10 @@ defineEmits<{
             <option value="INACTIVO">INACTIVO</option>
           </select>
         </label>
-        <fieldset class="coordination-checks">
-          <legend>Coordinaciones asignadas</legend>
-          <p v-if="requiresCoordination && !form.coordinationIds?.length" class="field-warning">
-            Coordinador activo requiere al menos una coordinacion.
-          </p>
-          <p v-else class="field-hint">Admin, Finanzas, RH, Contador y Contabilidad no requieren coordinacion operativa.</p>
-          <label v-for="coordination in coordinations" :key="coordination.id" class="checkbox-line">
-            <input
-              v-model="form.coordinationIds"
-              type="checkbox"
-              :value="coordination.id"
-            />
-            <span>{{ coordination.name }}</span>
-          </label>
-        </fieldset>
+        <div class="scope-note">
+          <strong>Alcance operativo</strong>
+          <span>{{ roleScopeMessage }}</span>
+        </div>
         <label>
           <span>Usuario legacy</span>
           <input v-model.trim="form.legacyUsername" />
