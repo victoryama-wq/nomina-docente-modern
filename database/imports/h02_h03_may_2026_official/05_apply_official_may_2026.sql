@@ -17,15 +17,6 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM h02h03_may2026_staging.teachers st
-    JOIN public.teachers t ON t.id = st.id
-    WHERE t.normalized_name <> st.normalized_name
-  ) THEN
-    RAISE EXCEPTION 'BLOCKER: teacher id conflict with different normalized_name';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM h02h03_may2026_staging.teachers st
     JOIN public.teachers t ON t.normalized_name = st.normalized_name
     WHERE t.id <> st.id
   ) THEN

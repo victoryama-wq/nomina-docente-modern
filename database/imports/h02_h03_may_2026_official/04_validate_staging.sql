@@ -29,7 +29,7 @@ WITH checks AS (
     GROUP BY normalized_name
     HAVING count(*) > 1
   ) dup
-  UNION ALL SELECT 'teacher id conflicts with different normalized_name', count(*)::text, CASE WHEN count(*) = 0 THEN 'OK' ELSE 'BLOCKER' END
+  UNION ALL SELECT 'teacher id official name changes', count(*)::text, CASE WHEN count(*) = 0 THEN 'OK' ELSE 'REVIEW' END
   FROM h02h03_may2026_staging.teachers st
   JOIN public.teachers t ON t.id = st.id
   WHERE t.normalized_name <> st.normalized_name

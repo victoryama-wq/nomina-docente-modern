@@ -10,10 +10,16 @@ Migrar de forma controlada los datos oficiales validados en revision hacia produ
 - Extras.
 - `user_coordinations` tecnicas.
 
-Fuente recomendada:
+Fuente recomendada si conserva datos vivos:
 
 ```text
 nomina_docente_h02h03_review
+```
+
+Fuente local validada cuando preview ya limpio Incidencias/Extras por guardado de nomina:
+
+```text
+nomina_docente_deploy_snapshot_20260526_111616_h02h03
 ```
 
 Destino:
@@ -26,14 +32,14 @@ Este flujo no importa `payroll_runs`, `payroll_lines`, `audit_log` ni documentos
 
 ## Orden de ejecucion
 
-### 1. Exportar datos desde revision
+### 1. Exportar datos desde la fuente validada
 
-Ejecutar contra la base de revision:
+Ejecutar contra la base que conserve Directorio, Horarios, Incidencias y Extras vivos.
 
 ```powershell
 $psql = 'C:\Program Files\PostgreSQL\18\bin\psql.exe'
 $env:PGPASSWORD = '<password>'
-& $psql -h 127.0.0.1 -p 55433 -U app_nomina -d nomina_docente_h02h03_review `
+& $psql -h localhost -p 55432 -U app_nomina -d nomina_docente_deploy_snapshot_20260526_111616_h02h03 `
   -v ON_ERROR_STOP=1 `
   -f database/imports/h02_h03_may_2026_official/01_export_review_to_csv.sql
 ```

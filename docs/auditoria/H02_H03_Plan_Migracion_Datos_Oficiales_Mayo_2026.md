@@ -73,6 +73,13 @@ Fuentes documentales de respaldo:
 
 Si la base de revision no coincide con los CSV oficiales, detener la migracion y corregir primero la base de revision.
 
+Actualizacion de dry-run:
+
+- La base Cloud `nomina_docente_h02h03_review` conserva el resultado correcto en `payroll_runs`, pero despues de guardar/pagar nomina ya no conserva Incidencias/Extras vivos.
+- La fuente viva validada para migrar datos operativos es la base local `nomina_docente_deploy_snapshot_20260526_111616_h02h03`.
+- Esa base contiene `teachers=216`, `schedules=589`, `schedule_incidences=18`, `extra_hours=65` y `user_coordinations=15`.
+- Por tanto, para migrar datos vivos se debe exportar desde esa base local validada, no desde la preview Cloud si esta ya fue limpiada por el flujo de nomina.
+
 ## 4. Principios de migracion
 
 1. No hacer truncado global de base de datos.
@@ -125,6 +132,7 @@ Reglas:
 
 - Usar `normalized_name` como llave principal cuando el docente ya existe.
 - Si hay cambios de nombre que rompen `normalized_name`, generar reporte manual de equivalencias antes de escribir.
+- Si el mismo `id` existe y el `normalized_name` cambia por correccion oficial de orden/nombre, tratarlo como `REVIEW`, no como bloqueante, siempre que no exista otro docente con ese `normalized_name`.
 - No eliminar docentes de produccion automaticamente.
 - Docentes que existan en produccion y no en la fuente oficial deben quedar en reporte de revision.
 - `payment_type` es dato fiscal-financiero sensible; se puede migrar solo si el archivo oficial fue aprobado por Admin/RH/Finanzas.
