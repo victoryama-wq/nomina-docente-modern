@@ -1,5 +1,36 @@
 # SDD Retrospectivo: Nómina Docente Vue 3 + Firebase Auth + Cloud Run + PostgreSQL
 
+## 0. Estado actual posterior a H02/H03
+
+Actualizacion: 2026-05-27.
+
+Este SDD queda actualizado despues de:
+
+- Cierre operativo de H01 de precision monetaria.
+- Implementacion y deploy productivo de H02/H03.
+- Migracion productiva de datos oficiales de mayo 2026.
+- Conciliacion de la nomina `2026-05-15 a 2026-05-28` por `$517,510.00`.
+- Normalizacion de docentes duplicados por formato apellido-nombre / nombre-apellido.
+- Cierre controlado de recursos preview/dry-run.
+
+Estado actual confirmado:
+
+| Area | Estado |
+|---|---|
+| Produccion | `https://nomina-docente-prod.web.app` |
+| API Cloud Run | `nomina-api`, revision `nomina-api-00044-pk9` |
+| Base aplicativa activa | `nomina_docente` |
+| Canales Firebase | Solo `live` |
+| Bases preview/dry-run | Eliminadas |
+| Servicio API review | Eliminado |
+| H01 | Cerrado |
+| H02 | Implementado; queda monitoreo de fallback legacy |
+| H03 | Implementado; permisos fiscal/finanzas/workflow separados |
+
+Nota de lectura:
+
+Las secciones historicas de este documento conservan contexto del diagnostico inicial. Cuando haya diferencia entre el diagnostico inicial y esta seccion, prevalece el estado posterior H02/H03 documentado en los cierres de auditoria.
+
 ## 1. Contexto general
 
 Este documento describe el estado actual del sistema Nómina Docente después del cierre técnico y operativo del Hotfix H01 de precisión monetaria.
@@ -69,6 +100,16 @@ Despliegue confirmado de H01:
 - Cloud Run: `nomina-api-00043-p96`
 - Firebase Hosting: versión `ffa4489d79ffc477`
 - Asset frontend: `/assets/index-Dqi2usvi.js`
+
+Despliegue actual confirmado despues de H02/H03:
+
+- Rama: `feature/h02-h03-user-coordinations-permissions`.
+- Cloud Run productivo: `nomina-api-00044-pk9`.
+- API publica: `https://nomina-api-443985127112.us-central1.run.app`.
+- Frontend live: `https://nomina-docente-prod.web.app`.
+- Base Cloud SQL activa: `nomina_docente`.
+- Migracion H02/H03 aplicada: `database/011_h02_h03_user_coordinations_permissions.sql`.
+- Recursos temporales `nomina_docente_h02h03_review`, `nomina_docente_h02h03_data_dryrun`, `nomina-api-h02h03-review` y canal `h02-h03-review` eliminados.
 
 ## 4. Tecnologías utilizadas
 
@@ -409,10 +450,21 @@ Permisos relevantes confirmados:
 - `access.manage`
 - `audit.view`
 
-Riesgos pendientes:
+Permisos H02/H03 agregados y desplegados:
 
-- H02 P1: resolución de coordinación por `display_name`, `legacy_username` o `actor.displayName` es funcional pero frágil ante cambios de nombre.
-- H03 P1: el alcance de `finance.view` y `fiscal.manage` sobre edición fiscal requiere confirmación formal de operación.
+- `fiscal.view`
+- `fiscal.document.view`
+- `fiscal.document.manage`
+- `finance.export`
+- `finance.workflow`
+- `payroll.preview`
+
+Estado H02/H03:
+
+- H02 ya no depende como fuente principal de `display_name`, `legacy_username` o `actor.displayName`; se implemento `user_coordinations` y reglas por usuario capturador donde operacion lo requirio.
+- El fallback legacy sigue habilitado temporalmente y debe monitorearse antes de retirarlo.
+- H03 separo permisos fiscales, documentales, exportacion financiera, workflow financiero y preview de nomina.
+- `finance.view` ya no debe habilitar edicion fiscal ni workflow financiero.
 
 ## 11. API Fastify y rutas principales
 
@@ -519,13 +571,14 @@ Confirmado en código:
 
 Confirmado por despliegue:
 
-- Cloud Run sirve `nomina-api-00043-p96`.
-- Firebase Hosting sirve asset `/assets/index-Dqi2usvi.js`.
-- `/api/health` respondió `200 OK`.
+- H01 fue preservado durante H02/H03.
+- Cloud Run sirve actualmente `nomina-api-00044-pk9`.
+- Firebase Hosting live responde `https://nomina-docente-prod.web.app`.
+- `/api/health` respondio `200 OK` despues del cierre de recursos preview/dry-run.
 
 Confirmado por operación:
 
-- La quincena real validada cuadró después del despliegue.
+- La quincena real `2026-05-15 a 2026-05-28` cuadro en `$517,510.00` y fue guardada correctamente.
 
 ## 15. Incidencias y extras
 
@@ -542,6 +595,9 @@ Extras confirmados:
 - Campos principales: docente, coordinación, ciclo, horas, tabulador, motivo, fecha de actividad, referencia y observaciones.
 - Se filtran por quincena usando fecha de actividad.
 - Impactan nómina como `loggedExtraAmount`.
+- Despues del ajuste H02/H03, Coordinador puede capturar extras para cualquier docente activo, pero solo puede editar/eliminar extras capturados por su propio usuario (`captured_by`).
+- Direccion/Subdireccion puede ver el listado de Extras, pero solo modificar los extras que haya capturado.
+- La coordinacion en Extras queda como etiqueta tecnica/legacy para reportes y nomina, no como permiso suficiente de edicion.
 
 Riesgos/pendientes:
 
@@ -577,6 +633,10 @@ Confirmado en código:
 - Incluye reportes por pagos, pendientes fiscales, coordinaciones, históricos y comprobantes.
 - Controla flujo financiero de estados.
 - Dirección/Subdirección puede ver globalmente sin acciones operativas mediante `finance.global_view`.
+- Despues de H03, `finance.view` queda para consulta financiera.
+- `finance.export` controla exportaciones financieras.
+- `finance.workflow` controla aprobar, marcar pagada, cancelar y cambiar estados financieros.
+- Contador/Contabilidad quedan limitados a exportacion/lectura minima, sin fiscal ni workflow.
 
 Estados confirmados:
 
@@ -616,12 +676,16 @@ Confirmado en código:
 
 Permisos confirmados:
 
-- Carga de constancia: `teachers.manage`, `finance.view` o `fiscal.manage`.
-- Consulta de constancia: `teachers.manage`, `finance.view`, `reports.view` o `fiscal.manage`.
+- Ver expediente fiscal: `fiscal.view`.
+- Editar RFC/correo fiscal/banco/tipo de pago: `fiscal.manage`.
+- Ver/descargar constancia: `fiscal.document.view`.
+- Subir/reemplazar constancia: `fiscal.document.manage`.
 
-Riesgo pendiente:
+Confirmado despues de H03:
 
-- H03 P1: confirmar si Finanzas debe poder editar/cargar expediente fiscal o si esa acción debe quedar solo para RH/Admin.
+- `teachers.manage`, `finance.view` y `reports.view` no deben habilitar por si solos gestion fiscal ni constancias.
+- RH, Finanzas y Admin gestionan expediente fiscal conforme a permisos explicitos.
+- Coordinador, Direccion/Subdireccion y Contador/Contabilidad no editan fiscal si no tienen permiso fiscal explicito.
 
 ## 20. Sistema legado Apps Script
 
@@ -645,77 +709,76 @@ Riesgos relacionados:
 - H06 P1: coexistencia con Apps Script legado.
 - H14 P3: legado extenso requiere inventario antes de eliminación.
 
-## 21. Riesgos técnicos pendientes
+## 21. Riesgos técnicos y estado actual
 
-H01 queda cerrado. Riesgos pendientes:
+H01 queda cerrado. H02/H03 tambien quedan cerrados operativamente en produccion, con monitoreo residual.
 
-| ID | Prioridad | Riesgo | Estado |
+| ID | Prioridad | Riesgo | Estado actual |
 |---|---|---|---|
-| H02 | P1 | Resolución de coordinación por `display_name` / `legacy_username` | Pendiente |
-| H03 | P1 | Alcance de `finance.view` y `fiscal.manage` sobre edición fiscal | Pendiente |
-| H04 | P1 | Falta de pruebas automatizadas | Pendiente |
-| H05 | P1 | Migraciones SQL sin control formal de ejecución | Pendiente |
-| H06 | P1 | Coexistencia con Apps Script legado | Pendiente |
-| H07 | P2 | Provider Google con `hd` comentado | Pendiente |
-| H08 | P2 | Lógica concentrada en archivos grandes | Pendiente |
-| H09 | P2 | Estados `BORRADOR` y `CERRADA` no usados claramente | Pendiente |
-| H10 | P2 | Cierre de cuatrimestre moderno pendiente de confirmar | Pendiente |
-| H11 | P2 | Exportables CSV con posible diferencia de codificación | Pendiente |
-| H12 | P2 | Dependencia de nombres para catálogos/tabuladores históricos | Pendiente |
-| H13 | P3 | Variables reales de producción no versionadas | Pendiente |
-| H14 | P3 | Legado Apps Script con lógica extensa | Pendiente |
+| H02 | P1 | Resolucion de coordinacion por `display_name` / `legacy_username` | Implementado. Existe `user_coordinations`, reglas por capturador y eliminacion de creacion automatica de coordinaciones. Residual: monitorear fallback legacy durante estabilizacion. |
+| H03 | P1 | Alcance de `finance.view` y `fiscal.manage` sobre edicion fiscal | Implementado. Permisos fiscales, documentales, exportacion, workflow y preview quedaron separados. Residual: pruebas de regresion recurrentes por rol. |
+| H04 | P1 | Falta de pruebas automatizadas | Pendiente. Hay pruebas manuales, SQL, typecheck y build, pero no una suite automatizada de negocio suficiente. |
+| H05 | P1 | Migraciones SQL sin control formal de ejecucion | Mitigado parcialmente. Existen scripts, backups y documentacion, pero falta herramienta/tabla formal de migraciones aplicadas con checksum. |
+| H06 | P1 | Coexistencia con Apps Script legado | Pendiente. Requiere decision institucional de congelamiento, consulta historica o retiro. |
+| H07 | P2 | Provider Google con `hd` comentado | Pendiente. Backend valida dominio; `hd` seria mejora UX, no control de seguridad primario. |
+| H08 | P2 | Logica concentrada en archivos grandes | Pendiente. Requiere refactor incremental con pruebas. |
+| H09 | P2 | Estados `BORRADOR` y `CERRADA` no usados claramente | Pendiente. Requiere definicion de maquina de estados financiera. |
+| H10 | P2 | Cierre de cuatrimestre moderno pendiente de confirmar | Pendiente. Requiere validacion operativa. |
+| H11 | P2 | Exportables CSV con posible diferencia de codificacion | Pendiente. Se han observado riesgos de acentos/mojibake en insumos; falta estandar formal por exportable. |
+| H12 | P2 | Dependencia de nombres para catalogos/tabuladores historicos | Pendiente. Requiere politica de inactivacion/renombrado. |
+| H13 | P3 | Variables reales de produccion no versionadas | Mitigado. Deploys H02/H03 documentan variables no secretas; falta consolidarlo como checklist permanente. |
+| H14 | P3 | Legado Apps Script con logica extensa | Pendiente. Requiere inventario y decision de archivo/retiro. |
 
-## 22. Deuda técnica
+## 22. Deuda tecnica
 
 Confirmado o inferido por estructura:
 
 - Archivos backend grandes: `payroll.ts`, `reports.ts`, `schedules.ts`, `teachers.ts`, `extras.ts`, `calendar.ts`.
 - Vistas frontend grandes: `FinanceReportsView.vue`, `CalendarView.vue`, `PayrollView.vue`, `ExtrasView.vue`, `FiscalRecordsView.vue`, `IncidencesView.vue`.
-- No se detectó suite de pruebas automatizadas de negocio.
-- No se detectó herramienta formal de migraciones.
-- La resolución de coordinación depende de texto/nombre.
-- El frontend aún conserva `AppLegacy.vue`.
-- El proveedor Google tiene `hd` comentado.
+- No existe todavia una suite automatizada completa de negocio para nomina, permisos, reportes y flujos por rol.
+- No existe todavia herramienta formal de migraciones con tabla de control/checksum.
+- H02 ya no depende principalmente de texto/nombre, pero el fallback legacy sigue habilitado por estabilizacion.
+- El frontend aun conserva `AppLegacy.vue`.
+- El proveedor Google tiene `hd` comentado; el backend conserva la validacion real de dominio.
 - El sistema legacy permanece en el repositorio.
 
-## 23. Pendientes por confirmar con operación
+## 23. Pendientes por confirmar con operacion
 
-- Si Apps Script sigue siendo usado por alguna coordinación o área financiera.
-- Si el cierre de cuatrimestre moderno cubre al 100% la operación esperada.
+- Si Apps Script sigue siendo usado por alguna coordinacion o area financiera.
+- Si el cierre de cuatrimestre moderno cubre al 100% la operacion esperada.
 - Uso real de estados `BORRADOR` y `CERRADA`.
-- Si Finanzas debe editar expedientes fiscales o solo consultar.
-- Si RH debe tener captura operativa amplia o solo expediente fiscal.
-- Política ante sobrecargas por categoría cuando se capturan extras.
-- Política de retención de bitácora.
-- Política de inactivación/renombrado de catálogos usados históricamente.
-- Proceso formal de corrección de nómina posterior a guardado.
-- Requerimientos formales de CSV/PDF para Excel, acentos y auditoría.
+- Politica ante sobrecargas por categoria cuando se capturan extras.
+- Politica de retencion de bitacora.
+- Politica de inactivacion/renombrado de catalogos usados historicamente.
+- Proceso formal de correccion de nomina posterior a guardado.
+- Requerimientos formales de CSV/PDF para Excel, acentos y auditoria.
+- Condicion/fecha final para retirar fallback legacy cuando termine la quincena de estabilizacion sin uso indebido.
 
 ## 24. Recomendaciones por prioridad
 
 ### P0
 
-- H01 precisión monetaria: cerrado. Mantener regresión obligatoria en cada cambio de Nómina/Finanzas.
+- H01 precision monetaria: cerrado. Mantener regresion obligatoria en cada cambio de Nomina/Finanzas.
+- H02/H03: cerrados operativamente. No cambiar reglas ya validadas sin SPEC o decision formal.
 
 ### P1
 
-- Documentar y corregir la resolución de coordinación para usar relación explícita usuario-coordinación.
-- Confirmar matriz rol-permiso-acción, especialmente `finance.view` y `fiscal.manage`.
-- Crear suite mínima de pruebas automatizadas para cálculo de nómina.
-- Formalizar migraciones SQL con tabla de control y procedimiento de rollback.
-- Definir plan operativo para Apps Script: congelar, retirar o mantener como histórico.
+- Crear suite minima automatizada para calculo de nomina, permisos por rol, docentes compartidos, extras propios/ajenos, fiscal/documentos y workflow financiero.
+- Formalizar migraciones SQL con tabla de control, checksum, orden, ambiente y rollback.
+- Definir plan operativo para Apps Script: congelar, retirar o mantener como historico.
+- Monitorear `LEGACY_COORDINATION_FALLBACK_USED` y preparar retiro del fallback cuando se cumpla la condicion aprobada.
 
 ### P2
 
 - Revisar `hd` en Google Provider para mejorar experiencia de login.
 - Refactorizar gradualmente archivos grandes por servicios internos, sin cambiar reglas.
-- Aclarar estados de nómina no usados.
+- Aclarar estados de nomina no usados.
 - Confirmar cierre de cuatrimestre moderno.
-- Estandarizar codificación de CSV y pruebas en Excel.
-- Definir política de catálogos históricos.
+- Estandarizar codificacion de CSV y pruebas en Excel.
+- Definir politica de catalogos historicos.
 
 ### P3
 
-- Documentar variables productivas no secretas y checklist de despliegue.
-- Inventariar lógica legacy antes de eliminar o archivar definitivamente.
+- Consolidar inventario de variables productivas no secretas como checklist permanente.
+- Inventariar logica legacy antes de eliminar o archivar definitivamente.
 - Crear `AGENTS.md`, Skills y workflow de mantenimiento cuando el sistema quede estabilizado.

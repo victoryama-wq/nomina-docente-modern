@@ -31,6 +31,24 @@ API via Hosting: https://nomina-docente-prod.web.app/api/health
 
 Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
+Estado productivo confirmado el 2026-05-27:
+
+- Cloud Run productivo: `nomina-api`, revision `nomina-api-00044-pk9`.
+- Base aplicativa activa: `nomina_docente`.
+- Canal Firebase Hosting activo: `live`.
+- Recursos preview/dry-run H02/H03 eliminados.
+- H01 precision monetaria: cerrado.
+- H02/H03 permisos/coordinacion: desplegado y validado.
+- Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
+
+Documentos de estado relevantes:
+
+- `docs/sdd/SDD_Retrospectivo_Nomina_Docente.md`
+- `docs/auditoria/Matriz_Formal_Riesgos_Nomina_Docente.md`
+- `docs/auditoria/H02_H03_Deploy_Productivo_Resultado.md`
+- `docs/auditoria/H02_H03_Migracion_Productiva_Datos_Oficiales_Mayo_2026.md`
+- `docs/auditoria/H02_H03_Cierre_Controlado_Recursos_Revision_20260527.md`
+
 ## Comandos útiles
 
 ```powershell
@@ -63,9 +81,25 @@ $image = 'us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:lates
   --allow-unauthenticated `
   --set-cloudsql-instances nomina-docente-prod:us-central1:nomina-docente-web `
   --set-secrets DB_PASSWORD=db-app-nomina-password:latest `
-  --set-env-vars "^@^NODE_ENV=production@FIREBASE_PROJECT_ID=nomina-docente-prod@GCP_PROJECT_ID=nomina-docente-prod@ALLOWED_EMAIL_DOMAIN=tecplayacar.edu.mx@CORS_ORIGINS=https://nomina-docente-prod.web.app,https://nomina-docente-prod.firebaseapp.com,http://localhost:5173,http://localhost:8080@DB_NAME=nomina_docente@DB_USER=app_nomina@INSTANCE_CONNECTION_NAME=nomina-docente-prod:us-central1:nomina-docente-web@CONSTANCIAS_BUCKET=nomina-docente-prod-constancias" `
+  --set-env-vars "^@^NODE_ENV=production@FIREBASE_PROJECT_ID=nomina-docente-prod@GCP_PROJECT_ID=nomina-docente-prod@ALLOWED_EMAIL_DOMAIN=tecplayacar.edu.mx@CORS_ORIGINS=https://nomina-docente-prod.web.app,https://nomina-docente-prod.firebaseapp.com,http://localhost:5173@DB_NAME=nomina_docente@DB_USER=app_nomina@INSTANCE_CONNECTION_NAME=nomina-docente-prod:us-central1:nomina-docente-web@CONSTANCIAS_BUCKET=nomina-docente-prod-constancias@LEGACY_COORDINATION_FALLBACK_ENABLED=true" `
   --min-instances 0 `
   --max-instances 3 `
   --cpu 1 `
   --memory 512Mi
+```
+
+Checklist minimo antes de deploy:
+
+```powershell
+npm --workspace apps/api run typecheck
+npm --workspace apps/web run typecheck
+npm run typecheck
+npm run build
+```
+
+Despues de deploy:
+
+```powershell
+Invoke-RestMethod https://nomina-docente-prod.web.app/api/health
+firebase hosting:channel:list --project nomina-docente-prod
 ```

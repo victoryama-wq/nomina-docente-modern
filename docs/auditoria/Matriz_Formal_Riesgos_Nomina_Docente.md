@@ -1,181 +1,123 @@
-# Matriz Formal de Riesgos - Nómina Docente
+# Matriz Formal de Riesgos - Nomina Docente
+
+Actualizacion: 2026-05-27
 
 ## 1. Contexto
 
-Esta matriz formaliza los riesgos pendientes del proyecto Nómina Docente con base en el SDD retrospectivo `docs/sdd/SDD_Retrospectivo_Nomina_Docente.md`, la matriz de priorización previa y el cierre del Hotfix H01.
+Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues de:
 
-H01, correspondiente a precisión monetaria con `number` en Node/API, ya fue cerrado técnica y operativamente. El sistema desplegado usa `decimal.js`, mantiene importes PostgreSQL `numeric` como string decimal en la API y expone importes monetarios como `MoneyString` en frontend.
+- Cierre tecnico/operativo H01.
+- Implementacion y deploy productivo H02/H03.
+- Migracion productiva de datos oficiales de mayo 2026.
+- Conciliacion de nomina `2026-05-15 a 2026-05-28` por `$517,510.00`.
+- Limpieza productiva de docentes duplicados por formato de nombre.
+- Cierre controlado de recursos preview/dry-run.
 
-Esta matriz se enfoca únicamente en H02-H14. No propone cambios de código todavía. Mantiene como arquitectura real: Vue 3 + Firebase Auth + Cloud Run + Fastify + PostgreSQL.
+Arquitectura vigente:
+
+- Frontend: Vue 3 + TypeScript + Firebase Hosting.
+- Backend: Fastify + TypeScript en Cloud Run.
+- Auth: Firebase Auth.
+- Base de datos: PostgreSQL / Cloud SQL.
+- Archivos fiscales: Cloud Storage.
 
 ## 2. Criterios de prioridad
 
-- **P0 Crítico:** corregir inmediatamente.
+- **P0 Critico:** corregir inmediatamente.
 - **P1 Alto:** corregir en la siguiente fase controlada.
-- **P2 Medio:** planificar en backlog técnico.
-- **P3 Bajo:** documentación, operación o mejora futura.
+- **P2 Medio:** planificar en backlog tecnico.
+- **P3 Bajo:** documentacion, operacion o mejora futura.
 
-## 3. Matriz de riesgos
+## 3. Matriz actual
 
-| ID | Riesgo | Área | Evidencia en SDD | Impacto | Probabilidad | Prioridad | Estado | Recomendación | Criterio de cierre | Requiere decisión humana |
-|---|---|---|---|---|---|---|---|---|---|---|
-| H02 | Resolución de coordinación por `display_name` / `legacy_username`. | Seguridad / Permisos / Datos operativos | Sección 10 indica que la resolución de coordinación por nombre es funcional pero frágil; sección 22 lo lista como deuda técnica. | Alto: un usuario podría quedar asociado a coordinación incorrecta, afectando edición de docentes, horarios, incidencias y extras. | Media | P1 Alto | Pendiente | Definir una relación explícita usuario-coordinación como fuente de verdad y documentar fallback solo para migración. | Existe modelo formal usuario-coordinación; rutas críticas usan ID de coordinación asignado; pruebas con nombres similares, cambios de nombre, usuario sin coordinación, admin, coordinador, RH y dirección pasan. | Sí: Operación debe confirmar fuente oficial de coordinación por usuario. |
-| H03 | Alcance de `finance.view` y `fiscal.manage` sobre edición fiscal. | Roles / Seguridad / RH / Finanzas | Secciones 10 y 19 indican que `finance.view` y `fiscal.manage` permiten acciones sobre expedientes/constancias y requieren confirmación formal. | Alto: Finanzas podría editar RFC, correo, banco o constancia si operación espera solo lectura. | Media | P1 Alto | Pendiente | Construir matriz rol-ruta-acción y pedir aprobación formal de Admin, Finanzas, RH y Dirección. | Matriz de permisos aprobada; pruebas por rol validan consultar, editar, subir constancia, descargar y exportar según alcance aprobado. | Sí: Finanzas, RH y Dirección deben aprobar alcance. |
-| H04 | Falta de pruebas automatizadas. | Calidad / Nómina / Finanzas / Permisos | Secciones 12 y 22 indican que no se detectó suite automatizada de negocio. | Alto: regresiones en nómina, permisos, exportables o estados pueden llegar a producción sin ser detectadas por typecheck. | Alta | P1 Alto | Pendiente | Crear suite mínima de pruebas de cálculo, permisos y exportables críticos antes de refactors grandes. | Existen pruebas automatizadas para cálculo de nómina, faltas, retardos, extras, permisos por rol, CSV/PDF básicos y regresión H01; se ejecutan en checklist de despliegue. | Sí: Operación debe validar casos de referencia y Finanzas debe aprobar totales esperados. |
-| H05 | Migraciones SQL sin control formal. | Base de datos / DevOps | Secciones 8 y 22 indican que hay SQL incrementales, pero no se detectó tabla/herramienta formal que registre migraciones aplicadas. | Alto: riesgo de migraciones fuera de orden, duplicadas, incompletas o difíciles de auditar. | Media | P1 Alto | Pendiente | Formalizar herramienta o tabla de control de migraciones, con orden, checksum, rollback y respaldo previo. | Existe control de migraciones aplicado en BD; instalación limpia y actualización existente ejecutan la misma secuencia; hay evidencia de versión de esquema. | Sí: DevOps/Admin debe aprobar herramienta/proceso de migración. |
-| H06 | Coexistencia con Apps Script legado. | Arquitectura / Operación / Gobierno de datos | Secciones 1 y 20 indican que Apps Script se conserva como referencia y está pendiente confirmar si sigue activo. | Alto: doble fuente de verdad, capturas paralelas, confusión operativa o uso de hojas no sincronizadas. | Media | P1 Alto | Pendiente | Definir estado oficial del legado: congelado, solo consulta, respaldo histórico o desactivado. | Existe acta/procedimiento de retiro o congelamiento; usuarios conocen fuente oficial; no hay capturas productivas paralelas fuera del sistema moderno. | Sí: Dirección y operación deben decidir continuidad o retiro del legado. |
-| H07 | Provider Google con parámetro `hd` comentado. | Autenticación / UX / Seguridad preventiva | Sección 9 indica que `hd` está comentado y backend valida dominio institucional. | Medio: usuarios externos pueden intentar login antes de ser rechazados por backend; más ruido y peor experiencia. | Media | P2 Medio | Pendiente | Evaluar activar `hd` como mejora UX sin confiar seguridad al frontend; mantener validación backend. | Login institucional funciona; cuentas externas quedan filtradas desde selector y también rechazadas por backend; pruebas con cuenta personal y otro dominio documentadas. | No crítica; recomendable confirmar con Admin Google si hay cuentas alias externas válidas. |
-| H08 | Lógica concentrada en archivos grandes. | Mantenibilidad / Backend / Frontend | Secciones 5 y 22 identifican archivos grandes: `payroll.ts`, `reports.ts`, `schedules.ts`, `FinanceReportsView.vue`, `PayrollView.vue`, entre otros. | Medio: mayor riesgo de conflictos, regresiones y lentitud al modificar módulos. | Alta | P2 Medio | Pendiente | Refactor incremental por servicios internos y componentes, después de pruebas base. | Módulos críticos separados por responsabilidad; pruebas de regresión pasan; no cambian contratos públicos ni reglas de negocio. | No para iniciar análisis técnico; sí para priorizar alcance de refactor por operación. |
-| H09 | Estados `BORRADOR` y `CERRADA` no usados claramente. | Modelo / Flujo financiero | Secciones 17 y 23 indican que se usan principalmente `CALCULADA`, `EN_REVISION`, `APROBADA`, `PAGADA`, `CANCELADA`, y queda pendiente confirmar `BORRADOR`/`CERRADA`. | Medio: ambigüedad en reportes, auditoría y evolución del flujo financiero. | Media | P2 Medio | Pendiente | Documentar máquina de estados oficial de nómina y depurar semántica operativa antes de agregar flujos nuevos. | Diagrama de estados aprobado; cada estado tiene botones, permisos, reportes y reglas de transición definidos o queda marcado como reservado. | Sí: Finanzas/Dirección deben aprobar flujo financiero formal. |
-| H10 | Cierre de cuatrimestre moderno pendiente. | Ciclos / Históricos / Operación académica | Secciones 7.8, 16 y 23 indican que activar ciclo cierra otros, pero queda pendiente confirmar si eso cubre cierre de cuatrimestre. | Medio: operación podría esperar archivado, limpieza o historial adicional no cubierto por el flujo actual. | Media | P2 Medio | Pendiente | Validar proceso real de cierre con operación antes de implementar un módulo adicional. | Cierre de ciclo documentado y probado: horarios históricos, nuevo ciclo, nuevas quincenas, incidencias/extras, nómina e histórico se comportan como operación requiere. | Sí: Coordinación académica y Dirección deben definir cierre esperado. |
-| H11 | CSV con posible diferencia de codificación según módulo. | Reportes / Finanzas / Excel | Sección 23 menciona requerimientos de CSV/PDF para Excel, acentos y auditoría; matriz previa documenta antecedentes de problemas de acentuación. | Medio: nombres, coordinaciones o textos con acentos/ñ pueden verse mal en Excel y generar reprocesos. | Media | P2 Medio | Pendiente | Estandarizar generación CSV UTF-8 con BOM donde aplique y probar en Excel Windows. | Exportables críticos abren correctamente en Excel, Google Sheets y LibreOffice con acentos, ñ, RFC y textos largos. | Sí para validar formato esperado por Finanzas; no para la corrección técnica básica. |
-| H12 | Dependencia de nombres para catálogos/tabuladores históricos. | Catálogos / Horarios / Históricos | Secciones 17 y 23 indican que nómina guarda snapshots, pero falta política de inactivación/renombrado de catálogos históricos. | Medio: cambios de asignaturas o tabuladores podrían confundir interpretación histórica o captura viva. | Baja | P2 Medio | Pendiente | Definir política: inactivar en vez de borrar, conservar snapshots y controlar edición de valores usados. | Política documentada; pruebas de cambio/inactivación de asignatura y tabulador no alteran nóminas guardadas ni rompen horarios vivos. | Sí: Operación académica y Finanzas deben definir política de catálogo. |
-| H13 | Variables productivas no versionadas. | Infraestructura / DevOps / Auditoría | Sección 22 lo identifica como deuda; sección 3 documenta despliegue, pero variables reales no están formalizadas como checklist completo. | Bajo: dificulta reproducibilidad y auditoría exacta de Cloud Run, CORS, buckets y dominios. | Media | P3 Bajo | Pendiente | Crear inventario no secreto de configuración productiva y checklist de despliegue. | Documento operativo contiene variables no secretas, origen de secretos, servicios, buckets, dominios, CORS y verificación de health/logs. | No para documentar; sí para validar propietarios de secretos y servicios. |
-| H14 | Legado Apps Script con lógica extensa. | Documentación / Retiro legado | Sección 20 confirma `Codigo.gs` e `index.html` y marca pendiente inventario/retiro; sección 22 lo lista como deuda. | Bajo a medio: pérdida de conocimiento si se elimina sin inventario o confusión si se mantiene sin estado oficial. | Media | P3 Bajo | Pendiente | Inventariar equivalencias legacy vs moderno y declarar estado del legado. | Documento de equivalencias y decisión de archivo histórico/congelamiento/retiro aprobado. | Sí: Dirección/operación deben decidir estado final del legado. |
+| ID | Riesgo | Area | Estado actual | Impacto residual | Prioridad actual | Recomendacion | Criterio de cierre restante | Requiere decision humana |
+|---|---|---|---|---|---|---|---|---|
+| H01 | Precision monetaria con `number` en Node/API | Nomina / Finanzas | Cerrado | Bajo; riesgo solo por regresion futura | P0 cerrado | Mantener pruebas/regresion en cada cambio de Nomina/Finanzas | Typecheck/build y pruebas de calculo pasan antes de deploy | No |
+| H02 | Resolucion de coordinacion por `display_name` / `legacy_username` | Seguridad / Permisos / Datos operativos | Cerrado operativo; en monitoreo | Medio mientras fallback legacy siga habilitado | P1 monitoreo | Monitorear `LEGACY_COORDINATION_FALLBACK_USED` durante estabilizacion y preparar retiro posterior | Una quincena operativa sin errores de acceso ni uso de fallback indebido | Solo para fecha final de retiro del fallback |
+| H03 | `finance.view` sobrecargado / fiscal y workflow mezclados | Roles / Seguridad / RH / Finanzas | Cerrado operativo | Bajo a medio por regresion si futuras rutas vuelven a mezclar permisos | P1 monitoreo | Mantener pruebas por rol y revisar nuevas rutas contra permisos explicitos | Pruebas recurrentes validan fiscal, documentos, export, workflow y preview | No, decisiones principales cerradas |
+| H04 | Falta de pruebas automatizadas de negocio | Calidad / Nomina / Finanzas / Permisos | Pendiente | Alto: regresiones pueden pasar con solo typecheck/build | P1 Alto | Crear suite automatizada minima de calculo, permisos y reportes criticos | Pruebas automatizadas cubren nomina, faltas, retardos, extras, H01, H02/H03 y workflow | Si: Operacion/Finanzas deben aprobar casos esperados |
+| H05 | Migraciones SQL sin control formal de ejecucion | Base de datos / DevOps | Mitigado parcialmente | Medio: scripts existen, pero falta registro formal con checksum | P1 Alto | Implementar tabla/herramienta de control de migraciones | BD registra migraciones aplicadas, orden, checksum, fecha y rollback | Si: DevOps/Admin aprueba proceso |
+| H06 | Coexistencia con Apps Script legado | Arquitectura / Operacion / Gobierno de datos | Pendiente | Alto: doble captura o doble fuente de verdad si sigue activo | P1 Alto | Definir si Apps Script queda congelado, consulta historica o retirado | Acta/procedimiento aprobado y comunicado | Si: Direccion/Operacion |
+| H07 | Provider Google con `hd` comentado | Auth / UX / Seguridad preventiva | Pendiente | Medio-bajo: backend ya valida dominio | P2 Medio | Evaluar `hd` como mejora UX, no como control principal | Pruebas con cuenta institucional y externa documentadas | Opcional con Admin Google |
+| H08 | Logica concentrada en archivos grandes | Mantenibilidad / Backend / Frontend | Pendiente | Medio: cambios futuros tienen mayor riesgo | P2 Medio | Refactor incremental despues de tener pruebas automatizadas | Servicios/componentes separados sin cambiar contratos ni reglas | No al inicio; si para priorizar modulos |
+| H09 | Estados `BORRADOR` y `CERRADA` no usados claramente | Modelo / Flujo financiero | Pendiente | Medio: ambiguedad futura de reportes/workflow | P2 Medio | Documentar maquina de estados oficial | Diagrama aprobado de transiciones, permisos y botones | Si: Finanzas/Direccion |
+| H10 | Cierre de cuatrimestre moderno pendiente | Ciclos / Historicos / Operacion academica | Pendiente | Medio: expectativas operativas pueden diferir del cierre de ciclo actual | P2 Medio | Validar proceso real de cierre con operacion | Cierre probado con nuevo ciclo/quincena/historicos | Si: Coordinacion/Direccion |
+| H11 | CSV y acentos/codificacion | Reportes / Excel / Importaciones | Pendiente | Medio: reprocesos por acentos/mojibake | P2 Medio | Estandarizar UTF-8/BOM y pruebas Excel por exportable | Exportables criticos abren bien en Excel/Sheets/LibreOffice | Si: Finanzas valida formato |
+| H12 | Nombres de catalogos/tabuladores historicos | Catalogos / Horarios / Historicos | Pendiente | Medio-bajo: confusion historica si se renombra/borra | P2 Medio | Politica de inactivar en vez de borrar y conservar snapshots | Politica documentada y probada | Si: Operacion/Finanzas |
+| H13 | Variables productivas no versionadas | Infraestructura / DevOps | Mitigado | Bajo: despliegues H02/H03 documentan variables no secretas | P3 Bajo | Consolidar checklist permanente de variables no secretas | README/manual operativo reflejan variables, secretos y healthchecks | No para documentar; si para propietarios de secretos |
+| H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Pendiente | Bajo-medio: perdida de conocimiento o confusion si se mantiene | P3 Bajo | Inventariar equivalencias legacy vs moderno | Documento de equivalencias y decision de archivo/retiro | Si: Direccion/Operacion |
 
-## 4. Riesgos P1 recomendados para siguiente fase
+## 4. Riesgos que ya no deben tratarse como pendientes
 
-Orden recomendado según urgencia real:
+### H02
 
-1. **H02 - Resolución de coordinación por `display_name` / `legacy_username`.**  
-   Es el primer riesgo a atender porque afecta aislamiento operativo por coordinación. Si falla, puede permitir edición o captura asociada a una coordinación incorrecta.
+Cerrado operativamente:
 
-2. **H03 - Alcance de `finance.view` y `fiscal.manage`.**  
-   Debe resolverse junto con H02 porque define quién puede modificar expedientes fiscales y constancias.
+- Existe `user_coordinations`.
+- Se eliminaron recursos preview/dry-run.
+- No se crean coordinaciones automaticamente desde flujos operativos.
+- Horarios, Incidencias, Extras y Directorio respetan reglas por usuario capturador donde aplica.
+- Docentes compartidos entre coordinadores se permiten sin otorgar edicion global.
+- Fallback legacy queda solo como contingencia temporal.
 
-3. **H04 - Falta de pruebas automatizadas.**  
-   Debe entrar antes de refactors o cambios profundos para proteger nómina, permisos y reportes.
+Pendiente residual:
 
-4. **H05 - Migraciones SQL sin control formal.**  
-   Importante para gobierno de base de datos, colaboración y despliegues controlados.
+- Monitorear uso de fallback y retirarlo cuando se cumpla la condicion aprobada.
 
-5. **H06 - Coexistencia con Apps Script legado.**  
-   Riesgo operativo relevante, pero requiere decisión institucional antes de cualquier acción técnica.
+### H03
 
-## 5. Decisiones humanas necesarias
+Cerrado operativamente:
 
-Decisiones que deben confirmarse antes de corregir:
+- `fiscal.view`.
+- `fiscal.manage`.
+- `fiscal.document.view`.
+- `fiscal.document.manage`.
+- `finance.export`.
+- `finance.workflow`.
+- `payroll.preview`.
 
-- **Operación académica:** fuente oficial para relación usuario-coordinación.
-- **Dirección:** si Apps Script queda congelado, retirado o disponible solo como consulta histórica.
-- **Finanzas:** si `finance.view` puede editar expedientes fiscales o solo consultarlos.
-- **RH:** si `fiscal.manage` debe ser el permiso principal para edición de RFC, correo, banco y constancia fiscal.
-- **Dirección/Finanzas:** flujo oficial de estados de nómina y significado de `BORRADOR` y `CERRADA`.
-- **Operación académica:** proceso esperado de cierre de cuatrimestre y apertura de nuevo ciclo.
-- **Finanzas:** formato definitivo de CSV/PDF para Excel, acentos, ñ y layout de reportes.
-- **Operación académica y Finanzas:** política de edición, inactivación y conservación histórica de asignaturas/tabuladores.
-- **DevOps/Admin:** herramienta o procedimiento oficial para controlar migraciones SQL.
-- **Admin/Gobierno técnico:** política de retención de auditoría y documentación de variables productivas no secretas.
+Reglas cerradas:
 
-## 6. Plan de atención por fases
+- `finance.view` no habilita workflow.
+- `finance.view` no habilita fiscal.
+- `teachers.manage` no habilita fiscal.
+- Coordinador no guarda nomina ni edita fiscal.
+- Finanzas aprueba, marca pagada y cancela con `finance.workflow`.
+- Contador/Contabilidad solo exportan.
 
-### Fase A: seguridad y permisos
+Pendiente residual:
 
-Riesgos incluidos:
+- Agregar pruebas automatizadas que eviten regresion.
 
-- H02
-- H03
-- H07
-- H09 en su parte de permisos/flujo
+## 5. Siguiente fase recomendada
 
-Objetivo:
+Orden recomendado:
 
-- Cerrar ambigüedades de coordinación, roles, permisos y login institucional.
+1. **H04 - pruebas automatizadas.** Es el siguiente bloque mas importante porque H02/H03 ya estan productivos y deben protegerse de regresiones.
+2. **H05 - control formal de migraciones.** Hay buenos scripts y backups, pero falta registrar migraciones aplicadas con checksum.
+3. **H06/H14 - Apps Script legacy.** Requiere decision humana para evitar doble fuente de verdad.
+4. **H09/H10 - flujo financiero y cierre de cuatrimestre.** Requieren definicion operativa antes de codigo.
+5. **H11/H12 - exportables y catalogos historicos.** Mejoras de estabilidad operativa.
 
-Entregables:
+## 6. Decisiones humanas pendientes
 
-- Matriz rol-ruta-acción.
-- Definición de relación usuario-coordinación.
-- Validación de permisos por rol.
-- Decisión sobre `hd` en Google Provider.
-- Diagrama de estados de nómina aprobado.
+Pendientes reales despues de H02/H03:
 
-### Fase B: pruebas automatizadas
+- Definir fecha/condicion operativa final para retirar fallback legacy despues de estabilizacion.
+- Decidir estado institucional de Apps Script: congelado, consulta historica o retirado.
+- Aprobar casos esperados para pruebas automatizadas de nomina/permisos.
+- Aprobar herramienta/proceso formal de migraciones.
+- Definir maquina de estados financiera si se usaran `BORRADOR` o `CERRADA`.
+- Definir cierre de cuatrimestre moderno.
+- Definir politica de catalogos historicos.
+- Validar formato final de CSV/PDF para Finanzas.
 
-Riesgos incluidos:
+## 7. Recomendacion final
 
-- H04
-- Cobertura de regresión para H01
-- Cobertura parcial de H02/H03/H09/H11
+No se recomienda reabrir H02/H03 mientras produccion siga estable.
 
-Objetivo:
+El foco tecnico inmediato debe pasar a:
 
-- Crear una base mínima de pruebas que permita modificar el sistema sin romper nómina, permisos ni reportes.
-
-Entregables:
-
-- Pruebas unitarias de cálculo.
-- Pruebas de integración API para permisos por rol.
-- Casos de nómina con faltas, retardos, extras de incidencia y extras externos.
-- Pruebas de exportables críticos.
-
-### Fase C: migraciones y DevOps
-
-Riesgos incluidos:
-
-- H05
-- H13
-
-Objetivo:
-
-- Asegurar trazabilidad de esquema y configuración productiva.
-
-Entregables:
-
-- Control formal de migraciones.
-- Checklist de despliegue.
-- Inventario de variables no secretas.
-- Procedimiento de rollback de base de datos y servicios.
-
-### Fase D: retiro/congelamiento Apps Script
-
-Riesgos incluidos:
-
-- H06
-- H14
-
-Objetivo:
-
-- Evitar doble operación y conservar conocimiento histórico del legado.
-
-Entregables:
-
-- Decisión formal de Dirección.
-- Inventario de procesos legacy.
-- Equivalencia legacy vs moderno.
-- Plan de congelamiento, consulta histórica o retiro.
-
-### Fase E: deuda técnica y documentación
-
-Riesgos incluidos:
-
-- H08
-- H10
-- H11
-- H12
-- H13 residual
-
-Objetivo:
-
-- Reducir complejidad, mejorar mantenimiento y cerrar documentación operativa.
-
-Entregables:
-
-- Refactor incremental con pruebas.
-- Documento de cierre de cuatrimestre.
-- Estándar de CSV/PDF.
-- Política de catálogos históricos.
-- Documentación de mantenimiento.
-
-## 7. Recomendación final
-
-El primer riesgo que debe atenderse es **H02 - resolución de coordinación por `display_name` / `legacy_username`**.
-
-Motivo:
-
-- Es un riesgo P1 de seguridad y operación diaria.
-- Afecta directamente edición de horarios, incidencias, extras y docentes.
-- Puede generar datos asociados a una coordinación incorrecta.
-- Es prerequisito natural para cerrar correctamente la matriz de permisos de H03.
-
-La siguiente fase debe iniciar con una validación funcional y humana de usuario-coordinación, seguida por la matriz rol-ruta-acción. Después de eso conviene implementar pruebas automatizadas mínimas antes de realizar correcciones estructurales o refactors.
+- proteger lo ya desplegado con pruebas automatizadas;
+- formalizar migraciones;
+- cerrar decisiones operativas pendientes de Apps Script, estados financieros y cierre de cuatrimestre.
