@@ -8,7 +8,9 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "vue-tsc -b --noEmit",
-    "lint": "npm run typecheck"
+    "lint": "npm run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "firebase": "^11.1.0",
@@ -18,9 +20,13 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@pinia/testing": "^0.1.7",
     "@vitejs/plugin-vue": "^5.2.1",
-    "vite": "^6.0.6",
+    "@vue/test-utils": "^2.4.10",
+    "jsdom": "^29.1.1",
     "typescript": "^5.7.2",
+    "vite": "^6.0.6",
+    "vitest": "^4.1.7",
     "vue-tsc": "^2.2.0"
   }
 }
