@@ -19,6 +19,11 @@
     "test:api:integration": "npm --workspace apps/api run test:integration",
     "test:db:prepare": "npm --workspace apps/api run test:db:prepare",
     "test:web": "npm --workspace apps/web run test",
+    "db:migrate:status": "tsx tools/migrate-db.ts status",
+    "db:migrate:dry-run": "tsx tools/migrate-db.ts dry-run",
+    "db:migrate:baseline": "tsx tools/migrate-db.ts baseline",
+    "db:migrate": "tsx tools/migrate-db.ts apply",
+    "db:migrate:apply": "tsx tools/migrate-db.ts apply",
     "legacy:csv-to-sql": "node tools/legacy-csv-to-sql.mjs",
     "legacy:schedules-to-sql": "node tools/legacy-schedules-csv-to-sql.mjs",
     "legacy:extras-to-sql": "node tools/legacy-extras-csv-to-sql.mjs"
