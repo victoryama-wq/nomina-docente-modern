@@ -5,6 +5,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.integration.test.ts'],
     fileParallelism: false,
+    globalTeardown: ['./src/test/integration-teardown.ts'],
     restoreMocks: true,
     testTimeout: 30_000
   }

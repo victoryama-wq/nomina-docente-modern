@@ -8,7 +8,5 @@ export async function buildTestApp(): Promise<FastifyInstance> {
 }
 
 export async function closeTestApp(app: FastifyInstance): Promise<void> {
-  const { closeDatabase } = await import('../db.js');
   await app.close();
-  await closeDatabase();
 }
