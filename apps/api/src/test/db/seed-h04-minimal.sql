@@ -491,4 +491,48 @@ SET hours = EXCLUDED.hours,
     updated_at = now(),
     updated_by = EXCLUDED.updated_by;
 
+INSERT INTO payroll_runs (
+  id,
+  cycle_id,
+  period_label,
+  status,
+  weights,
+  summary,
+  calculated_at,
+  calculated_by,
+  status_updated_at,
+  status_updated_by
+)
+VALUES (
+  '70000000-0000-4000-8000-000000000001',
+  (SELECT id FROM academic_cycles WHERE period_label = 'H04 QA Local 2026' AND quarter_code = 'H04TEST'),
+  'H04 QA Workflow Seed',
+  'CALCULADA',
+  jsonb_build_object(
+    'calendarConfigId', '30000000-0000-4000-8000-000000000004',
+    'payrollStart', '2026-05-15',
+    'payrollEnd', '2026-05-28',
+    'module1Start', '2026-05-01',
+    'module1End', '2026-06-30',
+    'module2Start', '2026-07-01',
+    'module2End', '2026-08-31'
+  ),
+  jsonb_build_object(
+    'lines', 0,
+    'teachers', 0,
+    'coordinations', 0,
+    'totalAmount', '0.00'
+  ),
+  now(),
+  (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx'),
+  now(),
+  (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+)
+ON CONFLICT (id) DO UPDATE
+SET status = 'CALCULADA',
+    weights = EXCLUDED.weights,
+    summary = EXCLUDED.summary,
+    status_updated_at = EXCLUDED.status_updated_at,
+    status_updated_by = EXCLUDED.status_updated_by;
+
 COMMIT;

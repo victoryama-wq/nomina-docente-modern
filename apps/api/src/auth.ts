@@ -4,6 +4,12 @@ import { query } from './db.js';
 import { firebaseAdmin } from './firebase.js';
 import type { ActorCoordination, SessionUser } from './types.js';
 
+const TEST_AUTH_TOKEN_PREFIX = 'test-actor:';
+
+type TestAuthGlobal = typeof globalThis & {
+  __NOMINA_TEST_ACTORS__?: Map<string, SessionUser>;
+};
+
 interface UserRow {
   id: string;
   firebase_uid: string | null;
@@ -30,6 +36,23 @@ function getBearerToken(request: FastifyRequest): string | null {
 function isAllowedDomain(email: string): boolean {
   if (!config.ALLOWED_EMAIL_DOMAIN) return true;
   return email.toLowerCase().endsWith(`@${config.ALLOWED_EMAIL_DOMAIN.toLowerCase()}`);
+}
+
+function cloneSessionUser(user: SessionUser): SessionUser {
+  return {
+    ...user,
+    permissions: [...user.permissions],
+    actorCoordinations: user.actorCoordinations.map((coordination) => ({ ...coordination }))
+  };
+}
+
+function loadTestSessionUser(token: string): SessionUser | null {
+  if (config.NODE_ENV !== 'test') return null;
+  if (!token.startsWith(TEST_AUTH_TOKEN_PREFIX)) return null;
+
+  const registry = (globalThis as TestAuthGlobal).__NOMINA_TEST_ACTORS__;
+  const actor = registry?.get(token);
+  return actor ? cloneSessionUser(actor) : null;
 }
 
 async function loadUserByEmail(email: string, firebaseUid: string): Promise<SessionUser | null> {
@@ -104,6 +127,12 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   const token = getBearerToken(request);
   if (!token) {
     await reply.code(401).send({ error: 'AUTH_REQUIRED', message: 'Inicia sesión para continuar.' });
+    return;
+  }
+
+  const testUser = loadTestSessionUser(token);
+  if (testUser) {
+    request.user = testUser;
     return;
   }
 

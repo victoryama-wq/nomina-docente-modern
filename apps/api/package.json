@@ -11,6 +11,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "npm run typecheck",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:db:prepare": "tsx src/test/db/setup-test-db.ts",
+    "test:db:reset": "tsx src/test/db/reset-test-db.ts",
     "test:watch": "vitest"
   },
   "dependencies": {
