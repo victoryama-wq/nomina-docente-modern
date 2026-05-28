@@ -5,7 +5,7 @@ import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { Client } from 'pg';
 
-type Command = 'status' | 'dry-run' | 'baseline' | 'apply';
+type Command = 'inspect' | 'status' | 'dry-run' | 'baseline' | 'apply';
 type MigrationState = 'applied' | 'baseline' | 'pending' | 'checksum_mismatch';
 
 interface DbConfig {
@@ -38,8 +38,8 @@ const databaseDir = path.join(repoRoot, 'database');
 const advisoryLockName = 'nomina_docente_schema_migrations';
 
 function commandFromArg(raw: string | undefined): Command {
-  if (raw === 'status' || raw === 'dry-run' || raw === 'baseline' || raw === 'apply') return raw;
-  throw new Error('Uso: npm run db:migrate:<status|dry-run|baseline|apply>');
+  if (raw === 'inspect' || raw === 'status' || raw === 'dry-run' || raw === 'baseline' || raw === 'apply') return raw;
+  throw new Error('Uso: npm run db:migrate:<inspect|status|dry-run|baseline|apply>');
 }
 
 function dbConfig(): DbConfig {
@@ -145,16 +145,45 @@ async function connect(config: DbConfig): Promise<Client> {
   return client;
 }
 
-async function controlTablesExist(client: Client) {
-  const result = await client.query<{ total: string }>(
+async function readConnectionInfo(client: Client) {
+  const result = await client.query<{
+    current_database: string;
+    current_user: string;
+    inet_server_addr: string | null;
+    inet_server_port: number | null;
+  }>(
     `
-      SELECT count(*)::text AS total
+      SELECT
+        current_database(),
+        current_user,
+        inet_server_addr()::text,
+        inet_server_port()
+    `
+  );
+
+  return result.rows[0];
+}
+
+async function controlTablePresence(client: Client) {
+  const result = await client.query<{ table_name: string }>(
+    `
+      SELECT table_name
       FROM information_schema.tables
       WHERE table_schema = 'public'
         AND table_name IN ('schema_migrations', 'schema_migration_runs')
+      ORDER BY table_name
     `
   );
-  return Number(result.rows[0]?.total || 0) === 2;
+  const names = new Set(result.rows.map((row) => row.table_name));
+  return {
+    schemaMigrations: names.has('schema_migrations'),
+    schemaMigrationRuns: names.has('schema_migration_runs')
+  };
+}
+
+async function controlTablesExist(client: Client) {
+  const presence = await controlTablePresence(client);
+  return presence.schemaMigrations && presence.schemaMigrationRuns;
 }
 
 async function readRegisteredMigrations(client: Client): Promise<Map<string, RegisteredMigration>> {
@@ -304,6 +333,48 @@ async function commandStatus(client: Client, migrations: MigrationFile[], warnin
   }
 
   printSummary(migrations, await readRegisteredMigrations(client), warnings);
+}
+
+async function commandInspect(client: Client, config: DbConfig, migrations: MigrationFile[], warnings: string[]) {
+  const info = await readConnectionInfo(client);
+  const presence = await controlTablePresence(client);
+  const tablesExist = presence.schemaMigrations && presence.schemaMigrationRuns;
+  const registered = tablesExist ? await readRegisteredMigrations(client) : new Map<string, RegisteredMigration>();
+  const states = migrations.map((migration) => stateForMigration(migration, registered));
+  const pending = states.filter((state) => state === 'pending').length;
+  const mismatches = states.filter((state) => state === 'checksum_mismatch').length;
+
+  console.log('INSPECT READ-ONLY MODE: no DDL, no DML, no migrations will run.');
+  console.log('Ambiente:', migrationEnvironment());
+  console.log('Base:', info.current_database);
+  console.log('Usuario DB:', info.current_user);
+  console.log('Host configurado:', config.host);
+  console.log('Puerto configurado:', config.port);
+  console.log('Host servidor:', info.inet_server_addr || '(local/unix socket/no disponible)');
+  console.log('Puerto servidor:', info.inet_server_port ?? '(no disponible)');
+  console.log('Migraciones en filesystem:', migrations.length);
+  console.log('schema_migrations existe:', presence.schemaMigrations ? 'si' : 'no');
+  console.log('schema_migration_runs existe:', presence.schemaMigrationRuns ? 'si' : 'no');
+
+  if (!tablesExist) {
+    console.log('Baseline inicializado: no');
+    printSummary(migrations, registered, warnings);
+    console.log('\nRecomendacion siguiente: aplicar database/012_h05_schema_migrations.sql solo con backup y aprobacion.');
+    return;
+  }
+
+  console.log('Baseline inicializado:', registered.size ? 'si' : 'no');
+  printSummary(migrations, registered, warnings);
+
+  if (mismatches > 0) {
+    console.log('\nRecomendacion siguiente: detenerse y revisar checksum mismatch antes de cualquier dry-run/baseline/apply.');
+    return;
+  }
+  if (pending > 0) {
+    console.log('\nRecomendacion siguiente: ejecutar dry-run antes de baseline/apply.');
+    return;
+  }
+  console.log('\nRecomendacion siguiente: ejecutar dry-run para registrar revision controlada si se cuenta con aprobacion.');
 }
 
 async function commandDryRun(client: Client, migrations: MigrationFile[], warnings: string[]) {
@@ -466,6 +537,11 @@ async function main() {
   const client = await connect(config);
 
   try {
+    if (command === 'inspect') {
+      await commandInspect(client, config, migrations, warnings);
+      return;
+    }
+
     await acquireLock(client);
     try {
       if (command === 'status') await commandStatus(client, migrations, warnings);
@@ -481,6 +557,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  const message = error instanceof Error ? error.stack || error.message : String(error);
+  console.error(message || 'Error desconocido sin mensaje.');
   process.exitCode = 1;
 });

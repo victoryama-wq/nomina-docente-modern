@@ -78,6 +78,7 @@ tools/migrate-db.ts
 Comandos soportados:
 
 ```bash
+npm run db:migrate:inspect
 npm run db:migrate:status
 npm run db:migrate:dry-run
 npm run db:migrate:baseline
@@ -105,6 +106,58 @@ pg_advisory_lock(hashtext('nomina_docente_schema_migrations'))
 - Registra intentos en `schema_migration_runs`.
 - Registra baseline/aplicacion en `schema_migrations`.
 - No implementa rollback automatico.
+
+### 5.1 Comando `inspect`
+
+H05-F3.5 agrega:
+
+```bash
+npm run db:migrate:inspect
+```
+
+`inspect` es el comando de revision 100% read-only antes de cualquier dry-run o baseline productivo.
+
+`inspect`:
+
+- lee archivos `database/*.sql`;
+- calcula checksum `SHA-256`;
+- detecta prefijos duplicados;
+- detecta archivos fuera del patron `NNN_nombre.sql`;
+- conecta a la base destino;
+- lee `current_database()`;
+- lee `current_user`;
+- lee host/puerto configurados y, si PostgreSQL lo permite, host/puerto del servidor;
+- consulta `information_schema.tables`;
+- detecta si existen `schema_migrations` y `schema_migration_runs`;
+- si existen tablas de control, lee `schema_migrations` y compara checksums;
+- si no existen tablas de control, reporta que baseline no esta inicializado;
+- no toma advisory lock;
+- no hace `CREATE`, `ALTER`, `DROP`, `INSERT`, `UPDATE` ni `DELETE`;
+- no ejecuta SQL de migraciones;
+- no requiere que `012_h05_schema_migrations.sql` este aplicada.
+
+`inspect` contra un destino productivo sigue bloqueado por defecto y requiere:
+
+```text
+ALLOW_PRODUCTION_MIGRATIONS=true
+```
+
+No requiere:
+
+```text
+CONFIRM_PRODUCTION_BASELINE
+CONFIRM_PRODUCTION_APPLY
+```
+
+### 5.2 Diferencia entre comandos
+
+| Comando | Crea tablas | Inserta auditoria | Toma advisory lock | Requiere tablas de control | Ejecuta SQL funcional |
+|---|---:|---:|---:|---:|---:|
+| `inspect` | No | No | No | No | No |
+| `status` | No | No | Si | No | No |
+| `dry-run` | No | Si, en `schema_migration_runs` | Si | Si | No |
+| `baseline` | No | Si | Si | Si | No |
+| `apply` | No | Si | Si | Si | Si, solo pendientes |
 
 ## 6. Variables
 
@@ -198,8 +251,8 @@ No ejecutado en esta fase.
 Cuando se apruebe:
 
 1. Confirmar ventana de revision.
-2. Confirmar que no se hara `apply`.
-3. Usar usuario con permisos de lectura y escritura solo sobre tablas administrativas si es viable.
+2. Confirmar que no se hara `baseline` ni `apply`.
+3. Ejecutar primero `inspect`, porque no crea tablas ni inserta registros.
 4. Definir:
 
 ```powershell
@@ -207,14 +260,41 @@ $env:MIGRATION_ENV='production'
 $env:ALLOW_PRODUCTION_MIGRATIONS='true'
 ```
 
-5. Ejecutar solo:
+5. Ejecutar:
+
+```bash
+npm run db:migrate:inspect
+```
+
+6. Revisar:
+
+   - base conectada;
+   - usuario DB;
+   - migraciones en filesystem;
+   - prefijos duplicados;
+   - existencia de `schema_migrations`;
+   - existencia de `schema_migration_runs`;
+   - si hay baseline inicializado;
+   - pendientes;
+   - checksum mismatch.
+
+7. Si `inspect` no tiene bloqueantes, crear tablas administrativas 012 solo con backup y aprobacion:
+
+```powershell
+& 'C:\Program Files\PostgreSQL\18\bin\psql.exe' `
+  -h <host> -p <port> -U <user> -d nomina_docente `
+  -v ON_ERROR_STOP=1 `
+  -f database/012_h05_schema_migrations.sql
+```
+
+8. Despues de aplicar solo 012, ejecutar:
 
 ```bash
 npm run db:migrate:status
 npm run db:migrate:dry-run
 ```
 
-6. Revisar:
+9. Revisar:
    - pendientes;
    - checksum mismatch;
    - duplicados historicos;
@@ -303,6 +383,7 @@ solo si un DBA/Admin confirma una reversa controlada.
 H05 local/test:
 
 - `database/012_h05_schema_migrations.sql` aplicado en `nomina_docente_test`.
+- `npm run db:migrate:inspect`.
 - `npm run db:migrate:status`.
 - `npm run db:migrate:dry-run`.
 - `npm run db:migrate:baseline`.
@@ -335,6 +416,7 @@ Resultado: todas pasaron.
 - No se conecto a produccion.
 - No se ejecuto H05-F4.
 - No se ejecuto H05-F5.
+- `inspect` no crea tablas, no inserta datos, no toma advisory lock y no ejecuta migraciones.
 - No se aplico baseline en produccion.
 - No se aplicaron migraciones en produccion.
 - No se tocaron datos reales.
