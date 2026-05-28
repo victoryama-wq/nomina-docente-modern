@@ -401,6 +401,130 @@ Rollback:
 - [ ] Se ejecuta dry-run.
 - [ ] Se documenta resultado.
 
+## Resultado H05-F4.2 - Produccion
+
+Fecha/hora de ejecucion:
+
+- 2026-05-28 14:02:18 -05:00.
+
+Backup creado:
+
+- Proyecto: `nomina-docente-prod`.
+- Instancia: `nomina-docente-web`.
+- Base protegida: `nomina_docente`.
+- Metodo: backup Cloud SQL `ON_DEMAND`.
+- ID backup: `1779994726761`.
+- Estado: `SUCCESSFUL`.
+- Inicio: `2026-05-28T18:58:46.773Z`.
+- Fin: `2026-05-28T19:00:18.025Z`.
+- Descripcion: `H05-F4.2 before schema_migrations setup 2026-05-28`.
+
+Conexion usada:
+
+- Metodo: Cloud SQL Auth Proxy local.
+- Endpoint local: `127.0.0.1:15432`.
+- Instancia Cloud SQL: `nomina-docente-prod:us-central1:nomina-docente-web`.
+- Usuario DB: `app_nomina`.
+- Base destino: `nomina_docente`.
+- El proxy fue cerrado al finalizar.
+
+Comando ejecutado:
+
+```powershell
+& 'C:\Program Files\PostgreSQL\18\bin\psql.exe' `
+  -h 127.0.0.1 `
+  -p 15432 `
+  -U app_nomina `
+  -d nomina_docente `
+  -v ON_ERROR_STOP=1 `
+  -f database/012_h05_schema_migrations.sql
+```
+
+Resultado del comando:
+
+```text
+BEGIN
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+COMMIT
+```
+
+Tablas creadas:
+
+- `schema_migrations`.
+- `schema_migration_runs`.
+
+Validacion SQL posterior inmediata:
+
+```text
+schema_migrations: schema_migrations
+schema_migration_runs: schema_migration_runs
+schema_migrations_rows: 0
+schema_migration_runs_rows: 0
+```
+
+Resultado `npm run db:migrate:status`:
+
+```text
+Migraciones detectadas: 15
+Registradas en DB: 0
+Aplicadas: 0
+Baseline: 0
+Pendientes: 15
+Checksum mismatch: 0
+```
+
+Advertencias reportadas:
+
+- Prefijo duplicado `007`: `007_direction_hr_roles.sql`, `007_incidence_period_locking.sql`.
+- Prefijo duplicado `008`: `008_direction_live_payroll.sql`, `008_payroll_status_workflow.sql`.
+- Prefijo duplicado `009`: `009_access_windows.sql`, `009_payroll_correction_flow.sql`.
+
+Estas advertencias son historicas aceptadas y no bloquean H05 porque la version formal usa el nombre completo del archivo sin extension.
+
+Resultado `npm run db:migrate:dry-run`:
+
+```text
+Migraciones detectadas: 15
+Registradas en DB: 0
+Aplicadas: 0
+Baseline: 0
+Pendientes: 15
+Checksum mismatch: 0
+```
+
+Validacion posterior al `dry-run`:
+
+```text
+schema_migrations_rows: 0
+schema_migration_runs:
+  dry_run: 15
+```
+
+Confirmaciones:
+
+- No se ejecuto baseline.
+- No se ejecuto apply.
+- No se ejecuto `npm run db:migrate`.
+- No se ejecutaron migraciones historicas `001` a `011`.
+- No se modificaron tablas funcionales.
+- No se modificaron datos reales de nomina.
+- No se cambiaron H01/H02/H03.
+- No se hizo deploy.
+
+Riesgos restantes:
+
+- Produccion aun no tiene baseline formal; `schema_migrations` permanece en `0` filas.
+- Hasta H05-F5, `status` seguira mostrando `15` pendientes.
+- Los prefijos duplicados `007`, `008` y `009` seguiran apareciendo como advertencia historica aceptada.
+
+Siguiente paso:
+
+- H05-F5: baseline produccion con backup vigente o nuevo, confirmacion manual, `CONFIRM_PRODUCTION_BASELINE=true`, sin ejecutar SQL funcional historico.
+
 ## 10. Procedimiento futuro H05-F5: baseline produccion
 
 No ejecutado en esta fase.
