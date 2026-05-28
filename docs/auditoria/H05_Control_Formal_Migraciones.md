@@ -244,6 +244,25 @@ El futuro baseline productivo debe:
 3. No ejecutar SQL funcional de `001` a `011`.
 4. Validar checksum y estado.
 
+## Advertencias historicas aceptadas
+
+H05-F4.1 `inspect` read-only contra produccion detecto prefijos duplicados historicos:
+
+- `007`
+- `008`
+- `009`
+
+Estas advertencias no se consideran bloqueantes para H05 porque el script usa como `version` el nombre completo del archivo sin extension, no solo el prefijo numerico.
+
+Reglas aprobadas:
+
+- No se deben renombrar archivos historicos.
+- No se deben modificar migraciones ya aplicadas.
+- Renombrar archivos historicos afectaria trazabilidad, checksums y baseline.
+- Los prefijos duplicados `007`, `008` y `009` quedan aceptados solo como deuda historica documentada.
+- Desde `013` en adelante queda prohibido repetir prefijos numericos.
+- Si aparece un nuevo duplicado en futuras migraciones, debe bloquearse antes de merge.
+
 ## 9. Procedimiento futuro H05-F4: dry-run produccion
 
 No ejecutado en esta fase.
@@ -300,6 +319,87 @@ npm run db:migrate:dry-run
    - duplicados historicos;
    - si existen tablas administrativas;
    - si la estructura real corresponde al baseline esperado.
+
+## Procedimiento H05-F4.2 - Crear tablas administrativas en produccion
+
+Objetivo:
+
+Crear unicamente las tablas administrativas de control:
+
+- `schema_migrations`
+- `schema_migration_runs`
+
+Archivo permitido:
+
+```text
+database/012_h05_schema_migrations.sql
+```
+
+Condiciones obligatorias:
+
+1. Backup Cloud SQL previo.
+2. Confirmacion manual Admin/DevOps.
+3. Confirmar que se ejecuto H05-F4.1 `inspect`.
+4. Confirmar que `inspect` no tuvo checksum mismatch.
+5. Confirmar que no se ejecutara `baseline`.
+6. Confirmar que no se ejecutara `apply`.
+7. Confirmar que no se modificaran tablas funcionales.
+
+Comando permitido:
+
+Ejecutar solo `database/012_h05_schema_migrations.sql` contra produccion.
+
+Ejemplo operativo:
+
+```powershell
+& 'C:\Program Files\PostgreSQL\18\bin\psql.exe' `
+  -h <host> -p <port> -U <user> -d nomina_docente `
+  -v ON_ERROR_STOP=1 `
+  -f database/012_h05_schema_migrations.sql
+```
+
+No ejecutar en H05-F4.2:
+
+- `npm run db:migrate:baseline`
+- `npm run db:migrate`
+- `npm run db:migrate:apply`
+
+Validacion posterior:
+
+1. Confirmar que existe `schema_migrations`.
+2. Confirmar que existe `schema_migration_runs`.
+3. Confirmar que no hay filas todavia, o que solo existen las esperadas si el script administrativo registra algo.
+4. Ejecutar `npm run db:migrate:status`.
+5. Ejecutar `npm run db:migrate:dry-run`.
+6. Confirmar que no hay checksum mismatch.
+7. Confirmar que siguen apareciendo migraciones pendientes hasta ejecutar baseline.
+8. No ejecutar baseline todavia.
+
+Rollback:
+
+- Si falla antes de crear tablas, no hacer nada.
+- Si se crean tablas y se decide revertir, eliminar unicamente:
+  - `schema_migration_runs`
+  - `schema_migrations`
+- El rollback solo aplica si no tienen registros criticos y con aprobacion Admin/DBA.
+- No tocar tablas funcionales.
+
+## Checklist H05-F4.2
+
+- [ ] Backup Cloud SQL creado.
+- [ ] Nombre backup registrado.
+- [ ] Hora backup registrada.
+- [ ] Inspect H05-F4.1 revisado.
+- [ ] Admin aprueba crear tablas administrativas.
+- [ ] Se confirma que solo se ejecutara 012.
+- [ ] Se confirma que no se hara baseline.
+- [ ] Se confirma que no se hara apply.
+- [ ] Se confirma rollback.
+- [ ] Se ejecuta 012.
+- [ ] Se valida existencia de tablas.
+- [ ] Se ejecuta status.
+- [ ] Se ejecuta dry-run.
+- [ ] Se documenta resultado.
 
 ## 10. Procedimiento futuro H05-F5: baseline produccion
 
