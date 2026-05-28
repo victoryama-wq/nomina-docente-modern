@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-05-27
+Actualizacion: 2026-05-28
 
 ## 1. Contexto
 
@@ -12,6 +12,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - Conciliacion de nomina `2026-05-15 a 2026-05-28` por `$517,510.00`.
 - Limpieza productiva de docentes duplicados por formato de nombre.
 - Cierre controlado de recursos preview/dry-run.
+- Cierre H06/H14 con retiro controlado de archivos Apps Script legacy del repositorio.
 
 Arquitectura vigente:
 
@@ -37,7 +38,7 @@ Arquitectura vigente:
 | H03 | `finance.view` sobrecargado / fiscal y workflow mezclados | Roles / Seguridad / RH / Finanzas | Cerrado operativo | Bajo a medio por regresion si futuras rutas vuelven a mezclar permisos | P1 monitoreo | Mantener pruebas por rol y revisar nuevas rutas contra permisos explicitos | Pruebas recurrentes validan fiscal, documentos, export, workflow y preview | No, decisiones principales cerradas |
 | H04 | Falta de pruebas automatizadas de negocio | Calidad / Nomina / Finanzas / Permisos | Pendiente | Alto: regresiones pueden pasar con solo typecheck/build | P1 Alto | Crear suite automatizada minima de calculo, permisos y reportes criticos | Pruebas automatizadas cubren nomina, faltas, retardos, extras, H01, H02/H03 y workflow | Si: Operacion/Finanzas deben aprobar casos esperados |
 | H05 | Migraciones SQL sin control formal de ejecucion | Base de datos / DevOps | Mitigado parcialmente | Medio: scripts existen, pero falta registro formal con checksum | P1 Alto | Implementar tabla/herramienta de control de migraciones | BD registra migraciones aplicadas, orden, checksum, fecha y rollback | Si: DevOps/Admin aprueba proceso |
-| H06 | Coexistencia con Apps Script legado | Arquitectura / Operacion / Gobierno de datos | Pendiente | Alto: doble captura o doble fuente de verdad si sigue activo | P1 Alto | Definir si Apps Script queda congelado, consulta historica o retirado | Acta/procedimiento aprobado y comunicado | Si: Direccion/Operacion |
+| H06 | Coexistencia con Apps Script legado | Arquitectura / Operacion / Gobierno de datos | Cerrado | Bajo: queda solo riesgo de copias externas no controladas | P1 cerrado | Mantener Git como respaldo historico y evitar reintroducir Apps Script como fuente operativa | Documento H06/H14 de cierre y archivos retirados | No para repo; si para inventario externo |
 | H07 | Provider Google con `hd` comentado | Auth / UX / Seguridad preventiva | Pendiente | Medio-bajo: backend ya valida dominio | P2 Medio | Evaluar `hd` como mejora UX, no como control principal | Pruebas con cuenta institucional y externa documentadas | Opcional con Admin Google |
 | H08 | Logica concentrada en archivos grandes | Mantenibilidad / Backend / Frontend | Pendiente | Medio: cambios futuros tienen mayor riesgo | P2 Medio | Refactor incremental despues de tener pruebas automatizadas | Servicios/componentes separados sin cambiar contratos ni reglas | No al inicio; si para priorizar modulos |
 | H09 | Estados `BORRADOR` y `CERRADA` no usados claramente | Modelo / Flujo financiero | Pendiente | Medio: ambiguedad futura de reportes/workflow | P2 Medio | Documentar maquina de estados oficial | Diagrama aprobado de transiciones, permisos y botones | Si: Finanzas/Direccion |
@@ -45,7 +46,7 @@ Arquitectura vigente:
 | H11 | CSV y acentos/codificacion | Reportes / Excel / Importaciones | Pendiente | Medio: reprocesos por acentos/mojibake | P2 Medio | Estandarizar UTF-8/BOM y pruebas Excel por exportable | Exportables criticos abren bien en Excel/Sheets/LibreOffice | Si: Finanzas valida formato |
 | H12 | Nombres de catalogos/tabuladores historicos | Catalogos / Horarios / Historicos | Pendiente | Medio-bajo: confusion historica si se renombra/borra | P2 Medio | Politica de inactivar en vez de borrar y conservar snapshots | Politica documentada y probada | Si: Operacion/Finanzas |
 | H13 | Variables productivas no versionadas | Infraestructura / DevOps | Mitigado | Bajo: despliegues H02/H03 documentan variables no secretas | P3 Bajo | Consolidar checklist permanente de variables no secretas | README/manual operativo reflejan variables, secretos y healthchecks | No para documentar; si para propietarios de secretos |
-| H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Pendiente | Bajo-medio: perdida de conocimiento o confusion si se mantiene | P3 Bajo | Inventariar equivalencias legacy vs moderno | Documento de equivalencias y decision de archivo/retiro | Si: Direccion/Operacion |
+| H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -95,16 +96,15 @@ Orden recomendado:
 
 1. **H04 - pruebas automatizadas.** Es el siguiente bloque mas importante porque H02/H03 ya estan productivos y deben protegerse de regresiones.
 2. **H05 - control formal de migraciones.** Hay buenos scripts y backups, pero falta registrar migraciones aplicadas con checksum.
-3. **H06/H14 - Apps Script legacy.** Requiere decision humana para evitar doble fuente de verdad.
-4. **H09/H10 - flujo financiero y cierre de cuatrimestre.** Requieren definicion operativa antes de codigo.
-5. **H11/H12 - exportables y catalogos historicos.** Mejoras de estabilidad operativa.
+3. **H09/H10 - flujo financiero y cierre de cuatrimestre.** Requieren definicion operativa antes de codigo.
+4. **H11/H12 - exportables y catalogos historicos.** Mejoras de estabilidad operativa.
 
 ## 6. Decisiones humanas pendientes
 
 Pendientes reales despues de H02/H03:
 
 - Definir fecha/condicion operativa final para retirar fallback legacy despues de estabilizacion.
-- Decidir estado institucional de Apps Script: congelado, consulta historica o retirado.
+- Confirmar si existen copias externas de Apps Script en Google Drive o respaldos institucionales y marcarlas como historicas/no operativas.
 - Aprobar casos esperados para pruebas automatizadas de nomina/permisos.
 - Aprobar herramienta/proceso formal de migraciones.
 - Definir maquina de estados financiera si se usaran `BORRADOR` o `CERRADA`.
@@ -120,4 +120,4 @@ El foco tecnico inmediato debe pasar a:
 
 - proteger lo ya desplegado con pruebas automatizadas;
 - formalizar migraciones;
-- cerrar decisiones operativas pendientes de Apps Script, estados financieros y cierre de cuatrimestre.
+- cerrar decisiones operativas pendientes de estados financieros y cierre de cuatrimestre.

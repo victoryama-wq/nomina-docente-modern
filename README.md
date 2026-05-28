@@ -10,7 +10,7 @@ Stack inicial:
 - Base de datos: Cloud SQL PostgreSQL.
 - Archivos: Cloud Storage.
 
-La app legacy de Apps Script se conserva en `Codigo.gs` e `index.html` como referencia funcional durante la migración.
+El legacy Apps Script fue retirado del repositorio en H06/H14. `Codigo.gs` e `index.html` ya no se usan operativamente ni son referencia funcional válida para la operación actual. La trazabilidad histórica queda en Git y en la documentación de auditoría.
 
 ## Documentación de entrega
 
@@ -48,6 +48,7 @@ Documentos de estado relevantes:
 - `docs/auditoria/H02_H03_Deploy_Productivo_Resultado.md`
 - `docs/auditoria/H02_H03_Migracion_Productiva_Datos_Oficiales_Mayo_2026.md`
 - `docs/auditoria/H02_H03_Cierre_Controlado_Recursos_Revision_20260527.md`
+- `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md`
 
 ## Comandos útiles
 

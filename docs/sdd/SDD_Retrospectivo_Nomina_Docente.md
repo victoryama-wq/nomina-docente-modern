@@ -26,22 +26,23 @@ Estado actual confirmado:
 | H01 | Cerrado |
 | H02 | Implementado; queda monitoreo de fallback legacy |
 | H03 | Implementado; permisos fiscal/finanzas/workflow separados |
+| H06/H14 | Cerrado; archivos Apps Script legacy retirados del repositorio |
 
 Nota de lectura:
 
-Las secciones historicas de este documento conservan contexto del diagnostico inicial. Cuando haya diferencia entre el diagnostico inicial y esta seccion, prevalece el estado posterior H02/H03 documentado en los cierres de auditoria.
+Las secciones historicas de este documento conservan contexto del diagnostico inicial. Cuando haya diferencia entre el diagnostico inicial y esta seccion, prevalece el estado posterior H02/H03/H06/H14 documentado en los cierres de auditoria.
 
 ## 1. Contexto general
 
 Este documento describe el estado actual del sistema Nómina Docente después del cierre técnico y operativo del Hotfix H01 de precisión monetaria.
 
-El sistema moderno reemplaza gradualmente la operación legacy basada en Google Apps Script y hojas de cálculo. La implementación actual usa una Web App Vue 3 publicada en Firebase Hosting, autenticación con Firebase Auth, API Fastify desplegada en Cloud Run y base de datos PostgreSQL en Cloud SQL.
+El sistema moderno reemplaza operativamente la aplicación legacy basada en Google Apps Script y hojas de cálculo. La implementación actual usa una Web App Vue 3 publicada en Firebase Hosting, autenticación con Firebase Auth, API Fastify desplegada en Cloud Run y base de datos PostgreSQL en Cloud SQL.
 
 Estado de certeza:
 
-- Confirmado en código: existe frontend Vue 3, backend Fastify, PostgreSQL/Cloud SQL, Firebase Auth, Firebase Hosting, Cloud Run, Cloud Storage para constancias fiscales y archivos legacy `Codigo.gs` e `index.html`.
+- Confirmado en código: existe frontend Vue 3, backend Fastify, PostgreSQL/Cloud SQL, Firebase Auth, Firebase Hosting, Cloud Run y Cloud Storage para constancias fiscales.
 - Confirmado por operación: H01 fue desplegado y validado con una quincena real; el usuario confirmó que el sistema funciona correctamente.
-- Pendiente de confirmar: si la app legacy de Apps Script sigue en uso operativo real o solo queda como respaldo histórico.
+- Confirmado por decisión humana H06/H14: los archivos Apps Script `Codigo.gs` e `index.html` ya no se usan operativamente, dejaron de ser referencia válida y fueron retirados del repositorio.
 
 ## 2. Objetivo actual del sistema
 
@@ -64,7 +65,7 @@ Objetivos funcionales confirmados en código:
 Pendiente de confirmar con operación:
 
 - Alcance final esperado para cierre de cuatrimestre moderno más allá de la activación/cierre de ciclos.
-- Política formal de retiro o congelamiento del sistema Apps Script.
+- Si existen copias históricas externas de Apps Script en Google Drive o respaldos institucionales.
 
 ## 3. Arquitectura actual
 
@@ -185,8 +186,6 @@ docs/
   auditoria/
   sdd/
 tools/
-Codigo.gs
-index.html
 firebase.json
 cloudbuild.api.yaml
 ```
@@ -689,25 +688,20 @@ Confirmado despues de H03:
 
 ## 20. Sistema legado Apps Script
 
-Confirmado en repositorio:
+Estado posterior a H06/H14:
 
-- Existen archivos `Codigo.gs` e `index.html` en la raíz.
-- El README indica que la app legacy se conserva como referencia funcional durante la migración.
+- Decisión humana aprobada: los archivos `Codigo.gs` e `index.html` ya no se usan operativamente.
+- Los archivos dejaron de ser referencia funcional válida porque el sistema moderno ya contiene reglas y cambios que no existían en el legacy.
+- `Codigo.gs` e `index.html` fueron retirados del repositorio.
+- La trazabilidad histórica permanece disponible en Git.
+- Si existen copias históricas externas en Google Drive o respaldos institucionales, deben tratarse como archivo histórico, no como fuente operativa.
 
-Inferido:
+Alcance del retiro:
 
-- El sistema moderno fue construido como reemplazo incremental del sistema Apps Script/Sheets.
-
-Pendiente de confirmar:
-
-- Si Apps Script sigue activo para operación diaria.
-- Si las hojas de cálculo siguen siendo fuente de verdad en algún proceso.
-- Estrategia formal de congelamiento, retiro o solo consulta histórica.
-
-Riesgos relacionados:
-
-- H06 P1: coexistencia con Apps Script legado.
-- H14 P3: legado extenso requiere inventario antes de eliminación.
+- Solo se retiraron archivos Apps Script legacy del repositorio.
+- No se modificó producción.
+- No se modificó base de datos.
+- No se modificó nómina, permisos ni infraestructura Firebase/Cloud Run.
 
 ## 21. Riesgos técnicos y estado actual
 
@@ -719,7 +713,7 @@ H01 queda cerrado. H02/H03 tambien quedan cerrados operativamente en produccion,
 | H03 | P1 | Alcance de `finance.view` y `fiscal.manage` sobre edicion fiscal | Implementado. Permisos fiscales, documentales, exportacion, workflow y preview quedaron separados. Residual: pruebas de regresion recurrentes por rol. |
 | H04 | P1 | Falta de pruebas automatizadas | Pendiente. Hay pruebas manuales, SQL, typecheck y build, pero no una suite automatizada de negocio suficiente. |
 | H05 | P1 | Migraciones SQL sin control formal de ejecucion | Mitigado parcialmente. Existen scripts, backups y documentacion, pero falta herramienta/tabla formal de migraciones aplicadas con checksum. |
-| H06 | P1 | Coexistencia con Apps Script legado | Pendiente. Requiere decision institucional de congelamiento, consulta historica o retiro. |
+| H06 | P1 | Coexistencia con Apps Script legado | Cerrado. Decisión humana aprobada y archivos `Codigo.gs`/`index.html` retirados del repositorio. |
 | H07 | P2 | Provider Google con `hd` comentado | Pendiente. Backend valida dominio; `hd` seria mejora UX, no control de seguridad primario. |
 | H08 | P2 | Logica concentrada en archivos grandes | Pendiente. Requiere refactor incremental con pruebas. |
 | H09 | P2 | Estados `BORRADOR` y `CERRADA` no usados claramente | Pendiente. Requiere definicion de maquina de estados financiera. |
@@ -727,7 +721,7 @@ H01 queda cerrado. H02/H03 tambien quedan cerrados operativamente en produccion,
 | H11 | P2 | Exportables CSV con posible diferencia de codificacion | Pendiente. Se han observado riesgos de acentos/mojibake en insumos; falta estandar formal por exportable. |
 | H12 | P2 | Dependencia de nombres para catalogos/tabuladores historicos | Pendiente. Requiere politica de inactivacion/renombrado. |
 | H13 | P3 | Variables reales de produccion no versionadas | Mitigado. Deploys H02/H03 documentan variables no secretas; falta consolidarlo como checklist permanente. |
-| H14 | P3 | Legado Apps Script con logica extensa | Pendiente. Requiere inventario y decision de archivo/retiro. |
+| H14 | P3 | Legado Apps Script con logica extensa | Cerrado como retiro documental/controlado del legacy local; trazabilidad histórica queda en Git. |
 
 ## 22. Deuda tecnica
 
@@ -740,11 +734,11 @@ Confirmado o inferido por estructura:
 - H02 ya no depende principalmente de texto/nombre, pero el fallback legacy sigue habilitado por estabilizacion.
 - El frontend aun conserva `AppLegacy.vue`.
 - El proveedor Google tiene `hd` comentado; el backend conserva la validacion real de dominio.
-- El sistema legacy permanece en el repositorio.
+- Los archivos Apps Script legacy ya no permanecen en el repositorio; la trazabilidad queda en Git.
 
 ## 23. Pendientes por confirmar con operacion
 
-- Si Apps Script sigue siendo usado por alguna coordinacion o area financiera.
+- Si existen copias históricas externas de Apps Script en Google Drive o respaldos institucionales.
 - Si el cierre de cuatrimestre moderno cubre al 100% la operacion esperada.
 - Uso real de estados `BORRADOR` y `CERRADA`.
 - Politica ante sobrecargas por categoria cuando se capturan extras.
@@ -765,7 +759,7 @@ Confirmado o inferido por estructura:
 
 - Crear suite minima automatizada para calculo de nomina, permisos por rol, docentes compartidos, extras propios/ajenos, fiscal/documentos y workflow financiero.
 - Formalizar migraciones SQL con tabla de control, checksum, orden, ambiente y rollback.
-- Definir plan operativo para Apps Script: congelar, retirar o mantener como historico.
+- Confirmar si existen copias externas de Apps Script y marcarlas como históricas/no operativas.
 - Monitorear `LEGACY_COORDINATION_FALLBACK_USED` y preparar retiro del fallback cuando se cumpla la condicion aprobada.
 
 ### P2
