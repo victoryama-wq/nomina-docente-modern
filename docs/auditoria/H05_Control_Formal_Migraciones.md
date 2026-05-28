@@ -561,6 +561,167 @@ npm run db:migrate:dry-run
    - checksum mismatch `0`;
    - no se ejecutaron migraciones funcionales historicas.
 
+## Resultado H05-F5 - Baseline produccion
+
+Fecha/hora de ejecucion:
+
+- 2026-05-28 14:08:35 -05:00.
+
+Backup usado:
+
+- Proyecto: `nomina-docente-prod`.
+- Instancia: `nomina-docente-web`.
+- Base protegida: `nomina_docente`.
+- Metodo: backup Cloud SQL `ON_DEMAND`.
+- ID backup: `1779994726761`.
+- Estado: `SUCCESSFUL`.
+- Inicio: `2026-05-28T18:58:46.773Z`.
+- Fin: `2026-05-28T19:00:18.025Z`.
+- Descripcion: `H05-F4.2 before schema_migrations setup 2026-05-28`.
+
+Conexion usada:
+
+- Metodo: Cloud SQL Auth Proxy local.
+- Endpoint local: `127.0.0.1:15432`.
+- Instancia Cloud SQL: `nomina-docente-prod:us-central1:nomina-docente-web`.
+- Usuario DB: `app_nomina`.
+- Base destino: `nomina_docente`.
+- El proxy fue cerrado al finalizar.
+
+Comando ejecutado:
+
+```bash
+npm run db:migrate:baseline
+```
+
+Variables de seguridad usadas:
+
+```text
+MIGRATION_ENV=production
+ALLOW_PRODUCTION_MIGRATIONS=true
+CONFIRM_PRODUCTION_BASELINE=true
+```
+
+No se definio:
+
+```text
+CONFIRM_PRODUCTION_APPLY
+```
+
+Resultado baseline:
+
+```text
+Baseline registrado: 001_initial_schema.sql
+Baseline registrado: 002_directory_access_module.sql
+Baseline registrado: 003_seed_tabulators.sql
+Baseline registrado: 004_calendar_payroll_history.sql
+Baseline registrado: 005_calendar_permission_seed.sql
+Baseline registrado: 006_payroll_finalize_permission.sql
+Baseline registrado: 007_direction_hr_roles.sql
+Baseline registrado: 007_incidence_period_locking.sql
+Baseline registrado: 008_direction_live_payroll.sql
+Baseline registrado: 008_payroll_status_workflow.sql
+Baseline registrado: 009_access_windows.sql
+Baseline registrado: 009_payroll_correction_flow.sql
+Baseline registrado: 010_payroll_no_rounding_precision.sql
+Baseline registrado: 011_h02_h03_user_coordinations_permissions.sql
+Baseline registrado: 012_h05_schema_migrations.sql
+```
+
+Resultado `npm run db:migrate:status`:
+
+```text
+Migraciones detectadas: 15
+Registradas en DB: 15
+Aplicadas: 0
+Baseline: 15
+Pendientes: 0
+Checksum mismatch: 0
+```
+
+Resultado `npm run db:migrate:dry-run` posterior:
+
+```text
+Migraciones detectadas: 15
+Registradas en DB: 15
+Aplicadas: 0
+Baseline: 15
+Pendientes: 0
+Checksum mismatch: 0
+```
+
+Consultas SQL de validacion:
+
+```sql
+SELECT status, count(*) FROM schema_migrations GROUP BY status ORDER BY status;
+SELECT count(*) AS total_migrations FROM schema_migrations;
+SELECT status, count(*) FROM schema_migration_runs GROUP BY status ORDER BY status;
+```
+
+Resultado SQL:
+
+```text
+schema_migrations:
+  baseline: 15
+
+total_migrations: 15
+
+schema_migration_runs:
+  baseline: 15
+  dry_run: 30
+```
+
+Versiones registradas como baseline:
+
+```text
+001_initial_schema
+002_directory_access_module
+003_seed_tabulators
+004_calendar_payroll_history
+005_calendar_permission_seed
+006_payroll_finalize_permission
+007_direction_hr_roles
+007_incidence_period_locking
+008_direction_live_payroll
+008_payroll_status_workflow
+009_access_windows
+009_payroll_correction_flow
+010_payroll_no_rounding_precision
+011_h02_h03_user_coordinations_permissions
+012_h05_schema_migrations
+```
+
+Confirmaciones:
+
+- No se ejecuto `apply`.
+- No se ejecuto `npm run db:migrate`.
+- No se ejecutaron migraciones historicas `001` a `011`.
+- No se ejecuto SQL funcional historico.
+- No se modificaron tablas funcionales.
+- No se modificaron datos reales de nomina.
+- No se cambiaron H01/H02/H03.
+- No se hizo deploy.
+- Las advertencias `007`, `008` y `009` permanecen como historicas aceptadas.
+
+Estado final H05:
+
+- Produccion ya cuenta con tablas administrativas H05.
+- Produccion ya tiene baseline formal para `001` a `012`.
+- `pending = 0`.
+- `checksum mismatch = 0`.
+
+Riesgos residuales:
+
+- Las migraciones historicas no deben editarse; cualquier cambio posterior generara checksum mismatch.
+- Los prefijos duplicados `007`, `008` y `009` se mantienen como deuda historica documentada.
+- Futuras migraciones deben iniciar desde `013` y no repetir prefijo.
+
+Regla para futuras migraciones:
+
+- Toda nueva migracion desde `013` debe pasar primero por `inspect/status/dry-run`.
+- Solo despues de backup, revision y aprobacion se podra ejecutar `apply`.
+- `apply` debe ejecutar exclusivamente migraciones pendientes nuevas, nunca historicas ya registradas.
+
 ## 11. Apply futuro
 
 `apply` queda disponible para migraciones futuras posteriores al baseline.
