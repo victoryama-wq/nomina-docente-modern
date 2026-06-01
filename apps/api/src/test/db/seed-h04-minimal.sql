@@ -255,10 +255,10 @@ SELECT
   ac.module1_end,
   ac.module2_start,
   ac.module2_end,
-  '2026-05-15 00:00:00-05'::timestamptz,
-  14,
-  '2026-05-15 00:00:00-05'::timestamptz,
-  14
+  now() - interval '1 day',
+  15,
+  now() - interval '1 day',
+  15
 FROM academic_cycles ac
 WHERE ac.period_label = 'H04 QA Local 2026'
   AND ac.quarter_code = 'H04TEST'
