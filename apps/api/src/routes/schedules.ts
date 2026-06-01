@@ -673,15 +673,26 @@ async function listScheduleTeachers(cycleId: string): Promise<TeacherScheduleRow
 async function listScheduleCoordinatorOptions(client: PoolClient): Promise<CoordinationRow[]> {
   const assigned = await client.query<CoordinationRow>(
     `
-      SELECT DISTINCT c.id, c.name
-      FROM user_coordinations uc
-      JOIN app_users u ON u.id = uc.user_id
-      JOIN roles r ON r.id = u.role_id
-      JOIN coordinations c ON c.id = uc.coordination_id
-      WHERE u.status = 'ACTIVO'
-        AND c.status = 'ACTIVO'
-        AND r.code <> 'admin'
-      ORDER BY c.name ASC
+      WITH ranked_responsibles AS (
+        SELECT
+          c.id,
+          COALESCE(NULLIF(u.display_name, ''), u.email) AS name,
+          row_number() OVER (
+            PARTITION BY u.id
+            ORDER BY uc.is_primary DESC, c.name ASC
+          ) AS row_number
+        FROM user_coordinations uc
+        JOIN app_users u ON u.id = uc.user_id
+        JOIN roles r ON r.id = u.role_id
+        JOIN coordinations c ON c.id = uc.coordination_id
+        WHERE u.status = 'ACTIVO'
+          AND c.status = 'ACTIVO'
+          AND r.code IN ('coordinador', 'direccion')
+      )
+      SELECT id, name
+      FROM ranked_responsibles
+      WHERE row_number = 1
+      ORDER BY name ASC
     `
   );
 

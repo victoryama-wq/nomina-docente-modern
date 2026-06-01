@@ -569,14 +569,19 @@ El fallback debe retirarse después de cumplir la condición aprobada:
 ### Horarios
 
 - Admin opera globalmente.
-- Coordinador puede agregar, editar y eliminar horarios dentro de sus coordinaciones asignadas.
+- Coordinador puede agregar horarios como responsable operativo de su propia captura.
+- Coordinador puede editar y eliminar solo horarios capturados por su usuario (`schedules.created_by` o equivalente).
 - Dirección/Subdirección puede agregar horarios y editar/eliminar solo información propia cuando aplique.
 - RH, Finanzas, Contador y Contabilidad no operan horarios.
 - Si el actor requiere coordinación operativa y no tiene asignación, se bloquea la captura.
 - No se crean coordinaciones automáticamente desde el modal o flujo de horarios.
-- Debe soportar múltiples coordinaciones por usuario.
-- Si un usuario tiene varias coordinaciones, la UI/API debe permitir seleccionar una coordinación válida dentro de su alcance.
-- La validación backend debe aceptar cualquiera de las coordinaciones asignadas, no solo una coordinación única.
+- El campo visible `Responsable operativo` debe representar al usuario responsable/capturador, no el nombre tecnico de una coordinacion o ambito.
+- Para Admin/Direccion, el selector de `Responsable operativo` debe listar usuarios operativos activos, usando `app_users.display_name` o email como etiqueta visible.
+- Para Coordinador y usuarios no globales, `Responsable operativo` debe mostrarse en modo solo lectura con el nombre del usuario conectado.
+- `coordinations` y `user_coordinations` pueden seguir usandose internamente como compatibilidad tecnica para nomina, reportes e importaciones, pero no deben exponerse en la UI como si fueran nombres de responsables.
+- No se deben mostrar valores como `ADETUR`, `ARQ`, `SISCOM`, `DIGRAF`, `Idiomas` u otros ambitos tecnicos en un selector etiquetado como `Responsable operativo`.
+- Si un usuario tiene multiples ambitos tecnicos, la API puede usar la relacion primaria para compatibilidad interna, pero la propiedad de edicion/eliminacion sigue siendo el usuario capturador.
+- Si en el futuro se requiere asignar una persona responsable distinta del capturador, debe agregarse un campo explicito de responsable usuario; no reutilizar `coordinations.name` como nombre de persona.
 
 ### Incidencias
 
@@ -1073,6 +1078,7 @@ Pasos de rollback sugeridos:
 | Fallback mal usado | Continúa riesgo H02 | Registrar uso y monitorear durante una quincena |
 | Pruebas insuficientes | Regresión productiva | Matriz de pruebas por rol y coordinación |
 | Confusión entre coordinación y propiedad | Permisos incorrectos | Separar `user_coordinations` de `created_by_user_id` |
+| Confusión entre responsable operativo y ambito tecnico | UI muestra catalogos como si fueran personas responsables | En Horarios/Docentes/Extras, la etiqueta visible debe ser usuario responsable/capturador; `coordinations` queda como referencia tecnica interna |
 | `GET /teachers` interpretado como edición global | Edición indebida | Validar acciones sensibles en backend |
 | Coordinaciones inexistentes | Migración incompleta | No crear automáticamente; marcar para revisión |
 | Subdirección creada como rol técnico nuevo por error | Fragmenta permisos | Usar `direccion` |

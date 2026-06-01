@@ -6,6 +6,7 @@ import { isTestDbExplicitlyConfigured, prepareTestDatabase } from './db/test-db-
 import {
   TEST_COORDINATIONS,
   accountantActor,
+  adminActor,
   coordinatorActor,
   coordinatorWithoutCoordinationActor,
   financeActor,
@@ -118,6 +119,17 @@ describeIntegration('H04 API integration with PostgreSQL test database', () => {
     });
     expect(blocked.statusCode).not.toBe(200);
     expect(blocked.json().message).toContain('Solo puedes editar');
+  });
+
+  it('serves schedule Admin selector as operational responsibles, not technical scopes', async () => {
+    const context = await injectAs(app, adminActor(), { method: 'GET', url: '/api/schedules/context' });
+    expect(context.statusCode).toBe(200);
+
+    const names = context.json().coordinations.map((coordination: { name: string }) => coordination.name);
+    expect(names).toContain('QA Coordinador Idiomas');
+    expect(names).toContain('QA Coordinador Multi');
+    expect(names).not.toContain('ADETUR');
+    expect(names).not.toContain('ARQ');
   });
 
   it('allows a multi-coordination coordinator to edit an own operational record', async () => {

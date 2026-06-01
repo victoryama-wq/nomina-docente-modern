@@ -273,7 +273,13 @@ Confirmado en código:
 - Manejan horas L, M, X, J, V, S1 y S2.
 - La categoría docente define límite operativo mediante `categoryMaxHours`: V = 35, M = 25, N = 15.
 - La API restringe escritura a ciclos no cerrados.
-- Coordinadores quedan asociados a coordinación por resolución de usuario.
+- La propiedad operativa de captura se controla por `schedules.created_by`.
+- Coordinadores pueden trabajar con docentes compartidos, pero solo editan/eliminan horarios capturados por su usuario.
+- El campo visible `Responsable operativo` representa al usuario responsable/capturador, no el nombre tecnico de la coordinacion.
+- Para Admin/Direccion, el selector de `Responsable operativo` lista usuarios operativos activos usando `app_users.display_name` o email.
+- Para Coordinador/no-admin, `Responsable operativo` se muestra en modo solo lectura con el nombre del usuario conectado.
+- `coordinations` se conserva como referencia tecnica/legacy para compatibilidad con nomina, reportes e importaciones, pero no debe mostrarse como nombre de responsable operativo.
+- Valores como `ADETUR`, `ARQ`, `SISCOM`, `DIGRAF` o `Idiomas` son ambitos tecnicos/catalogo; no deben aparecer como opciones visibles bajo la etiqueta `Responsable operativo`.
 
 Pendiente de confirmar:
 
@@ -461,6 +467,8 @@ Permisos H02/H03 agregados y desplegados:
 Estado H02/H03:
 
 - H02 ya no depende como fuente principal de `display_name`, `legacy_username` o `actor.displayName`; se implemento `user_coordinations` y reglas por usuario capturador donde operacion lo requirio.
+- En Horarios, Directorio e Incidencias la operacion diaria se basa en usuario capturador/propietario; `user_coordinations` y `coordinations` quedan como soporte tecnico de alcance, reportes, preview y compatibilidad historica.
+- La UI no debe volver a presentar ambitos tecnicos de `coordinations` como nombres de responsables operativos.
 - El fallback legacy sigue habilitado temporalmente y debe monitorearse antes de retirarlo.
 - H03 separo permisos fiscales, documentales, exportacion financiera, workflow financiero y preview de nomina.
 - `finance.view` ya no debe habilitar edicion fiscal ni workflow financiero.
@@ -709,7 +717,7 @@ H01 queda cerrado. H02/H03 tambien quedan cerrados operativamente en produccion,
 
 | ID | Prioridad | Riesgo | Estado actual |
 |---|---|---|---|
-| H02 | P1 | Resolucion de coordinacion por `display_name` / `legacy_username` | Implementado. Existe `user_coordinations`, reglas por capturador y eliminacion de creacion automatica de coordinaciones. Residual: monitorear fallback legacy durante estabilizacion. |
+| H02 | P1 | Resolucion de coordinacion por `display_name` / `legacy_username` | Implementado. Existe `user_coordinations`, reglas por capturador y eliminacion de creacion automatica de coordinaciones. En UI operativa, `Responsable operativo` debe ser usuario/capturador; no debe exponer ambitos tecnicos de `coordinations` como persona responsable. Residual: monitorear fallback legacy durante estabilizacion. |
 | H03 | P1 | Alcance de `finance.view` y `fiscal.manage` sobre edicion fiscal | Implementado. Permisos fiscales, documentales, exportacion, workflow y preview quedaron separados. Residual: pruebas de regresion recurrentes por rol. |
 | H04 | P1 | Falta de pruebas automatizadas | Pendiente. Hay pruebas manuales, SQL, typecheck y build, pero no una suite automatizada de negocio suficiente. |
 | H05 | P1 | Migraciones SQL sin control formal de ejecucion | Mitigado parcialmente. Existen scripts, backups y documentacion, pero falta herramienta/tabla formal de migraciones aplicadas con checksum. |

@@ -113,7 +113,7 @@ function remainingHoursLabel(value: number, maxHours: number) {
         <label>
           <span>Responsable operativo</span>
           <select v-if="isAdmin" v-model="form.coordinationId" required>
-            <option :value="null" disabled>Selecciona responsable/ambito</option>
+            <option :value="null" disabled>Selecciona responsable operativo</option>
             <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">
               {{ coordination.name }}
             </option>

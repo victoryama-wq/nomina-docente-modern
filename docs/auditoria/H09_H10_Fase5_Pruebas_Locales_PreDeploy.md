@@ -199,6 +199,47 @@ Bloqueante operativo para declarar la prueba manual UI como completa:
 - No se hizo ningun cambio funcional durante esta validacion.
 - No se modifico produccion ni Cloud SQL productivo.
 
+## 11.1 Correccion predeploy detectada en Horarios
+
+Durante la revision local posterior se detecto una regresion visual/contractual en el modal de Horarios:
+
+- El campo `Responsable operativo` estaba mostrando ambitos tecnicos de `coordinations`, por ejemplo `ADETUR`, `ARQ`, `DIGRAF`, `Idiomas` y `SISCOM`.
+- Esa lista no representa personas responsables y podia confundirse con una asignacion operativa manual.
+- La regla aprobada en H02/H03 es que la operacion diaria se base en usuario capturador/propietario (`schedules.created_by`), mientras `coordinations` queda como referencia tecnica/legacy para reportes, nomina e importaciones.
+
+Correccion aplicada en local:
+
+- `GET /schedules/context` devuelve para Admin/Direccion opciones visibles de responsables operativos basadas en usuarios activos (`app_users.display_name` o email) vinculados a `user_coordinations`.
+- El valor tecnico interno puede seguir usando la coordinacion primaria para compatibilidad con el esquema actual.
+- Para Coordinador/no-admin, el modal muestra `Responsable operativo` en solo lectura con el nombre del usuario conectado.
+- Se agrego prueba de integracion para asegurar que el selector Admin muestra responsables operativos y no ambitos tecnicos como `ADETUR` o `ARQ`.
+- Se actualizo prueba frontend de `ScheduleModal` para proteger el texto visible.
+
+Archivos impactados por esta correccion:
+
+- `apps/api/src/routes/schedules.ts`
+- `apps/api/src/test/api-h02-h03.integration.test.ts`
+- `apps/web/src/views/SchedulesView.vue`
+- `apps/web/src/components/modals/ScheduleModal.vue`
+- `apps/web/src/components/modals/ScheduleModal.test.ts`
+- `docs/specs/SPEC_H02_H03_Usuario_Coordinacion_Permisos.md`
+- `docs/sdd/SDD_Retrospectivo_Nomina_Docente.md`
+
+Esta correccion debe incluirse en la fase de deploy controlado para evitar que la UI local vuelva a exponer catalogos tecnicos como si fueran nombres de coordinadores.
+
+Validaciones posteriores a la correccion:
+
+| Validacion | Resultado |
+|---|---|
+| `npm --workspace apps/web run test -- ScheduleModal` | Paso |
+| `npm --workspace apps/api run test:integration -- api-h02-h03` | Paso |
+| `npm run test` | Paso |
+| `npm run test:api:integration` | Paso |
+| `npm --workspace apps/api run typecheck` | Paso |
+| `npm --workspace apps/web run typecheck` | Paso |
+| `npm run typecheck` | Paso |
+| `npm run build` | Paso |
+
 ## 12. Recomendacion
 
 Recomendacion: repetir la prueba visual manual con Admin real antes de deploy Firebase/Cloud Run.

@@ -22,8 +22,8 @@ const activeCycle: CycleOption = {
 };
 
 const coordinations: CoordinationOption[] = [
-  { id: 'coord-idiomas', name: 'Idiomas' },
-  { id: 'coord-adetur', name: 'ADETUR' }
+  { id: 'coord-idiomas', name: 'QA Coordinador Idiomas' },
+  { id: 'coord-adetur', name: 'QA Coordinador Multi' }
 ];
 
 const teacher: ScheduleTeacher = {
@@ -94,7 +94,9 @@ describe('ScheduleModal coordination visibility', () => {
   it('shows a coordination selector for Admin but read-only operational owner for non-admin users', () => {
     const admin = mountScheduleModal(true);
     expect(admin.find('select[required]').exists()).toBe(true);
-    expect(admin.text()).toContain('Selecciona responsable/ambito');
+    expect(admin.text()).toContain('Selecciona responsable operativo');
+    expect(admin.text()).toContain('QA Coordinador Idiomas');
+    expect(admin.text()).not.toContain('ADETUR');
 
     const coordinator = mountScheduleModal(false);
     const disabledInputs = coordinator.findAll('input[disabled]');

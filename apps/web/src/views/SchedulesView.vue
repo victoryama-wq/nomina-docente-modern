@@ -88,7 +88,7 @@ const currentUserCoordination = computed(() => {
 const canChooseScheduleCoordination = computed(() => authStore.isAdmin || authStore.session?.role === 'direccion');
 
 const currentCoordinatorName = computed(
-  () => currentUserCoordination.value?.name || authStore.session?.displayName || 'Coordinador conectado'
+  () => authStore.session?.displayName || currentUserCoordination.value?.name || 'Coordinador conectado'
 );
 
 const editingSchedule = computed(
