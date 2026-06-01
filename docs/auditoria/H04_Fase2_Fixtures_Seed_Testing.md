@@ -174,6 +174,13 @@ Uso recomendado:
 5. Construir requests con actores fixture sin Firebase real.
 6. Validar permisos H02/H03 y calculos H01 contra datos controlados.
 
+Advertencia para Firebase Auth real:
+
+- El seed H04 usa `firebase_uid` sinteticos para fixtures y pruebas automatizadas.
+- Esos UIDs no deben mezclarse con login interactivo usando Firebase Auth real.
+- Si se desea usar una cuenta real contra `nomina_docente_test`, el registro debe tener `firebase_uid = NULL` antes del primer login real.
+- Incidente documentado: `noreply@tecplayacar.edu.mx` fallo en local porque tenia `firebase_uid = 'qa-fixture-rh'`; limpiar el UID permitio vincular el UID real de Firebase.
+
 ## 9. Que NO se probo todavia
 
 No se implementaron todavia:

@@ -247,6 +247,13 @@ Confirmado en código:
 7. Si el usuario está activo, carga rol y permisos desde PostgreSQL.
 8. Si `firebase_uid` está vacío, se vincula al primer login; si difiere en logins posteriores, se rechaza.
 
+Regla de pruebas locales con Firebase real:
+
+- Si una BD local/test se prepara con seeds H04 o fixtures, los `firebase_uid` sinteticos no deben usarse para login con Firebase Auth real.
+- Para probar login real contra BD local/test, el correo debe coincidir exactamente con la cuenta Google y el dominio permitido `@tecplayacar.edu.mx`.
+- Si el registro local tiene un `firebase_uid` sintetico o ligado a otra cuenta, se debe limpiar `firebase_uid` en la BD local/test antes del login real para permitir la vinculacion correcta del UID.
+- Caso documentado: `noreply@tecplayacar.edu.mx` fallo localmente porque tenia `firebase_uid = 'qa-fixture-rh'`; al limpiar el UID sintetico, el login real funciono.
+
 Pendiente de confirmar:
 
 - Política operativa para usuarios que cambian cuenta Google o requieren re-vinculación de `firebase_uid`.

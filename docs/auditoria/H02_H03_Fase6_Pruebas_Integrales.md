@@ -276,6 +276,15 @@ Motivos:
 - Si inicia sesion y vincula `firebase_uid`, puede contaminar una identidad tecnica con permisos operativos.
 - No representa comportamiento real de un usuario Coordinador.
 
+Incidente local posterior:
+
+- El 2026-06-01 se probo login local con `noreply@tecplayacar.edu.mx`.
+- El registro estaba `ACTIVO`, pero tenia `firebase_uid = 'qa-fixture-rh'`, heredado de seed/fixture H04.
+- Firebase Auth real lo rechazo porque el UID sintetico no coincidia con el token real.
+- Se corrigio solo en `nomina_docente_test` limpiando `firebase_uid`.
+- Regla: no mezclar `firebase_uid` sinteticos con Firebase Auth real; para login real local, dejar `firebase_uid = NULL` antes del primer acceso.
+- El correo debe ser exactamente `noreply@tecplayacar.edu.mx`; `noreply@tecplaaycar.edu.mx` es invalido por dominio mal escrito.
+
 Recomendacion:
 
 - Usar una cuenta real de prueba institucional, por ejemplo `qa.coordinador@tecplayacar.edu.mx`, si existe y puede iniciar sesion.
