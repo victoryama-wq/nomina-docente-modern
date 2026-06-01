@@ -20,6 +20,7 @@ type VisibilityFilter = 'TODOS' | 'EDITABLES' | 'BLOQUEADOS';
 type ChangeFilter = 'TODOS' | 'MODIFICADOS' | 'SIN_CAMBIOS';
 type IncidenceField = 'absences' | 'delays' | 'extraHoursInSchedule';
 type IncidenceDraft = Required<Pick<IncidencePayload, IncidenceField>>;
+type IncidenceAccessStatus = 'SIN_QUINCENA' | 'NOMINA' | 'PENDIENTE' | 'ABIERTO' | 'CERRADO' | 'PLANEACION' | 'CICLO_CERRADO';
 
 const schedules = ref<IncidenceSchedule[]>([]);
 const cycles = ref<CycleOption[]>([]);
@@ -90,7 +91,9 @@ const visiblePendingRows = computed(() =>
 );
 const allPendingRows = computed(() => schedules.value.filter((schedule) => canEditSchedule(schedule) && rowIsModified(schedule)));
 
-const accessStatus = computed(() => {
+const accessStatus = computed<IncidenceAccessStatus>(() => {
+  if (activeCycle.value?.status === 'PLANEACION') return 'PLANEACION';
+  if (activeCycle.value?.status === 'CERRADO') return 'CICLO_CERRADO';
   const period = activeCalendarPeriod.value;
   if (!period) return 'SIN_QUINCENA';
   if (period.hasPayrollRun) return 'NOMINA';
@@ -103,6 +106,8 @@ const accessStatus = computed(() => {
 
 const accessStatusLabel = computed(() => {
   const period = activeCalendarPeriod.value;
+  if (accessStatus.value === 'PLANEACION') return 'Ciclo en Planeacion/Borrador';
+  if (accessStatus.value === 'CICLO_CERRADO') return 'Ciclo cerrado';
   if (!period) return 'Sin quincena';
   if (accessStatus.value === 'NOMINA') return 'Nómina guardada';
   if (accessStatus.value === 'PENDIENTE') return `Abre ${formatDateTime(period.accessStartAt)}`;
@@ -111,6 +116,26 @@ const accessStatusLabel = computed(() => {
 });
 
 const accessWindowCard = computed(() => {
+  if (activeCycle.value?.status === 'PLANEACION') {
+    return {
+      className: 'pending',
+      eyebrow: 'Preparacion/Borrador',
+      title: 'Incidencias bloqueadas durante planeacion.',
+      detail: 'Primero activa el ciclo para abrir captura de incidencias por quincena.',
+      counterLabel: 'Estado',
+      counter: 'Solo horarios'
+    };
+  }
+  if (activeCycle.value?.status === 'CERRADO') {
+    return {
+      className: 'locked',
+      eyebrow: 'Ciclo cerrado',
+      title: 'El ciclo cerrado es irreversible.',
+      detail: 'Las incidencias quedan solo para consulta historica.',
+      counterLabel: 'Estado',
+      counter: 'Solo consulta'
+    };
+  }
   const period = activeCalendarPeriod.value;
   if (!period) return null;
   const startLabel = formatDateTime(period.accessStartAt);
@@ -161,6 +186,7 @@ const accessWindowCard = computed(() => {
 });
 
 const accessWindowProgress = computed(() => {
+  if (activeCycle.value?.status !== 'ACTIVO') return 0;
   const period = activeCalendarPeriod.value;
   if (!period) return 0;
   const start = new Date(period.accessStartAt).getTime();
@@ -171,8 +197,10 @@ const accessWindowProgress = computed(() => {
   return 100;
 });
 
+const canCaptureIncidences = computed(() => activeCycle.value?.status === 'ACTIVO' && accessStatus.value === 'ABIERTO');
+
 function canEditSchedule(schedule: IncidenceSchedule) {
-  return schedule.canEdit && accessStatus.value === 'ABIERTO';
+  return schedule.canEdit && canCaptureIncidences.value;
 }
 
 function numberValue(value: number | string | null | undefined) {
@@ -262,6 +290,8 @@ function rowHasIncidences(schedule: IncidenceSchedule) {
 }
 
 function rowBadge(schedule: IncidenceSchedule) {
+  if (accessStatus.value === 'PLANEACION') return { label: 'Planeacion', className: 'warning' };
+  if (accessStatus.value === 'CICLO_CERRADO') return { label: 'Ciclo cerrado', className: 'muted' };
   if (schedule.payrollLocked) return { label: 'Nómina guardada', className: 'muted' };
   if (accessStatus.value === 'PENDIENTE') return { label: 'Por abrir', className: 'warning' };
   if (accessStatus.value === 'CERRADO') return { label: 'Acceso cerrado', className: 'muted' };
@@ -323,6 +353,12 @@ function loadSelectedCycle() {
 
 function loadSelectedCalendar() {
   return loadIncidences(selectedCycleId.value, selectedCalendarConfigId.value);
+}
+
+function cycleStatusLabel(status: CycleOption['status']) {
+  if (status === 'PLANEACION') return 'Planeacion/Borrador';
+  if (status === 'ACTIVO') return 'Activo';
+  return 'Cerrado';
 }
 
 async function saveRow(schedule: IncidenceSchedule) {
@@ -430,7 +466,7 @@ onUnmounted(() => {
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadSelectedCycle">
           <option v-for="cycle in cycles" :key="cycle.id" :value="cycle.id">
-            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycle.status }}
+            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycleStatusLabel(cycle.status) }}
           </option>
         </select>
         <select v-if="calendarPeriods.length" v-model="selectedCalendarConfigId" @change="loadSelectedCalendar">
@@ -445,7 +481,7 @@ onUnmounted(() => {
         <button
           class="primary-inline"
           type="button"
-          :disabled="!selectedCalendarConfigId || !allPendingRows.length || savingBatch"
+          :disabled="!canCaptureIncidences || !selectedCalendarConfigId || !allPendingRows.length || savingBatch"
           @click="saveAllPendingRows"
         >
           <Save :size="17" />
@@ -513,14 +549,14 @@ onUnmounted(() => {
             <span v-if="visiblePendingRows.length !== allPendingRows.length">/ {{ visiblePendingRows.length }} visible{{ visiblePendingRows.length === 1 ? '' : 's' }}</span>
           </strong>
           <div class="pending-actions">
-            <button class="primary-inline" type="button" :disabled="!selectedCalendarConfigId || savingBatch" @click="saveAllPendingRows">
+            <button class="primary-inline" type="button" :disabled="!canCaptureIncidences || !selectedCalendarConfigId || savingBatch" @click="saveAllPendingRows">
               <Save :size="16" />
               Guardar todo
             </button>
             <button
               class="secondary-action"
               type="button"
-              :disabled="!selectedCalendarConfigId || !visiblePendingRows.length"
+              :disabled="!canCaptureIncidences || !selectedCalendarConfigId || !visiblePendingRows.length"
               @click="saveVisibleRows"
             >
               <Save :size="16" />

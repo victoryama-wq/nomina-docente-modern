@@ -6,6 +6,7 @@ import {
   createCalendarPeriod,
   createAcademicCycle,
   activateAcademicCycle,
+  closeAcademicCycle,
   deleteCalendarPeriod,
   fetchCalendarContext,
   updateAcademicCycle,
@@ -32,13 +33,18 @@ const saving = ref(false);
 const savingModules = ref(false);
 const savingCycle = ref(false);
 const activatingCycle = ref(false);
+const closingCycle = ref(false);
 const deletingPeriod = ref(false);
 const pendingDeletePeriod = ref<CalendarPeriod | null>(null);
 const pendingActivateCycle = ref<CycleOption | null>(null);
+const pendingCloseCycle = ref<CycleOption | null>(null);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 const formError = ref('');
 const moduleError = ref('');
 const cycleError = ref('');
+const closeCycleError = ref('');
+const closeNextCycleId = ref('');
+const closeObservation = ref('');
 const blackoutDraft = ref({ blackoutDate: '', reason: '' });
 
 function dateKey(date: Date) {
@@ -162,6 +168,14 @@ const summary = computed(() => {
   };
 });
 
+const planningCycles = computed(() => cycles.value.filter((cycle) => cycle.status === 'PLANEACION'));
+const selectedCloseNextCycle = computed(
+  () => planningCycles.value.find((cycle) => cycle.id === closeNextCycleId.value) || null
+);
+const canRequestControlledClose = computed(
+  () => authStore.isAdmin && activeCycle.value?.status === 'ACTIVO' && !!selectedCloseNextCycle.value
+);
+
 function formatDate(value: string | null | undefined) {
   if (!value) return '-';
   const [year, month, day] = dateOnly(value).split('-');
@@ -205,6 +219,20 @@ function cycleStatusClass(status: CycleOption['status']) {
   if (status === 'ACTIVO') return 'ok';
   if (status === 'PLANEACION') return 'warning';
   return 'muted';
+}
+
+function cycleStatusLabel(status: CycleOption['status']) {
+  if (status === 'PLANEACION') return 'Planeacion/Borrador';
+  if (status === 'ACTIVO') return 'Activo';
+  return 'Cerrado';
+}
+
+function syncCloseCycleForm() {
+  const nextCycleStillAvailable = planningCycles.value.some((cycle) => cycle.id === closeNextCycleId.value);
+  if (!nextCycleStillAvailable) {
+    closeNextCycleId.value = planningCycles.value[0]?.id || '';
+  }
+  closeCycleError.value = '';
 }
 
 function newCycle() {
@@ -294,6 +322,50 @@ async function confirmActivateCycle() {
   }
 }
 
+function requestCloseActiveCycle() {
+  closeCycleError.value = '';
+  if (!activeCycle.value || activeCycle.value.status !== 'ACTIVO') {
+    closeCycleError.value = 'Solo puede cerrarse de forma controlada el ciclo ACTIVO.';
+    return;
+  }
+  if (!selectedCloseNextCycle.value) {
+    closeCycleError.value = 'Selecciona un ciclo en Planeacion/Borrador como siguiente ciclo activo.';
+    return;
+  }
+  pendingCloseCycle.value = activeCycle.value;
+  clearNotice();
+}
+
+function closeControlledCloseModal() {
+  if (closingCycle.value) return;
+  pendingCloseCycle.value = null;
+}
+
+async function confirmCloseActiveCycle() {
+  const cycle = pendingCloseCycle.value;
+  const nextCycle = selectedCloseNextCycle.value;
+  if (!cycle || !nextCycle) return;
+  closingCycle.value = true;
+  closeCycleError.value = '';
+  clearNotice();
+  try {
+    const response = await closeAcademicCycle(cycle.id, {
+      nextCycleId: nextCycle.id,
+      observation: closeObservation.value.trim() || undefined
+    });
+    pendingCloseCycle.value = null;
+    closeObservation.value = '';
+    editingCycleId.value = null;
+    await loadCalendar(response.activeCycle.id);
+    setNotice('ok', response.message);
+  } catch (err) {
+    closeCycleError.value = err instanceof Error ? err.message : 'No fue posible cerrar el ciclo.';
+    setNotice('error', closeCycleError.value);
+  } finally {
+    closingCycle.value = false;
+  }
+}
+
 async function loadCalendar(cycleId = selectedCycleId.value || undefined) {
   if (!authStore.canManageCalendar) return;
   pageBusy.value = true;
@@ -304,6 +376,7 @@ async function loadCalendar(cycleId = selectedCycleId.value || undefined) {
     selectedCycleId.value = data.activeCycle.id;
     cycles.value = data.cycles;
     syncModuleForm(data.activeCycle);
+    syncCloseCycleForm();
     periods.value = data.periods.map((period) => ({
       ...period,
       payrollStart: dateOnly(period.payrollStart),
@@ -522,7 +595,7 @@ onMounted(() => {
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadCalendar(selectedCycleId)">
           <option v-for="cycle in cycles" :key="cycle.id" :value="cycle.id">
-            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycle.status }}
+            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycleStatusLabel(cycle.status) }}
           </option>
         </select>
         <button class="secondary-action" type="button" @click="loadCalendar(selectedCycleId)">
@@ -622,7 +695,7 @@ onMounted(() => {
                   <span>{{ cycle.quarterCode }}</span>
                 </td>
                 <td>
-                  <span class="badge" :class="cycleStatusClass(cycle.status)">{{ cycle.status }}</span>
+                  <span class="badge" :class="cycleStatusClass(cycle.status)">{{ cycleStatusLabel(cycle.status) }}</span>
                 </td>
                 <td>
                   <strong>M1 {{ formatDate(cycle.module1Start) }} - {{ formatDate(cycle.module1End) }}</strong>
@@ -646,7 +719,7 @@ onMounted(() => {
                     v-if="cycle.status === 'PLANEACION'"
                     class="icon-button ok"
                     type="button"
-                    title="Activar ciclo"
+                    title="Activacion administrativa manual"
                     @click="requestActivateCycle(cycle)"
                   >
                     <CheckCircle2 :size="16" />
@@ -656,6 +729,52 @@ onMounted(() => {
             </tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <section v-if="authStore.isAdmin" class="data-panel module-editor-panel">
+      <div class="section-title compact">
+        <div>
+          <p class="eyebrow">Cierre controlado H10</p>
+          <h3>Cerrar ciclo activo y activar siguiente</h3>
+        </div>
+        <CheckCircle2 :size="22" />
+      </div>
+
+      <div class="module-period-note editable">
+        <strong>{{ activeCycle?.periodLabel || 'Ciclo activo' }} / {{ activeCycle ? cycleStatusLabel(activeCycle.status) : '-' }}</strong>
+        <span>Valida quincenas pagadas, registra quarter_closures y activa un ciclo en Planeacion/Borrador.</span>
+        <span>La activacion manual se conserva solo como compatibilidad administrativa legacy.</span>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>Siguiente ciclo</span>
+          <select v-model="closeNextCycleId" :disabled="!planningCycles.length || activeCycle?.status !== 'ACTIVO'">
+            <option value="">Seleccionar ciclo en planeacion</option>
+            <option v-for="cycle in planningCycles" :key="cycle.id" :value="cycle.id">
+              {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycleStatusLabel(cycle.status) }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>Observacion</span>
+          <input v-model="closeObservation" placeholder="Referencia de aprobacion externa o nota de cierre" />
+        </label>
+      </div>
+
+      <div v-if="closeCycleError" class="error-box wide">{{ closeCycleError }}</div>
+
+      <div class="form-actions">
+        <button
+          class="primary-inline"
+          type="button"
+          :disabled="closingCycle || !canRequestControlledClose"
+          @click="requestCloseActiveCycle"
+        >
+          <CheckCircle2 :size="17" />
+          Cerrar ciclo controlado
+        </button>
       </div>
     </section>
 
@@ -895,7 +1014,7 @@ onMounted(() => {
     <ConfirmModal
       :show="!!pendingActivateCycle"
       eyebrow="Ciclo escolar"
-      title="Activar nuevo ciclo"
+      title="Activacion administrativa manual"
       :subject="pendingActivateCycle ? `${pendingActivateCycle.periodLabel} - ${pendingActivateCycle.quarterCode}` : ''"
       message="Este ciclo quedará como activo. El ciclo activo anterior se cerrará y Capturar Horarios mostrará el nuevo ciclo por defecto."
       :details="pendingActivateCycle ? [
@@ -903,13 +1022,33 @@ onMounted(() => {
         `${pendingActivateCycle.calendarPeriodCount || 0} quincenas configuradas`,
         'Los horarios del ciclo anterior no se eliminan; quedan asociados a su ciclo histórico.'
       ] : []"
-      confirm-label="Activar ciclo"
+      confirm-label="Activar manual"
       cancel-label="Conservar planeación"
       tone="warning"
       icon="warning"
       :loading="activatingCycle"
       @close="closeActivateCycleModal"
       @confirm="confirmActivateCycle"
+    />
+
+    <ConfirmModal
+      :show="!!pendingCloseCycle"
+      eyebrow="Cierre controlado H10"
+      title="Cerrar ciclo activo"
+      :subject="pendingCloseCycle ? `${pendingCloseCycle.periodLabel} - ${pendingCloseCycle.quarterCode}` : ''"
+      message="Esta accion es irreversible para el ciclo actual. El backend validara que todas las quincenas esten PAGADA y que el ciclo siguiente tenga horarios antes de cerrar."
+      :details="[
+        selectedCloseNextCycle ? `Siguiente ciclo: ${selectedCloseNextCycle.periodLabel} - ${selectedCloseNextCycle.quarterCode}` : '',
+        'No ejecuta migraciones ni modifica nominas historicas.',
+        'PAGADA permanece como estado financiero terminal.'
+      ].filter(Boolean)"
+      confirm-label="Cerrar y activar siguiente"
+      cancel-label="Conservar ciclo activo"
+      tone="warning"
+      icon="warning"
+      :loading="closingCycle"
+      @close="closeControlledCloseModal"
+      @confirm="confirmCloseActiveCycle"
     />
   </div>
 </template>

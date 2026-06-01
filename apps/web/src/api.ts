@@ -135,6 +135,29 @@ export interface CycleOption {
   calendarPeriodCount?: number;
 }
 
+export interface CloseAcademicCyclePayload {
+  nextCycleId: string;
+  observation?: string;
+}
+
+export interface CloseAcademicCycleResponse {
+  closedCycle: CycleOption;
+  activeCycle: CycleOption;
+  quarterClosure: {
+    id: string;
+    executedAt: string;
+  };
+  validation: {
+    periodCount: number;
+    paidPeriods: string[];
+    payrollRunIds: string[];
+    pendingRuns: number;
+    missingPaidPeriods: number;
+    scheduleCountNextCycle: number;
+  };
+  message: string;
+}
+
 export interface SubjectOption {
   id: string;
   name: string;
@@ -1440,6 +1463,16 @@ export async function updateAcademicCycle(
 export async function activateAcademicCycle(cycleId: string): Promise<{ activeCycle: CycleOption; message: string }> {
   return request(`/calendar/cycles/${cycleId}/activate`, {
     method: 'POST'
+  });
+}
+
+export async function closeAcademicCycle(
+  cycleId: string,
+  payload: CloseAcademicCyclePayload
+): Promise<CloseAcademicCycleResponse> {
+  return request(`/calendar/cycles/${cycleId}/close`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 }
 

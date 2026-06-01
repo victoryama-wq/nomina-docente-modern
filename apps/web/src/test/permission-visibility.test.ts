@@ -3,6 +3,7 @@ import type { ExtraRecord } from '../api';
 import {
   accountingSession,
   accountantSession,
+  adminSession,
   coordinatorSession,
   coordinatorWithoutCoordinationSession,
   directionSession,
@@ -11,7 +12,13 @@ import {
   rhSession
 } from './fixtures/session-users';
 import {
+  canCaptureExtrasForCycle,
+  canCaptureIncidencesForCycle,
+  canCaptureSchedulesForCycle,
   canEditExtraRecord,
+  canUsePayrollForCycle,
+  cycleStatusLabel,
+  financeWorkflowVisibilityForRun,
   financeVisibility,
   fiscalVisibility,
   operationalCoordinationState,
@@ -113,5 +120,46 @@ describe('frontend permission visibility helpers', () => {
     expect(canEditExtraRecord(editableExtra)).toBe(true);
     expect(canEditExtraRecord({ ...editableExtra, canEdit: false })).toBe(false);
     expect(canEditExtraRecord({ ...editableExtra, accessEndAt: null })).toBe(false);
+  });
+
+  it('labels PLANEACION as the technical draft state and keeps CERRADO irreversible visually', () => {
+    expect(cycleStatusLabel('PLANEACION')).toBe('Planeacion/Borrador');
+    expect(cycleStatusLabel('ACTIVO')).toBe('Activo');
+    expect(cycleStatusLabel('CERRADO')).toBe('Cerrado');
+  });
+
+  it('allows Horarios in PLANEACION but blocks Incidencias, Extras and Nomina until ACTIVO', () => {
+    expect(canCaptureSchedulesForCycle('PLANEACION', true)).toBe(true);
+    expect(canCaptureSchedulesForCycle('ACTIVO', true)).toBe(true);
+    expect(canCaptureSchedulesForCycle('CERRADO', true)).toBe(false);
+
+    expect(canCaptureIncidencesForCycle('PLANEACION', true)).toBe(false);
+    expect(canCaptureIncidencesForCycle('ACTIVO', true)).toBe(true);
+    expect(canCaptureIncidencesForCycle('CERRADO', true)).toBe(false);
+
+    expect(canCaptureExtrasForCycle('PLANEACION', true)).toBe(false);
+    expect(canCaptureExtrasForCycle('ACTIVO', true)).toBe(true);
+    expect(canCaptureExtrasForCycle('CERRADO', true)).toBe(false);
+
+    expect(canUsePayrollForCycle('PLANEACION', true)).toBe(false);
+    expect(canUsePayrollForCycle('ACTIVO', true)).toBe(true);
+    expect(canUsePayrollForCycle('CERRADO', true)).toBe(false);
+  });
+
+  it('keeps finance cancellation unavailable for PAGADA and only exposes workflow to Finanzas/Admin', () => {
+    expect(financeWorkflowVisibilityForRun(financeSession(), 'APROBADA')).toMatchObject({
+      showMarkPaid: true,
+      showCancelForCorrection: true
+    });
+
+    expect(financeWorkflowVisibilityForRun(financeSession(), 'PAGADA')).toMatchObject({
+      showReview: false,
+      showApprove: false,
+      showMarkPaid: false,
+      showCancelForCorrection: false
+    });
+
+    expect(financeWorkflowVisibilityForRun(accountantSession(), 'APROBADA').showCancelForCorrection).toBe(false);
+    expect(financeWorkflowVisibilityForRun(adminSession(), 'CALCULADA').showReview).toBe(true);
   });
 });

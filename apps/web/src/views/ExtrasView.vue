@@ -22,6 +22,7 @@ import { moneyLabel } from '../utils/format';
 
 const authStore = useAuthStore();
 type LoadStatusFilter = 'TODOS' | ExtraTeacher['loadStatus'];
+type ExtraAccessStatus = 'SIN_QUINCENA' | 'NOMINA' | 'PENDIENTE' | 'ABIERTO' | 'CERRADO' | 'PLANEACION' | 'CICLO_CERRADO';
 
 const extras = ref<ExtraRecord[]>([]);
 const teachers = ref<ExtraTeacher[]>([]);
@@ -122,7 +123,9 @@ const filteredExtras = computed(() => {
   });
 });
 
-const extraAccessStatus = computed(() => {
+const extraAccessStatus = computed<ExtraAccessStatus>(() => {
+  if (activeCycle.value?.status === 'PLANEACION') return 'PLANEACION';
+  if (activeCycle.value?.status === 'CERRADO') return 'CICLO_CERRADO';
   const period = activeExtraAccessPeriod.value;
   if (!period) return 'SIN_QUINCENA';
   if (period.hasPayrollRun) return 'NOMINA';
@@ -133,10 +136,12 @@ const extraAccessStatus = computed(() => {
   return 'CERRADO';
 });
 
-const canCaptureExtras = computed(() => activeCycle.value?.status !== 'CERRADO' && extraAccessStatus.value === 'ABIERTO');
+const canCaptureExtras = computed(() => activeCycle.value?.status === 'ACTIVO' && extraAccessStatus.value === 'ABIERTO');
 
 const extraAccessStatusLabel = computed(() => {
   const period = activeExtraAccessPeriod.value;
+  if (extraAccessStatus.value === 'PLANEACION') return 'Ciclo en Planeacion/Borrador';
+  if (extraAccessStatus.value === 'CICLO_CERRADO') return 'Ciclo cerrado';
   if (!period) return 'Sin quincena configurada';
   if (extraAccessStatus.value === 'NOMINA') return 'Nómina guardada';
   if (extraAccessStatus.value === 'PENDIENTE') return `Abre ${formatDateTime(period.accessStartAt)}`;
@@ -145,6 +150,26 @@ const extraAccessStatusLabel = computed(() => {
 });
 
 const extraAccessWindowCard = computed(() => {
+  if (activeCycle.value?.status === 'PLANEACION') {
+    return {
+      className: 'pending',
+      eyebrow: 'Preparacion/Borrador',
+      title: 'Extras bloqueados durante planeacion.',
+      detail: 'Primero activa el ciclo para abrir captura de extras por quincena.',
+      counterLabel: 'Estado',
+      counter: 'Solo horarios'
+    };
+  }
+  if (activeCycle.value?.status === 'CERRADO') {
+    return {
+      className: 'locked',
+      eyebrow: 'Ciclo cerrado',
+      title: 'El ciclo cerrado es irreversible.',
+      detail: 'Los extras quedan solo para consulta historica.',
+      counterLabel: 'Estado',
+      counter: 'Solo consulta'
+    };
+  }
   const period = activeExtraAccessPeriod.value;
   if (!period) return null;
   const startLabel = formatDateTime(period.accessStartAt);
@@ -195,6 +220,7 @@ const extraAccessWindowCard = computed(() => {
 });
 
 const extraAccessWindowProgress = computed(() => {
+  if (activeCycle.value?.status !== 'ACTIVO') return 0;
   const period = activeExtraAccessPeriod.value;
   if (!period) return 0;
   const start = new Date(period.accessStartAt).getTime();
@@ -283,6 +309,7 @@ function formatRemaining(ms: number) {
 }
 
 function canEditExtra(extra: ExtraRecord) {
+  if (activeCycle.value?.status !== 'ACTIVO' || extra.cycleStatus !== 'ACTIVO') return false;
   if (!extra.canEdit || !extra.accessStartAt || !extra.accessEndAt) return false;
   const start = new Date(extra.accessStartAt).getTime();
   const end = new Date(extra.accessEndAt).getTime();
@@ -310,6 +337,12 @@ function loadStatusLabel(status: ExtraTeacher['loadStatus']) {
   if (status === 'LIMITE') return 'Al límite';
   if (status === 'CERCA') return 'Cerca del límite';
   return 'Disponible';
+}
+
+function cycleStatusLabel(status: CycleOption['status']) {
+  if (status === 'PLANEACION') return 'Planeacion/Borrador';
+  if (status === 'ACTIVO') return 'Activo';
+  return 'Cerrado';
 }
 
 function teacherForExtra(extra: ExtraRecord) {
@@ -545,7 +578,7 @@ onUnmounted(() => {
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadExtras(selectedCycleId)">
           <option v-for="cycle in cycles" :key="cycle.id" :value="cycle.id">
-            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycle.status }}
+            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycleStatusLabel(cycle.status) }}
           </option>
         </select>
         <button class="secondary-action" type="button" @click="loadExtras(selectedCycleId)">

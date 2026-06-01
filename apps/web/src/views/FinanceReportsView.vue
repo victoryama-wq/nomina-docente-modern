@@ -418,6 +418,12 @@ function runTraceLabel(run: FinanceRun) {
   return `Calculada ${formatDateTime(run.calculatedAt || run.createdAt)}`;
 }
 
+function cycleStatusLabel(status: CycleOption['status']) {
+  if (status === 'PLANEACION') return 'Planeacion/Borrador';
+  if (status === 'ACTIVO') return 'Activo';
+  return 'Cerrado';
+}
+
 function runTraceUser(run: FinanceRun) {
   if (run.status === 'PAGADA') return run.paidByEmail || run.statusUpdatedByEmail || 'Sistema';
   if (run.status === 'APROBADA') return run.approvedByEmail || run.statusUpdatedByEmail || 'Sistema';
@@ -595,7 +601,7 @@ onMounted(() => {
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadSelectedCycle">
           <option v-for="cycle in cycles" :key="cycle.id" :value="cycle.id">
-            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycle.status }}
+            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycleStatusLabel(cycle.status) }}
           </option>
         </select>
         <select v-if="runs.length" v-model="selectedRunId" @change="loadSelectedRun">

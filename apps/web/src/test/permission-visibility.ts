@@ -1,4 +1,4 @@
-import type { ActorCoordination, ExtraRecord, SessionUser } from '../api';
+import type { ActorCoordination, CycleOption, ExtraRecord, PayrollRun, SessionUser } from '../api';
 
 function hasPermission(session: SessionUser, permission: string) {
   return session.role === 'admin' || session.isProtectedSuperAdmin || session.permissions.includes(permission);
@@ -79,4 +79,36 @@ export function operationalCoordinationState(actorCoordinations: ActorCoordinati
 
 export function canEditExtraRecord(extra: Pick<ExtraRecord, 'canEdit' | 'accessStartAt' | 'accessEndAt'>) {
   return Boolean(extra.canEdit && extra.accessStartAt && extra.accessEndAt);
+}
+
+export function cycleStatusLabel(status: CycleOption['status']) {
+  if (status === 'PLANEACION') return 'Planeacion/Borrador';
+  if (status === 'ACTIVO') return 'Activo';
+  return 'Cerrado';
+}
+
+export function canCaptureSchedulesForCycle(status: CycleOption['status'], canManageSchedules: boolean) {
+  return canManageSchedules && (status === 'PLANEACION' || status === 'ACTIVO');
+}
+
+export function canCaptureIncidencesForCycle(status: CycleOption['status'], accessOpen: boolean) {
+  return status === 'ACTIVO' && accessOpen;
+}
+
+export function canCaptureExtrasForCycle(status: CycleOption['status'], accessOpen: boolean) {
+  return status === 'ACTIVO' && accessOpen;
+}
+
+export function canUsePayrollForCycle(status: CycleOption['status'], canViewPayroll: boolean) {
+  return status === 'ACTIVO' && canViewPayroll;
+}
+
+export function financeWorkflowVisibilityForRun(session: SessionUser, status: PayrollRun['status']) {
+  const canWorkflow = hasPermission(session, 'finance.workflow');
+  return {
+    showReview: canWorkflow && status === 'CALCULADA',
+    showApprove: canWorkflow && status === 'EN_REVISION',
+    showMarkPaid: canWorkflow && status === 'APROBADA',
+    showCancelForCorrection: canWorkflow && ['CALCULADA', 'EN_REVISION', 'APROBADA'].includes(status)
+  };
 }

@@ -203,6 +203,30 @@ const filteredSchedules = computed(() => {
   });
 });
 
+const canCreateSchedule = computed(
+  () => authStore.canManageSchedules && activeScheduleCycle.value?.status !== 'CERRADO'
+);
+
+const scheduleCycleNotice = computed(() => {
+  if (activeScheduleCycle.value?.status === 'PLANEACION') {
+    return {
+      className: 'pending',
+      eyebrow: 'Preparacion/Borrador',
+      title: 'Horarios habilitado para planeacion.',
+      detail: 'Puedes capturar la carga del siguiente ciclo antes de activarlo.'
+    };
+  }
+  if (activeScheduleCycle.value?.status === 'CERRADO') {
+    return {
+      className: 'locked',
+      eyebrow: 'Ciclo cerrado',
+      title: 'El ciclo cerrado es irreversible.',
+      detail: 'Los horarios quedan solo para consulta historica.'
+    };
+  }
+  return null;
+});
+
 function normalizeMatch(value: string) {
   return value
     .replace(/\s+/g, ' ')
@@ -288,7 +312,13 @@ function scheduleLoadStatus(schedule: Schedule): { code: ScheduleLoadStatus; lab
 }
 
 function canEditSchedule(schedule: Schedule) {
-  return !!schedule.canEdit;
+  return !!schedule.canEdit && schedule.cycleStatus !== 'CERRADO';
+}
+
+function cycleStatusLabel(status: CycleOption['status']) {
+  if (status === 'PLANEACION') return 'Planeacion/Borrador';
+  if (status === 'ACTIVO') return 'Activo';
+  return 'Cerrado';
 }
 
 
@@ -424,6 +454,10 @@ function editSchedule(schedule: Schedule) {
 
 async function saveSchedule() {
   if (!authStore.canManageSchedules) return;
+  if (!canCreateSchedule.value) {
+    setNotice('error', 'No se pueden capturar horarios en un ciclo cerrado.');
+    return;
+  }
   scheduleFormError.value = '';
   if (!selectedScheduleTeacher.value) {
     scheduleFormError.value = 'Selecciona un docente activo desde el buscador.';
@@ -525,17 +559,28 @@ onMounted(() => {
       <div class="toolbar-actions">
         <select v-if="scheduleCycles.length" v-model="selectedScheduleCycleId" @change="loadSchedules(selectedScheduleCycleId)">
           <option v-for="cycle in scheduleCycles" :key="cycle.id" :value="cycle.id">
-            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycle.status }}
+            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycleStatusLabel(cycle.status) }}
           </option>
         </select>
         <button class="secondary-action" type="button" @click="loadSchedules(selectedScheduleCycleId)">
           <RefreshCw :size="17" :class="{ spin: pageBusy }" />
           Actualizar
         </button>
-        <button class="primary-inline" type="button" :disabled="activeScheduleCycle?.status === 'CERRADO'" @click="newSchedule">
+        <button class="primary-inline" type="button" :disabled="!canCreateSchedule" @click="newSchedule">
           <CalendarClock :size="17" />
           Nuevo horario
         </button>
+      </div>
+    </section>
+
+    <section v-if="scheduleCycleNotice" class="access-window-card" :class="scheduleCycleNotice.className">
+      <div class="access-window-icon">
+        <CalendarClock :size="22" />
+      </div>
+      <div class="access-window-main">
+        <p>{{ scheduleCycleNotice.eyebrow }}</p>
+        <h4>{{ scheduleCycleNotice.title }}</h4>
+        <span>{{ scheduleCycleNotice.detail }}</span>
       </div>
     </section>
 

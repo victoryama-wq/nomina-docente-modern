@@ -83,6 +83,26 @@ const selectedCalendarPeriod = computed(
   () => calendarPeriods.value.find((period) => period.id === form.value.calendarConfigId) || null
 );
 const hasCalendarSelection = computed(() => !!form.value.calendarConfigId);
+const payrollCycleBlocked = computed(() => activeCycle.value?.status !== 'ACTIVO');
+const payrollCycleBlockCard = computed(() => {
+  if (activeCycle.value?.status === 'PLANEACION') {
+    return {
+      className: 'pending',
+      eyebrow: 'Preparacion/Borrador',
+      title: 'Nomina bloqueada durante planeacion.',
+      detail: 'En PLANEACION solo se prepara la carga de Horarios. Activa el ciclo para calcular nomina.'
+    };
+  }
+  if (activeCycle.value?.status === 'CERRADO') {
+    return {
+      className: 'locked',
+      eyebrow: 'Ciclo cerrado',
+      title: 'El ciclo cerrado es irreversible.',
+      detail: 'La nomina del ciclo cerrado queda disponible solo como historico guardado.'
+    };
+  }
+  return null;
+});
 
 const filteredLines = computed(() => {
   const text = searchText.value.toLowerCase().trim();
@@ -146,6 +166,7 @@ const calendarLabel = computed(() => {
 const canSaveRun = computed(
   () =>
     authStore.canFinalizePayroll &&
+    !payrollCycleBlocked.value &&
     !!form.value.calendarConfigId &&
     !!form.value.payrollStart &&
     !!form.value.payrollEnd &&
@@ -240,6 +261,12 @@ function statusClass(run: PayrollRun) {
   if (run.status === 'CERRADA' || run.status === 'APROBADA') return 'ok';
   if (run.status === 'CANCELADA') return 'danger';
   return 'neutral';
+}
+
+function cycleStatusLabel(status: CycleOption['status']) {
+  if (status === 'PLANEACION') return 'Planeacion/Borrador';
+  if (status === 'ACTIVO') return 'Activo';
+  return 'Cerrado';
 }
 
 function lineBadge(line: PayrollLine) {
@@ -408,6 +435,13 @@ async function loadContext(cycleId = selectedCycleId.value || undefined) {
 }
 
 async function calculatePreview(silent = false) {
+  if (payrollCycleBlocked.value) {
+    currentPreview.value = null;
+    selectedRunId.value = '';
+    selectedLineKey.value = '';
+    if (!silent) setNotice('error', 'La nomina solo puede calcularse para ciclos ACTIVO.');
+    return;
+  }
   if (!hasCalendarSelection.value) {
     currentPreview.value = null;
     if (!silent) setNotice('error', 'Selecciona una quincena del calendario para calcular la nómina.');
@@ -590,13 +624,24 @@ onMounted(() => {
       <div class="toolbar-actions">
         <select v-if="cycles.length" v-model="selectedCycleId" @change="loadContext(selectedCycleId)">
           <option v-for="cycle in cycles" :key="cycle.id" :value="cycle.id">
-            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycle.status }}
+            {{ cycle.periodLabel }} - {{ cycle.quarterCode }} / {{ cycleStatusLabel(cycle.status) }}
           </option>
         </select>
         <button class="secondary-action" type="button" @click="loadContext(selectedCycleId)">
           <RefreshCw :size="17" :class="{ spin: pageBusy }" />
           Actualizar datos
         </button>
+      </div>
+    </section>
+
+    <section v-if="payrollCycleBlockCard" class="access-window-card" :class="payrollCycleBlockCard.className">
+      <div class="access-window-icon">
+        <Clock3 :size="22" />
+      </div>
+      <div class="access-window-main">
+        <p>{{ payrollCycleBlockCard.eyebrow }}</p>
+        <h4>{{ payrollCycleBlockCard.title }}</h4>
+        <span>{{ payrollCycleBlockCard.detail }}</span>
       </div>
     </section>
 
@@ -644,7 +689,7 @@ onMounted(() => {
           <input v-model="form.module2End" type="date" :disabled="!!selectedCalendarPeriod" />
         </label>
         <div class="payroll-actions">
-          <button class="secondary-action" type="button" :disabled="calculating || !hasCalendarSelection" @click="refreshPreview">
+          <button class="secondary-action" type="button" :disabled="payrollCycleBlocked || calculating || !hasCalendarSelection" @click="refreshPreview">
             <RefreshCw :size="17" :class="{ spin: calculating }" />
             Actualizar cálculo
           </button>
