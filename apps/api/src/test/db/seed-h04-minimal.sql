@@ -262,6 +262,72 @@ INSERT INTO academic_cycles (
     '2026-04-30',
     'CERRADO',
     (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '30000000-0000-4000-8000-000000000021',
+    'H10 QA Cierre Pagado 2026',
+    'H10CLOSE',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '30000000-0000-4000-8000-000000000024',
+    'H10 QA Siguiente Planeacion 2026',
+    'H10NEXT',
+    '2026-09-01',
+    '2026-10-31',
+    '2026-11-01',
+    '2026-12-31',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '30000000-0000-4000-8000-000000000025',
+    'H10 QA Planeacion Sin Horarios 2026',
+    'H10NOSCHED',
+    '2026-09-01',
+    '2026-10-31',
+    '2026-11-01',
+    '2026-12-31',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '30000000-0000-4000-8000-000000000026',
+    'H10 QA Cierre Sin Pagada 2026',
+    'H10UNPAID',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '30000000-0000-4000-8000-000000000028',
+    'H10 QA Cierre Pendiente 2026',
+    'H10PENDING',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '30000000-0000-4000-8000-000000000030',
+    'H10 QA Cierre Solo Cancelada 2026',
+    'H10CANCEL',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
   )
 ON CONFLICT (period_label, quarter_code) DO UPDATE
 SET module1_start = EXCLUDED.module1_start,
@@ -348,6 +414,111 @@ SELECT
 FROM academic_cycles ac
 WHERE ac.period_label = 'H09 QA Planeacion 2026'
   AND ac.quarter_code = 'H09PLAN'
+ON CONFLICT (id) DO UPDATE
+SET payroll_start = EXCLUDED.payroll_start,
+    payroll_end = EXCLUDED.payroll_end,
+    period_label = EXCLUDED.period_label,
+    module1_start = EXCLUDED.module1_start,
+    module1_end = EXCLUDED.module1_end,
+    module2_start = EXCLUDED.module2_start,
+    module2_end = EXCLUDED.module2_end,
+    incidences_access_start_at = EXCLUDED.incidences_access_start_at,
+    incidences_access_days = EXCLUDED.incidences_access_days,
+    extras_access_start_at = EXCLUDED.extras_access_start_at,
+    extras_access_days = EXCLUDED.extras_access_days,
+    updated_at = now();
+
+INSERT INTO payroll_calendar_config (
+  id,
+  cycle_id,
+  period_label,
+  payroll_start,
+  payroll_end,
+  module1_start,
+  module1_end,
+  module2_start,
+  module2_end,
+  incidences_access_start_at,
+  incidences_access_days,
+  extras_access_start_at,
+  extras_access_days
+)
+VALUES
+  (
+    '30000000-0000-4000-8000-000000000022',
+    '30000000-0000-4000-8000-000000000021',
+    'H10 QA Cierre Mayo 1-15 2026',
+    '2026-05-01',
+    '2026-05-15',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    now() - interval '1 day',
+    15,
+    now() - interval '1 day',
+    15
+  ),
+  (
+    '30000000-0000-4000-8000-000000000023',
+    '30000000-0000-4000-8000-000000000021',
+    'H10 QA Cierre Mayo 16-31 2026',
+    '2026-05-16',
+    '2026-05-31',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    now() - interval '1 day',
+    15,
+    now() - interval '1 day',
+    15
+  ),
+  (
+    '30000000-0000-4000-8000-000000000027',
+    '30000000-0000-4000-8000-000000000026',
+    'H10 QA Sin Pagada Mayo 1-15 2026',
+    '2026-05-01',
+    '2026-05-15',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    now() - interval '1 day',
+    15,
+    now() - interval '1 day',
+    15
+  ),
+  (
+    '30000000-0000-4000-8000-000000000029',
+    '30000000-0000-4000-8000-000000000028',
+    'H10 QA Pendiente Mayo 1-15 2026',
+    '2026-05-01',
+    '2026-05-15',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    now() - interval '1 day',
+    15,
+    now() - interval '1 day',
+    15
+  ),
+  (
+    '30000000-0000-4000-8000-000000000031',
+    '30000000-0000-4000-8000-000000000030',
+    'H10 QA Cancelada Mayo 1-15 2026',
+    '2026-05-01',
+    '2026-05-15',
+    '2026-05-01',
+    '2026-06-30',
+    '2026-07-01',
+    '2026-08-31',
+    now() - interval '1 day',
+    15,
+    now() - interval '1 day',
+    15
+  )
 ON CONFLICT (id) DO UPDATE
 SET payroll_start = EXCLUDED.payroll_start,
     payroll_end = EXCLUDED.payroll_end,
@@ -530,6 +701,36 @@ INSERT INTO schedules (
     1, 1, 0, 0, 0, 0, 0,
     (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx'),
     (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
+  ),
+  (
+    '50000000-0000-4000-8000-000000000021',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H10 QA Cierre Pagado 2026' AND quarter_code = 'H10CLOSE'),
+    (SELECT id FROM coordinations WHERE name = 'Idiomas'),
+    (SELECT id FROM teachers WHERE normalized_name = 'docente qa idiomas uno'),
+    (SELECT id FROM subjects WHERE name = 'H04 QA Materia Base'),
+    'H04 QA Materia Base',
+    'QA-CLOSE-ID-01',
+    (SELECT id FROM tabulators WHERE name = 'H04 QA Tabulador 100'),
+    'H04 QA Tabulador 100',
+    100.00,
+    2, 2, 0, 0, 0, 0, 0,
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx'),
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
+  ),
+  (
+    '50000000-0000-4000-8000-000000000024',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H10 QA Siguiente Planeacion 2026' AND quarter_code = 'H10NEXT'),
+    (SELECT id FROM coordinations WHERE name = 'Idiomas'),
+    (SELECT id FROM teachers WHERE normalized_name = 'docente qa idiomas uno'),
+    (SELECT id FROM subjects WHERE name = 'H04 QA Materia Base'),
+    'H04 QA Materia Base',
+    'QA-NEXT-ID-01',
+    (SELECT id FROM tabulators WHERE name = 'H04 QA Tabulador 100'),
+    'H04 QA Tabulador 100',
+    100.00,
+    1, 1, 1, 1, 0, 0, 0,
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx'),
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
   )
 ON CONFLICT (id) DO UPDATE
 SET cycle_id = EXCLUDED.cycle_id,
@@ -637,6 +838,20 @@ INSERT INTO extra_hours (
     'Extra propio multi-coordinacion para prueba H04',
     (SELECT id FROM app_users WHERE email = 'qa.coordinador.multi@tecplayacar.edu.mx'),
     (SELECT id FROM app_users WHERE email = 'qa.coordinador.multi@tecplayacar.edu.mx')
+  ),
+  (
+    '60000000-0000-4000-8000-000000000021',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H10 QA Cierre Pagado 2026' AND quarter_code = 'H10CLOSE'),
+    (SELECT id FROM coordinations WHERE name = 'Idiomas'),
+    (SELECT id FROM teachers WHERE normalized_name = 'docente qa idiomas uno'),
+    1,
+    100.00,
+    'Extra cierre QA',
+    '2026-05-10',
+    'H10-CLOSE-EXTRA',
+    'Extra sintetico para cierre H10',
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx'),
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
   )
 ON CONFLICT (id) DO UPDATE
 SET hours = EXCLUDED.hours,
@@ -660,33 +875,94 @@ INSERT INTO payroll_runs (
   status_updated_at,
   status_updated_by
 )
-VALUES (
-  '70000000-0000-4000-8000-000000000001',
-  (SELECT id FROM academic_cycles WHERE period_label = 'H04 QA Local 2026' AND quarter_code = 'H04TEST'),
-  'H04 QA Workflow Seed',
-  'CALCULADA',
-  jsonb_build_object(
-    'calendarConfigId', '30000000-0000-4000-8000-000000000004',
-    'payrollStart', '2026-05-15',
-    'payrollEnd', '2026-05-28',
-    'module1Start', '2026-05-01',
-    'module1End', '2026-06-30',
-    'module2Start', '2026-07-01',
-    'module2End', '2026-08-31'
+VALUES
+  (
+    '70000000-0000-4000-8000-000000000001',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H04 QA Local 2026' AND quarter_code = 'H04TEST'),
+    'H04 QA Workflow Seed',
+    'CALCULADA',
+    jsonb_build_object(
+      'calendarConfigId', '30000000-0000-4000-8000-000000000004',
+      'payrollStart', '2026-05-15',
+      'payrollEnd', '2026-05-28',
+      'module1Start', '2026-05-01',
+      'module1End', '2026-06-30',
+      'module2Start', '2026-07-01',
+      'module2End', '2026-08-31'
+    ),
+    jsonb_build_object(
+      'lines', 0,
+      'teachers', 0,
+      'coordinations', 0,
+      'totalAmount', '0.00'
+    ),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
   ),
-  jsonb_build_object(
-    'lines', 0,
-    'teachers', 0,
-    'coordinations', 0,
-    'totalAmount', '0.00'
+  (
+    '70000000-0000-4000-8000-000000000021',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H10 QA Cierre Pagado 2026' AND quarter_code = 'H10CLOSE'),
+    'H10 QA Cierre Mayo 1-15 2026',
+    'PAGADA',
+    jsonb_build_object('calendarConfigId', '30000000-0000-4000-8000-000000000022'),
+    jsonb_build_object('lines', 1, 'teachers', 1, 'coordinations', 1, 'totalAmount', '100.00'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
   ),
-  now(),
-  (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx'),
-  now(),
-  (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
-)
+  (
+    '70000000-0000-4000-8000-000000000022',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H10 QA Cierre Pagado 2026' AND quarter_code = 'H10CLOSE'),
+    'H10 QA Cierre Mayo 16-31 2026',
+    'PAGADA',
+    jsonb_build_object('calendarConfigId', '30000000-0000-4000-8000-000000000023'),
+    jsonb_build_object('lines', 1, 'teachers', 1, 'coordinations', 1, 'totalAmount', '100.00'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '70000000-0000-4000-8000-000000000028',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H10 QA Cierre Pendiente 2026' AND quarter_code = 'H10PENDING'),
+    'H10 QA Pendiente Fuera Calendario 2026',
+    'CALCULADA',
+    jsonb_build_object('calendarConfigId', '30000000-0000-4000-8000-000000000029'),
+    jsonb_build_object('lines', 0, 'teachers', 0, 'coordinations', 0, 'totalAmount', '0.00'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '70000000-0000-4000-8000-000000000029',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H10 QA Cierre Pendiente 2026' AND quarter_code = 'H10PENDING'),
+    'H10 QA Pendiente Mayo 1-15 2026',
+    'PAGADA',
+    jsonb_build_object('calendarConfigId', '30000000-0000-4000-8000-000000000029'),
+    jsonb_build_object('lines', 1, 'teachers', 1, 'coordinations', 1, 'totalAmount', '100.00'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '70000000-0000-4000-8000-000000000030',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H10 QA Cierre Solo Cancelada 2026' AND quarter_code = 'H10CANCEL'),
+    'H10 QA Cancelada Mayo 1-15 2026',
+    'CANCELADA',
+    jsonb_build_object('calendarConfigId', '30000000-0000-4000-8000-000000000031'),
+    jsonb_build_object('lines', 0, 'teachers', 0, 'coordinations', 0, 'totalAmount', '0.00'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx'),
+    now(),
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  )
 ON CONFLICT (id) DO UPDATE
-SET status = 'CALCULADA',
+SET status = EXCLUDED.status,
     weights = EXCLUDED.weights,
     summary = EXCLUDED.summary,
     status_updated_at = EXCLUDED.status_updated_at,

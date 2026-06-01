@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { requirePermission } from '../auth.js';
 import { withTransaction } from '../db.js';
+import type { SessionUser } from '../types.js';
 import {
   ensureWorkingCycle,
   cycleSelectSql,
@@ -45,6 +46,31 @@ interface CalendarPeriodRow {
   createdAt: string;
   updatedAt: string;
   blackoutDates: BlackoutDateRow[];
+}
+
+interface ClosurePeriodRow {
+  id: string;
+  periodLabel: string;
+  payrollStart: string;
+  payrollEnd: string;
+}
+
+interface ClosurePayrollRunRow {
+  id: string;
+  periodLabel: string;
+  status: string;
+}
+
+interface ClosureCountersRow {
+  schedulesArchived: number;
+  extrasArchived: number;
+  affectedTeachers: number;
+  affectedCoordinations: number;
+}
+
+interface QuarterClosureRow {
+  id: string;
+  executedAt: string;
 }
 
 const contextQuerySchema = z.object({
@@ -147,11 +173,29 @@ const academicCycleBodySchema = cycleModuleDatesBodySchema.and(
 
 type AcademicCycleBody = z.infer<typeof academicCycleBodySchema>;
 
+const closeCycleBodySchema = z.object({
+  nextCycleId: z.string().uuid(),
+  observation: z.string().trim().max(1000).optional().default('')
+});
+
+type CloseCycleBody = z.infer<typeof closeCycleBodySchema>;
+
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
     message: error.issues[0]?.message || 'Datos inválidos.'
   });
+}
+
+function requestError(message: string, statusCode = 400): Error & { statusCode: number } {
+  const error = new Error(message) as Error & { statusCode: number };
+  error.statusCode = statusCode;
+  return error;
+}
+
+function assertCycleClosureAdmin(actor: SessionUser): void {
+  if (actor.role === 'admin' || actor.isProtectedSuperAdmin) return;
+  throw requestError('Solo Admin puede ejecutar el cierre controlado de ciclo.', 403);
 }
 
 function periodLabel(body: CalendarPeriodBody): string {
@@ -615,6 +659,290 @@ async function activateAcademicCycle(
   return after;
 }
 
+async function loadCycleByIdForUpdate(client: PoolClient, id: string): Promise<CycleRow | null> {
+  const result = await client.query<CycleRow>(`${cycleSelectSql('WHERE ac.id = $1')} FOR UPDATE OF ac`, [id]);
+  return result.rows[0] || null;
+}
+
+async function listClosurePeriods(client: PoolClient, cycleId: string): Promise<ClosurePeriodRow[]> {
+  const result = await client.query<ClosurePeriodRow>(
+    `
+      SELECT
+        id,
+        period_label AS "periodLabel",
+        payroll_start::text AS "payrollStart",
+        payroll_end::text AS "payrollEnd"
+      FROM payroll_calendar_config
+      WHERE cycle_id = $1
+      ORDER BY payroll_start ASC, created_at ASC
+    `,
+    [cycleId]
+  );
+  return result.rows;
+}
+
+async function listMissingPaidPeriods(client: PoolClient, cycleId: string): Promise<ClosurePeriodRow[]> {
+  const result = await client.query<ClosurePeriodRow>(
+    `
+      SELECT
+        pcc.id,
+        pcc.period_label AS "periodLabel",
+        pcc.payroll_start::text AS "payrollStart",
+        pcc.payroll_end::text AS "payrollEnd"
+      FROM payroll_calendar_config pcc
+      WHERE pcc.cycle_id = $1
+        AND NOT EXISTS (
+          SELECT 1
+          FROM payroll_runs pr
+          WHERE pr.cycle_id = pcc.cycle_id
+            AND pr.period_label = pcc.period_label
+            AND pr.status = 'PAGADA'
+        )
+      ORDER BY pcc.payroll_start ASC, pcc.created_at ASC
+    `,
+    [cycleId]
+  );
+  return result.rows;
+}
+
+async function listPendingClosureRuns(client: PoolClient, cycleId: string): Promise<ClosurePayrollRunRow[]> {
+  const result = await client.query<ClosurePayrollRunRow>(
+    `
+      SELECT
+        id,
+        period_label AS "periodLabel",
+        status::text AS status
+      FROM payroll_runs
+      WHERE cycle_id = $1
+        AND status IN ('BORRADOR', 'CALCULADA', 'EN_REVISION', 'APROBADA', 'CERRADA')
+      ORDER BY period_label ASC, calculated_at DESC NULLS LAST, created_at DESC
+    `,
+    [cycleId]
+  );
+  return result.rows;
+}
+
+async function listPaidClosureRuns(client: PoolClient, cycleId: string): Promise<ClosurePayrollRunRow[]> {
+  const result = await client.query<ClosurePayrollRunRow>(
+    `
+      SELECT
+        id,
+        period_label AS "periodLabel",
+        status::text AS status
+      FROM payroll_runs
+      WHERE cycle_id = $1
+        AND status = 'PAGADA'
+      ORDER BY period_label ASC, status_updated_at DESC NULLS LAST, calculated_at DESC NULLS LAST
+    `,
+    [cycleId]
+  );
+  return result.rows;
+}
+
+async function loadClosureCounters(client: PoolClient, cycleId: string): Promise<ClosureCountersRow> {
+  const result = await client.query<ClosureCountersRow>(
+    `
+      SELECT
+        (SELECT count(*)::int FROM schedules WHERE cycle_id = $1) AS "schedulesArchived",
+        (SELECT count(*)::int FROM extra_hours WHERE cycle_id = $1) AS "extrasArchived",
+        (
+          SELECT count(DISTINCT teacher_id)::int
+          FROM (
+            SELECT teacher_id FROM schedules WHERE cycle_id = $1
+            UNION
+            SELECT teacher_id FROM extra_hours WHERE cycle_id = $1
+          ) affected_teachers
+        ) AS "affectedTeachers",
+        (
+          SELECT count(DISTINCT coordination_id)::int
+          FROM (
+            SELECT coordination_id FROM schedules WHERE cycle_id = $1
+            UNION
+            SELECT coordination_id FROM extra_hours WHERE cycle_id = $1
+          ) affected_coordinations
+        ) AS "affectedCoordinations"
+    `,
+    [cycleId]
+  );
+
+  return (
+    result.rows[0] || {
+      schedulesArchived: 0,
+      extrasArchived: 0,
+      affectedTeachers: 0,
+      affectedCoordinations: 0
+    }
+  );
+}
+
+async function countSchedulesForCycle(client: PoolClient, cycleId: string): Promise<number> {
+  const result = await client.query<{ total: number }>('SELECT count(*)::int AS total FROM schedules WHERE cycle_id = $1', [
+    cycleId
+  ]);
+  return result.rows[0]?.total || 0;
+}
+
+async function closeAcademicCycle(
+  client: PoolClient,
+  actor: SessionUser,
+  cycleId: string,
+  body: CloseCycleBody
+) {
+  assertCycleClosureAdmin(actor);
+
+  if (cycleId === body.nextCycleId) {
+    throw requestError('El ciclo a cerrar y el ciclo siguiente deben ser distintos.');
+  }
+
+  const currentCycle = await loadCycleByIdForUpdate(client, cycleId);
+  if (!currentCycle) throw requestError('El ciclo seleccionado no existe.');
+  if (currentCycle.status !== 'ACTIVO') {
+    throw requestError('Solo se puede cerrar un ciclo ACTIVO.');
+  }
+
+  const nextCycle = await loadCycleByIdForUpdate(client, body.nextCycleId);
+  if (!nextCycle) throw requestError('El ciclo siguiente no existe.');
+  if (nextCycle.status !== 'PLANEACION') {
+    throw requestError('El ciclo siguiente debe estar en PLANEACION.');
+  }
+
+  const scheduleCountNextCycle = await countSchedulesForCycle(client, nextCycle.id);
+  if (scheduleCountNextCycle <= 0) {
+    throw requestError('El ciclo siguiente debe tener horarios capturados antes de activarse.');
+  }
+
+  const periods = await listClosurePeriods(client, currentCycle.id);
+  if (periods.length === 0) {
+    throw requestError('El ciclo actual no tiene quincenas configuradas.');
+  }
+
+  const missingPaidPeriods = await listMissingPaidPeriods(client, currentCycle.id);
+  if (missingPaidPeriods.length > 0) {
+    throw requestError(
+      `No se puede cerrar el ciclo. Faltan quincenas PAGADA: ${missingPaidPeriods
+        .map((period) => period.periodLabel)
+        .join(', ')}.`
+    );
+  }
+
+  const pendingRuns = await listPendingClosureRuns(client, currentCycle.id);
+  if (pendingRuns.length > 0) {
+    throw requestError(
+      `No se puede cerrar el ciclo. Existen corridas pendientes: ${pendingRuns
+        .map((run) => `${run.periodLabel} (${run.status})`)
+        .join(', ')}.`
+    );
+  }
+
+  const paidRuns = await listPaidClosureRuns(client, currentCycle.id);
+  const counters = await loadClosureCounters(client, currentCycle.id);
+  const observation = [
+    body.observation || 'Cierre controlado H09/H10',
+    `nextCycleId=${nextCycle.id}`,
+    `paidPeriods=${periods.length}`,
+    `paidRuns=${paidRuns.length}`
+  ].join(' | ');
+
+  const closure = await client.query<QuarterClosureRow>(
+    `
+      INSERT INTO quarter_closures (
+        cycle_id,
+        action,
+        observation,
+        schedules_archived,
+        extras_archived,
+        affected_teachers,
+        affected_coordinations,
+        executed_by
+      )
+      VALUES ($1, 'CYCLE_CLOSED_AND_NEXT_ACTIVATED', $2, $3, $4, $5, $6, $7)
+      RETURNING id, executed_at AS "executedAt"
+    `,
+    [
+      currentCycle.id,
+      observation,
+      counters.schedulesArchived,
+      counters.extrasArchived,
+      counters.affectedTeachers,
+      counters.affectedCoordinations,
+      actor.id
+    ]
+  );
+
+  await client.query(
+    `
+      UPDATE academic_cycles
+      SET status = 'CERRADO',
+          closed_at = now(),
+          closed_by = $1
+      WHERE id = $2
+    `,
+    [actor.id, currentCycle.id]
+  );
+
+  await client.query(
+    `
+      UPDATE academic_cycles
+      SET status = 'ACTIVO',
+          closed_at = NULL,
+          closed_by = NULL
+      WHERE id = $1
+    `,
+    [nextCycle.id]
+  );
+
+  const closedCycle = await loadCycleById(client, currentCycle.id);
+  const activeCycle = await loadCycleById(client, nextCycle.id);
+  if (!closedCycle || !activeCycle) throw requestError('No fue posible leer los ciclos despues del cierre.');
+
+  const validation = {
+    periodCount: periods.length,
+    paidPeriods: periods.map((period) => period.periodLabel),
+    payrollRunIds: paidRuns.map((run) => run.id),
+    pendingRuns: pendingRuns.length,
+    missingPaidPeriods: missingPaidPeriods.length,
+    scheduleCountNextCycle
+  };
+
+  await client.query(
+    `
+      INSERT INTO audit_log (actor_user_id, actor_email, action, entity_type, entity_id, before_data, after_data)
+      VALUES ($1, $2, 'CYCLE_CLOSED_AND_NEXT_ACTIVATED', 'academic_cycle', $3, $4::jsonb, $5::jsonb)
+    `,
+    [
+      actor.id,
+      actor.email,
+      currentCycle.id,
+      JSON.stringify({
+        currentCycle,
+        nextCycle,
+        periods,
+        paidRuns,
+        counters
+      }),
+      JSON.stringify({
+        closedCycleId: closedCycle.id,
+        activatedCycleId: activeCycle.id,
+        quarterClosureId: closure.rows[0].id,
+        paidPeriods: validation.paidPeriods,
+        payrollRunIds: validation.payrollRunIds,
+        scheduleCountNextCycle,
+        irreversible: true,
+        closedCycle,
+        activeCycle
+      })
+    ]
+  );
+
+  return {
+    closedCycle,
+    activeCycle,
+    quarterClosure: closure.rows[0],
+    validation,
+    message: 'Ciclo cerrado y ciclo siguiente activado correctamente.'
+  };
+}
+
 export async function registerCalendarRoutes(app: FastifyInstance): Promise<void> {
   app.get('/calendar/context', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
     const parsed = contextQuerySchema.safeParse(request.query as CalendarContextQuery);
@@ -706,6 +1034,21 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
       activeCycle: cycle,
       message: 'Ciclo activado correctamente. El ciclo activo anterior quedó cerrado.'
     };
+  });
+
+  app.post('/calendar/cycles/:id/close', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
+    const params = paramsSchema.safeParse(request.params as CalendarParams);
+    const parsed = closeCycleBodySchema.safeParse(request.body);
+    if (!params.success) {
+      await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Ciclo invalido.' });
+      return;
+    }
+    if (!parsed.success) {
+      sendValidation(reply, parsed.error);
+      return;
+    }
+
+    return withTransaction((client) => closeAcademicCycle(client, request.user!, params.data.id, parsed.data));
   });
 
   app.patch('/calendar/cycles/:id/modules', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
