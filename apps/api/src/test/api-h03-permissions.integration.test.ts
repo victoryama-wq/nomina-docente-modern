@@ -33,6 +33,23 @@ describeIfDb('H03 permission separation business integration coverage', () => {
     app = null;
   });
 
+  async function transitionPayrollRun(status: string) {
+    return injectAs(app!, financeActor(), {
+      method: 'PATCH',
+      url: `/api/reports/finance/runs/${TEST_IDS.payrollRun}/status`,
+      payload: { status }
+    });
+  }
+
+  async function expectSelectedRunStatus(expected: string): Promise<void> {
+    const response = await injectAs(app!, financeActor(), {
+      method: 'GET',
+      url: `/api/reports/finance/context?runId=${TEST_IDS.payrollRun}`
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().selectedRun.status).toBe(expected);
+  }
+
   it('separates fiscal manage from operational roles', async () => {
     for (const actor of [coordinatorActor(), directionActor(), accountantActor()]) {
       const response = await injectAs(app!, actor, {
@@ -169,26 +186,15 @@ describeIfDb('H03 permission separation business integration coverage', () => {
   });
 
   it('allows finance.workflow to move payroll status through approved transitions', async () => {
-    const review = await injectAs(app!, financeActor(), {
-      method: 'PATCH',
-      url: `/api/reports/finance/runs/${TEST_IDS.payrollRun}/status`,
-      payload: { status: 'EN_REVISION' }
-    });
+    const review = await transitionPayrollRun('EN_REVISION');
     expect(review.statusCode).toBe(200);
 
-    const approve = await injectAs(app!, financeActor(), {
-      method: 'PATCH',
-      url: `/api/reports/finance/runs/${TEST_IDS.payrollRun}/status`,
-      payload: { status: 'APROBADA' }
-    });
+    const approve = await transitionPayrollRun('APROBADA');
     expect(approve.statusCode).toBe(200);
 
-    const paid = await injectAs(app!, financeActor(), {
-      method: 'PATCH',
-      url: `/api/reports/finance/runs/${TEST_IDS.payrollRun}/status`,
-      payload: { status: 'PAGADA' }
-    });
+    const paid = await transitionPayrollRun('PAGADA');
     expect(paid.statusCode).toBe(200);
+    await expectSelectedRunStatus('PAGADA');
   });
 
   it('allows finance.workflow cancellation and blocks direccion workflow', async () => {
@@ -199,12 +205,43 @@ describeIfDb('H03 permission separation business integration coverage', () => {
     });
     expect(directionWorkflow.statusCode).toBe(403);
 
-    const financeCancel = await injectAs(app!, financeActor(), {
-      method: 'PATCH',
-      url: `/api/reports/finance/runs/${TEST_IDS.payrollRun}/status`,
-      payload: { status: 'CANCELADA' }
-    });
+    const financeCancel = await transitionPayrollRun('CANCELADA');
     expect(financeCancel.statusCode).toBe(200);
+  });
+
+  it('keeps PAGADA as terminal and blocks later transitions', async () => {
+    expect((await transitionPayrollRun('EN_REVISION')).statusCode).toBe(200);
+    expect((await transitionPayrollRun('APROBADA')).statusCode).toBe(200);
+    expect((await transitionPayrollRun('PAGADA')).statusCode).toBe(200);
+
+    for (const status of ['CANCELADA', 'EN_REVISION', 'APROBADA']) {
+      const response = await transitionPayrollRun(status);
+      expect(response.statusCode).toBe(409);
+      expect(response.json().message).toContain(`PAGADA a ${status}`);
+    }
+
+    const calculated = await transitionPayrollRun('CALCULADA');
+    expect(calculated.statusCode).toBe(400);
+    await expectSelectedRunStatus('PAGADA');
+  });
+
+  it('blocks reserved payroll targets from the finance status route', async () => {
+    for (const status of ['BORRADOR', 'CERRADA']) {
+      const response = await transitionPayrollRun(status);
+      expect(response.statusCode).toBe(400);
+    }
+    await expectSelectedRunStatus('CALCULADA');
+  });
+
+  it('allows cancellation before payment from EN_REVISION', async () => {
+    expect((await transitionPayrollRun('EN_REVISION')).statusCode).toBe(200);
+    expect((await transitionPayrollRun('CANCELADA')).statusCode).toBe(200);
+  });
+
+  it('allows cancellation before payment from APROBADA', async () => {
+    expect((await transitionPayrollRun('EN_REVISION')).statusCode).toBe(200);
+    expect((await transitionPayrollRun('APROBADA')).statusCode).toBe(200);
+    expect((await transitionPayrollRun('CANCELADA')).statusCode).toBe(200);
   });
 
   it('keeps payroll.finalize separate from payroll.preview and finance workflow', async () => {

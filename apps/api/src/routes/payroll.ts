@@ -54,7 +54,7 @@ interface PayrollRunRow {
   cycleId: string;
   cycleLabel: string;
   periodLabel: string;
-  status: 'BORRADOR' | 'CALCULADA' | 'APROBADA' | 'CERRADA' | 'CANCELADA';
+  status: 'BORRADOR' | 'CALCULADA' | 'EN_REVISION' | 'APROBADA' | 'PAGADA' | 'CERRADA' | 'CANCELADA';
   weights: Record<string, unknown>;
   summary: PayrollSummary;
   calculatedAt: string | null;
