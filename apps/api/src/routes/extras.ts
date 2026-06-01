@@ -326,7 +326,7 @@ function applyExtraEditability(
     tabulatorAmount: moneyToApi(row.tabulatorAmount),
     totalAmount: moneyToApi(row.totalAmount),
     canEdit:
-      row.cycleStatus !== 'CERRADO' &&
+      row.cycleStatus === 'ACTIVO' &&
       !row.payrollLocked &&
       row.accessOpen &&
       (isSystemAdmin(actor) ||
@@ -661,7 +661,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
     const actor = request.user!;
     const extra = await withTransaction(async (client) => {
       const cycle = await ensureWritableCycle(client, actor, parsed.data.cycleId);
-      if (cycle.status !== 'ACTIVO') throw new Error('Solo se pueden capturar extras en un ciclo activo.');
+      if (cycle.status !== 'ACTIVO') throw new Error('Los extras solo pueden capturarse cuando el ciclo esta activo.');
       const teacher = await loadTeacherForExtra(client, parsed.data.teacherId);
       if (!teacher) throw new Error('El docente seleccionado no existe.');
       if (teacher.status !== 'ACTIVO') throw new Error('Solo se pueden capturar extras para docentes ACTIVO.');
@@ -731,7 +731,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
       if (!before.canEdit) throw new Error('Solo la coordinación que capturó este extra puede editarlo.');
 
       const cycle = await ensureWritableCycle(client, actor, parsed.data.cycleId || before.cycleId);
-      if (cycle.status !== 'ACTIVO') throw new Error('Solo se pueden modificar extras en un ciclo activo.');
+      if (cycle.status !== 'ACTIVO') throw new Error('Los extras solo pueden modificarse cuando el ciclo esta activo.');
       const teacher = await loadTeacherForExtra(client, parsed.data.teacherId);
       if (!teacher) throw new Error('El docente seleccionado no existe.');
       if (teacher.status !== 'ACTIVO') throw new Error('Solo se pueden capturar extras para docentes ACTIVO.');
@@ -796,6 +796,7 @@ export async function registerExtraRoutes(app: FastifyInstance): Promise<void> {
       const before = await loadExtraById(client, params.data.id, actor, scope);
       if (!before) throw new Error('No se encontró el registro de extra.');
       if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden eliminar extras de un ciclo cerrado.');
+      if (before.cycleStatus !== 'ACTIVO') throw new Error('Los extras solo pueden eliminarse cuando el ciclo esta activo.');
       if (!before.canEdit) throw new Error('Solo la coordinación que capturó este extra puede eliminarlo.');
 
       await assertExtraPeriodOpen(client, before.cycleId, dateOnly(before.activityDate) || dateOnly(before.capturedAt));

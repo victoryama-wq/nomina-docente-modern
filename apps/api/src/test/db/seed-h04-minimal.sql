@@ -230,6 +230,46 @@ SET module1_start = EXCLUDED.module1_start,
     module2_end = EXCLUDED.module2_end,
     status = EXCLUDED.status;
 
+INSERT INTO academic_cycles (
+  id,
+  period_label,
+  quarter_code,
+  module1_start,
+  module1_end,
+  module2_start,
+  module2_end,
+  status,
+  created_by
+) VALUES
+  (
+    '30000000-0000-4000-8000-000000000013',
+    'H09 QA Planeacion 2026',
+    'H09PLAN',
+    '2026-09-01',
+    '2026-10-31',
+    '2026-11-01',
+    '2026-12-31',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '30000000-0000-4000-8000-000000000015',
+    'H09 QA Cerrado 2026',
+    'H09CLOSED',
+    '2026-01-01',
+    '2026-02-28',
+    '2026-03-01',
+    '2026-04-30',
+    'CERRADO',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  )
+ON CONFLICT (period_label, quarter_code) DO UPDATE
+SET module1_start = EXCLUDED.module1_start,
+    module1_end = EXCLUDED.module1_end,
+    module2_start = EXCLUDED.module2_start,
+    module2_end = EXCLUDED.module2_end,
+    status = EXCLUDED.status;
+
 INSERT INTO payroll_calendar_config (
   id,
   cycle_id,
@@ -262,6 +302,52 @@ SELECT
 FROM academic_cycles ac
 WHERE ac.period_label = 'H04 QA Local 2026'
   AND ac.quarter_code = 'H04TEST'
+ON CONFLICT (id) DO UPDATE
+SET payroll_start = EXCLUDED.payroll_start,
+    payroll_end = EXCLUDED.payroll_end,
+    period_label = EXCLUDED.period_label,
+    module1_start = EXCLUDED.module1_start,
+    module1_end = EXCLUDED.module1_end,
+    module2_start = EXCLUDED.module2_start,
+    module2_end = EXCLUDED.module2_end,
+    incidences_access_start_at = EXCLUDED.incidences_access_start_at,
+    incidences_access_days = EXCLUDED.incidences_access_days,
+    extras_access_start_at = EXCLUDED.extras_access_start_at,
+    extras_access_days = EXCLUDED.extras_access_days,
+    updated_at = now();
+
+INSERT INTO payroll_calendar_config (
+  id,
+  cycle_id,
+  period_label,
+  payroll_start,
+  payroll_end,
+  module1_start,
+  module1_end,
+  module2_start,
+  module2_end,
+  incidences_access_start_at,
+  incidences_access_days,
+  extras_access_start_at,
+  extras_access_days
+)
+SELECT
+  '30000000-0000-4000-8000-000000000014',
+  ac.id,
+  'H09 QA Planeacion Sep 1-15 2026',
+  '2026-09-01',
+  '2026-09-15',
+  ac.module1_start,
+  ac.module1_end,
+  ac.module2_start,
+  ac.module2_end,
+  now() - interval '1 day',
+  15,
+  now() - interval '1 day',
+  15
+FROM academic_cycles ac
+WHERE ac.period_label = 'H09 QA Planeacion 2026'
+  AND ac.quarter_code = 'H09PLAN'
 ON CONFLICT (id) DO UPDATE
 SET payroll_start = EXCLUDED.payroll_start,
     payroll_end = EXCLUDED.payroll_end,
@@ -391,6 +477,77 @@ SET coordination_id = EXCLUDED.coordination_id,
     hours_x = EXCLUDED.hours_x,
     hours_j = EXCLUDED.hours_j,
     hours_v = EXCLUDED.hours_v,
+    updated_at = now(),
+    updated_by = EXCLUDED.updated_by;
+
+INSERT INTO schedules (
+  id,
+  cycle_id,
+  coordination_id,
+  teacher_id,
+  subject_id,
+  subject_name,
+  group_code,
+  tabulator_id,
+  tabulator_name,
+  tabulator_amount,
+  hours_l,
+  hours_m,
+  hours_x,
+  hours_j,
+  hours_v,
+  hours_s1,
+  hours_s2,
+  created_by,
+  updated_by
+) VALUES
+  (
+    '50000000-0000-4000-8000-000000000013',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H09 QA Planeacion 2026' AND quarter_code = 'H09PLAN'),
+    (SELECT id FROM coordinations WHERE name = 'Idiomas'),
+    (SELECT id FROM teachers WHERE normalized_name = 'docente qa idiomas uno'),
+    (SELECT id FROM subjects WHERE name = 'H04 QA Materia Base'),
+    'H04 QA Materia Base',
+    'QA-PLAN-ID-01',
+    (SELECT id FROM tabulators WHERE name = 'H04 QA Tabulador 100'),
+    'H04 QA Tabulador 100',
+    100.00,
+    1, 1, 1, 1, 0, 0, 0,
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx'),
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
+  ),
+  (
+    '50000000-0000-4000-8000-000000000015',
+    (SELECT id FROM academic_cycles WHERE period_label = 'H09 QA Cerrado 2026' AND quarter_code = 'H09CLOSED'),
+    (SELECT id FROM coordinations WHERE name = 'Idiomas'),
+    (SELECT id FROM teachers WHERE normalized_name = 'docente qa idiomas uno'),
+    (SELECT id FROM subjects WHERE name = 'H04 QA Materia Base'),
+    'H04 QA Materia Base',
+    'QA-CLOSED-ID-01',
+    (SELECT id FROM tabulators WHERE name = 'H04 QA Tabulador 100'),
+    'H04 QA Tabulador 100',
+    100.00,
+    1, 1, 0, 0, 0, 0, 0,
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx'),
+    (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
+  )
+ON CONFLICT (id) DO UPDATE
+SET cycle_id = EXCLUDED.cycle_id,
+    coordination_id = EXCLUDED.coordination_id,
+    teacher_id = EXCLUDED.teacher_id,
+    subject_id = EXCLUDED.subject_id,
+    subject_name = EXCLUDED.subject_name,
+    group_code = EXCLUDED.group_code,
+    tabulator_id = EXCLUDED.tabulator_id,
+    tabulator_name = EXCLUDED.tabulator_name,
+    tabulator_amount = EXCLUDED.tabulator_amount,
+    hours_l = EXCLUDED.hours_l,
+    hours_m = EXCLUDED.hours_m,
+    hours_x = EXCLUDED.hours_x,
+    hours_j = EXCLUDED.hours_j,
+    hours_v = EXCLUDED.hours_v,
+    hours_s1 = EXCLUDED.hours_s1,
+    hours_s2 = EXCLUDED.hours_s2,
     updated_at = now(),
     updated_by = EXCLUDED.updated_by;
 

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { injectAs } from './auth-test-utils.js';
 import {
+  TEST_IDS,
   cleanupTestApp,
   describeIntegration,
   expectDecimalString,
@@ -99,6 +100,36 @@ describeIfDb('H01 payroll business integration coverage', () => {
       payload: payrollInput()
     });
     expect(finalize.statusCode).toBe(403);
+  });
+
+  it('blocks payroll preview and finalize while a cycle is in planning', async () => {
+    const planningInput = payrollInput({
+      calendarConfigId: TEST_IDS.planningCalendarConfig,
+      cycleId: TEST_IDS.planningCycle,
+      periodLabel: 'H09 QA Planeacion Sep 1-15 2026',
+      payrollStart: '2026-09-01',
+      payrollEnd: '2026-09-15',
+      module1Start: '2026-09-01',
+      module1End: '2026-10-31',
+      module2Start: '2026-11-01',
+      module2End: '2026-12-31'
+    });
+
+    const preview = await injectAs(app!, coordinatorActor(), {
+      method: 'POST',
+      url: '/api/payroll/preview',
+      payload: planningInput
+    });
+    expect(preview.statusCode).toBe(400);
+    expect(preview.json().message).toContain('nomina solo puede calcularse');
+
+    const finalize = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/payroll/runs',
+      payload: planningInput
+    });
+    expect(finalize.statusCode).toBe(400);
+    expect(finalize.json().message).toContain('nomina solo puede calcularse');
   });
 
   it('allows admin to finalize payroll without changing the preview calculation', async () => {

@@ -70,6 +70,105 @@ describeIfDb('H02 operational scope business integration coverage', () => {
     expect(coordinatorCreate.json().schedule.coordinationId).toBe(TEST_COORDINATIONS.idiomas.id);
   });
 
+  it('allows schedule capture in planning cycles and blocks closed cycles', async () => {
+    const adminPlanning = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/schedules',
+      payload: scheduleBody({
+        cycleId: TEST_IDS.planningCycle,
+        teacherId: TEST_IDS.teacherMulti,
+        coordinationId: TEST_COORDINATIONS.arq.id,
+        groupCode: 'QA-PLAN-ADMIN',
+        hoursL: '1',
+        hoursM: '0',
+        hoursX: '0',
+        hoursJ: '0',
+        hoursV: '0'
+      })
+    });
+    expect(adminPlanning.statusCode).toBe(201);
+    expect(adminPlanning.json().schedule.cycleId).toBe(TEST_IDS.planningCycle);
+    expect(adminPlanning.json().schedule.coordinationId).toBe(TEST_COORDINATIONS.arq.id);
+
+    const coordinatorPlanning = await injectAs(app!, coordinatorActor(), {
+      method: 'POST',
+      url: '/api/schedules',
+      payload: scheduleBody({
+        cycleId: TEST_IDS.planningCycle,
+        teacherId: TEST_IDS.teacherMulti,
+        coordinationId: TEST_COORDINATIONS.adetur.id,
+        groupCode: 'QA-PLAN-COORD',
+        hoursL: '1',
+        hoursM: '0',
+        hoursX: '0',
+        hoursJ: '0',
+        hoursV: '0'
+      })
+    });
+    expect(coordinatorPlanning.statusCode).toBe(201);
+    expect(coordinatorPlanning.json().schedule.cycleId).toBe(TEST_IDS.planningCycle);
+    expect(coordinatorPlanning.json().schedule.coordinationId).toBe(TEST_COORDINATIONS.idiomas.id);
+
+    const editPlanning = await injectAs(app!, coordinatorActor(), {
+      method: 'PATCH',
+      url: `/api/schedules/${TEST_IDS.planningScheduleIdiomas}`,
+      payload: scheduleBody({
+        cycleId: TEST_IDS.planningCycle,
+        teacherId: TEST_IDS.teacherIdiomas,
+        coordinationId: TEST_COORDINATIONS.idiomas.id,
+        groupCode: 'QA-PLAN-ID-EDIT',
+        hoursL: '1',
+        hoursM: '1',
+        hoursX: '0',
+        hoursJ: '0',
+        hoursV: '0'
+      })
+    });
+    expect(editPlanning.statusCode).toBe(200);
+    expect(editPlanning.json().schedule.cycleId).toBe(TEST_IDS.planningCycle);
+
+    const closedCreate = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/schedules',
+      payload: scheduleBody({
+        cycleId: TEST_IDS.closedCycle,
+        groupCode: 'QA-CLOSED-CREATE',
+        hoursL: '1',
+        hoursM: '0',
+        hoursX: '0',
+        hoursJ: '0',
+        hoursV: '0'
+      })
+    });
+    expect(closedCreate.statusCode).toBe(400);
+    expect(closedCreate.json().message).toContain('ciclo cerrado');
+
+    const closedEdit = await injectAs(app!, adminActor(), {
+      method: 'PATCH',
+      url: `/api/schedules/${TEST_IDS.closedScheduleIdiomas}`,
+      payload: scheduleBody({
+        cycleId: TEST_IDS.closedCycle,
+        teacherId: TEST_IDS.teacherIdiomas,
+        coordinationId: TEST_COORDINATIONS.idiomas.id,
+        groupCode: 'QA-CLOSED-EDIT',
+        hoursL: '1',
+        hoursM: '0',
+        hoursX: '0',
+        hoursJ: '0',
+        hoursV: '0'
+      })
+    });
+    expect(closedEdit.statusCode).toBe(400);
+    expect(closedEdit.json().message).toContain('ciclo cerrado');
+
+    const closedDelete = await injectAs(app!, adminActor(), {
+      method: 'DELETE',
+      url: `/api/schedules/${TEST_IDS.closedScheduleIdiomas}`
+    });
+    expect(closedDelete.statusCode).toBe(400);
+    expect(closedDelete.json().message).toContain('ciclo cerrado');
+  });
+
   it('allows multi-coordinator own schedule edits and blocks foreign schedule edits', async () => {
     const allowed = await injectAs(app!, multiCoordinatorActor(), {
       method: 'PATCH',
@@ -143,6 +242,89 @@ describeIfDb('H02 operational scope business integration coverage', () => {
     });
     expect(blocked.statusCode).not.toBe(200);
     expect(blocked.json().message).toContain('capturo este horario');
+  });
+
+  it('blocks incidences and extras while a planning cycle is not active', async () => {
+    const incidence = await injectAs(app!, coordinatorActor(), {
+      method: 'PATCH',
+      url: `/api/incidences/${TEST_IDS.planningScheduleIdiomas}`,
+      payload: incidenceBody({
+        calendarConfigId: TEST_IDS.planningCalendarConfig,
+        absences: '1',
+        delays: '0',
+        extraHoursInSchedule: '0'
+      })
+    });
+    expect(incidence.statusCode).toBe(400);
+    expect(incidence.json().message).toContain('incidencias solo pueden capturarse');
+
+    const createExtra = await injectAs(app!, coordinatorActor(), {
+      method: 'POST',
+      url: '/api/extras',
+      payload: extraBody({
+        cycleId: TEST_IDS.planningCycle,
+        teacherId: TEST_IDS.teacherIdiomas,
+        activityDate: '2026-09-03'
+      })
+    });
+    expect(createExtra.statusCode).toBe(400);
+    expect(createExtra.json().message).toContain('extras solo pueden capturarse');
+
+    const editExtraToPlanning = await injectAs(app!, coordinatorActor(), {
+      method: 'PATCH',
+      url: `/api/extras/${TEST_IDS.extraOwn}`,
+      payload: extraBody({
+        cycleId: TEST_IDS.planningCycle,
+        teacherId: TEST_IDS.teacherIdiomas,
+        activityDate: '2026-09-04'
+      })
+    });
+    expect(editExtraToPlanning.statusCode).toBe(400);
+    expect(editExtraToPlanning.json().message).toContain('extras solo pueden modificarse');
+
+    const client = await connectTestDb();
+    try {
+      await client.query(
+        `
+          INSERT INTO extra_hours (
+            id,
+            cycle_id,
+            coordination_id,
+            teacher_id,
+            hours,
+            tabulator_amount,
+            reason,
+            activity_date,
+            reference,
+            observations,
+            captured_by,
+            updated_by
+          )
+          VALUES ($1, $2, $3, $4, 1, 100.00, 'Extra planeacion QA', '2026-09-05', 'H09-PLAN-EXTRA', 'Dato sintetico H09', $5, $5)
+          ON CONFLICT (id) DO UPDATE
+          SET cycle_id = EXCLUDED.cycle_id,
+              activity_date = EXCLUDED.activity_date,
+              captured_by = EXCLUDED.captured_by,
+              updated_by = EXCLUDED.updated_by
+        `,
+        [
+          TEST_IDS.planningExtra,
+          TEST_IDS.planningCycle,
+          TEST_COORDINATIONS.idiomas.id,
+          TEST_IDS.teacherIdiomas,
+          TEST_USER_IDS.coordinator
+        ]
+      );
+    } finally {
+      await client.end();
+    }
+
+    const deleteExtra = await injectAs(app!, coordinatorActor(), {
+      method: 'DELETE',
+      url: `/api/extras/${TEST_IDS.planningExtra}`
+    });
+    expect(deleteExtra.statusCode).toBe(400);
+    expect(deleteExtra.json().message).toContain('extras solo pueden eliminarse');
   });
 
   it('keeps extras editable only by the capturing actor while allowing shared teachers', async () => {

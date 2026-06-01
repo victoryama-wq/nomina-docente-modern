@@ -574,10 +574,11 @@ function applyScheduleEditability(
   return rows.map((row) => ({
     ...normalizeScheduleRow(row),
     canEdit:
-      isSystemAdmin(actor) ||
-      (actor.role === 'direccion'
-        ? isOwnRecord(scope, row.createdById)
-        : isOwnRecord(scope, row.createdById))
+      row.cycleStatus !== 'CERRADO' &&
+      (isSystemAdmin(actor) ||
+        (actor.role === 'direccion'
+          ? isOwnRecord(scope, row.createdById)
+          : isOwnRecord(scope, row.createdById)))
   }));
 }
 
