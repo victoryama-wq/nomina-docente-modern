@@ -14,6 +14,7 @@ import {
   type ScheduleTeacher,
   type CycleOption,
   type CoordinationOption,
+  type ScheduleResponsibleOption,
   type SubjectOption,
   type TabulatorOption,
   type ScheduleSummary,
@@ -32,6 +33,7 @@ const scheduleCycles = ref<CycleOption[]>([]);
 const activeScheduleCycle = ref<CycleOption | null>(null);
 const selectedScheduleCycleId = ref('');
 const scheduleCoordinations = ref<CoordinationOption[]>([]);
+const scheduleResponsibles = ref<ScheduleResponsibleOption[]>([]);
 const actorScheduleCoordination = ref<CoordinationOption | null>(null);
 const scheduleSubjects = ref<SubjectOption[]>([]);
 const scheduleTabulators = ref<TabulatorOption[]>([]);
@@ -59,6 +61,7 @@ const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 
 const blankSchedule = (): SchedulePayload => ({
   teacherId: '',
+  responsibleUserId: null,
   coordinationId: null,
   coordinationName: '',
   subjectName: '',
@@ -343,6 +346,7 @@ async function loadSchedules(cycleId = selectedScheduleCycleId.value || undefine
     schedules.value = data.schedules;
     scheduleTeachers.value = data.teachers;
     scheduleCoordinations.value = data.coordinations;
+    scheduleResponsibles.value = data.responsibles || [];
     actorScheduleCoordination.value = data.actorCoordination;
     scheduleSubjects.value = data.subjects;
     scheduleTabulators.value = data.tabulators;
@@ -362,6 +366,7 @@ function newSchedule() {
   scheduleForm.value = {
     ...blankSchedule(),
     cycleId: selectedScheduleCycleId.value || activeScheduleCycle.value?.id,
+    responsibleUserId: null,
     coordinationId: currentUserCoordination.value?.id || null,
     coordinationName: currentUserCoordination.value?.name || ''
   };
@@ -430,6 +435,7 @@ function editSchedule(schedule: Schedule) {
   scheduleForm.value = {
     cycleId: schedule.cycleId,
     teacherId: schedule.teacherId,
+    responsibleUserId: canChooseScheduleCoordination.value ? schedule.createdById || null : null,
     coordinationId: canChooseScheduleCoordination.value ? schedule.coordinationId : currentUserCoordination.value?.id || null,
     coordinationName: canChooseScheduleCoordination.value ? schedule.coordinationName : currentCoordinatorName.value,
     subjectName: schedule.subjectName,
@@ -467,15 +473,15 @@ async function saveSchedule() {
     scheduleFormError.value = 'Selecciona un tabulador del catálogo.';
     return;
   }
-  if (canChooseScheduleCoordination.value && !scheduleForm.value.coordinationId) {
-    scheduleFormError.value = 'Selecciona el coordinador responsable del horario.';
+  if (canChooseScheduleCoordination.value && !scheduleForm.value.responsibleUserId) {
+    scheduleFormError.value = 'Selecciona el responsable operativo del horario.';
     return;
   }
   if (
     canChooseScheduleCoordination.value &&
-    !scheduleCoordinations.value.some((coordination) => coordination.id === scheduleForm.value.coordinationId)
+    !scheduleResponsibles.value.some((responsible) => responsible.responsibleUserId === scheduleForm.value.responsibleUserId)
   ) {
-    scheduleFormError.value = 'Selecciona un coordinador con acceso activo al sistema.';
+    scheduleFormError.value = 'Selecciona un responsable operativo activo.';
     return;
   }
   if (scheduleFormProjection.value.exceeds) {
@@ -485,11 +491,21 @@ async function saveSchedule() {
   scheduleSaving.value = true;
   clearNotice();
   try {
+    const selectedResponsible = canChooseScheduleCoordination.value
+      ? scheduleResponsibles.value.find(
+          (responsible) => responsible.responsibleUserId === scheduleForm.value.responsibleUserId
+        )
+      : null;
     const payload = {
       ...scheduleForm.value,
       cycleId: scheduleForm.value.cycleId || selectedScheduleCycleId.value || activeScheduleCycle.value?.id,
-      coordinationId: canChooseScheduleCoordination.value ? scheduleForm.value.coordinationId : currentUserCoordination.value?.id || null,
-      coordinationName: canChooseScheduleCoordination.value ? scheduleForm.value.coordinationName : currentCoordinatorName.value
+      responsibleUserId: canChooseScheduleCoordination.value ? selectedResponsible?.responsibleUserId || null : null,
+      coordinationId: canChooseScheduleCoordination.value
+        ? selectedResponsible?.primaryCoordinationId || null
+        : currentUserCoordination.value?.id || null,
+      coordinationName: canChooseScheduleCoordination.value
+        ? selectedResponsible?.primaryCoordinationName || ''
+        : currentCoordinatorName.value
     };
     const response = editingScheduleId.value
       ? await updateSchedule(editingScheduleId.value, payload)
@@ -718,7 +734,7 @@ onMounted(() => {
       v-model:teacher-search-text="scheduleTeacherSearch"
       :teacher-picker-open="scheduleTeacherPickerOpen"
       :filtered-teacher-options="filteredScheduleTeacherOptions"
-      :coordinations="scheduleCoordinations"
+      :responsibles="scheduleResponsibles"
       :current-coordinator-name="currentCoordinatorName"
       :cycles="scheduleCycles"
       :active-cycle="activeScheduleCycle"

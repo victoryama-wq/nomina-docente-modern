@@ -4,7 +4,7 @@ import type {
   SchedulePayload,
   ScheduleTeacher,
   CycleOption,
-  CoordinationOption,
+  ScheduleResponsibleOption,
   SubjectOption,
   TabulatorOption
 } from '../../api';
@@ -19,7 +19,7 @@ defineProps<{
   teacherSearchText: string;
   teacherPickerOpen: boolean;
   filteredTeacherOptions: ScheduleTeacher[];
-  coordinations: CoordinationOption[];
+  responsibles: ScheduleResponsibleOption[];
   currentCoordinatorName: string;
   cycles: CycleOption[];
   activeCycle: CycleOption | null;
@@ -112,10 +112,10 @@ function remainingHoursLabel(value: number, maxHours: number) {
         </label>
         <label>
           <span>Responsable operativo</span>
-          <select v-if="isAdmin" v-model="form.coordinationId" required>
+          <select v-if="isAdmin" v-model="form.responsibleUserId" required>
             <option :value="null" disabled>Selecciona responsable operativo</option>
-            <option v-for="coordination in coordinations" :key="coordination.id" :value="coordination.id">
-              {{ coordination.name }}
+            <option v-for="responsible in responsibles" :key="responsible.responsibleUserId" :value="responsible.responsibleUserId">
+              {{ responsible.name }}
             </option>
           </select>
           <input v-else :value="currentCoordinatorName" disabled />

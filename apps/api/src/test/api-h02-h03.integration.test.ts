@@ -125,9 +125,11 @@ describeIntegration('H04 API integration with PostgreSQL test database', () => {
     const context = await injectAs(app, adminActor(), { method: 'GET', url: '/api/schedules/context' });
     expect(context.statusCode).toBe(200);
 
-    const names = context.json().coordinations.map((coordination: { name: string }) => coordination.name);
+    const names = context.json().responsibles.map((responsible: { name: string }) => responsible.name);
     expect(names).toContain('QA Coordinador Idiomas');
     expect(names).toContain('QA Coordinador Multi');
+    expect(names).toContain('QA Coordinador Sin Coordinacion');
+    expect(names).toContain('QA Direccion');
     expect(names).not.toContain('ADETUR');
     expect(names).not.toContain('ARQ');
   });

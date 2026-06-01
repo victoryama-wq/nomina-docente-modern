@@ -31,6 +31,22 @@ interface CoordinationRow {
   name: string;
 }
 
+interface ScheduleResponsibleRow {
+  id: string;
+  name: string;
+  email: string;
+  responsibleUserId: string;
+  primaryCoordinationId: string | null;
+  primaryCoordinationName: string;
+  hasTechnicalScope: boolean;
+}
+
+interface ScheduleResponsible {
+  userId: string;
+  primaryCoordinationId: string | null;
+  primaryCoordinationName: string;
+}
+
 interface OptionRow {
   id: string;
   name: string;
@@ -110,6 +126,7 @@ const contextQuerySchema = z.object({
 const scheduleBodySchema = z.object({
   cycleId: z.string().uuid().optional(),
   teacherId: z.string().uuid(),
+  responsibleUserId: z.string().uuid().optional().nullable(),
   coordinationId: z.string().uuid().optional().nullable(),
   coordinationName: z.string().trim().max(120).optional().default(''),
   subjectName: z.string().trim().min(1).max(160),
@@ -412,24 +429,87 @@ async function loadActiveCoordinationByName(client: PoolClient, name: string): P
   return result.rows[0] || null;
 }
 
-async function resolveScheduleCoordination(
+async function loadScheduleResponsible(
   client: PoolClient,
   actor: SessionUser,
-  teacher: TeacherScheduleRow,
   body: ScheduleBody
-): Promise<string> {
+): Promise<ScheduleResponsible> {
   const scope = await loadActorScope(client, actor, { module: 'schedules.resolveScheduleCoordination' });
 
   if (!isSystemAdmin(actor) && actor.role !== 'direccion') {
     const actorCoordination = selectCompatibleActorCoordination(scope);
-    if (actorCoordination) return actorCoordination.id;
-    throw new Error('Tu usuario no tiene un ambito operativo tecnico para capturar horarios. Actualiza el usuario desde Control de Accesos.');
+    return {
+      userId: actor.id,
+      primaryCoordinationId: actorCoordination?.id || null,
+      primaryCoordinationName: actorCoordination?.name || ''
+    };
+  }
+
+  if (!body.responsibleUserId) {
+    return {
+      userId: actor.id,
+      primaryCoordinationId: null,
+      primaryCoordinationName: ''
+    };
+  }
+
+  const responsible = await client.query<ScheduleResponsible>(
+    `
+      SELECT
+        u.id AS "userId",
+        primary_scope.id AS "primaryCoordinationId",
+        COALESCE(primary_scope.name, '') AS "primaryCoordinationName"
+      FROM app_users u
+      JOIN roles r ON r.id = u.role_id
+      LEFT JOIN LATERAL (
+        SELECT c.id, c.name
+        FROM user_coordinations uc
+        JOIN coordinations c ON c.id = uc.coordination_id
+        WHERE uc.user_id = u.id
+          AND c.status = 'ACTIVO'
+        ORDER BY uc.is_primary DESC, c.name ASC
+        LIMIT 1
+      ) primary_scope ON true
+      WHERE u.id = $1
+        AND u.status = 'ACTIVO'
+        AND r.code IN ('coordinador', 'direccion')
+      LIMIT 1
+    `,
+    [body.responsibleUserId]
+  );
+
+  if (!responsible.rows[0]) {
+    throw new Error('Selecciona un responsable operativo activo.');
+  }
+
+  return responsible.rows[0];
+}
+
+async function resolveScheduleCoordination(
+  client: PoolClient,
+  actor: SessionUser,
+  teacher: TeacherScheduleRow,
+  body: ScheduleBody,
+  responsible: ScheduleResponsible
+): Promise<string> {
+  const canChooseResponsible = isSystemAdmin(actor) || actor.role === 'direccion';
+
+  if (!canChooseResponsible) {
+    if (!responsible.primaryCoordinationId) {
+      throw new Error('Tu usuario no tiene un ambito operativo tecnico para capturar horarios. Actualiza el usuario desde Control de Accesos.');
+    }
+
+    return responsible.primaryCoordinationId;
   }
 
   if (body.coordinationId) {
     const coordination = await loadActiveCoordinationById(client, body.coordinationId);
     if (!coordination) throw new Error('La coordinacion seleccionada no existe o no esta activa.');
     return coordination.id;
+  }
+
+  if (responsible.primaryCoordinationId) {
+    return responsible.primaryCoordinationId;
   }
 
   if (teacher.coordinationId) {
@@ -670,34 +750,38 @@ async function listScheduleTeachers(cycleId: string): Promise<TeacherScheduleRow
   );
 }
 
-async function listScheduleCoordinatorOptions(client: PoolClient): Promise<CoordinationRow[]> {
-  const assigned = await client.query<CoordinationRow>(
+async function listScheduleResponsibleOptions(client: PoolClient): Promise<ScheduleResponsibleRow[]> {
+  const responsibles = await client.query<ScheduleResponsibleRow>(
     `
-      WITH ranked_responsibles AS (
-        SELECT
-          c.id,
-          COALESCE(NULLIF(u.display_name, ''), u.email) AS name,
-          row_number() OVER (
-            PARTITION BY u.id
-            ORDER BY uc.is_primary DESC, c.name ASC
-          ) AS row_number
+      SELECT
+        u.id,
+        COALESCE(NULLIF(u.display_name, ''), u.email) AS name,
+        u.email,
+        u.id AS "responsibleUserId",
+        primary_scope.id AS "primaryCoordinationId",
+        COALESCE(primary_scope.name, '') AS "primaryCoordinationName",
+        (primary_scope.id IS NOT NULL) AS "hasTechnicalScope"
+      FROM app_users u
+      JOIN roles r ON r.id = u.role_id
+      LEFT JOIN LATERAL (
+        SELECT c.id, c.name
         FROM user_coordinations uc
-        JOIN app_users u ON u.id = uc.user_id
-        JOIN roles r ON r.id = u.role_id
         JOIN coordinations c ON c.id = uc.coordination_id
-        WHERE u.status = 'ACTIVO'
+        WHERE uc.user_id = u.id
           AND c.status = 'ACTIVO'
-          AND r.code IN ('coordinador', 'direccion')
-      )
-      SELECT id, name
-      FROM ranked_responsibles
-      WHERE row_number = 1
+        ORDER BY uc.is_primary DESC, c.name ASC
+        LIMIT 1
+      ) primary_scope ON true
+      WHERE u.status = 'ACTIVO'
+        AND r.code IN ('coordinador', 'direccion')
       ORDER BY name ASC
     `
   );
 
-  if (assigned.rows.length > 0) return assigned.rows;
+  return responsibles.rows;
+}
 
+async function listScheduleTechnicalCoordinations(client: PoolClient): Promise<CoordinationRow[]> {
   return client
     .query<CoordinationRow>("SELECT id, name FROM coordinations WHERE status = 'ACTIVO' ORDER BY name ASC")
     .then((result) => result.rows);
@@ -737,7 +821,10 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
       cycle: await ensureWorkingCycle(client, actor, preferredCycleId),
       scope,
       actorCoordination: selectCompatibleActorCoordination(scope),
-      coordinatorOptions: isSystemAdmin(actor) || actor.role === 'direccion' ? await listScheduleCoordinatorOptions(client) : []
+      responsibleOptions:
+        isSystemAdmin(actor) || actor.role === 'direccion' ? await listScheduleResponsibleOptions(client) : [],
+      technicalCoordinations:
+        isSystemAdmin(actor) || actor.role === 'direccion' ? await listScheduleTechnicalCoordinations(client) : []
     };
   });
   const [cycles, schedules, teachers, options] = await Promise.all([
@@ -748,9 +835,9 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
   ]);
   const coordinations =
     isSystemAdmin(actor)
-      ? setup.coordinatorOptions
+      ? setup.technicalCoordinations
       : actor.role === 'direccion'
-        ? setup.coordinatorOptions
+        ? setup.technicalCoordinations
       : setup.actorCoordination
         ? [{ id: setup.actorCoordination.id, name: setup.actorCoordination.name }]
         : [];
@@ -761,6 +848,7 @@ async function buildContext(actor: SessionUser, preferredCycleId?: string) {
     schedules,
     teachers,
     coordinations,
+    responsibles: setup.responsibleOptions,
     actorCoordination: setup.actorCoordination,
     subjects: options.subjects,
     tabulators: options.tabulators,
@@ -812,7 +900,8 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
       const existing = await loadExistingTeacherLoad(client, cycle.id, teacher.id, null);
       validateScheduleLoad(teacher, existing, parsed.data);
 
-      const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data);
+      const responsible = await loadScheduleResponsible(client, actor, parsed.data);
+      const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data, responsible);
       const subjectId = await getOrCreateSubject(client, parsed.data.subjectName);
       const tabulator = await resolveTabulator(client, parsed.data);
 
@@ -838,7 +927,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
             created_by,
             updated_by
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
           RETURNING id
         `,
         [
@@ -858,6 +947,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
           hoursToApi(parsed.data.hoursV),
           hoursToApi(parsed.data.hoursS1),
           hoursToApi(parsed.data.hoursS2),
+          responsible.userId,
           actor.id
         ]
       );
@@ -895,7 +985,11 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
       const existing = await loadExistingTeacherLoad(client, cycle.id, teacher.id, before.id);
       validateScheduleLoad(teacher, existing, parsed.data);
 
-      const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data);
+      const responsible = await loadScheduleResponsible(client, actor, {
+        ...parsed.data,
+        responsibleUserId: parsed.data.responsibleUserId || before.createdById
+      });
+      const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data, responsible);
       const subjectId = await getOrCreateSubject(client, parsed.data.subjectName);
       const tabulator = await resolveTabulator(client, parsed.data);
 
@@ -919,9 +1013,10 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
             hours_v = $14,
             hours_s1 = $15,
             hours_s2 = $16,
+            created_by = $17,
             updated_at = now(),
-            updated_by = $17
-          WHERE id = $18
+            updated_by = $18
+          WHERE id = $19
         `,
         [
           cycle.id,
@@ -940,6 +1035,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
           hoursToApi(parsed.data.hoursV),
           hoursToApi(parsed.data.hoursS1),
           hoursToApi(parsed.data.hoursS2),
+          responsible.userId,
           actor.id,
           before.id
         ]

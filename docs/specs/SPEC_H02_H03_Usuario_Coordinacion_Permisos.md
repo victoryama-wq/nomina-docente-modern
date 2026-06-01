@@ -577,6 +577,8 @@ El fallback debe retirarse después de cumplir la condición aprobada:
 - No se crean coordinaciones automáticamente desde el modal o flujo de horarios.
 - El campo visible `Responsable operativo` debe representar al usuario responsable/capturador, no el nombre tecnico de una coordinacion o ambito.
 - Para Admin/Direccion, el selector de `Responsable operativo` debe listar usuarios operativos activos, usando `app_users.display_name` o email como etiqueta visible.
+- Los usuarios inactivos no deben mostrarse en el selector de responsables operativos.
+- El selector visible no debe limitarse a usuarios con `user_coordinations`; `user_coordinations` es alcance tecnico interno, no catalogo visible de responsables.
 - Para Coordinador y usuarios no globales, `Responsable operativo` debe mostrarse en modo solo lectura con el nombre del usuario conectado.
 - `coordinations` y `user_coordinations` pueden seguir usandose internamente como compatibilidad tecnica para nomina, reportes e importaciones, pero no deben exponerse en la UI como si fueran nombres de responsables.
 - No se deben mostrar valores como `ADETUR`, `ARQ`, `SISCOM`, `DIGRAF`, `Idiomas` u otros ambitos tecnicos en un selector etiquetado como `Responsable operativo`.

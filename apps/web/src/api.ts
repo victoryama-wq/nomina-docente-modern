@@ -122,6 +122,16 @@ export interface CoordinationOption {
   isPrimary?: boolean;
 }
 
+export interface ScheduleResponsibleOption {
+  id: string;
+  name: string;
+  email: string;
+  responsibleUserId: string;
+  primaryCoordinationId: string | null;
+  primaryCoordinationName: string;
+  hasTechnicalScope: boolean;
+}
+
 export interface CycleOption {
   id: string;
   periodLabel: string;
@@ -279,6 +289,7 @@ export interface ScheduleSummary {
 export interface SchedulePayload {
   cycleId?: string;
   teacherId: string;
+  responsibleUserId?: string | null;
   coordinationId?: string | null;
   coordinationName: string;
   subjectName: string;
@@ -1105,6 +1116,7 @@ export async function fetchSchedulesContext(cycleId?: string): Promise<{
   schedules: Schedule[];
   teachers: ScheduleTeacher[];
   coordinations: CoordinationOption[];
+  responsibles?: ScheduleResponsibleOption[];
   actorCoordination: CoordinationOption | null;
   actorCoordinations?: CoordinationOption[];
   subjects: SubjectOption[];

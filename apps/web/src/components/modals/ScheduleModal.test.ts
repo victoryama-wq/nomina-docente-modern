@@ -1,9 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import type {
-  CoordinationOption,
   CycleOption,
   SchedulePayload,
+  ScheduleResponsibleOption,
   ScheduleTeacher,
   SubjectOption,
   TabulatorOption
@@ -21,9 +21,25 @@ const activeCycle: CycleOption = {
   status: 'ACTIVO'
 };
 
-const coordinations: CoordinationOption[] = [
-  { id: 'coord-idiomas', name: 'QA Coordinador Idiomas' },
-  { id: 'coord-adetur', name: 'QA Coordinador Multi' }
+const responsibles: ScheduleResponsibleOption[] = [
+  {
+    id: 'user-coord-idiomas',
+    name: 'QA Coordinador Idiomas',
+    email: 'qa.coordinador.idiomas@tecplayacar.edu.mx',
+    responsibleUserId: 'user-coord-idiomas',
+    primaryCoordinationId: 'coord-idiomas',
+    primaryCoordinationName: 'Idiomas',
+    hasTechnicalScope: true
+  },
+  {
+    id: 'user-coord-no-scope',
+    name: 'QA Coordinador Sin Coordinacion',
+    email: 'qa.coordinador.sin.coordinacion@tecplayacar.edu.mx',
+    responsibleUserId: 'user-coord-no-scope',
+    primaryCoordinationId: null,
+    primaryCoordinationName: '',
+    hasTechnicalScope: false
+  }
 ];
 
 const teacher: ScheduleTeacher = {
@@ -48,6 +64,7 @@ function scheduleForm(): SchedulePayload {
   return {
     cycleId: activeCycle.id,
     teacherId: teacher.id,
+    responsibleUserId: 'user-coord-idiomas',
     coordinationId: 'coord-idiomas',
     coordinationName: 'Idiomas',
     subjectName: 'Asignatura QA',
@@ -76,7 +93,7 @@ function mountScheduleModal(isAdmin: boolean) {
       teacherSearchText: 'Docente QA',
       teacherPickerOpen: false,
       filteredTeacherOptions: [teacher],
-      coordinations,
+      responsibles,
       currentCoordinatorName: 'Idiomas',
       cycles: [activeCycle],
       activeCycle,
@@ -96,6 +113,7 @@ describe('ScheduleModal coordination visibility', () => {
     expect(admin.find('select[required]').exists()).toBe(true);
     expect(admin.text()).toContain('Selecciona responsable operativo');
     expect(admin.text()).toContain('QA Coordinador Idiomas');
+    expect(admin.text()).toContain('QA Coordinador Sin Coordinacion');
     expect(admin.text()).not.toContain('ADETUR');
 
     const coordinator = mountScheduleModal(false);

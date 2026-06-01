@@ -209,7 +209,9 @@ Durante la revision local posterior se detecto una regresion visual/contractual 
 
 Correccion aplicada en local:
 
-- `GET /schedules/context` devuelve para Admin/Direccion opciones visibles de responsables operativos basadas en usuarios activos (`app_users.display_name` o email) vinculados a `user_coordinations`.
+- `GET /schedules/context` devuelve para Admin/Direccion opciones visibles de responsables operativos basadas en usuarios operativos activos (`coordinador`/`direccion`) desde Control de Accesos.
+- Los usuarios inactivos no deben mostrarse en el selector.
+- El selector visible no depende de que el usuario tenga `user_coordinations`; esa relacion queda como alcance tecnico interno.
 - El valor tecnico interno puede seguir usando la coordinacion primaria para compatibilidad con el esquema actual.
 - Para Coordinador/no-admin, el modal muestra `Responsable operativo` en solo lectura con el nombre del usuario conectado.
 - Se agrego prueba de integracion para asegurar que el selector Admin muestra responsables operativos y no ambitos tecnicos como `ADETUR` o `ARQ`.

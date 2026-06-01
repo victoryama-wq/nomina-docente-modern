@@ -277,6 +277,8 @@ Confirmado en código:
 - Coordinadores pueden trabajar con docentes compartidos, pero solo editan/eliminan horarios capturados por su usuario.
 - El campo visible `Responsable operativo` representa al usuario responsable/capturador, no el nombre tecnico de la coordinacion.
 - Para Admin/Direccion, el selector de `Responsable operativo` lista usuarios operativos activos usando `app_users.display_name` o email.
+- Los usuarios inactivos no aparecen en el selector de responsables operativos.
+- El selector visible no depende de que el usuario tenga `user_coordinations`; esa relacion se conserva como alcance tecnico interno.
 - Para Coordinador/no-admin, `Responsable operativo` se muestra en modo solo lectura con el nombre del usuario conectado.
 - `coordinations` se conserva como referencia tecnica/legacy para compatibilidad con nomina, reportes e importaciones, pero no debe mostrarse como nombre de responsable operativo.
 - Valores como `ADETUR`, `ARQ`, `SISCOM`, `DIGRAF` o `Idiomas` son ambitos tecnicos/catalogo; no deben aparecer como opciones visibles bajo la etiqueta `Responsable operativo`.
