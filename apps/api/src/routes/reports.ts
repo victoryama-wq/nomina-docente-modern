@@ -15,6 +15,7 @@ import {
   toHoursDecimal,
   toMoneyDecimal
 } from '../lib/decimal.js';
+import { buildCsv as serializeCsv, csvAttachmentHeaders } from '../lib/csv.js';
 import type { SessionUser } from '../types.js';
 import { listCycles, loadActorCoordination, type CoordinationRow, type CycleRow } from './academic-context.js';
 
@@ -305,19 +306,15 @@ function fiscalMissing(row: FinanceLineRow): string[] {
   return missing;
 }
 
-function csvValue(value: unknown): string {
-  const text = value === null || value === undefined ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
 function buildCsv(headers: string[], rows: unknown[][]): string {
-  return [headers, ...rows].map((row) => row.map(csvValue).join(',')).join('\r\n');
+  return serializeCsv(headers, rows, { quoteAll: true });
 }
 
 function sendCsv(reply: FastifyReply, fileName: string, content: string): void {
+  const headers = csvAttachmentHeaders(fileName);
   void reply
-    .header('Content-Type', 'text/csv; charset=utf-8')
-    .header('Content-Disposition', `attachment; filename="${fileName}"`)
+    .header('Content-Type', headers['Content-Type'])
+    .header('Content-Disposition', headers['Content-Disposition'])
     .send(content);
 }
 

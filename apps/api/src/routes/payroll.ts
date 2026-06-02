@@ -15,6 +15,7 @@ import {
   toHoursDecimal,
   toMoneyDecimal
 } from '../lib/decimal.js';
+import { buildCsv as serializeCsv, csvAttachmentHeaders } from '../lib/csv.js';
 import type { ActorScope, SessionUser } from '../types.js';
 import {
   ensureWorkingCycle,
@@ -512,23 +513,15 @@ function publicAlerts(alerts: string[]): string[] {
   return alerts.filter((alert) => !alert.startsWith('extra:'));
 }
 
-function csvValue(value: unknown): string {
-  const text = value === null || value === undefined ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
 function buildCsv(headers: string[], rows: unknown[][]): string {
-  const lines = [headers.map(csvValue).join(',')];
-  for (const row of rows) {
-    lines.push(row.map(csvValue).join(','));
-  }
-  return `\uFEFF${lines.join('\r\n')}\r\n`;
+  return `${serializeCsv(headers, rows, { quoteAll: true })}\r\n`;
 }
 
 function sendCsv(reply: FastifyReply, fileName: string, content: string): void {
+  const headers = csvAttachmentHeaders(fileName);
   void reply
-    .header('Content-Type', 'text/csv; charset=utf-8')
-    .header('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '')}"`)
+    .header('Content-Type', headers['Content-Type'])
+    .header('Content-Disposition', headers['Content-Disposition'])
     .send(content);
 }
 
