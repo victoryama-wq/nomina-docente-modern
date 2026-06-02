@@ -17,7 +17,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - Cierre H05 con baseline productivo 001 a 012.
 - Deploy productivo H09/H10 sin migracion 013.
 - Inventario H11 de CSV, acentos y codificacion.
-- H11-F1/F2/F3A con helper CSV central y exportables backend criticos parcialmente estandarizados.
+- H11-F1/F2/F3A/F3B con helper CSV central y exportables CSV criticos backend/frontend estandarizados.
 
 Arquitectura vigente:
 
@@ -48,7 +48,7 @@ Arquitectura vigente:
 | H08 | Logica concentrada en archivos grandes | Mantenibilidad / Backend / Frontend | Pendiente | Medio: cambios futuros tienen mayor riesgo | P2 Medio | Refactor incremental despues de tener pruebas automatizadas | Servicios/componentes separados sin cambiar contratos ni reglas | No al inicio; si para priorizar modulos |
 | H09 | Estados `BORRADOR` y `CERRADA` no usados claramente | Modelo / Flujo financiero | Cerrado/desplegado | Bajo: riesgo residual por regresion futura o confusion documental | P2 cerrado | Mantener `PAGADA` terminal; `BORRADOR`/`CERRADA` reservados no operativos | Pruebas H09/H10 y smoke post-deploy aprobados | No para reglas cerradas |
 | H10 | Cierre de cuatrimestre moderno pendiente | Ciclos / Historicos / Operacion academica | Cerrado/desplegado | Medio-bajo: cierre real es irreversible y requiere disciplina operativa | P2 monitoreo | Usar cierre controlado con `quarter_closures` + `audit_log`; no cierre real sin aprobacion | Primer cierre real ejecutado con checklist operativo y backup | Si para cada cierre real |
-| H11 | CSV y acentos/codificacion | Reportes / Excel / Importaciones | En curso; helper central, Finanzas/Nomina y backend Directorio/RH/Auditoria estandarizados | Medio-bajo: quedan exportables frontend y validacion manual con hojas de calculo | P2 Medio | Completar exportables restantes, validar UTF-8/BOM en Excel/Sheets/LibreOffice y decidir sanitizacion de formulas por exportable | Exportables criticos abren bien en Excel/Sheets/LibreOffice | Si: Finanzas/RH valida formato |
+| H11 | CSV y acentos/codificacion | Reportes / Excel / Importaciones | En curso; helper central y exportables criticos backend/frontend estandarizados | Bajo-medio: queda validacion manual con hojas de calculo y decision de sanitizacion | P2 Medio | Validar UTF-8/BOM en Excel/Sheets/LibreOffice y decidir sanitizacion de formulas por exportable | Exportables criticos abren bien en Excel/Sheets/LibreOffice | Si: Finanzas/RH valida formato |
 | H12 | Nombres de catalogos/tabuladores historicos | Catalogos / Horarios / Historicos | Pendiente | Medio-bajo: confusion historica si se renombra/borra | P2 Medio | Politica de inactivar en vez de borrar y conservar snapshots | Politica documentada y probada | Si: Operacion/Finanzas |
 | H13 | Variables productivas no versionadas | Infraestructura / DevOps | Mitigado | Bajo: despliegues H02/H03 documentan variables no secretas | P3 Bajo | Consolidar checklist permanente de variables no secretas | README/manual operativo reflejan variables, secretos y healthchecks | No para documentar; si para propietarios de secretos |
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
@@ -137,7 +137,7 @@ Cerrado/desplegado:
 
 Orden recomendado:
 
-1. **H11 - CSV, acentos y codificacion.** Continuar con exportables restantes y validacion manual de apertura.
+1. **H11 - CSV, acentos y codificacion.** Continuar con validacion manual de apertura y decision de sanitizacion.
 2. **H12 - catalogos historicos.** Definir politica de inactivar/no borrar y conservar snapshots.
 3. **H13 - checklist productivo permanente.** Consolidar variables no secretas, secretos, CORS, healthchecks y rollback.
 4. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.

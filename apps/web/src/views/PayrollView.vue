@@ -20,6 +20,7 @@ import {
 } from '../api';
 import ConfirmModal from '../components/modals/ConfirmModal.vue';
 import { moneyLabel } from '../utils/format';
+import { buildPayrollDetailCsvRows, downloadPayrollDetailCsv } from '../utils/payrollDetailCsv';
 
 type AlertFilter = 'TODOS' | 'CON_ALERTAS' | 'SIN_ALERTAS';
 type PayrollViewMode = 'RESUMEN' | 'DETALLE';
@@ -288,24 +289,6 @@ function clearNotice() {
   notice.value = null;
 }
 
-function csvValue(value: unknown) {
-  const text = value === null || value === undefined ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function downloadCsv(fileName: string, headers: string[], rows: unknown[][]) {
-  const content = `\uFEFF${[headers, ...rows].map((row) => row.map(csvValue).join(',')).join('\r\n')}\r\n`;
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
-
 function safeFilePart(value: string) {
   return value
     .toLowerCase()
@@ -542,50 +525,10 @@ async function exportRun(kind: 'summary' | 'schedules' | 'extras') {
   }
 }
 
-function detailExportHeaders() {
-  return [
-    'Nombre del docente',
-    'Coordinación',
-    'Total de horas base con descuento',
-    'Total de horas extra',
-    'Motivo del extra',
-    'Faltas',
-    'Retardos',
-    'Monto base con descuento',
-    'Monto extra',
-    'Total a pagar'
-  ];
-}
-
-function detailExportRows() {
-  const preview = currentPreview.value;
-  if (!preview) return [];
-  const extraReasonsByLine = new Map<string, string[]>();
-  for (const detail of preview.extraDetails) {
-    const reason = detail.reason.trim();
-    if (!reason) continue;
-    const current = extraReasonsByLine.get(detail.lineKey) || [];
-    current.push(`${reason} (${formatHours(detail.hours)} h)`);
-    extraReasonsByLine.set(detail.lineKey, current);
-  }
-
-  return filteredLines.value.map((line) => [
-    line.teacherName,
-    line.coordinationName,
-    numberValue(line.baseHours) - numberValue(line.absences) - numberValue(line.delayDiscountHours),
-    line.totalExtraHours,
-    (extraReasonsByLine.get(line.key) || []).join(' | '),
-    line.absences,
-    line.delays,
-    line.baseNetAmount,
-    line.totalExtraAmount,
-    line.totalAmount
-  ]);
-}
-
 function exportDetailCsv() {
-  if (!currentPreview.value || !canExportPayrollRun.value) return;
-  const rows = detailExportRows();
+  const preview = currentPreview.value;
+  if (!preview || !canExportPayrollRun.value) return;
+  const rows = buildPayrollDetailCsvRows(filteredLines.value, preview.extraDetails);
   if (!rows.length) {
     setNotice('error', 'No hay detalle de nómina para exportar con los filtros actuales.');
     return;
@@ -593,9 +536,9 @@ function exportDetailCsv() {
   exporting.value = 'detail';
   clearNotice();
   try {
-    const period = safeFilePart(currentPreview.value.input.periodLabel || defaultPeriodLabel() || 'nomina');
+    const period = safeFilePart(preview.input.periodLabel || defaultPeriodLabel() || 'nomina');
     const cycle = safeFilePart(activeCycle.value?.quarterCode || 'ciclo');
-    downloadCsv(`nomina-${cycle}-${period}-detalle-docente.csv`, detailExportHeaders(), rows);
+    downloadPayrollDetailCsv(`nomina-${cycle}-${period}-detalle-docente.csv`, rows);
     setNotice('ok', 'Detalle por docente exportado en CSV.');
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible exportar el detalle por docente.');

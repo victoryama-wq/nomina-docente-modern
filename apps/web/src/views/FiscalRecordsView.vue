@@ -26,6 +26,7 @@ import {
   type TeacherSummary
 } from '../api';
 import { useAuthStore } from '../stores/auth';
+import { buildFiscalBirthdaysCsvRows, downloadFiscalBirthdaysCsv } from '../utils/fiscalBirthdaysCsv';
 
 type TeacherStatusFilter = 'TODOS' | 'ACTIVO' | 'INACTIVO';
 type FiscalStatusFilter = 'TODOS' | 'COMPLETO' | 'INCOMPLETO' | 'SIN_CONSTANCIA' | 'SIN_RFC' | 'CUMPLEANOS';
@@ -326,50 +327,11 @@ function documentDate(value: string | null | undefined) {
   });
 }
 
-function csvValue(value: unknown) {
-  const text = value === null || value === undefined ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function downloadCsv(fileName: string, headers: string[], rows: unknown[][]) {
-  const content = `\uFEFF${[headers, ...rows].map((row) => row.map(csvValue).join(',')).join('\r\n')}\r\n`;
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
-
 function exportBirthdays() {
   exportingBirthdays.value = true;
   try {
-    const rows = [...filteredRecords.value]
-      .sort((left, right) => {
-        const leftKey = left.birthDate ? `${String(left.birthDate.getMonth() + 1).padStart(2, '0')}-${String(left.birthDate.getDate()).padStart(2, '0')}` : '99-99';
-        const rightKey = right.birthDate ? `${String(right.birthDate.getMonth() + 1).padStart(2, '0')}-${String(right.birthDate.getDate()).padStart(2, '0')}` : '99-99';
-        return leftKey.localeCompare(rightKey);
-      })
-      .map((record) => [
-        record.teacher.fullName,
-        record.teacher.coordinationName,
-        record.teacher.rfc,
-        record.birthDateLabel === 'No detectada' ? '' : record.birthDateLabel,
-        record.birthdayLabel === '-' ? '' : record.birthdayLabel,
-        record.age ?? '',
-        record.daysUntilBirthday ?? '',
-        record.teacher.email,
-        record.teacher.status
-      ]);
-
-    downloadCsv(
-      'cumpleaños-docentes.csv',
-      ['Docente', 'Coordinación', 'RFC', 'Fecha nacimiento', 'Cumpleaños', 'Edad', 'Días para cumpleaños', 'Correo', 'Estatus'],
-      rows
-    );
+    const rows = buildFiscalBirthdaysCsvRows(filteredRecords.value);
+    downloadFiscalBirthdaysCsv(rows);
     setNotice('ok', 'Listado de cumpleaños generado.');
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible generar el listado.');

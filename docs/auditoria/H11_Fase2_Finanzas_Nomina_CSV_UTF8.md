@@ -90,4 +90,4 @@ La prueba cubre:
 
 ## 7. Proximo paso
 
-H11-F3B/H11-F4: completar CSV frontend pendientes y validar apertura en Excel/Sheets/LibreOffice.
+H11-F4: validar apertura en Excel/Sheets/LibreOffice y decidir sanitizacion de formulas por exportable.

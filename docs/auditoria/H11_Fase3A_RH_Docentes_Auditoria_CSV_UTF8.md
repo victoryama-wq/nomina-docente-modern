@@ -83,7 +83,7 @@ La prueba de integracion se ejecuta contra `nomina_docente_test` usando datos si
 ## 7. Riesgos pendientes
 
 - Validar apertura de los CSV en Excel Windows, Google Sheets y LibreOffice durante H11-F4.
-- Los CSV generados por frontend, como Cumpleanos/Fiscal si aplica, quedan pendientes de una fase posterior.
+- Los CSV generados por frontend fueron cubiertos posteriormente en H11-F3B.
 - La sanitizacion de formulas CSV sigue disponible en el helper, pero no se activo en esta fase para no cambiar contenido funcional sin decision por exportable.
 
 ## 8. Proximo paso

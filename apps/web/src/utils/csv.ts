@@ -6,6 +6,7 @@ export interface CsvSerializeOptions {
   includeBom?: boolean;
   quoteAll?: boolean;
   sanitizeFormulaValues?: boolean;
+  trailingLineEnding?: boolean;
 }
 
 const UTF8_BOM = '\uFEFF';
@@ -50,7 +51,8 @@ export function buildCsv(headers: readonly unknown[], rows: readonly (readonly u
   const includeBom = options.includeBom ?? true;
 
   const serializeRow = (row: readonly unknown[]) => row.map((value) => csvEscape(value, options)).join(separator);
-  const csv = [serializeRow(headers), ...rows.map(serializeRow)].join(lineEnding);
+  const serialized = [serializeRow(headers), ...rows.map(serializeRow)].join(lineEnding);
+  const csv = options.trailingLineEnding ? `${serialized}${lineEnding}` : serialized;
   return includeBom ? withUtf8Bom(csv) : csv;
 }
 

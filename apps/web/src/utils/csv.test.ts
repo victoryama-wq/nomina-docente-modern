@@ -32,6 +32,12 @@ describe('frontend csv helpers', () => {
     expect(buildCsv(['Total'], [['517510.00']], { includeBom: false })).toBe('Total\r\n517510.00');
   });
 
+  it('can preserve a trailing CRLF for legacy browser exports', () => {
+    expect(buildCsv(['Nombre'], [['García']], { includeBom: false, quoteAll: true, trailingLineEnding: true })).toBe(
+      '"Nombre"\r\n"García"\r\n'
+    );
+  });
+
   it('sanitizes spreadsheet formulas only when requested', () => {
     expect(csvEscape('=SUM(A1:A2)')).toBe('=SUM(A1:A2)');
     expect(csvEscape('=SUM(A1:A2)', { sanitizeFormulaValues: true })).toBe("'=SUM(A1:A2)");
