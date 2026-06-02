@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../auth.js';
 import { query } from '../db.js';
+import { buildCsv as serializeCsv, csvAttachmentHeaders } from '../lib/csv.js';
 
 type AuditGroup = 'ALL' | 'CREATE' | 'UPDATE' | 'DELETE' | 'PAYROLL' | 'ACCESS' | 'FISCAL';
 
@@ -57,21 +58,25 @@ const auditQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).max(5000).optional().default(0)
 });
 
-function csvValue(value: unknown): string {
+function auditCsvCell(value: unknown): string {
   if (value === null || value === undefined) return '';
-  const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-  return `"${stringValue.replace(/"/g, '""')}"`;
+  return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
 function buildCsv(headers: string[], rows: unknown[][]): string {
-  return [headers, ...rows].map((row) => row.map(csvValue).join(',')).join('\r\n');
+  return serializeCsv(
+    headers,
+    rows.map((row) => row.map(auditCsvCell)),
+    { quoteAll: true }
+  );
 }
 
 function sendCsv(reply: FastifyReply, fileName: string, csv: string): void {
+  const headers = csvAttachmentHeaders(fileName);
   void reply
-    .header('Content-Type', 'text/csv; charset=utf-8')
-    .header('Content-Disposition', `attachment; filename="${fileName.replace(/"/g, '')}"`)
-    .send(`\uFEFF${csv}`);
+    .header('Content-Type', headers['Content-Type'])
+    .header('Content-Disposition', headers['Content-Disposition'])
+    .send(csv);
 }
 
 function actionFilterSql(actionGroup: AuditGroup): string {

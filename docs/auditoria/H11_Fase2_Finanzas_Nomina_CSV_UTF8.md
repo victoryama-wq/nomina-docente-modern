@@ -84,10 +84,10 @@ La prueba cubre:
 
 ## 6. Riesgos pendientes
 
-- H11-F3 debe migrar Directorio/RH, Cumpleanos CSV frontend y Auditoria.
+- H11-F3A migro backend Directorio/RH y Auditoria; quedan pendientes los CSV frontend.
 - La validacion con Excel Windows, Google Sheets y LibreOffice queda para H11-F4.
 - Esta fase no activa sanitizacion de formulas CSV para no cambiar contenido funcional sin decision por exportable.
 
 ## 7. Proximo paso
 
-H11-F3: aplicar helper CSV a RH/Docentes/Auditoria y validar datos sensibles, permisos y exportables frontend restantes.
+H11-F3B/H11-F4: completar CSV frontend pendientes y validar apertura en Excel/Sheets/LibreOffice.

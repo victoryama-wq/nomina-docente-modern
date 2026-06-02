@@ -273,9 +273,9 @@ Pruebas por endpoint/vista:
 | Finanzas fiscal | P0 | Datos fiscales sensibles y sin BOM actual. | Estandarizar primero; confirmar permisos y columnas sin cambios. |
 | Nómina resumen/horarios/extras | P0 | Protege H01 y conciliación de pagos. | Migrar con pruebas de no alteración de importes/columnas. |
 | Nómina detalle frontend | P1 | Exportable con importes generado en navegador. | Definir si helper frontend o backend; no cambiar UX ni columnas. |
-| Directorio activos/historial | P1 | Datos personales/fiscales e historial. | Migrar después de Finanzas/Nómina; pruebas de datos sensibles. |
+| Directorio activos/historial | P1 | Datos personales/fiscales e historial. | Migrado en H11-F3A backend; validar en Excel/Sheets y mantener pruebas de datos sensibles. |
 | Cumpleaños docentes | P1 | Datos RH/fiscales generados en frontend. | Estandarizar helper frontend y permisos visuales. |
-| Auditoría bitácora | P1 | Evidencia técnica con JSON y metadata. | Probar JSON, saltos y acentos; mantener trazabilidad. |
+| Auditoría bitácora | P1 | Evidencia técnica con JSON y metadata. | Migrado en H11-F3A backend; validar JSON, saltos y acentos en Excel/Sheets. |
 | Importadores legacy | P2 | Uso controlado/local, no exportables productivos. | Revisar solo si se vuelven a usar para migraciones/importaciones. |
 
 ## 8. Recomendación técnica
@@ -312,9 +312,13 @@ Crear helper backend y pruebas unitarias. Definir BOM, CRLF, escaping, CSV injec
 
 Aplicar helper a Finanzas y Nómina. No cambiar columnas, filtros, permisos, montos ni fórmula H01.
 
-### H11-F3 Exportables RH/Docentes/Auditoría
+### H11-F3A Exportables backend RH/Docentes/Auditoría
 
-Aplicar helper a Directorio/RH, Cumpleaños CSV y Auditoría. Validar datos sensibles y permisos.
+Aplicar helper a Directorio/RH y Auditoría backend. Validar datos sensibles, permisos, JSON, saltos y acentos.
+
+### H11-F3B Exportables frontend restantes
+
+Aplicar helper frontend a CSV generados en navegador que sigan vigentes, por ejemplo Cumpleaños CSV, sin cambiar columnas, permisos visuales ni UX.
 
 ### H11-F4 Validación Excel/Sheets
 
@@ -346,4 +350,3 @@ Confirmación de alcance H11-F0:
 - No se hizo deploy.
 - No se modificó base de datos.
 - No se ejecutaron migraciones.
-
