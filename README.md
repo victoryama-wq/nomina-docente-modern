@@ -16,10 +16,11 @@ El legacy Apps Script fue retirado del repositorio en H06/H14. `Codigo.gs` e `in
 
 La documentación técnico-operativa del sistema está en:
 
+- `docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md`
 - `docs/Manual_Entrega_Nomina_Docente.md`
 - `docs/Manual_Entrega_Nomina_Docente.docx`
 
-Incluye alcance, arquitectura, roles, vistas, flujos operativos, modelo de datos resumido, despliegue, respaldos, validación de entrega y recomendaciones post-entrega.
+El SDD consolidado es la fuente documental principal para H11 en adelante. Los manuales de entrega incluyen alcance, arquitectura, roles, vistas, flujos operativos, modelo de datos resumido, despliegue, respaldos, validación de entrega y recomendaciones post-entrega.
 
 ## Despliegue actual
 
@@ -31,23 +32,30 @@ API via Hosting: https://nomina-docente-prod.web.app/api/health
 
 Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
-Estado productivo confirmado el 2026-05-27:
+Estado productivo consolidado posterior a H09/H10:
 
-- Cloud Run productivo: `nomina-api`, revision `nomina-api-00044-pk9`.
+- Cloud Run productivo: `nomina-api`, revision `nomina-api-00045-v8h`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.
 - H01 precision monetaria: cerrado.
 - H02/H03 permisos/coordinacion: desplegado y validado.
+- H04 pruebas automatizadas: implementado hasta Fase 5; Playwright queda opcional.
+- H05 control formal de migraciones: baseline productivo 001 a 012, sin pendientes ni checksum mismatch.
+- H09/H10 estados y cierre de ciclo: desplegado en produccion sin migracion 013.
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 
 Documentos de estado relevantes:
 
+- `docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md`
 - `docs/sdd/SDD_Retrospectivo_Nomina_Docente.md`
 - `docs/auditoria/Matriz_Formal_Riesgos_Nomina_Docente.md`
 - `docs/auditoria/H02_H03_Deploy_Productivo_Resultado.md`
 - `docs/auditoria/H02_H03_Migracion_Productiva_Datos_Oficiales_Mayo_2026.md`
 - `docs/auditoria/H02_H03_Cierre_Controlado_Recursos_Revision_20260527.md`
+- `docs/auditoria/H05_Control_Formal_Migraciones.md`
+- `docs/auditoria/H09_H10_Deploy_Productivo_Resultado.md`
+- `docs/auditoria/H11_Inventario_CSV_Acentos_Codificacion.md`
 - `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md`
 
 ## Comandos útiles
