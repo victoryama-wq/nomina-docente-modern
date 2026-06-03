@@ -32,9 +32,9 @@ API via Hosting: https://nomina-docente-prod.web.app/api/health
 
 Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
-Estado productivo consolidado posterior a H09/H10:
+Estado productivo consolidado posterior a H11/H13:
 
-- Cloud Run productivo: `nomina-api`, revision `nomina-api-00045-v8h`.
+- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00046-6ck`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.
@@ -43,6 +43,9 @@ Estado productivo consolidado posterior a H09/H10:
 - H04 pruebas automatizadas: implementado hasta Fase 5; Playwright queda opcional.
 - H05 control formal de migraciones: baseline productivo 001 a 012, sin pendientes ni checksum mismatch.
 - H09/H10 estados y cierre de ciclo: desplegado en produccion sin migracion 013.
+- H11 CSV UTF-8: desplegado y cerrado operativo con smoke autorizado.
+- H12 catalogos historicos: cerrado documental como politica operativa.
+- H13 checklist productivo permanente: cerrado documental; usar antes de cada deploy.
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 
 Documentos de estado relevantes:
@@ -55,7 +58,9 @@ Documentos de estado relevantes:
 - `docs/auditoria/H02_H03_Cierre_Controlado_Recursos_Revision_20260527.md`
 - `docs/auditoria/H05_Control_Formal_Migraciones.md`
 - `docs/auditoria/H09_H10_Deploy_Productivo_Resultado.md`
-- `docs/auditoria/H11_Inventario_CSV_Acentos_Codificacion.md`
+- `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md`
+- `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md`
+- `docs/auditoria/H13_Checklist_Productivo_Permanente.md`
 - `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md`
 
 ## Comandos útiles
@@ -100,11 +105,17 @@ $image = 'us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:lates
 Checklist minimo antes de deploy:
 
 ```powershell
+npm run test
+npm run test:api
+npm run test:api:integration
+npm run test:web
 npm --workspace apps/api run typecheck
 npm --workspace apps/web run typecheck
 npm run typecheck
 npm run build
 ```
+
+Checklist productivo completo: `docs/auditoria/H13_Checklist_Productivo_Permanente.md`.
 
 Despues de deploy:
 

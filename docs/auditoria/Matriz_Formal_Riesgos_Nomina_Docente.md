@@ -20,6 +20,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H11-F1/F2/F3A/F3B con helper CSV central y exportables CSV criticos backend/frontend estandarizados.
 - Deploy productivo H11-F5 ejecutado y smoke CSV autorizado aprobado en produccion.
 - H12 cerrado como politica documental y gobierno operativo sin cambios tecnicos.
+- H13 cerrado documentalmente con checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback.
 
 Arquitectura vigente:
 
@@ -52,7 +53,7 @@ Arquitectura vigente:
 | H10 | Cierre de cuatrimestre moderno pendiente | Ciclos / Historicos / Operacion academica | Cerrado/desplegado | Medio-bajo: cierre real es irreversible y requiere disciplina operativa | P2 monitoreo | Usar cierre controlado con `quarter_closures` + `audit_log`; no cierre real sin aprobacion | Primer cierre real ejecutado con checklist operativo y backup | Si para cada cierre real |
 | H11 | CSV y acentos/codificacion | Reportes / Excel / Importaciones | Cerrado operativo | Bajo: riesgo residual por regresion futura y sanitizacion pendiente por exportable | P2 cerrado | Mantener helper CSV central y pruebas; decidir sanitizacion CSV injection por exportable si se requiere | Cumplido con deploy H11-F5 y smoke CSV autorizado en Excel institucional | Solo para sanitizacion futura o nuevos exportables |
 | H12 | Nombres de catalogos/tabuladores historicos | Catalogos / Horarios / Historicos | Cerrado documental / politica operativa | Bajo si se sigue la politica; sube solo ante cambios manuales sin procedimiento | P2 cerrado documental | Mantener politica de inactivar antes que borrar; no intervenir tecnicamente mientras el sistema funcione correctamente | Cumplido con SPEC y cierre documental; no hay implementacion inmediata requerida | Solo si se solicita excepcion o cambio futuro |
-| H13 | Variables productivas no versionadas | Infraestructura / DevOps | Mitigado | Bajo: despliegues H02/H03 documentan variables no secretas | P3 Bajo | Consolidar checklist permanente de variables no secretas | README/manual operativo reflejan variables, secretos y healthchecks | No para documentar; si para propietarios de secretos |
+| H13 | Variables productivas no versionadas | Infraestructura / DevOps | Cerrado documental / checklist productivo permanente | Bajo si se usa el checklist antes de cada deploy | P3 cerrado documental | Usar checklist H13 para revisar variables, secretos, CORS, healthchecks y rollback antes de cada despliegue | Cumplido con documento H13 y referencias en SDD/README | Solo si se cambian propietarios de secretos o infraestructura real |
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
@@ -139,9 +140,9 @@ Cerrado/desplegado:
 
 Orden recomendado:
 
-1. **H13 - checklist productivo permanente.** Consolidar variables no secretas, secretos, CORS, healthchecks y rollback.
-2. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
-3. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
+1. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
+2. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
+3. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
 
 ## 6. Decisiones humanas pendientes
 
@@ -152,6 +153,7 @@ Pendientes reales despues de H02/H03:
 - Decidir si H04-F6 Playwright/e2e se ejecuta o queda descartado.
 - Aprobar cada cierre real de ciclo porque es irreversible.
 - H12 solo requiere nueva decision humana si se quiere intervenir tecnicamente catalogos historicos.
+- H13 solo requiere nueva decision humana si se cambian secretos, propietarios, CORS o infraestructura productiva.
 - Decidir si se requiere sanitizacion CSV injection por exportable o si se mantiene sin transformar datos exportados.
 
 ## 7. Recomendacion final
@@ -162,4 +164,5 @@ El foco tecnico inmediato debe pasar a:
 
 - mantener H11 cerrado con helper CSV central y pruebas de regresion;
 - conservar H04/H05 como barreras obligatorias antes de cambios;
+- usar H13 como checklist permanente antes de despliegues productivos;
 - usar el SDD consolidado post H09/H10 como primera fuente documental.

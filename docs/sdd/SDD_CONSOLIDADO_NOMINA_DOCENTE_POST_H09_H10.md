@@ -33,7 +33,7 @@ Estado por H:
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
 | H12 | Cerrado documental; politica operativa de catalogos historicos definida sin cambios tecnicos. |
-| H13 | Mitigado documentalmente; requiere checklist permanente de variables no secretas y secretos. |
+| H13 | Cerrado documental; checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -304,6 +304,7 @@ Documentos vigentes:
 | Estados/cierre | `docs/auditoria/H09_H10_Deploy_Productivo_Resultado.md` | SPEC, diseno, fases 1-4, predeploy | Deploy/cierre vigente; SPEC/diseno aprobados |
 | CSV/codificacion | `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md` | H11 Fase 1, Fase 2, Fase 3A, Fase 3B, Fase 4, deploy H11-F5 y cierre postdeploy | Cerrado operativo; exportables criticos estandarizados y validados en Excel institucional |
 | Catalogos historicos | `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md` | SPEC H12 | Cerrado documental; politica operativa sin implementacion tecnica |
+| Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -337,7 +338,7 @@ Regla de precedencia:
 | H08 | Pendiente | Refactor gradual despues de mantener pruebas H04 verdes; no cambiar contratos. |
 | H11 | Cerrado operativo | Mantener helper CSV central y pruebas; evaluar sanitizacion por exportable como mejora futura. |
 | H12 | Cerrado documental / politica operativa | No intervenir tecnicamente mientras el sistema funcione correctamente; seguir politica si se requiere modificar catalogos. |
-| H13 | Mitigado, no cerrado formal permanente | Consolidar checklist permanente de variables productivas, secretos, CORS y healthchecks. |
+| H13 | Cerrado documental / checklist productivo permanente | Usar checklist H13 antes de cada deploy y actualizarlo solo si cambia infraestructura real. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -363,18 +364,14 @@ Para cualquier fase posterior:
 
 Orden recomendado:
 
-1. H13 checklist productivo:
-   - variables no secretas;
-   - secretos;
-   - CORS;
-   - healthchecks;
-   - rollback.
-2. H07 Google Provider `hd`:
+1. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
-3. H08 refactor gradual:
+2. H08 refactor gradual:
    - solo despues de cubrir con pruebas y sin cambiar reglas.
-4. CSV injection:
+3. CSV injection:
    - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
+4. H13 operativo continuo:
+   - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
 
 ## 10. Confirmacion de alcance de esta consolidacion
 
