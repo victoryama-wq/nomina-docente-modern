@@ -49,13 +49,33 @@ Interpretacion de integracion API:
 
 ## 3. Resultado de prueba manual local
 
-Prueba manual con usuario autorizado en navegador local: **pendiente**.
+Prueba manual con usuario autorizado en navegador local: **parcial satisfactoria**.
 
-Motivo:
+Ambiente:
 
-- En esta corrida no se levanto una sesion local real con Firebase Auth y API local.
-- PostgreSQL local/test `localhost:55432` no estaba disponible para sostener una validacion completa con API local.
-- No se uso produccion para validar la expiracion de sesion.
+- Ambiente: local.
+- Usuario: autorizado.
+- Produccion: no utilizada.
+
+Resultado confirmado por usuario:
+
+| Punto validado | Resultado | Observacion |
+|---|---|---|
+| Modal de advertencia | OK | El usuario confirmo visualmente que el sistema manda el modal/mensaje de aviso de cierre. |
+| Mensaje de aviso de cierre | OK | Confirmado en navegador real local. |
+| Advertencia previa al cierre | OK | Confirmada por aparicion del aviso antes del cierre. |
+| Texto de datos no guardados | Cubierto por prueba automatizada | No se registro confirmacion visual separada; `session-timeout.test.ts` valida que el texto se renderiza. |
+| Continuar sesion | Pendiente manual | Cubierto por prueba automatizada con timers falsos. |
+| Cerrar sesion | Pendiente manual | Cubierto por prueba automatizada. |
+| Cierre automatico al minuto 60 | Pendiente manual | No se espero el ciclo completo; cubierto por prueba automatizada. |
+| Redireccion a login | Pendiente manual | Cubierto por prueba automatizada de logout por inactividad. |
+| Persistencia al cerrar/reabrir navegador | Pendiente manual | Depende del navegador y queda para smoke postdeploy o prueba manual ampliada. |
+
+Interpretacion:
+
+- La validacion manual parcial es satisfactoria para el comportamiento visual principal del aviso.
+- Las pruebas automatizadas cubren modal, texto de datos no guardados, continuar sesion, cerrar sesion y cierre automatico.
+- Los puntos manuales no ejecutados deben revisarse como smoke postdeploy H15 o en una prueba manual ampliada si operacion lo exige.
 
 Cobertura automatizada ya disponible:
 
@@ -91,6 +111,11 @@ Prueba manual requerida antes de deploy productivo:
 12. Confirmar que cerrar/reabrir navegador requiere login si la sesion de navegador no se restaura.
 13. Confirmar que logout manual sigue funcionando.
 14. Confirmar que permisos y vistas por rol no cambian.
+
+Estado despues de la validacion del usuario:
+
+- La prueba manual local minima de aviso/modal queda cumplida.
+- La prueba manual completa queda recomendada, pero no bloqueante si se acepta cobertura automatizada + smoke postdeploy.
 
 ## 4. Resultado de persistencia de sesion
 
@@ -137,25 +162,33 @@ Confirmado:
 
 | Riesgo | Estado | Mitigacion |
 |---|---|---|
-| Prueba manual real pendiente | Bloqueante para deploy productivo | Ejecutar con usuario autorizado en ambiente local/revision antes de deploy. |
+| Prueba manual completa pendiente | No bloqueante si se acepta cobertura automatizada + smoke postdeploy | Ejecutar smoke postdeploy H15 con usuario autorizado despues del deploy controlado. |
 | PostgreSQL local/test no disponible | No bloqueante para H15 frontend, pero impide repetir integracion API completa | Levantar `nomina_docente_test` si se requiere repetir integracion antes de deploy. |
 | Cierre/reapertura del navegador depende del navegador | Pendiente manual | Validar en el navegador institucional usado por operacion. |
 | Datos no guardados pueden perderse al expirar sesion | Riesgo esperado y advertido | Modal muestra advertencia explicita antes del cierre. |
 
 ## 8. Recomendacion
 
-Recomendacion actual: **deploy no autorizado todavia**.
+Recomendacion actual: **deploy controlado autorizado con smoke postdeploy H15**.
 
 Motivo:
 
 - Validaciones automatizadas principales pasan.
 - H15 frontend esta construido y probado.
-- Falta prueba manual local con usuario autorizado y navegador real.
+- El usuario valido en navegador local real el aviso/modal de cierre por inactividad.
+- La validacion manual fue parcial, pero el resto del flujo critico esta cubierto por pruebas automatizadas.
 - La integracion API explicita contra `nomina_docente_test` no pudo repetirse porque PostgreSQL local/test no estaba disponible.
 
-Para pasar a deploy controlado:
+Condicion para deploy controlado:
 
-1. Ejecutar prueba manual local H15 con sesion real.
-2. Si se desea, levantar `nomina_docente_test` y repetir `test:api:integration`.
-3. Actualizar este documento con resultado manual.
-4. Usar H13 antes del deploy productivo.
+1. Usar H13 antes del deploy productivo.
+2. No ejecutar migraciones.
+3. No modificar backend, BD, permisos, reglas ni variables productivas.
+4. Ejecutar smoke postdeploy H15:
+   - login;
+   - modal de inactividad;
+   - continuar sesion;
+   - cerrar sesion;
+   - cierre automatico si se valida con timeout corto de revision o espera controlada;
+   - logout manual;
+   - permisos y vistas por rol sin cambios.
