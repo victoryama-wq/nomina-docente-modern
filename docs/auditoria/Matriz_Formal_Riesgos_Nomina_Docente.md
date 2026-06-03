@@ -19,7 +19,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - Inventario H11 de CSV, acentos y codificacion.
 - H11-F1/F2/F3A/F3B con helper CSV central y exportables CSV criticos backend/frontend estandarizados.
 - Deploy productivo H11-F5 ejecutado y smoke CSV autorizado aprobado en produccion.
-- H12-F0 SPEC documental de politica de catalogos historicos creada.
+- H12 cerrado como politica documental y gobierno operativo sin cambios tecnicos.
 
 Arquitectura vigente:
 
@@ -51,7 +51,7 @@ Arquitectura vigente:
 | H09 | Estados `BORRADOR` y `CERRADA` no usados claramente | Modelo / Flujo financiero | Cerrado/desplegado | Bajo: riesgo residual por regresion futura o confusion documental | P2 cerrado | Mantener `PAGADA` terminal; `BORRADOR`/`CERRADA` reservados no operativos | Pruebas H09/H10 y smoke post-deploy aprobados | No para reglas cerradas |
 | H10 | Cierre de cuatrimestre moderno pendiente | Ciclos / Historicos / Operacion academica | Cerrado/desplegado | Medio-bajo: cierre real es irreversible y requiere disciplina operativa | P2 monitoreo | Usar cierre controlado con `quarter_closures` + `audit_log`; no cierre real sin aprobacion | Primer cierre real ejecutado con checklist operativo y backup | Si para cada cierre real |
 | H11 | CSV y acentos/codificacion | Reportes / Excel / Importaciones | Cerrado operativo | Bajo: riesgo residual por regresion futura y sanitizacion pendiente por exportable | P2 cerrado | Mantener helper CSV central y pruebas; decidir sanitizacion CSV injection por exportable si se requiere | Cumplido con deploy H11-F5 y smoke CSV autorizado en Excel institucional | Solo para sanitizacion futura o nuevos exportables |
-| H12 | Nombres de catalogos/tabuladores historicos | Catalogos / Horarios / Historicos | SPEC creada; pendiente diseno tecnico | Medio-bajo: confusion historica si se renombra/borra antes de implementar controles | P2 Medio | Aplicar politica de inactivar en vez de borrar y conservar snapshots; disenar bloqueos futuros | SPEC aprobada, diseno tecnico, pruebas y controles implementados | Si: Operacion/Finanzas |
+| H12 | Nombres de catalogos/tabuladores historicos | Catalogos / Horarios / Historicos | Cerrado documental / politica operativa | Bajo si se sigue la politica; sube solo ante cambios manuales sin procedimiento | P2 cerrado documental | Mantener politica de inactivar antes que borrar; no intervenir tecnicamente mientras el sistema funcione correctamente | Cumplido con SPEC y cierre documental; no hay implementacion inmediata requerida | Solo si se solicita excepcion o cambio futuro |
 | H13 | Variables productivas no versionadas | Infraestructura / DevOps | Mitigado | Bajo: despliegues H02/H03 documentan variables no secretas | P3 Bajo | Consolidar checklist permanente de variables no secretas | README/manual operativo reflejan variables, secretos y healthchecks | No para documentar; si para propietarios de secretos |
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
 
@@ -139,10 +139,9 @@ Cerrado/desplegado:
 
 Orden recomendado:
 
-1. **H12 - catalogos historicos.** Pasar de SPEC a inventario tecnico y diseno de controles.
-2. **H13 - checklist productivo permanente.** Consolidar variables no secretas, secretos, CORS, healthchecks y rollback.
-3. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
-4. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
+1. **H13 - checklist productivo permanente.** Consolidar variables no secretas, secretos, CORS, healthchecks y rollback.
+2. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
+3. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
 
 ## 6. Decisiones humanas pendientes
 
@@ -152,7 +151,7 @@ Pendientes reales despues de H02/H03:
 - Confirmar si existen copias externas de Apps Script en Google Drive o respaldos institucionales y marcarlas como historicas/no operativas.
 - Decidir si H04-F6 Playwright/e2e se ejecuta o queda descartado.
 - Aprobar cada cierre real de ciclo porque es irreversible.
-- Cerrar decisiones H12: acentos/typos, cambio de importe, inactivacion/reactivacion, fusiones y alias historicos.
+- H12 solo requiere nueva decision humana si se quiere intervenir tecnicamente catalogos historicos.
 - Decidir si se requiere sanitizacion CSV injection por exportable o si se mantiene sin transformar datos exportados.
 
 ## 7. Recomendacion final
