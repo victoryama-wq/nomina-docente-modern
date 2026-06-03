@@ -32,7 +32,7 @@ API via Hosting: https://nomina-docente-prod.web.app/api/health
 
 Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
-Estado productivo consolidado posterior a H11/H13:
+Estado productivo consolidado posterior a H15:
 
 - Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00046-6ck`.
 - Base aplicativa activa: `nomina_docente`.
@@ -46,6 +46,7 @@ Estado productivo consolidado posterior a H11/H13:
 - H11 CSV UTF-8: desplegado y cerrado operativo con smoke autorizado.
 - H12 catalogos historicos: cerrado documental como politica operativa.
 - H13 checklist productivo permanente: cerrado documental; usar antes de cada deploy.
+- H15 sesion por inactividad: desplegado en Firebase Hosting live; `browserSessionPersistence`, timeout 60 minutos y modal de advertencia vigentes.
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 
 Documentos de estado relevantes:
@@ -62,6 +63,7 @@ Documentos de estado relevantes:
 - `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md`
 - `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md`
 - `docs/auditoria/H13_Checklist_Productivo_Permanente.md`
+- `docs/auditoria/H15_Deploy_Productivo_Resultado.md`
 - `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md`
 
 ## Comandos útiles

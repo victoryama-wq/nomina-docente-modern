@@ -34,7 +34,7 @@ Estado por H:
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
 | H12 | Cerrado documental; politica operativa de catalogos historicos definida sin cambios tecnicos. |
 | H13 | Cerrado documental; checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback. |
-| H15 | Implementado en frontend; `browserSessionPersistence`, timeout 60 min y modal 5 min antes; predeploy automatizado OK y prueba manual local pendiente antes de deploy. |
+| H15 | Desplegado en produccion; `browserSessionPersistence`, timeout 60 min, modal 5 min antes y logout por inactividad vigentes. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -46,6 +46,7 @@ Ultimos hitos productivos relevantes:
 - H05 baseline productivo: migraciones `001` a `012` registradas como baseline sin reaplicar SQL historico.
 - H09/H10 deploy productivo: revision `nomina-api-00045-v8h`, Hosting live confirmado, sin migracion 013 y sin modificacion de Cloud SQL salvo backup preventivo.
 - H11-F5 deploy productivo: revision `nomina-api-00046-6ck`, Hosting live confirmado, sin migracion y sin cambios de datos; smoke CSV autorizado aprobado en Excel institucional.
+- H15 deploy productivo: Hosting live confirmado el 2026-06-03 15:16:08, sin despliegue API, sin migracion y sin cambios de datos; smoke minimo de sesion/logout aprobado.
 
 ## 2. Arquitectura vigente
 
@@ -307,7 +308,7 @@ Documentos vigentes:
 | CSV/codificacion | `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md` | H11 Fase 1, Fase 2, Fase 3A, Fase 3B, Fase 4, deploy H11-F5 y cierre postdeploy | Cerrado operativo; exportables criticos estandarizados y validados en Excel institucional |
 | Catalogos historicos | `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md` | SPEC H12 | Cerrado documental; politica operativa sin implementacion tecnica |
 | Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
-| Sesion/inactividad | `docs/auditoria/H15_Sesion_Inactividad_Frontend.md` y `docs/auditoria/H15_PreDeploy_Sesion_Inactividad.md` | H13, auth frontend | Predeploy; prueba manual local pendiente antes de deploy |
+| Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -342,7 +343,7 @@ Regla de precedencia:
 | H11 | Cerrado operativo | Mantener helper CSV central y pruebas; evaluar sanitizacion por exportable como mejora futura. |
 | H12 | Cerrado documental / politica operativa | No intervenir tecnicamente mientras el sistema funcione correctamente; seguir politica si se requiere modificar catalogos. |
 | H13 | Cerrado documental / checklist productivo permanente | Usar checklist H13 antes de cada deploy y actualizarlo solo si cambia infraestructura real. |
-| H15 | Implementado / predeploy pendiente | Ejecutar prueba manual local con usuario autorizado; no autorizar deploy hasta validar navegador real, modal, continuar sesion, logout y expiracion. |
+| H15 | Desplegado productivamente | Mantener observacion operativa del ciclo real de 60 minutos y reapertura de navegador si se requiere evidencia adicional. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -374,11 +375,9 @@ Orden recomendado:
    - solo despues de cubrir con pruebas y sin cambiar reglas.
 3. CSV injection:
    - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
-4. H15 sesion/inactividad:
-   - cerrar prueba manual local con usuario autorizado antes del deploy controlado.
-5. H13 operativo continuo:
+4. H13 operativo continuo:
    - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
-6. Cierre global de matriz:
+5. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 
 ## 10. Confirmacion de alcance de esta consolidacion

@@ -345,6 +345,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | 2026-05-27 | `6ff6516` | `nomina-api-00043-p96` | `nomina-api-00044-pk9` | `2026-05-27 11:44:21` | SQL GCS pre-H02/H03 | 011 | OK | OK lectura | `H02_H03_Deploy_Productivo_Resultado.md` |
 | 2026-06-01 | `0c5c8b5` | `nomina-api-00044-pk9` | `nomina-api-00045-v8h` | `2026-06-01 16:15:53` | `1780348318919` | No | OK | OK no destructivo | `H09_H10_Deploy_Productivo_Resultado.md` |
 | 2026-06-03 | `4e0c214` | `nomina-api-00045-v8h` | `nomina-api-00046-6ck` | `2026-06-03 10:21:16` | `1780499832076` | No | OK | CSV OK autorizado | `H11_Deploy_Productivo_Resultado.md` y `H11_Cierre_CSV_UTF8_PostDeploy.md` |
+| 2026-06-03 | `0989092` | `nomina-api-00046-6ck` | `nomina-api-00046-6ck` | `2026-06-03 15:16:08` | `1780517600085` | No | OK | H15 sesion/logout OK; API no desplegada | `H15_Deploy_Productivo_Resultado.md` |
 
 ## 15. Relacion con fases cerradas
 
@@ -358,6 +359,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | H09/H10 | H13 recuerda que cierre de ciclo real es irreversible y requiere aprobacion. |
 | H11 | H13 conserva evidencia de deploy y smoke CSV. |
 | H12 | H13 respeta politica de no intervencion sobre catalogos historicos. |
+| H15 | H13 exige backup, healthcheck y smoke de sesion para cambios de autenticacion frontend. |
 
 ## 16. Estado final H13
 
