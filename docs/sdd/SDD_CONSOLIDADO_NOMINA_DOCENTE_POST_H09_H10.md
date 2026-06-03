@@ -13,7 +13,7 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00045-v8h` |
+| Revision Cloud Run vigente documentada | `nomina-api-00046-6ck` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
@@ -31,7 +31,7 @@ Estado por H:
 | H05 | Cerrado con tablas de control y baseline productivo de 15 migraciones, 0 pendientes, 0 checksum mismatch. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
-| H11 | En curso; inventario, helper CSV central y exportables CSV backend/frontend criticos estandarizados con BOM UTF-8. |
+| H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
 | H12 | Pendiente; politica de catalogos historicos por definir. |
 | H13 | Mitigado documentalmente; requiere checklist permanente de variables no secretas y secretos. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
@@ -44,6 +44,7 @@ Ultimos hitos productivos relevantes:
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 - H05 baseline productivo: migraciones `001` a `012` registradas como baseline sin reaplicar SQL historico.
 - H09/H10 deploy productivo: revision `nomina-api-00045-v8h`, Hosting live confirmado, sin migracion 013 y sin modificacion de Cloud SQL salvo backup preventivo.
+- H11-F5 deploy productivo: revision `nomina-api-00046-6ck`, Hosting live confirmado, sin migracion y sin cambios de datos; smoke CSV autorizado aprobado en Excel institucional.
 
 ## 2. Arquitectura vigente
 
@@ -301,7 +302,7 @@ Documentos vigentes:
 | Migraciones | `docs/auditoria/H05_Control_Formal_Migraciones.md` | Procedimientos F4/F5 dentro del mismo doc | Vigente |
 | Legacy | `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md` | SDD retrospectivo, README | Vigente |
 | Estados/cierre | `docs/auditoria/H09_H10_Deploy_Productivo_Resultado.md` | SPEC, diseno, fases 1-4, predeploy | Deploy/cierre vigente; SPEC/diseno aprobados |
-| CSV/codificacion | `docs/auditoria/H11_Inventario_CSV_Acentos_Codificacion.md` | H11 Fase 1, Fase 2, Fase 3A y Fase 3B | Vigente; exportables criticos estandarizados, pendiente validacion Excel/Sheets |
+| CSV/codificacion | `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md` | H11 Fase 1, Fase 2, Fase 3A, Fase 3B, Fase 4, deploy H11-F5 y cierre postdeploy | Cerrado operativo; exportables criticos estandarizados y validados en Excel institucional |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -333,7 +334,7 @@ Regla de precedencia:
 |---|---|---|
 | H07 | Pendiente opcional | Evaluar `hd` de Google como mejora UX; backend ya valida dominio. |
 | H08 | Pendiente | Refactor gradual despues de mantener pruebas H04 verdes; no cambiar contratos. |
-| H11 | En curso | Validar apertura en Excel/Sheets/LibreOffice y cerrar decision de sanitizacion por exportable. |
+| H11 | Cerrado operativo | Mantener helper CSV central y pruebas; evaluar sanitizacion por exportable como mejora futura. |
 | H12 | Pendiente | Definir politica de catalogos/tabuladores historicos: inactivar, no borrar; conservar snapshots. |
 | H13 | Mitigado, no cerrado formal permanente | Consolidar checklist permanente de variables productivas, secretos, CORS y healthchecks. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
@@ -361,25 +362,21 @@ Para cualquier fase posterior:
 
 Orden recomendado:
 
-1. H11 CSV/acentos/codificacion:
-   - helper CSV central ya creado;
-   - BOM UTF-8 consistente ya aplicado a Finanzas/Nomina, Directorio/RH/Auditoria y CSV frontend restantes;
-   - defensa contra CSV formula injection;
-   - pruebas por exportable critico;
-   - validacion Excel/Google Sheets.
-2. H12 catalogos historicos:
+1. H12 catalogos historicos:
    - politica de inactivar/no borrar;
    - snapshots y trazabilidad.
-3. H13 checklist productivo:
+2. H13 checklist productivo:
    - variables no secretas;
    - secretos;
    - CORS;
    - healthchecks;
    - rollback.
-4. H07 Google Provider `hd`:
+3. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
-5. H08 refactor gradual:
+4. H08 refactor gradual:
    - solo despues de cubrir con pruebas y sin cambiar reglas.
+5. CSV injection:
+   - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
 
 ## 10. Confirmacion de alcance de esta consolidacion
 

@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-06-02
+Actualizacion: 2026-06-03
 
 ## 1. Contexto
 
@@ -18,6 +18,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - Deploy productivo H09/H10 sin migracion 013.
 - Inventario H11 de CSV, acentos y codificacion.
 - H11-F1/F2/F3A/F3B con helper CSV central y exportables CSV criticos backend/frontend estandarizados.
+- Deploy productivo H11-F5 ejecutado y smoke CSV autorizado aprobado en produccion.
 
 Arquitectura vigente:
 
@@ -48,7 +49,7 @@ Arquitectura vigente:
 | H08 | Logica concentrada en archivos grandes | Mantenibilidad / Backend / Frontend | Pendiente | Medio: cambios futuros tienen mayor riesgo | P2 Medio | Refactor incremental despues de tener pruebas automatizadas | Servicios/componentes separados sin cambiar contratos ni reglas | No al inicio; si para priorizar modulos |
 | H09 | Estados `BORRADOR` y `CERRADA` no usados claramente | Modelo / Flujo financiero | Cerrado/desplegado | Bajo: riesgo residual por regresion futura o confusion documental | P2 cerrado | Mantener `PAGADA` terminal; `BORRADOR`/`CERRADA` reservados no operativos | Pruebas H09/H10 y smoke post-deploy aprobados | No para reglas cerradas |
 | H10 | Cierre de cuatrimestre moderno pendiente | Ciclos / Historicos / Operacion academica | Cerrado/desplegado | Medio-bajo: cierre real es irreversible y requiere disciplina operativa | P2 monitoreo | Usar cierre controlado con `quarter_closures` + `audit_log`; no cierre real sin aprobacion | Primer cierre real ejecutado con checklist operativo y backup | Si para cada cierre real |
-| H11 | CSV y acentos/codificacion | Reportes / Excel / Importaciones | En curso; helper central y exportables criticos backend/frontend estandarizados | Bajo-medio: queda validacion manual con hojas de calculo y decision de sanitizacion | P2 Medio | Validar UTF-8/BOM en Excel/Sheets/LibreOffice y decidir sanitizacion de formulas por exportable | Exportables criticos abren bien en Excel/Sheets/LibreOffice | Si: Finanzas/RH valida formato |
+| H11 | CSV y acentos/codificacion | Reportes / Excel / Importaciones | Cerrado operativo | Bajo: riesgo residual por regresion futura y sanitizacion pendiente por exportable | P2 cerrado | Mantener helper CSV central y pruebas; decidir sanitizacion CSV injection por exportable si se requiere | Cumplido con deploy H11-F5 y smoke CSV autorizado en Excel institucional | Solo para sanitizacion futura o nuevos exportables |
 | H12 | Nombres de catalogos/tabuladores historicos | Catalogos / Horarios / Historicos | Pendiente | Medio-bajo: confusion historica si se renombra/borra | P2 Medio | Politica de inactivar en vez de borrar y conservar snapshots | Politica documentada y probada | Si: Operacion/Finanzas |
 | H13 | Variables productivas no versionadas | Infraestructura / DevOps | Mitigado | Bajo: despliegues H02/H03 documentan variables no secretas | P3 Bajo | Consolidar checklist permanente de variables no secretas | README/manual operativo reflejan variables, secretos y healthchecks | No para documentar; si para propietarios de secretos |
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
@@ -137,10 +138,10 @@ Cerrado/desplegado:
 
 Orden recomendado:
 
-1. **H11 - CSV, acentos y codificacion.** Continuar con validacion manual de apertura y decision de sanitizacion.
-2. **H12 - catalogos historicos.** Definir politica de inactivar/no borrar y conservar snapshots.
-3. **H13 - checklist productivo permanente.** Consolidar variables no secretas, secretos, CORS, healthchecks y rollback.
-4. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
+1. **H12 - catalogos historicos.** Definir politica de inactivar/no borrar y conservar snapshots.
+2. **H13 - checklist productivo permanente.** Consolidar variables no secretas, secretos, CORS, healthchecks y rollback.
+3. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
+4. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
 
 ## 6. Decisiones humanas pendientes
 
@@ -151,7 +152,7 @@ Pendientes reales despues de H02/H03:
 - Decidir si H04-F6 Playwright/e2e se ejecuta o queda descartado.
 - Aprobar cada cierre real de ciclo porque es irreversible.
 - Definir politica de catalogos historicos.
-- Validar formato final de CSV en Excel/Sheets/LibreOffice para Finanzas, Nomina, RH/Docentes y Auditoria.
+- Decidir si se requiere sanitizacion CSV injection por exportable o si se mantiene sin transformar datos exportados.
 
 ## 7. Recomendacion final
 
@@ -159,6 +160,6 @@ No se recomienda reabrir H02/H03 mientras produccion siga estable.
 
 El foco tecnico inmediato debe pasar a:
 
-- ejecutar H11 sin tocar reglas de negocio;
+- mantener H11 cerrado con helper CSV central y pruebas de regresion;
 - conservar H04/H05 como barreras obligatorias antes de cambios;
 - usar el SDD consolidado post H09/H10 como primera fuente documental.
