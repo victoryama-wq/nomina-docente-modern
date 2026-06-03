@@ -296,6 +296,7 @@ Documentos vigentes:
 |---|---|---|---|
 | Estado consolidado | `docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md` | SDD retrospectivo, README, matriz | Vigente principal |
 | Riesgos | `docs/auditoria/Matriz_Formal_Riesgos_Nomina_Docente.md` | Inventarios y analisis por H | Vigente, actualizada post H09/H10 |
+| Cierre global matriz | `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` | Matriz formal, SDD, H05, H13 y cierres por H | Cierre ejecutivo/tecnico de riesgos principales; pendientes clasificados |
 | H01 | `docs/auditoria/H01_Cierre_Hotfix_Precision_Monetaria.md` | H04 Fase 4 | Vigente para precision monetaria |
 | H02/H03 | `docs/auditoria/H02_H03_Deploy_Productivo_Resultado.md` y `docs/auditoria/H02_H03_Migracion_Productiva_Datos_Oficiales_Mayo_2026.md` | SPEC, diseno, fases 1-6, revision documental | Cierres/deploy vigentes; SPEC/diseno historicos aprobados |
 | Pruebas | `docs/auditoria/H04_Fase5_Pruebas_Frontend_Permisos.md` + Fases 1-4 | Inventarios H04 previos | Vigente hasta Fase 5 |
@@ -372,6 +373,8 @@ Orden recomendado:
    - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
 4. H13 operativo continuo:
    - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
+5. Cierre global de matriz:
+   - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 
 ## 10. Confirmacion de alcance de esta consolidacion
 

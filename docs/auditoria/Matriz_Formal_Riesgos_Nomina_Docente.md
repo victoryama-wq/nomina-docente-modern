@@ -21,6 +21,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - Deploy productivo H11-F5 ejecutado y smoke CSV autorizado aprobado en produccion.
 - H12 cerrado como politica documental y gobierno operativo sin cambios tecnicos.
 - H13 cerrado documentalmente con checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback.
+- Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
 Arquitectura vigente:
 
@@ -165,4 +166,5 @@ El foco tecnico inmediato debe pasar a:
 - mantener H11 cerrado con helper CSV central y pruebas de regresion;
 - conservar H04/H05 como barreras obligatorias antes de cambios;
 - usar H13 como checklist permanente antes de despliegues productivos;
+- consultar el cierre global `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva de estado de matriz;
 - usar el SDD consolidado post H09/H10 como primera fuente documental.

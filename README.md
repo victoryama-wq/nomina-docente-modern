@@ -53,6 +53,7 @@ Documentos de estado relevantes:
 - `docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md`
 - `docs/sdd/SDD_Retrospectivo_Nomina_Docente.md`
 - `docs/auditoria/Matriz_Formal_Riesgos_Nomina_Docente.md`
+- `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md`
 - `docs/auditoria/H02_H03_Deploy_Productivo_Resultado.md`
 - `docs/auditoria/H02_H03_Migracion_Productiva_Datos_Oficiales_Mayo_2026.md`
 - `docs/auditoria/H02_H03_Cierre_Controlado_Recursos_Revision_20260527.md`
