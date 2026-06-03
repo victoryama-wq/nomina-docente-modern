@@ -137,6 +137,7 @@ describe('idle session timeout', () => {
 
     expect(wrapper.text()).toContain('Sesion por expirar');
     expect(wrapper.text()).toContain('Tu sesion se cerrara por inactividad en 5 minutos.');
+    expect(wrapper.text()).toContain('Guarda tus cambios antes de que termine el tiempo.');
     expect(wrapper.text()).toContain('Tiempo restante: 05:00');
 
     wrapper.unmount();

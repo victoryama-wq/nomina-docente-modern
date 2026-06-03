@@ -25,6 +25,9 @@ defineEmits<{
         <p>
           Tu sesion se cerrara por inactividad en 5 minutos.
         </p>
+        <p>
+          Guarda tus cambios antes de que termine el tiempo. Los datos no guardados se perderan.
+        </p>
         <strong class="session-timeout-countdown">Tiempo restante: {{ remainingLabel }}</strong>
       </div>
 
