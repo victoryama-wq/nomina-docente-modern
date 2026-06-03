@@ -38,6 +38,8 @@ El modal permite:
 - continuar sesion;
 - cerrar sesion manualmente.
 
+El modal advierte explicitamente que los datos no guardados pueden perderse si expira la sesion.
+
 Al expirar la sesion por inactividad:
 
 - se ejecuta logout Firebase;
@@ -93,6 +95,7 @@ Pruebas agregadas:
 - no se duplican listeners;
 - el modal aparece al minuto 55;
 - el modal muestra advertencia y cuenta regresiva;
+- el modal muestra advertencia de datos no guardados;
 - `Continuar sesion` cierra modal y reinicia temporizador;
 - `Cerrar sesion` ejecuta logout;
 - el cierre automatico ocurre al minuto 60;
@@ -111,13 +114,14 @@ Prueba manual local recomendada antes de deploy:
 3. Confirmar que la sesion funciona en vistas protegidas.
 4. Si se requiere validar rapido, usar timeout corto temporal solo en local sin commitearlo.
 5. Confirmar que aparece el modal de advertencia.
-6. Confirmar boton `Continuar sesion`.
-7. Confirmar boton `Cerrar sesion`.
-8. Confirmar cierre automatico por inactividad.
-9. Confirmar redireccion a `/login`.
-10. Cerrar navegador y reabrir.
-11. Confirmar que requiere login nuevamente si el navegador no restaura la sesion activa.
-12. Confirmar que refrescar pagina durante una sesion activa no rompe la sesion.
+6. Confirmar que el modal muestra advertencia de datos no guardados.
+7. Confirmar boton `Continuar sesion`.
+8. Confirmar boton `Cerrar sesion`.
+9. Confirmar cierre automatico por inactividad.
+10. Confirmar redireccion a `/login`.
+11. Cerrar navegador y reabrir.
+12. Confirmar que requiere login nuevamente si el navegador no restaura la sesion activa.
+13. Confirmar que refrescar pagina durante una sesion activa no rompe la sesion.
 
 No usar produccion para pruebas destructivas.
 

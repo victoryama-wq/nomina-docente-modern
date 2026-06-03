@@ -21,6 +21,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - Deploy productivo H11-F5 ejecutado y smoke CSV autorizado aprobado en produccion.
 - H12 cerrado como politica documental y gobierno operativo sin cambios tecnicos.
 - H13 cerrado documentalmente con checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback.
+- H15 implementado como correccion de seguridad frontend para persistencia de sesion e inactividad; predeploy automatizado OK y prueba manual local pendiente antes de deploy.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
 Arquitectura vigente:
@@ -56,6 +57,7 @@ Arquitectura vigente:
 | H12 | Nombres de catalogos/tabuladores historicos | Catalogos / Horarios / Historicos | Cerrado documental / politica operativa | Bajo si se sigue la politica; sube solo ante cambios manuales sin procedimiento | P2 cerrado documental | Mantener politica de inactivar antes que borrar; no intervenir tecnicamente mientras el sistema funcione correctamente | Cumplido con SPEC y cierre documental; no hay implementacion inmediata requerida | Solo si se solicita excepcion o cambio futuro |
 | H13 | Variables productivas no versionadas | Infraestructura / DevOps | Cerrado documental / checklist productivo permanente | Bajo si se usa el checklist antes de cada deploy | P3 cerrado documental | Usar checklist H13 para revisar variables, secretos, CORS, healthchecks y rollback antes de cada despliegue | Cumplido con documento H13 y referencias en SDD/README | Solo si se cambian propietarios de secretos o infraestructura real |
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
+| H15 | Persistencia de sesion e inactividad | Seguridad frontend / Firebase Auth | Implementado; predeploy automatizado OK; prueba manual local pendiente | Bajo a medio hasta validar navegador real antes de deploy | P2 predeploy | Ejecutar prueba manual local con usuario autorizado; usar H13 antes de deploy | Prueba manual local aprobada y deploy controlado documentado | No para reglas; si para autorizar deploy |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -144,6 +146,7 @@ Orden recomendado:
 1. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
 2. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
 3. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
+4. **H15 predeploy.** Ejecutar prueba manual local de sesion/inactividad con usuario autorizado antes de autorizar deploy productivo.
 
 ## 6. Decisiones humanas pendientes
 
@@ -155,6 +158,7 @@ Pendientes reales despues de H02/H03:
 - Aprobar cada cierre real de ciclo porque es irreversible.
 - H12 solo requiere nueva decision humana si se quiere intervenir tecnicamente catalogos historicos.
 - H13 solo requiere nueva decision humana si se cambian secretos, propietarios, CORS o infraestructura productiva.
+- H15 requiere validacion manual local de navegador/sesion antes de autorizar deploy.
 - Decidir si se requiere sanitizacion CSV injection por exportable o si se mantiene sin transformar datos exportados.
 
 ## 7. Recomendacion final
@@ -165,6 +169,7 @@ El foco tecnico inmediato debe pasar a:
 
 - mantener H11 cerrado con helper CSV central y pruebas de regresion;
 - conservar H04/H05 como barreras obligatorias antes de cambios;
+- cerrar la validacion manual H15 antes de despliegue de sesion/inactividad;
 - usar H13 como checklist permanente antes de despliegues productivos;
 - consultar el cierre global `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva de estado de matriz;
 - usar el SDD consolidado post H09/H10 como primera fuente documental.
