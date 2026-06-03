@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { signOut } from 'firebase/auth';
 import {
   accountingSession,
   accountantSession,
@@ -18,6 +19,7 @@ vi.mock('firebase/auth', () => ({
 
 vi.mock('../firebase', () => ({
   auth: {},
+  authPersistenceReady: Promise.resolve(),
   googleProvider: {}
 }));
 
@@ -27,7 +29,9 @@ vi.mock('../api', () => ({
 
 describe('auth store permission helpers', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     setActivePinia(createPinia());
+    vi.mocked(signOut).mockResolvedValue(undefined);
   });
 
   it('keeps Coordinador in payroll preview without fiscal, finance workflow, export or finalize permissions', () => {
@@ -86,5 +90,31 @@ describe('auth store permission helpers', () => {
     expect(accounting.canExportFinance).toBe(true);
     expect(accounting.canFinanceWorkflow).toBe(false);
     expect(accounting.canManageFiscal).toBe(false);
+  });
+
+  it('keeps manual logout working and clears auth state', async () => {
+    const auth = useAuthStore();
+    auth.session = coordinatorSession();
+    auth.firebaseUser = { uid: 'firebase-user' } as typeof auth.firebaseUser;
+
+    await auth.logout();
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(auth.session).toBeNull();
+    expect(auth.firebaseUser).toBeNull();
+    expect(auth.error).toBe('');
+  });
+
+  it('stores an inactivity logout message while clearing auth state', async () => {
+    const auth = useAuthStore();
+    auth.session = coordinatorSession();
+    auth.firebaseUser = { uid: 'firebase-user' } as typeof auth.firebaseUser;
+
+    await auth.logout('La sesion se cerro por inactividad.');
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(auth.session).toBeNull();
+    expect(auth.firebaseUser).toBeNull();
+    expect(auth.error).toBe('La sesion se cerro por inactividad.');
   });
 });

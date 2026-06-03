@@ -2,6 +2,9 @@
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { useIdleTimeout } from '../../composables/useIdleTimeout';
+import SessionTimeoutModal from '../modals/SessionTimeoutModal.vue';
+import { logoutForInactivity } from '../../utils/session';
 import {
   WalletCards,
   X,
@@ -27,6 +30,16 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const menuOpen = ref(false);
+const idleEnabled = computed(() => authStore.isAuthenticated && route.name !== 'login');
+const {
+  showWarning: idleWarningVisible,
+  remainingLabel: idleRemainingLabel,
+  continueSession: continueIdleSession,
+  expireNow: logoutFromIdleModal
+} = useIdleTimeout({
+  enabled: idleEnabled,
+  onTimeout: () => logoutForInactivity(authStore, router)
+});
 
 const initials = computed(() => {
   const base = authStore.session?.displayName || authStore.firebaseUser?.displayName || 'ND';
@@ -64,6 +77,10 @@ const pageTitle = computed(() => {
 async function handleLogout() {
   await authStore.logout();
   router.push({ name: 'login' });
+}
+
+async function handleIdleLogout() {
+  await logoutFromIdleModal();
 }
 </script>
 
@@ -249,5 +266,12 @@ async function handleLogout() {
       <router-view></router-view>
       
     </div>
+
+    <SessionTimeoutModal
+      :show="idleWarningVisible"
+      :remaining-label="idleRemainingLabel"
+      @continue="continueIdleSession"
+      @logout="handleIdleLogout"
+    />
   </section>
 </template>

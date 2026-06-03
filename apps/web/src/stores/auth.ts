@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
+import { auth, authPersistenceReady, googleProvider } from '../firebase';
 import { fetchSession, type SessionUser } from '../api';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -70,6 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
     signingIn.value = true;
     error.value = '';
     try {
+      await authPersistenceReady;
       await signInWithPopup(auth, googleProvider);
       await loadProtectedData();
     } catch (err) {
@@ -80,8 +81,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function logout() {
-    await signOut(auth);
+  async function logout(message = '') {
+    try {
+      await signOut(auth);
+    } finally {
+      error.value = message;
+      session.value = null;
+      firebaseUser.value = null;
+    }
+  }
+
+  function clearSession(message = '') {
+    error.value = message;
     session.value = null;
     firebaseUser.value = null;
   }
@@ -90,7 +101,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   function initAuth() {
     if (initPromise) return initPromise;
-    initPromise = new Promise<void>((resolve) => {
+    initPromise = new Promise<void>(async (resolve) => {
+      try {
+        await authPersistenceReady;
+      } catch (err) {
+        error.value = err instanceof Error ? err.message : 'No fue posible configurar la sesion del navegador.';
+        loading.value = false;
+        resolve();
+        return;
+      }
       onAuthStateChanged(auth, async (user) => {
         firebaseUser.value = user;
         if (user) {
@@ -101,7 +120,7 @@ export const useAuthStore = defineStore('auth', () => {
             await signOut(auth);
           }
         } else {
-          session.value = null;
+          clearSession(error.value);
         }
         loading.value = false;
         resolve();
@@ -144,6 +163,7 @@ export const useAuthStore = defineStore('auth', () => {
     canViewTeachers,
     login,
     logout,
+    clearSession,
     initAuth,
     loadProtectedData
   };
