@@ -32,7 +32,7 @@ Estado por H:
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
-| H12 | Pendiente; politica de catalogos historicos por definir. |
+| H12 | SPEC creada; politica documental de catalogos historicos definida, pendiente diseno tecnico e implementacion. |
 | H13 | Mitigado documentalmente; requiere checklist permanente de variables no secretas y secretos. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
@@ -288,7 +288,7 @@ Documentos vigentes:
 | Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. | H09/H10 Fase 3, Fase 4, deploy H09/H10. |
 | Accesos | Roles y usuarios gestionados por Admin; no mostrar checkboxes manuales de coordinaciones como fuente operativa final; subdireccion usa `direccion`. | H02/H03 Fase 5, H04 Fase 5. |
 | Auditoria | Export CSV y eventos; evidencia de cierre H10 via `audit_log`; no registrar secretos ni datos fiscales completos innecesarios. | H03 Fase 4, H09/H10 Fase 3, H11 inventario. |
-| Catalogos | Pendiente H12; politica futura debe privilegiar inactivar y conservar historicos/snapshots. | Matriz formal H12. |
+| Catalogos | H12-F0 SPEC creada; politica futura debe privilegiar inactivar y conservar historicos/snapshots. | Matriz formal H12 y SPEC H12. |
 
 ## 5. Documentos fuente de verdad
 
@@ -335,7 +335,7 @@ Regla de precedencia:
 | H07 | Pendiente opcional | Evaluar `hd` de Google como mejora UX; backend ya valida dominio. |
 | H08 | Pendiente | Refactor gradual despues de mantener pruebas H04 verdes; no cambiar contratos. |
 | H11 | Cerrado operativo | Mantener helper CSV central y pruebas; evaluar sanitizacion por exportable como mejora futura. |
-| H12 | Pendiente | Definir politica de catalogos/tabuladores historicos: inactivar, no borrar; conservar snapshots. |
+| H12 | SPEC creada; pendiente diseno tecnico | Definir controles backend/frontend para inactivar, no borrar; conservar snapshots y bloquear cambios historicos riesgosos. |
 | H13 | Mitigado, no cerrado formal permanente | Consolidar checklist permanente de variables productivas, secretos, CORS y healthchecks. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
@@ -363,8 +363,9 @@ Para cualquier fase posterior:
 Orden recomendado:
 
 1. H12 catalogos historicos:
-   - politica de inactivar/no borrar;
-   - snapshots y trazabilidad.
+   - SPEC documental creada;
+   - inventario tecnico de columnas/dependencias;
+   - diseno de controles para inactivar/no borrar, snapshots y trazabilidad.
 2. H13 checklist productivo:
    - variables no secretas;
    - secretos;
