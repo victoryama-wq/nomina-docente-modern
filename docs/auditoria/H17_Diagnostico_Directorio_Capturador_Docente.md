@@ -27,21 +27,22 @@ Esta revision fue read-only. No se ejecutaron escrituras, migraciones ni deploy.
 | Estado local | Working tree limpio al inicio; rama `ahead 1` contra origin |
 | Commit local relevante | `086abe5 fix(h02): allow coordinators to edit operational teacher data` |
 | Estado de `086abe5` | Commit local no subido a origin durante este diagnostico y no desplegado por esta revision |
+| Revert posterior | `bce2180 revert(h17): restore teacher edit ownership by capturer` restaura regla por capturador |
 | Uso de produccion | Solo consultas `SELECT` en transaccion `READ ONLY` |
 | Escrituras | No `UPDATE`, no `DELETE`, no `INSERT` |
 | Migraciones | No ejecutadas |
 | Deploy | No ejecutado |
 
-Nota importante: el commit local `086abe5` implementa una regla por coordinacion
-asignada. Esa hipotesis queda descartada por la decision humana actual y no debe
-desplegarse sin revertirla o reemplazarla por una correccion alineada a
-capturador tecnico.
+Nota importante: el commit local `086abe5` implementaba una regla por
+coordinacion asignada. Esa hipotesis quedo descartada por la decision humana
+actual y fue revertida mediante `bce2180`.
 
 ## 3. Documentos revisados
 
 - `docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md`
 - `docs/auditoria/Matriz_Formal_Riesgos_Nomina_Docente.md`
 - `docs/auditoria/H17_Correccion_Directorio_Coordinador_Edita_Docentes.md`
+  (documento local eliminado por el revert por contener la hipotesis descartada)
 - `docs/auditoria/H02_H03_Fase3_Modulos_Operativos.md`
 - `docs/auditoria/H02_H03_Fase4_Fiscal_Finanzas_Nomina_Preview.md`
 - `docs/auditoria/H02_H03_Fase5_Frontend_Permisos.md`
@@ -238,7 +239,7 @@ No cambiar a ciegas la regla funcional por coordinacion.
 
 Recomendacion antes de entrega:
 
-1. No desplegar el commit local `086abe5`.
+1. Mantener revertido el commit local `086abe5`.
 2. Definir si `teachers.created_by` debe normalizarse como capturador operativo
    real para docentes cargados masivamente.
 3. Si se decide normalizar datos, preparar un plan formal separado:
@@ -262,7 +263,7 @@ Recomendacion antes de entrega:
 
 ### Ruta recomendada: datos + proteccion actual
 
-1. Revertir o reemplazar la hipotesis local `086abe5`.
+1. Mantener la hipotesis local `086abe5` revertida.
 2. Mantener frontend/backend autorizando por `created_by`.
 3. Preparar diagnostico de docentes con `created_by IS NULL` por coordinacion.
 4. Solicitar a operacion una decision de asignacion de capturador por docente o
@@ -288,3 +289,12 @@ diagnostico porque alteraria la regla aprobada.
 - No se cambiaron permisos.
 - No se cambio codigo funcional en este diagnostico.
 
+## 12. Estado posterior
+
+H17 queda en estado:
+
+- diagnostico completado;
+- correccion por codigo basada en coordinacion descartada;
+- regla por `created_by` restaurada;
+- normalizacion de `teachers.created_by` pendiente de aprobacion mediante
+  `docs/auditoria/H17_Plan_Normalizacion_CreatedBy_Directorio.md`.

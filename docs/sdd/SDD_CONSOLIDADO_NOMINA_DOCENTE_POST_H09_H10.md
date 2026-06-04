@@ -35,6 +35,7 @@ Estado por H:
 | H12 | Cerrado documental; politica operativa de catalogos historicos definida sin cambios tecnicos. |
 | H13 | Cerrado documental; checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback. |
 | H15 | Desplegado en produccion; `browserSessionPersistence`, timeout 60 min, modal 5 min antes y logout por inactividad vigentes. |
+| H17 | Diagnostico completado; Directorio mantiene edicion por `teachers.created_by`; normalizacion de capturador pendiente con plan controlado. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -47,6 +48,7 @@ Ultimos hitos productivos relevantes:
 - H09/H10 deploy productivo: revision `nomina-api-00045-v8h`, Hosting live confirmado, sin migracion 013 y sin modificacion de Cloud SQL salvo backup preventivo.
 - H11-F5 deploy productivo: revision `nomina-api-00046-6ck`, Hosting live confirmado, sin migracion y sin cambios de datos; smoke CSV autorizado aprobado en Excel institucional.
 - H15 deploy productivo: Hosting live confirmado el 2026-06-03 15:16:08, sin despliegue API, sin migracion y sin cambios de datos; smoke minimo de sesion/logout aprobado.
+- H17 Directorio: diagnostico read-only confirmo `teachers.created_by = NULL` en carga masiva; se descarto correccion por coordinacion y queda plan de normalizacion pendiente.
 
 ## 2. Arquitectura vigente
 
@@ -101,6 +103,7 @@ Reglas vigentes:
 - Para usuarios no admin, el responsable operativo se muestra en modo solo lectura cuando corresponde.
 - `created_by` y `captured_by` son relevantes para propiedad de registros.
 - Docentes pueden estar relacionados operativamente con varios coordinadores por capturas, sin otorgar edicion global.
+- En Directorio, `teachers.created_by` es la fuente tecnica de capturador para edicion por coordinador; no existe `teachers.captured_by` y no basta con pertenecer a la coordinacion.
 - En Extras, Direccion/Subdireccion puede ver listado y modificar solo extras capturados por el actor cuando backend lo permite.
 
 Reglas de captura vigentes:
@@ -119,6 +122,8 @@ Documentos vigentes:
 - `docs/auditoria/H02_H03_Fase2_Auth_Context.md`
 - `docs/auditoria/H02_H03_Fase3_Modulos_Operativos.md`
 - `docs/auditoria/H02_H03_Fase5_Frontend_Permisos.md`
+- `docs/auditoria/H17_Diagnostico_Directorio_Capturador_Docente.md`
+- `docs/auditoria/H17_Plan_Normalizacion_CreatedBy_Directorio.md`
 
 ### 3.3 Fiscal, Finanzas y Workflow / H03
 

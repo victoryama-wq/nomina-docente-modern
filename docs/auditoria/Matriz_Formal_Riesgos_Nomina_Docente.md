@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-06-03
+Actualizacion: 2026-06-04
 
 ## 1. Contexto
 
@@ -22,6 +22,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H12 cerrado como politica documental y gobierno operativo sin cambios tecnicos.
 - H13 cerrado documentalmente con checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback.
 - H15 desplegado productivamente en Firebase Hosting live; sesion por inactividad y `browserSessionPersistence` quedan operativos.
+- H17 diagnosticado: Directorio usa `teachers.created_by` como capturador tecnico; correccion por coordinacion descartada y normalizacion de datos pendiente.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
 Arquitectura vigente:
@@ -58,6 +59,7 @@ Arquitectura vigente:
 | H13 | Variables productivas no versionadas | Infraestructura / DevOps | Cerrado documental / checklist productivo permanente | Bajo si se usa el checklist antes de cada deploy | P3 cerrado documental | Usar checklist H13 para revisar variables, secretos, CORS, healthchecks y rollback antes de cada despliegue | Cumplido con documento H13 y referencias en SDD/README | Solo si se cambian propietarios de secretos o infraestructura real |
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
 | H15 | Persistencia de sesion e inactividad | Seguridad frontend / Firebase Auth | Desplegado productivamente | Bajo: queda observacion operativa del ciclo real de 60 minutos y reapertura de navegador | P2 cerrado operativo | Mantener pruebas H15 y observar comportamiento en operacion normal | Cumplido con predeploy, deploy Hosting live y smoke postdeploy minimo | Solo si se cambia politica de tiempo o UX |
+| H17 | `teachers.created_by` nulo por carga masiva | Directorio / Permisos operativos / Datos productivos | Diagnostico completado; normalizacion pendiente | Medio: coordinadoras no pueden editar docentes cargados masivamente hasta normalizar capturador | P1 datos controlados | Mantener regla por capturador y preparar normalizacion `created_by` solo con backup, mapping aprobado y auditoria | Mapping aprobado, update controlado ejecutado y validacion por coordinadoras | Si, para aprobar mapping y ventana de datos |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -71,10 +73,12 @@ Cerrado operativamente:
 - Horarios, Incidencias, Extras y Directorio respetan reglas por usuario capturador donde aplica.
 - Docentes compartidos entre coordinadores se permiten sin otorgar edicion global.
 - Fallback legacy queda solo como contingencia temporal.
+- H17 confirma que Directorio debe seguir usando `teachers.created_by` como capturador tecnico; la edicion por sola coordinacion queda descartada.
 
 Pendiente residual:
 
 - Monitorear uso de fallback y retirarlo cuando se cumpla la condicion aprobada.
+- Normalizar `teachers.created_by` para docentes cargados masivamente solo con aprobacion y procedimiento controlado.
 
 ### H03
 
