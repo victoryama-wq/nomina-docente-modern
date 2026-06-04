@@ -216,6 +216,28 @@ Resultado del mapping read-only:
 El caso Maricarmen -> Merit queda documentado como excepcion funcional y requiere
 aprobacion explicita antes de cualquier escritura.
 
+## 12. Validacion CSV aprobada
+
+Se creo el documento:
+
+- `docs/auditoria/H17_Validacion_CSV_CreatedBy_Directorio.md`
+
+Resultado de la validacion con el CSV aprobado por el usuario:
+
+- 213 filas validas.
+- 14 valores unicos en columna `COORDINADOR`.
+- 204 docentes con match exacto en `teachers`.
+- 9 docentes sin match.
+- 196 updates propuestos para `teachers.created_by`.
+- 3 docentes omitidos porque ya tenian `created_by`.
+- 5 filas omitidas por coordinador sin match.
+- SQL generado en `database/validation/h17_created_by_from_csv_APPROVAL_REQUIRED.sql`.
+- El SQL queda en `ROLLBACK` por defecto y no fue ejecutado.
+
+La decision Maricarmen -> Merit queda reflejada por el CSV aprobado: Maricarmen
+no aparece como capturador en columna `COORDINADOR`; los registros aplicables
+quedan bajo `merit.bazan@tecplayacar.edu.mx`.
+
 Confirmaciones:
 
 - No se ejecuto `UPDATE`.
