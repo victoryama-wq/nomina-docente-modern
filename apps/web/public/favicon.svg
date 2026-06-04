@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Nómina Docente">
+  <rect width="64" height="64" rx="12" fill="#252a86" />
+  <path d="M18 45V19h6l16 16V19h6v26h-5.6L24 28.6V45h-6Z" fill="#ffffff" />
+  <path d="M18 50h28" stroke="#74d4c4" stroke-width="4" stroke-linecap="round" />
+</svg>

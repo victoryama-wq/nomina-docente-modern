@@ -22,6 +22,8 @@ La documentación técnico-operativa del sistema está en:
 
 El SDD consolidado es la fuente documental principal para H11 en adelante. Los manuales de entrega incluyen alcance, arquitectura, roles, vistas, flujos operativos, modelo de datos resumido, despliegue, respaldos, validación de entrega y recomendaciones post-entrega.
 
+La metadata publica de la Web App, favicon y recursos de vista previa social quedan versionados en `apps/web/index.html` y `apps/web/public/`. Ver `docs/auditoria/H16_Metadata_Favicon_WebApp.md`.
+
 ## Despliegue actual
 
 ```text
@@ -64,6 +66,7 @@ Documentos de estado relevantes:
 - `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md`
 - `docs/auditoria/H13_Checklist_Productivo_Permanente.md`
 - `docs/auditoria/H15_Deploy_Productivo_Resultado.md`
+- `docs/auditoria/H16_Metadata_Favicon_WebApp.md`
 - `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md`
 
 ## Comandos útiles
