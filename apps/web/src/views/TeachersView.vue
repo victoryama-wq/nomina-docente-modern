@@ -20,7 +20,6 @@ import {
 } from '../api';
 import TeacherModal from '../components/modals/TeacherModal.vue';
 import ConfirmModal from '../components/modals/ConfirmModal.vue';
-import { canEditTeacherOperational } from '../utils/teacherAccess';
 
 const authStore = useAuthStore();
 
@@ -56,9 +55,7 @@ const canViewTeacherFiscal = computed(() => authStore.canViewFiscal);
 const canManageTeacherFiscal = computed(() => authStore.canManageFiscal);
 const canViewTeacherDocuments = computed(() => authStore.canViewFiscalDocuments);
 const canManageTeacherDocuments = computed(() => authStore.canManageFiscalDocuments);
-const canChooseTeacherCoordination = computed(
-  () => authStore.isAdmin || (authStore.session?.role === 'coordinador' && actorScopeCoordinations.value.length > 1)
-);
+const canChooseTeacherCoordination = computed(() => authStore.isAdmin);
 const assignableTeacherCoordinations = computed(() =>
   authStore.isAdmin ? coordinations.value : actorScopeCoordinations.value
 );
@@ -129,7 +126,8 @@ function fiscalPercent(teacher: Teacher) {
 }
 
 function canEditTeacher(teacher: Teacher) {
-  return canEditTeacherOperational(authStore.session, teacher, actorScopeCoordinations.value);
+  if (authStore.isAdmin) return true;
+  return teacher.createdById === authStore.session?.id;
 }
 
 function canAccessTeacherDocument(teacher: Teacher) {
@@ -157,12 +155,11 @@ async function loadTeachers() {
 }
 
 function newTeacher() {
-  const defaultCoordination = defaultActorTeacherCoordination();
   editingTeacherId.value = null;
   teacherForm.value = {
     ...blankTeacher(),
-    coordinationId: authStore.isAdmin ? null : defaultCoordination?.id || null,
-    coordinationName: authStore.isAdmin ? '' : defaultCoordination?.name || ''
+    coordinationId: null,
+    coordinationName: authStore.isAdmin ? '' : authStore.session?.displayName || ''
   };
   selectedConstancia.value = null;
   teacherModalOpen.value = true;
@@ -178,7 +175,7 @@ function closeTeacherModal() {
 
 function editTeacher(teacher: Teacher) {
   if (!canEditTeacher(teacher)) {
-    setNotice('error', 'Solo puedes editar docentes dentro de tu alcance operativo.');
+    setNotice('error', 'Solo puedes editar docentes capturados por tu usuario.');
     return;
   }
   editingTeacherId.value = teacher.id;
@@ -212,7 +209,10 @@ async function saveTeacher() {
   teacherSaving.value = true;
   clearNotice();
   try {
-    if (!ensureTeacherCoordinationForActor()) return;
+    if (!authStore.isAdmin) {
+      teacherForm.value.coordinationId = null;
+      teacherForm.value.coordinationName = authStore.session?.displayName || '';
+    }
     const payload: TeacherPayload = { ...teacherForm.value };
     if (!canManageTeacherFiscal.value) {
       delete payload.paymentType;
@@ -231,46 +231,6 @@ async function saveTeacher() {
   } finally {
     teacherSaving.value = false;
   }
-}
-
-function defaultActorTeacherCoordination(): CoordinationOption | null {
-  if (authStore.isAdmin) return null;
-  return (
-    actorScopeCoordinations.value.find((coordination) => coordination.isPrimary) ||
-    actorScopeCoordinations.value[0] ||
-    actorCoordination.value ||
-    null
-  );
-}
-
-function ensureTeacherCoordinationForActor() {
-  if (authStore.isAdmin) return true;
-
-  const allowedCoordinations = actorScopeCoordinations.value;
-  if (!allowedCoordinations.length) {
-    setNotice('error', 'Tu usuario no tiene un responsable operativo asignado.');
-    return false;
-  }
-
-  if (teacherForm.value.coordinationId) {
-    const selected = allowedCoordinations.find((coordination) => coordination.id === teacherForm.value.coordinationId);
-    if (!selected) {
-      setNotice('error', 'Solo puedes asignar docentes a responsables dentro de tu alcance operativo.');
-      return false;
-    }
-    teacherForm.value.coordinationName = selected.name;
-    return true;
-  }
-
-  const fallback = defaultActorTeacherCoordination();
-  if (!fallback) {
-    setNotice('error', 'Tu usuario no tiene un responsable operativo asignado.');
-    return false;
-  }
-
-  teacherForm.value.coordinationId = fallback.id;
-  teacherForm.value.coordinationName = fallback.name;
-  return true;
 }
 
 function onConstanciaSelected(event: Event) {
@@ -497,7 +457,7 @@ onMounted(() => {
                     class="icon-button"
                     type="button"
                     :disabled="!canEditTeacher(teacher)"
-                    :title="canEditTeacher(teacher) ? 'Editar' : 'Fuera de tu alcance operativo'"
+                    :title="canEditTeacher(teacher) ? 'Editar' : 'Solo editable por el usuario capturador'"
                     @click="editTeacher(teacher)"
                   >
                     <Edit3 :size="16" />

@@ -84,7 +84,7 @@ describe('TeacherModal permission visibility', () => {
     expect(wrapper.text()).toContain('Responsable operativo');
     expect(responsibleInput.exists()).toBe(true);
     expect((responsibleInput.element as HTMLInputElement).value).toBe('Idiomas');
-    expect(wrapper.text()).toContain('Se asigna automaticamente al responsable operativo permitido.');
+    expect(wrapper.text()).toContain('Se asigna automaticamente al usuario que captura.');
   });
 
   it('shows document upload only when editing and fiscal.document.manage is present', () => {

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { ExtraRecord } from '../api';
-import { canEditTeacherOperational } from '../utils/teacherAccess';
 import {
   accountingSession,
   accountantSession,
@@ -10,8 +9,7 @@ import {
   directionSession,
   financeSession,
   multiCoordinatorSession,
-  rhSession,
-  WEB_COORDINATIONS
+  rhSession
 } from './fixtures/session-users';
 import {
   canCaptureExtrasForCycle,
@@ -94,52 +92,6 @@ describe('frontend permission visibility helpers', () => {
       showFiscalFields: true,
       showConstanciaUpload: true
     });
-  });
-
-  it('allows coordinators to edit operational teacher data only inside assigned coordinations', () => {
-    const coordinator = coordinatorSession();
-    const multiCoordinator = multiCoordinatorSession();
-
-    expect(
-      canEditTeacherOperational(
-        coordinator,
-        { coordinationId: WEB_COORDINATIONS.idiomas.id, createdById: 'another-user' },
-        coordinator.actorCoordinations
-      )
-    ).toBe(true);
-
-    expect(
-      canEditTeacherOperational(
-        coordinator,
-        { coordinationId: WEB_COORDINATIONS.adetur.id, createdById: coordinator.id },
-        coordinator.actorCoordinations
-      )
-    ).toBe(false);
-
-    expect(
-      canEditTeacherOperational(
-        multiCoordinator,
-        { coordinationId: WEB_COORDINATIONS.arq.id, createdById: 'another-user' },
-        multiCoordinator.actorCoordinations
-      )
-    ).toBe(true);
-
-    expect(
-      canEditTeacherOperational(
-        multiCoordinator,
-        { coordinationId: WEB_COORDINATIONS.idiomas.id, createdById: multiCoordinator.id },
-        multiCoordinator.actorCoordinations
-      )
-    ).toBe(false);
-  });
-
-  it('keeps admin global and non-coordinator teacher edits tied to existing ownership rule', () => {
-    const admin = adminSession();
-    const direction = directionSession();
-
-    expect(canEditTeacherOperational(admin, { coordinationId: WEB_COORDINATIONS.idiomas.id, createdById: null }, [])).toBe(true);
-    expect(canEditTeacherOperational(direction, { coordinationId: WEB_COORDINATIONS.idiomas.id, createdById: direction.id }, [])).toBe(true);
-    expect(canEditTeacherOperational(direction, { coordinationId: WEB_COORDINATIONS.idiomas.id, createdById: 'another-user' }, [])).toBe(false);
   });
 
   it('models operational coordination states for one, multiple and missing coordinations', () => {
