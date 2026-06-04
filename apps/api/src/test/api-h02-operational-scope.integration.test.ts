@@ -8,7 +8,8 @@ import {
   extraBody,
   freshTestApp,
   incidenceBody,
-  scheduleBody
+  scheduleBody,
+  teacherBody
 } from './api-integration-helpers.js';
 import { connectTestDb } from './db/test-db-utils.js';
 import {
@@ -189,6 +190,151 @@ describeIfDb('H02 operational scope business integration coverage', () => {
     });
     expect(blocked.statusCode).not.toBe(200);
     expect(blocked.json().message).toContain('Solo puedes editar');
+  });
+
+  it('allows coordinators to edit operational teacher data inside their assigned coordinations', async () => {
+    const client = await connectTestDb();
+    const sharedTeacherId = '40000000-0000-4000-8000-000000000017';
+    try {
+      await client.query(
+        `
+          INSERT INTO teachers (
+            id,
+            full_name,
+            normalized_name,
+            first_names,
+            paternal_last_name,
+            maternal_last_name,
+            degree,
+            payment_type,
+            category,
+            location,
+            coordination_id,
+            phone,
+            external_identifier,
+            status,
+            created_by,
+            updated_by
+          )
+          VALUES ($1, 'Docente QA H17 Compartido', 'docente qa h17 compartido', 'Docente QA', 'H17', 'Compartido',
+            'Licenciatura', '', 'N', 'Local', $2, '', 'H17-SHARED', 'ACTIVO', $3, $3)
+          ON CONFLICT (id) DO UPDATE
+          SET coordination_id = EXCLUDED.coordination_id,
+              created_by = EXCLUDED.created_by,
+              updated_by = EXCLUDED.updated_by,
+              phone = EXCLUDED.phone,
+              external_identifier = EXCLUDED.external_identifier,
+              updated_at = now()
+        `,
+        [sharedTeacherId, TEST_COORDINATIONS.idiomas.id, TEST_USER_IDS.multiCoordinator]
+      );
+    } finally {
+      await client.end();
+    }
+
+    const allowed = await injectAs(app!, coordinatorActor(), {
+      method: 'PATCH',
+      url: `/api/teachers/${sharedTeacherId}`,
+      payload: teacherBody({
+        firstNames: 'Docente QA',
+        paternalLastName: 'H17',
+        maternalLastName: 'Editado',
+        coordinationId: TEST_COORDINATIONS.idiomas.id,
+        coordinationName: TEST_COORDINATIONS.idiomas.name,
+        phone: '9847654321',
+        externalIdentifier: 'H17-EDITADO'
+      })
+    });
+    expect(allowed.statusCode).toBe(200);
+    expect(allowed.json().teacher.coordinationId).toBe(TEST_COORDINATIONS.idiomas.id);
+    expect(allowed.json().teacher.phone).toBe('9847654321');
+    expect(allowed.json().teacher.rfc).toBe('');
+    expect(allowed.json().teacher.bankDetail).toBe('');
+
+    const blocked = await injectAs(app!, coordinatorActor(), {
+      method: 'PATCH',
+      url: `/api/teachers/${TEST_IDS.teacherMulti}`,
+      payload: teacherBody({
+        firstNames: 'Docente QA',
+        paternalLastName: 'Multi',
+        maternalLastName: 'Bloqueado',
+        coordinationId: TEST_COORDINATIONS.adetur.id,
+        coordinationName: TEST_COORDINATIONS.adetur.name
+      })
+    });
+    expect(blocked.statusCode).toBe(403);
+    expect(blocked.json().message).toContain('No tienes permiso para operar esta coordinacion');
+  });
+
+  it('allows multi-coordinators to edit assigned teacher coordinations and blocks foreign reassignment', async () => {
+    const client = await connectTestDb();
+    const arqTeacherId = '40000000-0000-4000-8000-000000000018';
+    try {
+      await client.query(
+        `
+          INSERT INTO teachers (
+            id,
+            full_name,
+            normalized_name,
+            first_names,
+            paternal_last_name,
+            maternal_last_name,
+            degree,
+            payment_type,
+            category,
+            location,
+            coordination_id,
+            phone,
+            external_identifier,
+            status,
+            created_by,
+            updated_by
+          )
+          VALUES ($1, 'Docente QA H17 ARQ', 'docente qa h17 arq', 'Docente QA', 'H17', 'ARQ',
+            'Licenciatura', '', 'N', 'Local', $2, '', 'H17-ARQ', 'ACTIVO', $3, $3)
+          ON CONFLICT (id) DO UPDATE
+          SET coordination_id = EXCLUDED.coordination_id,
+              created_by = EXCLUDED.created_by,
+              updated_by = EXCLUDED.updated_by,
+              phone = EXCLUDED.phone,
+              external_identifier = EXCLUDED.external_identifier,
+              updated_at = now()
+        `,
+        [arqTeacherId, TEST_COORDINATIONS.arq.id, TEST_USER_IDS.coordinator]
+      );
+    } finally {
+      await client.end();
+    }
+
+    const allowed = await injectAs(app!, multiCoordinatorActor(), {
+      method: 'PATCH',
+      url: `/api/teachers/${arqTeacherId}`,
+      payload: teacherBody({
+        firstNames: 'Docente QA',
+        paternalLastName: 'H17',
+        maternalLastName: 'ARQ',
+        coordinationId: TEST_COORDINATIONS.arq.id,
+        coordinationName: TEST_COORDINATIONS.arq.name,
+        phone: '9841112233',
+        externalIdentifier: 'H17-ARQ-EDIT'
+      })
+    });
+    expect(allowed.statusCode).toBe(200);
+    expect(allowed.json().teacher.coordinationId).toBe(TEST_COORDINATIONS.arq.id);
+
+    const blockedReassignment = await injectAs(app!, multiCoordinatorActor(), {
+      method: 'PATCH',
+      url: `/api/teachers/${arqTeacherId}`,
+      payload: teacherBody({
+        firstNames: 'Docente QA',
+        paternalLastName: 'H17',
+        maternalLastName: 'Fuera',
+        coordinationId: TEST_COORDINATIONS.idiomas.id,
+        coordinationName: TEST_COORDINATIONS.idiomas.name
+      })
+    });
+    expect(blockedReassignment.statusCode).toBe(403);
+    expect(blockedReassignment.json().message).toContain('No tienes permiso para operar esta coordinacion');
   });
 
   it('blocks operational capture for coordinator without assigned coordination', async () => {

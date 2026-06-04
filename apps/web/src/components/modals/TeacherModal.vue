@@ -96,7 +96,7 @@ defineEmits<{
             </option>
           </select>
           <input v-else :value="form.coordinationName || currentCoordinatorName" disabled />
-          <small v-if="!canChooseCoordination">Se asigna automaticamente al usuario que captura.</small>
+          <small v-if="!canChooseCoordination">Se asigna automaticamente al responsable operativo permitido.</small>
         </label>
         <label>
           <span>Telefono</span>

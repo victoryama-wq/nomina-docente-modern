@@ -258,7 +258,12 @@ async function assertTeacherOwnedByActorCoordination(
   }
 
   const scope = await loadActorScope(client, actor, { module: 'teachers.assertTeacherOwnedByActorCoordination' });
-  if (actor.role === 'direccion' || actor.role === 'coordinador') {
+  if (actor.role === 'coordinador') {
+    assertCoordinationAllowed(scope, teacher.coordinationId);
+    return scope;
+  }
+
+  if (actor.role === 'direccion') {
     if (isOwnRecord(scope, teacher.createdById)) return scope;
     throw new Error('Solo puedes modificar docentes capturados por tu usuario.');
   }
@@ -312,9 +317,16 @@ async function resolveTeacherCoordinationForActor(
 
   const scope = await loadActorScope(client, actor, { module: 'teachers.resolveTeacherCoordinationForActor' });
   if (actor.role === 'coordinador') {
+    if (requestedCoordination) {
+      assertCoordinationAllowed(scope, requestedCoordination.id);
+      return { id: requestedCoordination.id, name: requestedCoordination.name };
+    }
+    if (normalizeText(submittedCoordinationName) && !requestedCoordination) {
+      throw new Error('La coordinacion indicada no existe o no esta activa.');
+    }
     const compatible = selectCompatibleActorCoordination(scope);
     if (compatible) return { id: compatible.id, name: compatible.name };
-    return { id: null, name: actor.displayName };
+    throw new Error('Tu usuario no tiene una coordinacion vinculada para capturar docentes.');
   }
 
   if (actor.role === 'direccion') {

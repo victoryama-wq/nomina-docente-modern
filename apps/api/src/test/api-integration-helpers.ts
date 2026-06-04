@@ -101,6 +101,25 @@ export function incidenceBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
+export function teacherBody(overrides: Record<string, unknown> = {}) {
+  return {
+    firstNames: 'Docente QA',
+    paternalLastName: 'Operativo',
+    maternalLastName: 'H17',
+    degree: 'Licenciatura',
+    category: 'N',
+    location: 'Local',
+    comment: 'Docente operativo H17',
+    observation: 'Dato sintetico de prueba',
+    coordinationId: TEST_COORDINATIONS.idiomas.id,
+    coordinationName: TEST_COORDINATIONS.idiomas.name,
+    phone: '9841234567',
+    externalIdentifier: 'H17-TEACHER',
+    status: 'ACTIVO',
+    ...overrides
+  };
+}
+
 export function payrollInput(overrides: Record<string, unknown> = {}) {
   return {
     calendarConfigId: TEST_IDS.calendarConfig,

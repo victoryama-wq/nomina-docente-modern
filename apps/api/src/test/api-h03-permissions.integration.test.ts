@@ -6,7 +6,8 @@ import {
   cleanupTestApp,
   describeIntegration,
   freshTestApp,
-  payrollInput
+  payrollInput,
+  teacherBody
 } from './api-integration-helpers.js';
 import {
   PERMISSIONS,
@@ -113,6 +114,32 @@ describeIfDb('H03 permission separation business integration coverage', () => {
       }
     });
     expect(direction.statusCode).toBe(403);
+  });
+
+  it('blocks fiscal fields in operational teacher updates for users without fiscal.manage', async () => {
+    const sensitivePayloads = [
+      { paymentType: '1' },
+      { rfc: 'TEST010101AAA' },
+      { email: 'blocked.patch@example.test' },
+      { bankDetail: 'BANCO QA' }
+    ];
+
+    for (const sensitivePayload of sensitivePayloads) {
+      const response = await injectAs(app!, coordinatorActor(), {
+        method: 'PATCH',
+        url: `/api/teachers/${TEST_IDS.teacherIdiomas}`,
+        payload: teacherBody({
+          firstNames: 'Docente QA',
+          paternalLastName: 'Idiomas',
+          maternalLastName: 'Fiscal Bloqueado',
+          coordinationId: TEST_COORDINATIONS.idiomas.id,
+          coordinationName: TEST_COORDINATIONS.idiomas.name,
+          ...sensitivePayload
+        })
+      });
+      expect(response.statusCode).toBe(403);
+      expect(response.json().message).toContain('datos fiscales');
+    }
   });
 
   it('enforces fiscal document permissions before touching Storage', async () => {
