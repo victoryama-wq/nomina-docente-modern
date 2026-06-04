@@ -198,6 +198,24 @@ Sin ejecucion.
 
 Pendiente aprobacion humana.
 
+## 11. Mapping read-only preparado
+
+Se creo el documento:
+
+- `docs/auditoria/H17_Mapping_Normalizacion_CreatedBy_Directorio.md`
+
+Resultado del mapping read-only:
+
+- Total pendiente: 209 docentes con `created_by IS NULL`.
+- 138 docentes quedan en grupos `APROBABLE_1A1`.
+- 36 docentes quedan en excepcion `EXCEPCION_MARICARMEN_A_MERIT`.
+- 10 docentes quedan en coordinaciones compartidas que requieren decision.
+- 20 docentes quedan en coordinaciones sin coordinador activo exacto.
+- 5 docentes no tienen coordinacion y requieren analisis previo.
+
+El caso Maricarmen -> Merit queda documentado como excepcion funcional y requiere
+aprobacion explicita antes de cualquier escritura.
+
 Confirmaciones:
 
 - No se ejecuto `UPDATE`.
@@ -207,4 +225,3 @@ Confirmaciones:
 - No se ejecutaron migraciones.
 - No se hizo deploy.
 - No se tocaron datos fiscales, nomina, finanzas, CSV ni cierre de ciclo.
-
