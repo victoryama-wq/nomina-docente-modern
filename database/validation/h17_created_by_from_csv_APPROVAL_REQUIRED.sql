@@ -1,6 +1,6 @@
 ﻿-- H17 created_by normalization from approved CSV
 -- NO EJECUTAR SIN BACKUP Y APROBACION
--- Generated from local CSV validation. Default transaction ends with ROLLBACK.
+-- Generated from local CSV validation with approved Elsa and Mario mappings. Default transaction ends with ROLLBACK.
 -- Scope: update teachers.created_by only when it is currently NULL.
 
 \set ON_ERROR_STOP on
@@ -86,6 +86,7 @@ INSERT INTO h17_created_by_mapping (teacher_id, coordinator_user_id) VALUES
   ('312de389-fa09-473b-9471-a2372e7c96d4', '4e1ca00c-b50d-4dd6-9be2-dd70e1f6d551'),
   ('1155c96c-6abb-45fe-8078-0a8067bb4911', '5377a59d-8e09-4d56-b993-c1c7205ba8af'),
   ('ae2e87f7-30d5-4bf7-9ddc-15acb6f9f6ed', '5377a59d-8e09-4d56-b993-c1c7205ba8af'),
+  ('26475527-21d7-4ef2-920e-7f6ef295aff7', '7209f83b-e73f-4fe7-87b4-bb13a0e490e6'),
   ('80f219e9-f899-4476-8dd2-9aef1dafaf68', '61744d7e-6f64-4bfe-82b0-d4c056aad239'),
   ('b2167ff7-3e8a-4d09-b331-2fb20daedc80', '61744d7e-6f64-4bfe-82b0-d4c056aad239'),
   ('8fe0507a-c6f8-4665-baec-5a4ee8314d2c', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'),

@@ -79,13 +79,13 @@ exportable operativo final.
 | coordinador_csv | filas | app_user_email | app_user_display_name | match_status | observacion |
 |---|---:|---|---|---|---|
 | Cristhian Alvarado Valencia | 1 | Pendiente | Pendiente | `SIN_MATCH` | No se encontro app_user activo equivalente exacto. |
-| Elsa Garcia Vallejo | 8 | `elsa.garcia@tecplayacar.edu.mx` | Elsa Garcia Vallejo | `MATCH_EXACTO` | Usuario activo encontrado; rol actual `direccion`, requiere aprobacion operativa si se usara como capturador. |
-| Elsa García Vallejo | 7 | `elsa.garcia@tecplayacar.edu.mx` | Elsa Garcia Vallejo | `MATCH_SIN_ACENTO` | Usuario activo encontrado sin acento; rol actual `direccion`, requiere aprobacion operativa si se usara como capturador. |
+| Elsa Garcia Vallejo | 8 | `elsa.garcia@tecplayacar.edu.mx` | Elsa Garcia Vallejo | `MATCH_MANUAL_APROBADO` | Decision humana aprobada: Elsa con/sin acento se asigna a Elsa, aunque rol actual sea `direccion`. |
+| Elsa García Vallejo | 7 | `elsa.garcia@tecplayacar.edu.mx` | Elsa Garcia Vallejo | `MATCH_MANUAL_APROBADO` | Decision humana aprobada: Elsa con/sin acento se asigna a Elsa, aunque rol actual sea `direccion`. |
 | Eslivet Aguilar Santos | 47 | `eslivet.aguilar@tecplayacar.edu.mx` | Eslivet Aguilar Santos | `MATCH_EXACTO` | Rol `coordinador`. |
 | Josue Delgado | 13 | `josue.delgado@tecplayacar.edu.mx` | Josue Delgado | `MATCH_EXACTO` | Rol `coordinador`. |
 | Lidia Medina | 13 | `lidia.medina@tecplayacar.edu.mx` | Lidia Medina | `MATCH_EXACTO` | Rol `coordinador`. |
-| Mario Manuel Medina Aké | 1 | `mario.medina@tecplayacar.edu.mx` | Mario Manuel Medina Ake | `MATCH_SIN_ACENTO` | Rol `coordinador`. |
-| Mario Medina | 2 | Pendiente | Pendiente | `SIN_MATCH` | No se encontro app_user activo equivalente exacto. |
+| Mario Manuel Medina Aké | 1 | `mario.medina@tecplayacar.edu.mx` | Mario Manuel Medina Ake | `MATCH_MANUAL_APROBADO` | Decision humana aprobada: Mario Medina y Mario Manuel Medina Aké se asignan a `mario.medina@tecplayacar.edu.mx`. |
+| Mario Medina | 2 | `mario.medina@tecplayacar.edu.mx` | Mario Manuel Medina Ake | `MATCH_MANUAL_APROBADO` | Decision humana aprobada: Mario Medina y Mario Manuel Medina Aké se asignan a `mario.medina@tecplayacar.edu.mx`. |
 | Merit Berenice Bazan Garcia | 40 | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | `MATCH_EXACTO` | Rol `coordinador`. |
 | Noadia Gonzales | 1 | Pendiente | Pendiente | `SIN_MATCH` | No se encontro app_user activo equivalente exacto con ese texto. |
 | Oriana Nah Rosado | 38 | `oriana.nah@tecplayacar.edu.mx` | Oriana Nah Rosado | `MATCH_EXACTO` | Rol `coordinador`. |
@@ -142,10 +142,10 @@ Resumen:
 
 | estado_update | conteo |
 |---|---:|
-| `UPDATE_PROPUESTO` | 196 |
+| `UPDATE_PROPUESTO` | 197 |
 | `OMITIR_CREATED_BY_EXISTENTE` | 3 |
 | `OMITIR_DOCENTE_SIN_MATCH` | 9 |
-| `OMITIR_COORDINADOR_SIN_MATCH` | 5 |
+| `OMITIR_COORDINADOR_SIN_MATCH` | 4 |
 
 Propuesta por usuario destino:
 
@@ -155,15 +155,18 @@ Propuesta por usuario destino:
 | `eslivet.aguilar@tecplayacar.edu.mx` | 46 |
 | `josue.delgado@tecplayacar.edu.mx` | 11 |
 | `lidia.medina@tecplayacar.edu.mx` | 13 |
-| `mario.medina@tecplayacar.edu.mx` | 1 |
+| `mario.medina@tecplayacar.edu.mx` | 2 |
 | `merit.bazan@tecplayacar.edu.mx` | 38 |
 | `oriana.nah@tecplayacar.edu.mx` | 34 |
 | `zulma.martinez@tecplayacar.edu.mx` | 39 |
-| **Total** | **196** |
+| **Total** | **197** |
 
-Advertencia: `elsa.garcia@tecplayacar.edu.mx` esta activo con rol `direccion`.
-Como el CSV lo marca como capturador en 15 filas y 14 tienen update propuesto,
-ese grupo debe aprobarse explicitamente antes de ejecutar SQL.
+Decision humana aplicada: `elsa.garcia@tecplayacar.edu.mx` queda aprobado como
+capturador tecnico para las filas de Elsa Garcia Vallejo/Elsa García Vallejo,
+aunque su rol actual sea `direccion`.
+
+Decision humana aplicada: `mario.medina@tecplayacar.edu.mx` queda aprobado como
+capturador tecnico para Mario Medina y Mario Manuel Medina Aké.
 
 ## 8. Casos omitidos
 
@@ -171,12 +174,11 @@ ese grupo debe aprobarse explicitamente antes de ejecutar SQL.
 |---|---:|---|
 | `OMITIR_CREATED_BY_EXISTENTE` | 3 | No se tocaran docentes que ya tienen capturador tecnico. |
 | `OMITIR_DOCENTE_SIN_MATCH` | 9 | Requieren revision de nombre o existencia en Directorio. |
-| `OMITIR_COORDINADOR_SIN_MATCH` | 5 | Requieren mapping manual o correccion de usuario/capturador. |
+| `OMITIR_COORDINADOR_SIN_MATCH` | 4 | Requieren mapping manual o correccion de usuario/capturador. |
 
 Los valores de coordinador sin match fueron:
 
 - Cristhian Alvarado Valencia.
-- Mario Medina.
 - Noadia Gonzales.
 - Simulación Clinica.
 
@@ -191,7 +193,7 @@ Propiedades:
 - Guard de base exacta `nomina_docente`.
 - Comentario `NO EJECUTAR SIN BACKUP Y APROBACION`.
 - Transaccion explicita.
-- Tabla temporal de mapping con 196 filas.
+- Tabla temporal de mapping con 197 filas.
 - `UPDATE` limitado a `teachers.created_by` y solo cuando esta `NULL`.
 - Conteos antes/despues.
 - `ROLLBACK` por defecto.
@@ -208,4 +210,3 @@ No se ejecuto este archivo.
 - No se hizo deploy.
 - No se tocaron fiscales.
 - No se tocaron nomina, snapshots, finanzas, CSV productivos ni cierre de ciclo.
-

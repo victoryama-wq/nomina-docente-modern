@@ -208,7 +208,7 @@ Resultado del mapping read-only:
 
 - Total pendiente: 209 docentes con `created_by IS NULL`.
 - 138 docentes quedan en grupos `APROBABLE_1A1`.
-- 36 docentes quedan en excepcion `EXCEPCION_MARICARMEN_A_MERIT`.
+- 36 docentes quedan en decision aprobada `APROBADO_MARICARMEN_A_MERIT`.
 - 10 docentes quedan en coordinaciones compartidas que requieren decision.
 - 20 docentes quedan en coordinaciones sin coordinador activo exacto.
 - 5 docentes no tienen coordinacion y requieren analisis previo.
@@ -228,15 +228,24 @@ Resultado de la validacion con el CSV aprobado por el usuario:
 - 14 valores unicos en columna `COORDINADOR`.
 - 204 docentes con match exacto en `teachers`.
 - 9 docentes sin match.
-- 196 updates propuestos para `teachers.created_by`.
+- 197 updates propuestos para `teachers.created_by`.
 - 3 docentes omitidos porque ya tenian `created_by`.
-- 5 filas omitidas por coordinador sin match.
+- 4 filas omitidas por coordinador sin match.
 - SQL generado en `database/validation/h17_created_by_from_csv_APPROVAL_REQUIRED.sql`.
 - El SQL queda en `ROLLBACK` por defecto y no fue ejecutado.
 
 La decision Maricarmen -> Merit queda reflejada por el CSV aprobado: Maricarmen
 no aparece como capturador en columna `COORDINADOR`; los registros aplicables
 quedan bajo `merit.bazan@tecplayacar.edu.mx`.
+
+Decisiones humanas adicionales aplicadas en el mapping:
+
+- `Elsa Garcia Vallejo` y `Elsa García Vallejo` se asignan a
+  `elsa.garcia@tecplayacar.edu.mx`, aunque el usuario tenga rol `direccion`.
+- `Mario Medina` y `Mario Manuel Medina Aké` se asignan a
+  `mario.medina@tecplayacar.edu.mx`.
+- El SQL fue regenerado con 197 filas en la tabla temporal y sigue terminando
+  en `ROLLBACK`.
 
 Confirmaciones:
 

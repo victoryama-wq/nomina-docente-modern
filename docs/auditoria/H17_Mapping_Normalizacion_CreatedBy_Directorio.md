@@ -91,8 +91,11 @@ Total pendiente: 209 docentes.
 Estados usados:
 
 - `APROBABLE_1A1`: una coordinacion con un coordinador activo exacto.
-- `EXCEPCION_MARICARMEN_A_MERIT`: decision funcional indicada por usuario;
-  requiere aprobacion explicita.
+- `APROBADO_MARICARMEN_A_MERIT`: decision funcional aprobada por usuario.
+- `APROBADO_MANUAL_ELSA`: decision funcional aprobada para Elsa Garcia
+  Vallejo/Elsa García Vallejo hacia `elsa.garcia@tecplayacar.edu.mx`.
+- `APROBADO_MANUAL_MARIO`: decision funcional aprobada para Mario Medina y
+  Mario Manuel Medina Aké hacia `mario.medina@tecplayacar.edu.mx`.
 - `REQUIERE_DECISION_COMPARTIDA`: coordinacion compuesta sin mapping exacto en
   `user_coordinations`; requiere decision humana.
 - `SIN_COORDINADOR_ACTIVO`: no hay coordinador activo exacto para esa
@@ -108,17 +111,17 @@ Estados usados:
 | `48e41353-7d8a-4784-b5b1-91c92bd539cd` | Merit Berenice Bazan Garcia | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 8 | `APROBABLE_1A1` | Mapping exacto por `user_coordinations`. |
 | `2175ade9-8f38-446f-965e-cfa5b8743f89` | Oriana Nah Rosado | `oriana.nah@tecplayacar.edu.mx` | Oriana Nah Rosado | 37 | `APROBABLE_1A1` | Mapping exacto por `user_coordinations`. |
 | `c0075dbd-26bc-4e5f-acc6-6e21e0ddcf20` | Zulma Martinez Duque | `zulma.martinez@tecplayacar.edu.mx` | Zulma Martinez Duque | 30 | `APROBABLE_1A1` | Mapping exacto por `user_coordinations`. |
-| `db24459f-34df-4fe0-86c8-19ea41fb4ff8` | Maricarmen Martínez Martínez | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 26 | `EXCEPCION_MARICARMEN_A_MERIT` | Requiere aprobacion explicita. |
-| `df832a2a-bd60-4bc9-b4f6-c4632778fc92` | Maricarmen Martínez Martínez/Eslivet Aguilar Santos | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 5 | `EXCEPCION_MARICARMEN_A_MERIT` | Requiere aprobacion explicita; coordinacion compuesta. |
-| `2737085d-f312-4d40-a4e4-7ccee339b50e` | Maricarmen Martínez Martínez/Eslivet Aguilar Santos/Elsa García Vallejo | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 1 | `EXCEPCION_MARICARMEN_A_MERIT` | Requiere aprobacion explicita; coordinacion compuesta. |
-| `02f2dd38-5e97-48ca-991d-c8f33c928ce5` | Maricarmen Martínez Martínez/Lidia Medina | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 1 | `EXCEPCION_MARICARMEN_A_MERIT` | Requiere aprobacion explicita; coordinacion compuesta. |
-| `1b0116fc-37db-4a7f-82c6-b99de45fe57e` | Zulma Martinez Duque/Maricarmen Martínez Martínez | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 3 | `EXCEPCION_MARICARMEN_A_MERIT` | Requiere aprobacion explicita; coordinacion compuesta. |
+| `db24459f-34df-4fe0-86c8-19ea41fb4ff8` | Maricarmen Martínez Martínez | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 26 | `APROBADO_MARICARMEN_A_MERIT` | Decision humana aprobada. |
+| `df832a2a-bd60-4bc9-b4f6-c4632778fc92` | Maricarmen Martínez Martínez/Eslivet Aguilar Santos | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 5 | `APROBADO_MARICARMEN_A_MERIT` | Decision humana aprobada; coordinacion compuesta conserva nombre. |
+| `2737085d-f312-4d40-a4e4-7ccee339b50e` | Maricarmen Martínez Martínez/Eslivet Aguilar Santos/Elsa García Vallejo | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 1 | `APROBADO_MARICARMEN_A_MERIT` | Decision humana aprobada; coordinacion compuesta conserva nombre. |
+| `02f2dd38-5e97-48ca-991d-c8f33c928ce5` | Maricarmen Martínez Martínez/Lidia Medina | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 1 | `APROBADO_MARICARMEN_A_MERIT` | Decision humana aprobada; coordinacion compuesta conserva nombre. |
+| `1b0116fc-37db-4a7f-82c6-b99de45fe57e` | Zulma Martinez Duque/Maricarmen Martínez Martínez | `merit.bazan@tecplayacar.edu.mx` | Merit Berenice Bazan Garcia | 3 | `APROBADO_MARICARMEN_A_MERIT` | Decision humana aprobada; coordinacion compuesta conserva nombre. |
 | `df81caf0-9a8c-4af5-9409-f095529c9cdf` | Zulma Martinez Duque/Eslivet Aguilar Santos | Pendiente | Pendiente | 7 | `REQUIERE_DECISION_COMPARTIDA` | Elegir capturador correcto. |
 | `83aa8250-00a8-4f58-8d43-ba3d55ab25cb` | Zulma Martinez Duque/Eslivet Aguilar Santos/Lidia Medina | Pendiente | Pendiente | 2 | `REQUIERE_DECISION_COMPARTIDA` | Elegir capturador correcto. |
 | `daa13687-d2c2-42eb-8042-e7011ba20678` | Zulma Martinez Duque/Eslivet Aguilar Santos/Oriana Nah Rosado | Pendiente | Pendiente | 1 | `REQUIERE_DECISION_COMPARTIDA` | Elegir capturador correcto. |
-| `62e685f3-c92a-411f-bf86-48c540f5ae21` | Cristhian Alvarado Valencia | Pendiente | Pendiente | 1 | `SIN_COORDINADOR_ACTIVO` | Existe Cristhian Alvarado activo, pero no mapping exacto a esta coordinacion. |
-| `b67c9bce-c1b1-43bd-abeb-9ca8b1ff79ea` | Elsa Garcia Vallejo | Pendiente | Pendiente | 15 | `SIN_COORDINADOR_ACTIVO` | No se detecto coordinador activo exacto. |
-| `e8aaaa99-ab9c-40eb-b7d3-fbd6d74006ff` | Mario Medina | Pendiente | Pendiente | 2 | `SIN_COORDINADOR_ACTIVO` | Existe Mario Manuel Medina Ake activo, pero no mapping exacto a esta coordinacion. |
+| `62e685f3-c92a-411f-bf86-48c540f5ae21` | Cristhian Alvarado Valencia | Pendiente | Pendiente | 1 | `SIN_COORDINADOR_ACTIVO` | Existe Cristhian Alvarado activo, pero no mapping exacto aprobado a esta coordinacion. |
+| `b67c9bce-c1b1-43bd-abeb-9ca8b1ff79ea` | Elsa Garcia Vallejo | `elsa.garcia@tecplayacar.edu.mx` | Elsa Garcia Vallejo | 15 | `APROBADO_MANUAL_ELSA` | Decision humana aprobada, aunque el usuario tenga rol `direccion`. |
+| `e8aaaa99-ab9c-40eb-b7d3-fbd6d74006ff` | Mario Medina | `mario.medina@tecplayacar.edu.mx` | Mario Manuel Medina Ake | 2 | `APROBADO_MANUAL_MARIO` | Decision humana aprobada; Mario Medina y Mario Manuel Medina Aké son la misma persona. |
 | `6d3886a0-b161-4766-9831-41aa06e8ef07` | Simulación Clinica | Pendiente | Pendiente | 2 | `SIN_COORDINADOR_ACTIVO` | Requiere decision humana. |
 | `NULL` | Sin coordinacion | Pendiente | Pendiente | 5 | `SIN_COORDINACION` | Requiere normalizar coordinacion antes de capturador. |
 
@@ -127,9 +130,11 @@ Resumen por estado:
 | Estado | Docentes |
 |---|---:|
 | `APROBABLE_1A1` | 138 |
-| `EXCEPCION_MARICARMEN_A_MERIT` | 36 |
+| `APROBADO_MARICARMEN_A_MERIT` | 36 |
+| `APROBADO_MANUAL_ELSA` | 15 |
+| `APROBADO_MANUAL_MARIO` | 2 |
 | `REQUIERE_DECISION_COMPARTIDA` | 10 |
-| `SIN_COORDINADOR_ACTIVO` | 20 |
+| `SIN_COORDINADOR_ACTIVO` | 3 |
 | `SIN_COORDINACION` | 5 |
 | **Total** | **209** |
 
@@ -149,13 +154,12 @@ Mapping propuesto:
 
 | Alcance | Docentes | Coordinador propuesto | Estado |
 |---|---:|---|---|
-| Maricarmen exacto | 26 | `merit.bazan@tecplayacar.edu.mx` | Requiere aprobacion explicita |
-| Maricarmen en coordinaciones compuestas | 10 | `merit.bazan@tecplayacar.edu.mx` | Requiere aprobacion explicita por cada grupo |
-| **Total potencial Maricarmen -> Merit** | **36** | `merit.bazan@tecplayacar.edu.mx` | Pendiente aprobacion |
+| Maricarmen exacto | 26 | `merit.bazan@tecplayacar.edu.mx` | Aprobado |
+| Maricarmen en coordinaciones compuestas | 10 | `merit.bazan@tecplayacar.edu.mx` | Aprobado; conserva nombre compuesto |
+| **Total potencial Maricarmen -> Merit** | **36** | `merit.bazan@tecplayacar.edu.mx` | Aprobado |
 
-Advertencia: aunque este mapping fue indicado funcionalmente, debe aprobarse
-explicitamente antes de cualquier `UPDATE`, porque reasigna propiedad tecnica de
-docentes desde `NULL` hacia Merit.
+Advertencia: aunque este mapping ya fue aprobado funcionalmente, cualquier
+`UPDATE` productivo sigue requiriendo backup y ventana de ejecucion controlada.
 
 ## 7. Ambiguedades y pendientes
 
@@ -235,4 +239,3 @@ Para coordinaciones compuestas, generar un `UPDATE` por cada grupo aprobado.
 - No se modifico produccion.
 - No se expusieron RFC, bancos, constancias, documentos fiscales ni datos de
   nomina.
-
