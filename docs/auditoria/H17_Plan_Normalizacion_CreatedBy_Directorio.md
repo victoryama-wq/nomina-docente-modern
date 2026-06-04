@@ -27,8 +27,10 @@ Asignar `teachers.created_by` a los usuarios coordinadores correctos solo para
 docentes cargados masivamente y solo cuando exista mapping aprobado por
 operacion/administracion.
 
-Este plan no ejecuta cambios de datos. Queda preparado para una ventana
-posterior con backup, aprobacion y validacion.
+Este plan preparo la ventana controlada. La ejecucion productiva aprobada quedo
+documentada posteriormente en:
+
+- `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md`
 
 ## 3. Riesgos
 
@@ -179,7 +181,7 @@ GROUP BY u.email
 ORDER BY u.email;
 ```
 
-## 9. Procedimiento productivo futuro
+## 9. Procedimiento productivo aplicado
 
 1. Crear backup Cloud SQL.
 2. Ejecutar preview read-only y generar mapping final.
@@ -192,11 +194,22 @@ ORDER BY u.email;
 
 ## 10. Estado
 
-Plan preparado.
+Normalizacion productiva ejecutada el 2026-06-04 con backup previo.
 
-Sin ejecucion.
+Resultado:
 
-Pendiente aprobacion humana.
+- Backup Cloud SQL: `1780616275581`.
+- 197 docentes actualizados en `teachers.created_by`.
+- 0 filas del mapping quedaron `NULL`.
+- 0 filas del mapping quedaron con capturador inesperado.
+- 12 docentes permanecen con `created_by IS NULL` fuera del lote aprobado.
+- No se hizo deploy.
+- No se ejecutaron migraciones.
+- No se tocaron datos fiscales, `updated_by`, `coordination_id`, nomina,
+  finanzas, CSV productivos ni snapshots.
+
+Pendiente: validacion funcional con coordinadoras/usuarios autorizados y
+decision futura sobre los 12 remanentes si operacion lo requiere.
 
 ## 11. Mapping read-only preparado
 
@@ -232,7 +245,7 @@ Resultado de la validacion con el CSV aprobado por el usuario:
 - 3 docentes omitidos porque ya tenian `created_by`.
 - 4 filas omitidas por coordinador sin match.
 - SQL generado en `database/validation/h17_created_by_from_csv_APPROVAL_REQUIRED.sql`.
-- El SQL queda en `ROLLBACK` por defecto y no fue ejecutado.
+- El SQL versionado queda en `ROLLBACK` por defecto.
 
 La decision Maricarmen -> Merit queda reflejada por el CSV aprobado: Maricarmen
 no aparece como capturador en columna `COORDINADOR`; los registros aplicables
@@ -249,10 +262,12 @@ Decisiones humanas adicionales aplicadas en el mapping:
 
 Confirmaciones:
 
-- No se ejecuto `UPDATE`.
+- Se ejecuto `UPDATE` productivo controlado solo para 197 filas aprobadas de
+  `teachers.created_by`.
 - No se ejecuto `DELETE`.
-- No se ejecuto `INSERT`.
-- No se modifico produccion.
+- No hubo `INSERT` permanente en tablas funcionales; solo se uso tabla temporal
+  de mapping dentro de la sesion SQL.
+- No se modifico produccion fuera de `teachers.created_by` en el lote aprobado.
 - No se ejecutaron migraciones.
 - No se hizo deploy.
 - No se tocaron datos fiscales, nomina, finanzas, CSV ni cierre de ciclo.

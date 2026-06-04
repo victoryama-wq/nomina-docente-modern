@@ -15,8 +15,9 @@ La regla funcional vigente se mantiene:
 - Coordinador/coordinadora no edita datos fiscales.
 - La fuente tecnica es `teachers.created_by`.
 
-Esta fase valida el CSV y prepara una propuesta SQL en modo seguro. No se
-ejecuto ningun `UPDATE`.
+Esta fase valido el CSV y preparo una propuesta SQL en modo seguro. En una
+ventana posterior aprobada, esa propuesta fue ejecutada de forma controlada
+solo para el lote aprobado.
 
 ## 2. Validacion del CSV
 
@@ -182,7 +183,7 @@ Los valores de coordinador sin match fueron:
 - Noadia Gonzales.
 - Simulación Clinica.
 
-## 9. SQL propuesto, NO ejecutar
+## 9. SQL propuesto y ejecucion controlada
 
 Se genero el archivo:
 
@@ -198,14 +199,32 @@ Propiedades:
 - Conteos antes/despues.
 - `ROLLBACK` por defecto.
 
-No se ejecuto este archivo.
+El archivo versionado permanece en `ROLLBACK`. Para la ejecucion productiva
+aprobada se genero una copia temporal local con cierre `COMMIT`; no se modifico
+el archivo versionado.
+
+Resultado de ejecucion:
+
+| Metrica | Resultado |
+|---|---:|
+| Filas actualizadas en `teachers.created_by` | 197 |
+| Filas del mapping con capturador esperado | 197 |
+| Filas del mapping aun `NULL` | 0 |
+| Filas del mapping con capturador inesperado | 0 |
+| Docentes globales aun `created_by IS NULL` | 12 |
+
+Documento de resultado:
+
+- `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md`
 
 ## 10. Confirmaciones
 
-- No se ejecuto `UPDATE`.
+- Se ejecuto `UPDATE` productivo controlado solo para 197 filas aprobadas de
+  `teachers.created_by`.
 - No se ejecuto `DELETE`.
-- No se ejecuto `INSERT`.
-- No se modifico produccion.
+- No hubo `INSERT` permanente en tablas funcionales; solo se uso una tabla
+  temporal de mapping en la sesion SQL.
+- No se modifico produccion fuera del lote aprobado de `teachers.created_by`.
 - No se ejecutaron migraciones.
 - No se hizo deploy.
 - No se tocaron fiscales.

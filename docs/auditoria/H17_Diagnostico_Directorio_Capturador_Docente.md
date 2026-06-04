@@ -296,5 +296,9 @@ H17 queda en estado:
 - diagnostico completado;
 - correccion por codigo basada en coordinacion descartada;
 - regla por `created_by` restaurada;
-- normalizacion de `teachers.created_by` pendiente de aprobacion mediante
-  `docs/auditoria/H17_Plan_Normalizacion_CreatedBy_Directorio.md`.
+- normalizacion de `teachers.created_by` ejecutada posteriormente para 197
+  docentes aprobados, con 12 remanentes documentados.
+
+Documento de resultado:
+
+- `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md`

@@ -14,8 +14,13 @@ Regla funcional vigente:
 - No basta con estar en la coordinacion.
 - Coordinador/coordinadora no edita datos fiscales.
 
-Este documento prepara un mapping read-only para normalizar `created_by` en una
-ventana futura. No ejecuta cambios de datos.
+Este documento preparo un mapping read-only para normalizar `created_by` en una
+ventana futura. En esta fase no ejecuto cambios de datos.
+
+Resultado posterior: la normalizacion productiva aprobada se ejecuto el
+2026-06-04 con base en el CSV/mapping aprobado y quedo documentada en:
+
+- `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md`
 
 ## 2. Alcance
 
@@ -158,8 +163,9 @@ Mapping propuesto:
 | Maricarmen en coordinaciones compuestas | 10 | `merit.bazan@tecplayacar.edu.mx` | Aprobado; conserva nombre compuesto |
 | **Total potencial Maricarmen -> Merit** | **36** | `merit.bazan@tecplayacar.edu.mx` | Aprobado |
 
-Advertencia: aunque este mapping ya fue aprobado funcionalmente, cualquier
-`UPDATE` productivo sigue requiriendo backup y ventana de ejecucion controlada.
+Resultado posterior: este criterio quedo incorporado en la ejecucion productiva
+aprobada. Cualquier segundo lote futuro sigue requiriendo backup, mapping
+actualizado y ventana de ejecucion controlada.
 
 ## 7. Ambiguedades y pendientes
 
@@ -183,7 +189,7 @@ nombres compuestos o coordinaciones sin mapping exacto.
   antes de ejecutar.
 - No debe tocarse ningun campo fiscal, ni `updated_by`, ni `coordination_id`.
 
-## 9. SQL UPDATE propuesto, NO ejecutar
+## 9. SQL UPDATE propuesto historico
 
 Plantilla por mapping aprobado:
 
@@ -217,7 +223,7 @@ WHERE created_by IS NULL
 
 Para coordinaciones compuestas, generar un `UPDATE` por cada grupo aprobado.
 
-## 10. Proximo paso
+## 10. Proximo paso original
 
 1. Usuario revisa este mapping.
 2. Usuario aprueba, corrige o descarta cada grupo.
@@ -229,13 +235,29 @@ Para coordinaciones compuestas, generar un `UPDATE` por cada grupo aprobado.
    - documento de resultado.
 4. No se requiere deploy si solo se normaliza `created_by`.
 
-## 11. Confirmaciones
+## 11. Resultado posterior
 
-- No se ejecuto `UPDATE`.
+La ventana productiva posterior ejecuto un lote aprobado desde el CSV:
+
+- Backup Cloud SQL: `1780616275581`.
+- 197 docentes actualizados en `teachers.created_by`.
+- 12 docentes quedaron con `created_by IS NULL`.
+- No se hizo deploy.
+- No se ejecutaron migraciones.
+- No se tocaron campos fiscales, `updated_by`, `coordination_id`, nomina,
+  finanzas ni snapshots.
+
+Documento de resultado:
+
+- `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md`
+
+## 12. Confirmaciones de la fase read-only original
+
+- No se ejecuto `UPDATE` durante la fase de mapping read-only.
 - No se ejecuto `DELETE`.
-- No se ejecuto `INSERT`.
+- No se ejecuto `INSERT` permanente.
 - No se ejecutaron migraciones.
 - No se hizo deploy.
-- No se modifico produccion.
+- No se modifico produccion durante la fase de mapping read-only.
 - No se expusieron RFC, bancos, constancias, documentos fiscales ni datos de
   nomina.
