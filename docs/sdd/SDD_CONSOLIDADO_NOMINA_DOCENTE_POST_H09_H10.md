@@ -104,6 +104,7 @@ Reglas vigentes:
 - `created_by` y `captured_by` son relevantes para propiedad de registros.
 - Docentes pueden estar relacionados operativamente con varios coordinadores por capturas, sin otorgar edicion global.
 - En Directorio, `teachers.created_by` es la fuente tecnica de capturador para edicion por coordinador; no existe `teachers.captured_by` y no basta con pertenecer a la coordinacion.
+- En Directorio, Coordinador puede consultar todos los docentes en modo lectura mediante detalle operativo, incluyendo datos de contacto como correo y telefono; la edicion sigue limitada al capturador y los datos fiscales siguen separados por permisos.
 - En Extras, Direccion/Subdireccion puede ver listado y modificar solo extras capturados por el actor cuando backend lo permite.
 
 Reglas de captura vigentes:
@@ -126,6 +127,7 @@ Documentos vigentes:
 - `docs/auditoria/H17_Plan_Normalizacion_CreatedBy_Directorio.md`
 - `docs/auditoria/H17_Validacion_CSV_CreatedBy_Directorio.md`
 - `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md`
+- `docs/auditoria/H17_Ajuste_Directorio_Consulta_Coordinador.md`
 
 ### 3.3 Fiscal, Finanzas y Workflow / H03
 
@@ -287,7 +289,7 @@ Documentos vigentes:
 
 | Modulo | Reglas vigentes | Documentos relevantes |
 |---|---|---|
-| Directorio | GET global para consulta; alta/edicion operativa por permisos; datos fiscales bloqueados sin `fiscal.manage`; responsable operativo no debe confundirse con catalogo de coordinaciones. | H02/H03 Fase 5, H03 Fase 4, SDD retrospectivo. |
+| Directorio | GET global para consulta; Coordinador puede ver detalle operativo de cualquier docente, incluido contacto; alta/edicion operativa por capturador/permisos; datos fiscales bloqueados sin `fiscal.manage`; responsable operativo no debe confundirse con catalogo de coordinaciones. | H02/H03 Fase 5, H03 Fase 4, SDD retrospectivo, ajuste H17 Directorio. |
 | Horarios | Permitidos en ciclos `ACTIVO` y `PLANEACION`; bloqueados en `CERRADO`; coordinadores operan segun capturador/alcance; Admin global. | H02/H03 Fase 3, H09/H10 Fase 2, H09/H10 Fase 4. |
 | Incidencias | Permitidas solo en ciclo operativo activo y ventana abierta; bloqueadas en `PLANEACION` y `CERRADO`; validacion por horario/coordinacion. | H02/H03 Fase 3, H09/H10 Fase 2. |
 | Extras | Listado segun rol; edicion por propiedad/captured_by donde aplique; Direccion/Subdireccion solo modifica propios; bloqueados en `PLANEACION` y `CERRADO`. | H02/H03 Fase 3, H04 Fase 5, H09/H10 Fase 2. |

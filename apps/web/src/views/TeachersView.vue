@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import {
   RefreshCw, UserPlus, Search, Download, Building2, Mail, CreditCard,
-  FileText, Edit3, Trash2, Loader2
+  FileText, Edit3, Trash2, Loader2, Eye, Phone, IdCard, X
 } from 'lucide-vue-next';
 import {
   fetchTeachers,
@@ -48,6 +48,7 @@ const teacherSaving = ref(false);
 const teacherUploading = ref(false);
 const teacherExporting = ref<'active' | 'history' | ''>('');
 const editingTeacherId = ref<string | null>(null);
+const selectedTeacherDetail = ref<Teacher | null>(null);
 const selectedConstancia = ref<File | null>(null);
 const pendingDeleteTeacher = ref<Teacher | null>(null);
 const deletingTeacher = ref(false);
@@ -90,10 +91,10 @@ const filteredTeachers = computed(() => {
     const haystack = [
       teacher.fullName,
       canViewTeacherFiscal.value ? teacher.rfc : '',
-      canViewTeacherFiscal.value ? teacher.email : '',
+      teacher.email,
       teacher.phone,
       teacher.externalIdentifier,
-      teacher.bankDetail,
+      canViewTeacherFiscal.value ? teacher.bankDetail : '',
       teacher.coordinationName,
       teacher.documentName
     ]
@@ -132,6 +133,14 @@ function canEditTeacher(teacher: Teacher) {
 
 function canAccessTeacherDocument(teacher: Teacher) {
   return canViewTeacherDocuments.value && !!teacher.documentId;
+}
+
+function viewTeacher(teacher: Teacher) {
+  selectedTeacherDetail.value = teacher;
+}
+
+function closeTeacherDetail() {
+  selectedTeacherDetail.value = null;
 }
 
 async function loadTeachers() {
@@ -443,6 +452,14 @@ onMounted(() => {
                 </td>
                 <td class="row-actions">
                   <button
+                    class="icon-button"
+                    type="button"
+                    title="Ver información"
+                    @click="viewTeacher(teacher)"
+                  >
+                    <Eye :size="16" />
+                  </button>
+                  <button
                     v-if="teacher.documentId && canViewTeacherDocuments"
                     class="icon-button"
                     type="button"
@@ -491,6 +508,79 @@ onMounted(() => {
       @file-selected="onConstanciaSelected"
       @upload="uploadConstancia"
     />
+
+    <div v-if="selectedTeacherDetail" class="modal-backdrop" @click.self="closeTeacherDetail">
+      <section class="modal-card large teacher-detail-modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Directorio docente</p>
+            <h3>{{ selectedTeacherDetail.fullName }}</h3>
+          </div>
+          <button class="icon-button" type="button" title="Cerrar" @click="closeTeacherDetail">
+            <X :size="17" />
+          </button>
+        </div>
+
+        <div class="teacher-detail-grid">
+          <article class="teacher-detail-card">
+            <span>Responsable operativo</span>
+            <strong>{{ selectedTeacherDetail.coordinationName || 'Sin responsable' }}</strong>
+          </article>
+          <article class="teacher-detail-card">
+            <span>Estatus</span>
+            <strong>{{ selectedTeacherDetail.status }}</strong>
+          </article>
+          <article class="teacher-detail-card">
+            <span>Categoría</span>
+            <strong>{{ selectedTeacherDetail.category || '-' }}</strong>
+          </article>
+          <article class="teacher-detail-card">
+            <span>Ubicación</span>
+            <strong>{{ selectedTeacherDetail.location || '-' }}</strong>
+          </article>
+        </div>
+
+        <section class="teacher-detail-section">
+          <h4>Contacto</h4>
+          <dl>
+            <dt><Phone :size="14" /> Teléfono</dt>
+            <dd>{{ selectedTeacherDetail.phone || 'Sin teléfono' }}</dd>
+            <dt><Mail :size="14" /> Correo</dt>
+            <dd>{{ selectedTeacherDetail.email || 'Sin correo' }}</dd>
+            <dt><IdCard :size="14" /> Identificador</dt>
+            <dd>{{ selectedTeacherDetail.externalIdentifier || 'Sin identificador' }}</dd>
+          </dl>
+        </section>
+
+        <section class="teacher-detail-section">
+          <h4>Perfil operativo</h4>
+          <dl>
+            <dt>Grado</dt>
+            <dd>{{ selectedTeacherDetail.degree || '-' }}</dd>
+            <dt>Comentario</dt>
+            <dd>{{ selectedTeacherDetail.comment || '-' }}</dd>
+            <dt>Observación</dt>
+            <dd>{{ selectedTeacherDetail.observation || '-' }}</dd>
+          </dl>
+        </section>
+
+        <section v-if="canViewTeacherFiscal" class="teacher-detail-section">
+          <h4>Fiscal</h4>
+          <dl>
+            <dt>RFC</dt>
+            <dd>{{ selectedTeacherDetail.rfc || 'Sin RFC' }}</dd>
+            <dt>Tipo de pago</dt>
+            <dd>{{ paymentLabel(selectedTeacherDetail.paymentType) }}</dd>
+            <dt>Banco / cuenta</dt>
+            <dd>{{ selectedTeacherDetail.bankDetail || 'Sin datos bancarios' }}</dd>
+          </dl>
+        </section>
+
+        <div class="modal-actions">
+          <button class="secondary-action" type="button" @click="closeTeacherDetail">Cerrar</button>
+        </div>
+      </section>
+    </div>
 
     <ConfirmModal
       :show="!!pendingDeleteTeacher"

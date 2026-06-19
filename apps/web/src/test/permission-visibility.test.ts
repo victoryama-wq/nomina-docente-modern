@@ -77,20 +77,28 @@ describe('frontend permission visibility helpers', () => {
 
   it('hides teacher fiscal fields for users without fiscal.manage and shows them for RH/Finanzas', () => {
     expect(teacherModalVisibility(coordinatorSession(), false)).toMatchObject({
+      showReadOnlyTeacherContactDetail: true,
       showFiscalFields: false,
       showFiscalRestrictionHint: true,
       showConstanciaUpload: false
     });
 
     expect(teacherModalVisibility(rhSession(), true)).toMatchObject({
+      showReadOnlyTeacherContactDetail: true,
       showFiscalFields: true,
       showFiscalRestrictionHint: false,
       showConstanciaUpload: true
     });
 
     expect(teacherModalVisibility(financeSession(), true)).toMatchObject({
+      showReadOnlyTeacherContactDetail: true,
       showFiscalFields: true,
       showConstanciaUpload: true
+    });
+
+    expect(teacherModalVisibility(directionSession(), false)).toMatchObject({
+      showReadOnlyTeacherContactDetail: true,
+      showFiscalFields: false
     });
   });
 

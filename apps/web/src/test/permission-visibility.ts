@@ -47,6 +47,11 @@ export function teacherModalVisibility(session: SessionUser, isEditing: boolean)
   const canManageFiscal = hasPermission(session, 'fiscal.manage');
 
   return {
+    showReadOnlyTeacherContactDetail:
+      hasPermission(session, 'teachers.manage') ||
+      hasPermission(session, 'fiscal.view') ||
+      hasPermission(session, 'finance.view') ||
+      hasPermission(session, 'finance.global_view'),
     showFiscalFields: canManageFiscal,
     showFiscalRestrictionHint: !canManageFiscal,
     showConstanciaUpload: isEditing && hasPermission(session, 'fiscal.document.manage')

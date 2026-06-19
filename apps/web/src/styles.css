@@ -2061,6 +2061,78 @@ td span {
   margin-bottom: 12px;
 }
 
+.teacher-detail-modal {
+  display: grid;
+  gap: 14px;
+}
+
+.teacher-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.teacher-detail-card {
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.teacher-detail-card span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.teacher-detail-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #0f172a;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.teacher-detail-section {
+  min-width: 0;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.teacher-detail-section h4 {
+  margin: 0 0 12px;
+  color: #0f172a;
+}
+
+.teacher-detail-section dl {
+  display: grid;
+  grid-template-columns: minmax(120px, 30%) minmax(0, 1fr);
+  gap: 9px 12px;
+  margin: 0;
+}
+
+.teacher-detail-section dt {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.teacher-detail-section dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
 .finance-fiscal-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3247,6 +3319,7 @@ td span {
   .finance-signal-grid,
   .finance-detail-grid,
   .finance-detail-sections,
+  .teacher-detail-grid,
   .audit-detail-grid,
   .audit-json-grid {
     grid-template-columns: 1fr 1fr;
@@ -3321,6 +3394,7 @@ td span {
     .finance-detail-grid,
     .finance-detail-sections,
     .finance-fiscal-list,
+    .teacher-detail-grid,
     .audit-detail-grid,
     .audit-json-grid,
     .calendar-access-row,
@@ -3335,6 +3409,10 @@ td span {
   }
 
   .access-window-card {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-detail-section dl {
     grid-template-columns: 1fr;
   }
 

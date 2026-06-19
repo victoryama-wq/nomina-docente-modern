@@ -233,7 +233,6 @@ function sanitizeTeacherForActor(actor: SessionUser, teacher: TeacherRow): Teach
   return {
     ...teacher,
     paymentType: '',
-    email: '',
     rfc: '',
     bankDetail: '',
     documentId: null,
