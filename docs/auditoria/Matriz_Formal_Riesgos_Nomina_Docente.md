@@ -23,7 +23,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H13 cerrado documentalmente con checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback.
 - H15 desplegado productivamente en Firebase Hosting live; sesion por inactividad y `browserSessionPersistence` quedan operativos.
 - H17 ejecutado: Directorio usa `teachers.created_by` como capturador tecnico; correccion por coordinacion descartada y 197 docentes fueron normalizados con backup y mapping aprobado.
-- H18 iniciado en SPEC documental para modulo Reportes Operativos; decisiones funcionales principales aprobadas, no implementado y sin cambios tecnicos.
+- H18-F1 backend implementado para modulo Reportes Operativos; endpoints JSON, CSV H11 y XLSX server-side con `exceljs`; frontend/deploy pendientes.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
 Arquitectura vigente:
@@ -61,7 +61,7 @@ Arquitectura vigente:
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
 | H15 | Persistencia de sesion e inactividad | Seguridad frontend / Firebase Auth | Desplegado productivamente | Bajo: queda observacion operativa del ciclo real de 60 minutos y reapertura de navegador | P2 cerrado operativo | Mantener pruebas H15 y observar comportamiento en operacion normal | Cumplido con predeploy, deploy Hosting live y smoke postdeploy minimo | Solo si se cambia politica de tiempo o UX |
 | H17 | `teachers.created_by` nulo por carga masiva | Directorio / Permisos operativos / Datos productivos | Normalizacion productiva ejecutada para 197 docentes; 12 remanentes documentados | Bajo-medio: queda validacion funcional por coordinadoras y decision futura sobre remanentes | P1 datos controlados / monitoreo | Mantener regla por capturador; validar acceso operativo y no tocar remanentes sin nuevo mapping aprobado | Validacion por coordinadoras y cierre/documentacion de los 12 remanentes si se decide atenderlos | Si, solo para remanentes o excepciones futuras |
-| H18 | Modulo Reportes Operativos pendiente de implementacion | Reportes / Permisos / Operacion academica | En SPEC con decisiones funcionales aprobadas; no implementado | Medio-bajo: quedan riesgos tecnicos de guardas backend, calculo, snapshots y XLSX | P2 especificacion | Implementar solo con pruebas por rol/calculo/export; no crear permisos ni migraciones sin H05 | Backend/frontend implementados, pruebas aprobadas y deploy controlado con H13 | Si, solo si se agregan permisos nuevos o dependencia XLSX |
+| H18 | Modulo Reportes Operativos pendiente de frontend/deploy | Reportes / Permisos / Operacion academica | H18-F1 backend implementado con `exceljs` en API | Medio-bajo: quedan riesgos de frontend, validacion manual de exportables y snapshot sin capturador historico externo | P2 implementacion gradual | Continuar con H18-F2 frontend; no crear permisos ni migraciones sin H05; revisar audit npm antes de deploy | Backend/frontend implementados, pruebas aprobadas y deploy controlado con H13 | Si, solo si se agregan permisos nuevos o cambios de BD |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -154,7 +154,7 @@ Orden recomendado:
 3. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
 4. **H15 operativo.** Mantener smoke de sesion/inactividad si se ajusta la politica de tiempo o UX del modal.
 5. **H17 monitoreo.** Validar acceso real de coordinadoras y resolver remanentes solo con nuevo mapping aprobado.
-6. **H18 Reportes Operativos.** Implementar backend/frontend solo despues de cerrar guardas tecnicas, pruebas y decision de dependencia XLSX.
+6. **H18 Reportes Operativos.** Backend F1 ya implementado; continuar con frontend, validacion manual de CSV/XLSX y deploy controlado con H13.
 
 ## 6. Decisiones humanas pendientes
 
@@ -168,7 +168,7 @@ Pendientes reales despues de H02/H03:
 - H13 solo requiere nueva decision humana si se cambian secretos, propietarios, CORS o infraestructura productiva.
 - Decidir si se requiere sanitizacion CSV injection por exportable o si se mantiene sin transformar datos exportados.
 - Validar H17 con usuarios autorizados y decidir si los 12 remanentes requieren una segunda ventana de datos.
-- Para H18, decidir tecnicamente si se agregan permisos formales nuevos y si se aprueba dependencia XLSX real como `exceljs`.
+- Para H18, decidir solo si en fases futuras se agregan permisos formales nuevos; `exceljs` ya fue aprobado e instalado en backend/API.
 
 ## 7. Recomendacion final
 

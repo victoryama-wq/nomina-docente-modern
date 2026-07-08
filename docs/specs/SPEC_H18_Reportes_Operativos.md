@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: SPEC / diseno funcional. No implementado.
+Estado: H18-F1 backend implementado. Frontend y deploy pendientes.
 
 ## 1. Resumen ejecutivo
 
@@ -13,7 +13,7 @@ H18 propone un nuevo modulo llamado `Reportes` para consulta operativa no financ
 
 El objetivo es dar visibilidad operativa sobre horas base, horas extra, capturadores, categorias, ciclos, quincenas y coordinaciones sin modificar la formula de nomina, sin cambiar permisos productivos y sin alterar reportes financieros o CSV existentes.
 
-Esta fase es solo documental. No se modifica backend, frontend, base de datos, permisos productivos, roles, migraciones, deploy ni datos reales.
+H18-F1 implementa backend, CSV y XLSX real server-side. No modifica frontend, base de datos, permisos productivos, roles, migraciones, deploy ni datos reales.
 
 ## 2. Alcance
 
@@ -359,7 +359,7 @@ format
 Formato export:
 
 - `format=csv` por defecto.
-- `format=xlsx` solo si se aprueba dependencia o infraestructura Excel real.
+- `format=xlsx` aprobado para H18-F1 con `exceljs` en backend/API.
 
 Ubicacion tecnica sugerida:
 
@@ -389,7 +389,7 @@ Elementos:
 - Tabla densa y escaneable.
 - Resumen de totales.
 - Boton CSV.
-- Boton Excel solo si se aprueba la dependencia/infraestructura XLSX real.
+- Boton Excel para consumir XLSX real generado server-side por API.
 
 Integracion:
 
@@ -428,24 +428,27 @@ Excel:
 - Opcion A: CSV compatible con Excel, usando H11.
 - Opcion B: `.xlsx` real.
 
-Decision funcional cerrada:
+Decision funcional y tecnica cerrada:
 
 - La preferencia funcional es exportar XLSX real.
+- `exceljs` queda aprobado para H18 y se instala solo en `apps/api`.
+- XLSX se genera server-side desde la API; el frontend solo consumira la descarga.
 - CSV H11 se mantiene como respaldo obligatorio.
 
 Revision tecnica H18-F0:
 
 - `package.json` raiz: no contiene dependencia XLSX.
-- `apps/api/package.json`: no contiene `exceljs`, `xlsx` ni helper de workbook.
+- `apps/api/package.json`: H18-F1 agrega `exceljs`; no se instala `xlsx`.
 - `apps/web/package.json`: no contiene `exceljs` ni `xlsx`.
-- `package-lock.json`: no se detecto dependencia XLSX/Excel instalada.
-- No se encontro infraestructura Excel real existente en esta revision documental.
+- `package-lock.json`: H18-F1 registra `exceljs` y sus dependencias transitivas.
+- H18-F1 agrega helper server-side para workbook XLSX.
 
 Recomendacion tecnica:
 
-- Para H18-F3, si se aprueba XLSX real, usar una dependencia server-side como `exceljs` en `apps/api`.
-- No instalar dependencia hasta aprobacion tecnica explicita.
-- No agregar dependencia en H18-F0.
+- Mantener `exceljs` solo en API.
+- No construir XLSX en frontend.
+- No usar `xlsx`.
+- Mantener CSV H11 como respaldo obligatorio.
 
 ## 10. Riesgos
 
@@ -460,7 +463,7 @@ Recomendacion tecnica:
 | Mezclar datos vivos con snapshots | Medio | Priorizar snapshots si existe nomina guardada; indicar origen. |
 | Cambiar H01 accidentalmente | Alto | No tocar formula; solo leer datos y probar regresion. |
 | Exponer datos fiscales | Alto | Excluir RFC, banco, paymentType, constancias y datos fiscales. |
-| Excel real requiere dependencia nueva | Medio | No existe dependencia XLSX instalada; proponer `exceljs` y pedir aprobacion antes de implementar. |
+| Excel real requiere dependencia nueva | Medio-bajo | H18-F1 instala `exceljs` en API con aprobacion explicita; revisar auditoria npm antes de deploy. |
 
 ## 11. Decisiones funcionales aprobadas y pendientes tecnicos
 
@@ -485,13 +488,12 @@ Recomendacion tecnica:
 - Si no existe snapshot/corrida guardada, se usan datos vivos.
 - Extras externos usan `extra_hours.captured_by`.
 - Incidencias/extras de `schedule_incidences.extra_hours_in_schedule` usan `updated_by` como capturador/responsable operativo disponible.
-- Se prefiere XLSX real, manteniendo CSV H11 como respaldo obligatorio.
+- XLSX real queda aprobado e implementado server-side en H18-F1 con `exceljs`; CSV H11 se mantiene como respaldo obligatorio.
 
 ### Pendientes tecnicos restantes
 
-- Definir si H18-F1 crea helpers de permiso por rol o permisos formales nuevos. Si se crean permisos nuevos, requerira migracion H05.
-- Definir ubicacion final de rutas: extender `reports.ts` o crear archivo separado de reportes operativos.
-- Aprobar instalacion de `exceljs` u otra dependencia XLSX antes de H18-F3.
+- Frontend H18-F2: crear modulo/pestanas/filtros y consumir endpoints backend.
+- Definir si en una fase futura se crean permisos formales nuevos; no se hizo en H18-F1 para evitar migracion H05.
 - Definir si los snapshots historicos deben exponer capturador de extra externo cuando `payroll_extra_details` no conserva `captured_by`.
 - Decidir si roles financieros futuros similares a Direccion Financiera deben quedar excluidos de pestana 2 por regla general.
 
@@ -503,12 +505,14 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 
 ### H18-F1 Backend
 
-- Crear endpoints.
-- Crear queries vivas/snapshot.
-- Implementar guardas por rol.
-- Reusar helper CSV H11.
-- Pruebas API con `app.inject()`.
-- No cambiar H01.
+- Implementado.
+- Crea endpoints JSON y exportables.
+- Crea queries vivas/snapshot para horas base y extras.
+- Implementa guardas por rol sin migracion ni permisos nuevos.
+- Reusa helper CSV H11.
+- Genera XLSX real con `exceljs` desde API.
+- Agrega pruebas API con `app.inject()`.
+- No cambia H01.
 
 ### H18-F2 Frontend
 
@@ -520,8 +524,8 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 
 ### H18-F3 Exportables
 
-- CSV H11 para ambas pestanas.
-- XLSX real solo si antes se aprueba e instala dependencia; recomendacion inicial: `exceljs` en backend.
+- CSV H11 y XLSX real ya quedan disponibles desde backend H18-F1.
+- H18-F3 puede enfocarse en validacion manual/controlada de archivos descargados desde UI.
 - Pruebas de BOM, CRLF y acentos.
 
 ### H18-F4 Pruebas
