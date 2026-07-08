@@ -36,6 +36,7 @@ Estado por H:
 | H13 | Cerrado documental; checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback. |
 | H15 | Desplegado en produccion; `browserSessionPersistence`, timeout 60 min, modal 5 min antes y logout por inactividad vigentes. |
 | H17 | Normalizacion productiva ejecutada para 197 docentes; Directorio mantiene edicion por `teachers.created_by`; 12 remanentes documentados. |
+| H18 | En SPEC; modulo Reportes Operativos propuesto con pestanas de horas base/extras y horas base por categoria, sin implementacion tecnica todavia. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -319,6 +320,7 @@ Documentos vigentes:
 | Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
+| Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | En SPEC; no implementado |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -355,6 +357,7 @@ Regla de precedencia:
 | H13 | Cerrado documental / checklist productivo permanente | Usar checklist H13 antes de cada deploy y actualizarlo solo si cambia infraestructura real. |
 | H15 | Desplegado productivamente | Mantener observacion operativa del ciclo real de 60 minutos y reapertura de navegador si se requiere evidencia adicional. |
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
+| H18 | En SPEC | Definir decisiones pendientes antes de implementar: acceso Admin en pestana 1, fuente oficial de horas esperadas por categoria y uso de snapshots vs datos vivos. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
