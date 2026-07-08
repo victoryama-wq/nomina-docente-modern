@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: H18-F1 backend implementado, H18-F2 frontend implementado y H18-F3 prevalidacion local automatizada documentada. Deploy y validacion manual con sesion real/Excel pendientes.
+Estado: H18-F1 backend implementado, H18-F2 frontend implementado, H18-F3 prevalidacion local automatizada documentada y H18-F5 deploy productivo ejecutado. Validacion manual con sesion real/Excel pendiente para cierre operativo.
 
 ## 1. Resumen ejecutivo
 
@@ -13,7 +13,7 @@ H18 propone un nuevo modulo llamado `Reportes` para consulta operativa no financ
 
 El objetivo es dar visibilidad operativa sobre horas base, horas extra, capturadores, categorias, ciclos, quincenas y coordinaciones sin modificar la formula de nomina, sin cambiar permisos productivos y sin alterar reportes financieros o CSV existentes.
 
-H18-F1 implementa backend, CSV y XLSX real server-side. H18-F2 implementa la vista frontend, ruta `/reports`, menu, pestanas, filtros, tablas, resumenes, descarga CSV/XLSX y pruebas de visibilidad. No modifica base de datos, permisos productivos, roles, migraciones, deploy ni datos reales.
+H18-F1 implementa backend, CSV y XLSX real server-side. H18-F2 implementa la vista frontend, ruta `/reports`, menu, pestanas, filtros, tablas, resumenes, descarga CSV/XLSX y pruebas de visibilidad. H18-F5 despliega backend/frontend a produccion sin migraciones ni cambios de base de datos. No modifica permisos productivos, roles, datos reales ni H01.
 
 ## 2. Alcance
 
@@ -33,8 +33,8 @@ No incluye:
 - Cambios a roles.
 - Cambios a formula H01.
 - Cambios a Finanzas, Nomina, CSV existentes, cierre de ciclo o catalogos.
-- Deploy.
-- Consultas o cambios en produccion.
+- Cambios de datos en produccion.
+- Consultas con bypass de permisos productivos.
 
 ## 3. Pestana 1 - Horas base y extras
 
@@ -490,9 +490,8 @@ Recomendacion tecnica:
 
 ### Pendientes tecnicos restantes
 
-- Validar manualmente descargas CSV/XLSX desde la UI en ambiente controlado.
-- Ejecutar deploy controlado H18-F5 con checklist H13.
-- Ejecutar smoke manual con sesion real/autorizada para cerrar H18-F3 sin observaciones.
+- Validar manualmente descargas CSV/XLSX desde la UI con sesion real/autorizada y Excel institucional.
+- Ejecutar smoke manual por rol para cerrar H18 operativo sin observaciones.
 - Definir si en una fase futura se crean permisos formales nuevos; no se hizo en H18-F1/F2 para evitar migracion H05.
 - Definir si los snapshots historicos deben exponer capturador de extra externo cuando `payroll_extra_details` no conserva `captured_by`.
 - Decidir si roles financieros futuros similares a Direccion Financiera deben quedar excluidos de pestana 2 por regla general.
@@ -540,18 +539,21 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 
 ### H18-F5 Deploy controlado
 
-- Solo con checklist H13.
-- Confirmar sin migracion o, si se aprueban permisos nuevos, aplicar H05.
-- Healthcheck y smoke por rol.
+- Ejecutado en produccion el 2026-07-08.
+- Se uso checklist H13, revision H05 `pending=0` y `checksum mismatch=0`.
+- Se desplego API Cloud Run revision `nomina-api-00048-js8`.
+- Se desplego Firebase Hosting live.
+- Healthchecks publicos aprobados.
+- Smoke tecnico aprobado.
+- Smoke manual por rol y validacion Excel institucional quedan pendientes para cierre operativo.
 
 ## 13. Que NO se hizo
 
-Confirmado hasta H18-F2:
+Confirmado hasta H18-F5:
 
 - No se modifico base de datos.
 - No se ejecutaron migraciones.
-- No se hizo deploy.
-- No se toco produccion.
+- Se hizo deploy controlado de API/Hosting; no se modifico produccion fuera del despliegue de codigo.
 - No se instalaron dependencias frontend.
 - No se cambiaron permisos productivos.
 - No se cambiaron roles.
