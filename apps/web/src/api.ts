@@ -884,6 +884,96 @@ export interface UserPayload {
   coordinationIds?: string[];
 }
 
+export type ExportFormat = 'csv' | 'xlsx';
+export type OperationalReportSource = 'live' | 'snapshot';
+export type OperationalReportSourceFilter = 'auto' | OperationalReportSource;
+export type BaseExtraReportTypeFilter = 'all' | 'withExtras' | 'withoutExtras';
+export type CategoryHoursStatus = 'completo' | 'faltante' | 'excedido';
+export type CategoryHoursStatusFilter = 'all' | CategoryHoursStatus;
+
+export interface BaseExtraReportFilters {
+  cycleId?: string;
+  calendarConfigId?: string;
+  teacherId?: string;
+  coordinationId?: string;
+  category?: string;
+  capturedBy?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  type?: BaseExtraReportTypeFilter;
+  source?: OperationalReportSourceFilter;
+}
+
+export interface BaseExtraReportRow {
+  source: OperationalReportSource;
+  cycleId: string;
+  cycleLabel: string;
+  calendarConfigId?: string | null;
+  periodLabel?: string | null;
+  teacherId: string;
+  teacherName: string;
+  category: string;
+  categoryLabel: string;
+  coordinationId?: string | null;
+  coordinationName?: string | null;
+  baseHours: string;
+  incidenceExtraHours: string;
+  externalExtraHours: string;
+  totalExtraHours: string;
+  externalExtraCapturedByEmail?: string | null;
+  externalExtraCapturedByName?: string | null;
+  incidenceUpdatedByEmail?: string | null;
+  incidenceUpdatedByName?: string | null;
+  reason?: string | null;
+  activityDate?: string | null;
+}
+
+export interface BaseExtraReportResponse {
+  meta: {
+    source: OperationalReportSource;
+    cycleId: string;
+    cycleLabel: string;
+    calendarConfigId?: string | null;
+    periodLabel?: string | null;
+  };
+  rows: BaseExtraReportRow[];
+}
+
+export interface CategoryHoursReportFilters {
+  cycleId?: string;
+  coordinationId?: string;
+  teacherId?: string;
+  category?: string;
+  status?: CategoryHoursStatusFilter;
+  teacherStatus?: string;
+}
+
+export interface CategoryHoursReportRow {
+  cycleId: string;
+  cycleLabel: string;
+  teacherId: string;
+  teacherName: string;
+  category: string;
+  categoryLabel: string;
+  expectedHours: string;
+  assignedHours: string;
+  remainingHours: string;
+  status: CategoryHoursStatus;
+  hoursLv: string;
+  hoursModule1: string;
+  hoursModule2: string;
+  coordinationId?: string | null;
+  coordinationName?: string | null;
+}
+
+export interface CategoryHoursReportResponse {
+  meta: {
+    cycleId: string;
+    coordinatorScope?: string[] | null;
+  };
+  rows: CategoryHoursReportRow[];
+}
+
 async function getIdToken(): Promise<string> {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error('No hay una sesión activa.');
@@ -916,6 +1006,45 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+function queryString(filters: Record<string, unknown>): string {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    params.set(key, String(value));
+  });
+  return params.toString() ? `?${params.toString()}` : '';
+}
+
+async function downloadAuthenticatedFile(path: string, fallbackFileName: string, errorMessage: string): Promise<void> {
+  const token = await getIdToken();
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    let body: ApiErrorBody = {};
+    try {
+      body = (await response.json()) as ApiErrorBody;
+    } catch {
+      body = {};
+    }
+    throw new Error(body.message || errorMessage);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const fileName = match?.[1] || fallbackFileName;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 export async function fetchSession(): Promise<SessionUser> {
@@ -1316,6 +1445,42 @@ export async function downloadFinanceExport(kind: 'payments' | 'fiscal' | 'coord
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+export async function fetchOperationalBaseExtraReport(
+  filters: BaseExtraReportFilters = {}
+): Promise<BaseExtraReportResponse> {
+  return request(`/reports/operational/base-extra${queryString(filters as Record<string, unknown>)}`);
+}
+
+export async function downloadOperationalBaseExtraReport(
+  filters: BaseExtraReportFilters = {},
+  format: ExportFormat
+): Promise<void> {
+  const suffix = format === 'xlsx' ? 'xlsx' : 'csv';
+  return downloadAuthenticatedFile(
+    `/reports/operational/base-extra/export${queryString({ ...filters, format })}`,
+    `reporte-horas-base-extras.${suffix}`,
+    'No fue posible generar el reporte de horas base y extras.'
+  );
+}
+
+export async function fetchOperationalCategoryHoursReport(
+  filters: CategoryHoursReportFilters
+): Promise<CategoryHoursReportResponse> {
+  return request(`/reports/operational/category-hours${queryString(filters as Record<string, unknown>)}`);
+}
+
+export async function downloadOperationalCategoryHoursReport(
+  filters: CategoryHoursReportFilters,
+  format: ExportFormat
+): Promise<void> {
+  const suffix = format === 'xlsx' ? 'xlsx' : 'csv';
+  return downloadAuthenticatedFile(
+    `/reports/operational/category-hours/export${queryString({ ...filters, format })}`,
+    `reporte-horas-base-categoria.${suffix}`,
+    'No fue posible generar el reporte de horas base por categoria.'
+  );
 }
 
 export async function downloadFinancePdf(kind: 'summary' | 'coordinations', runId: string): Promise<void> {

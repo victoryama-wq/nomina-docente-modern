@@ -117,3 +117,15 @@ export function financeWorkflowVisibilityForRun(session: SessionUser, status: Pa
     showCancelForCorrection: canWorkflow && ['CALCULADA', 'EN_REVISION', 'APROBADA'].includes(status)
   };
 }
+
+export function operationalReportsVisibility(session: SessionUser) {
+  const canViewBaseExtra = session.role === 'admin' || session.isProtectedSuperAdmin || session.role === 'direccion';
+  const canViewCategoryHours =
+    canViewBaseExtra || session.role === 'coordinador' || session.role === 'rh';
+
+  return {
+    canOpenModule: canViewBaseExtra || canViewCategoryHours,
+    showBaseExtraTab: canViewBaseExtra,
+    showCategoryHoursTab: canViewCategoryHours
+  };
+}

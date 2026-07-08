@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   BadgePlus,
   CircleDollarSign,
+  BarChart3,
   FileSpreadsheet,
   FolderLock,
   ScrollText,
@@ -66,6 +67,7 @@ const pageTitle = computed(() => {
   if (route.name === 'incidences') return 'Capturar Incidencias';
   if (route.name === 'extras') return 'Capturar Extras';
   if (route.name === 'payroll') return 'Nómina';
+  if (route.name === 'reports') return 'Reportes';
   if (route.name === 'financeReports') return 'Reportes y Finanzas';
   if (route.name === 'calendar') return 'Calendario Operativo';
   if (route.name === 'catalogs') return 'Catálogos Administrativos';
@@ -187,6 +189,17 @@ async function handleIdleLogout() {
         >
           <CircleDollarSign :size="18" />
           Nómina
+        </router-link>
+
+        <router-link
+          v-if="authStore.canViewReportsModule"
+          :to="{ name: 'reports' }"
+          class="nav-item"
+          active-class="active"
+          @click="menuOpen = false"
+        >
+          <BarChart3 :size="18" />
+          Reportes
         </router-link>
 
         <router-link

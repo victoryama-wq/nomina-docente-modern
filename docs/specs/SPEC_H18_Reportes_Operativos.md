@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: H18-F1 backend implementado. Frontend y deploy pendientes.
+Estado: H18-F1 backend implementado y H18-F2 frontend implementado. Deploy y validacion manual pendientes.
 
 ## 1. Resumen ejecutivo
 
@@ -13,7 +13,7 @@ H18 propone un nuevo modulo llamado `Reportes` para consulta operativa no financ
 
 El objetivo es dar visibilidad operativa sobre horas base, horas extra, capturadores, categorias, ciclos, quincenas y coordinaciones sin modificar la formula de nomina, sin cambiar permisos productivos y sin alterar reportes financieros o CSV existentes.
 
-H18-F1 implementa backend, CSV y XLSX real server-side. No modifica frontend, base de datos, permisos productivos, roles, migraciones, deploy ni datos reales.
+H18-F1 implementa backend, CSV y XLSX real server-side. H18-F2 implementa la vista frontend, ruta `/reports`, menu, pestanas, filtros, tablas, resumenes, descarga CSV/XLSX y pruebas de visibilidad. No modifica base de datos, permisos productivos, roles, migraciones, deploy ni datos reales.
 
 ## 2. Alcance
 
@@ -28,8 +28,6 @@ Incluye:
 
 No incluye:
 
-- Implementacion backend.
-- Implementacion frontend.
 - Migraciones SQL.
 - Nuevos permisos productivos.
 - Cambios a roles.
@@ -492,8 +490,9 @@ Recomendacion tecnica:
 
 ### Pendientes tecnicos restantes
 
-- Frontend H18-F2: crear modulo/pestanas/filtros y consumir endpoints backend.
-- Definir si en una fase futura se crean permisos formales nuevos; no se hizo en H18-F1 para evitar migracion H05.
+- Validar manualmente descargas CSV/XLSX desde la UI en ambiente controlado.
+- Ejecutar deploy controlado H18-F5 con checklist H13.
+- Definir si en una fase futura se crean permisos formales nuevos; no se hizo en H18-F1/F2 para evitar migracion H05.
 - Definir si los snapshots historicos deben exponer capturador de extra externo cuando `payroll_extra_details` no conserva `captured_by`.
 - Decidir si roles financieros futuros similares a Direccion Financiera deben quedar excluidos de pestana 2 por regla general.
 
@@ -516,11 +515,13 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 
 ### H18-F2 Frontend
 
-- Crear `ReportsView.vue`.
-- Agregar ruta y menu.
-- Agregar pestanas, filtros y tablas.
-- Ocultar pestanas no permitidas.
-- Manejar exportacion CSV.
+- Implementado.
+- Crea `ReportsView.vue`.
+- Agrega ruta `/reports` y menu `Reportes`.
+- Agrega pestanas, filtros, tablas y resumenes.
+- Oculta modulo/pestanas no permitidas por rol.
+- Consume exportacion CSV y Excel/XLSX generada por API.
+- Agrega pruebas frontend de visibilidad, consulta y descarga.
 
 ### H18-F3 Exportables
 
@@ -543,19 +544,17 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 
 ## 13. Que NO se hizo
 
-Confirmado en H18-F0:
+Confirmado hasta H18-F2:
 
-- No se modifico codigo.
-- No se modifico backend.
-- No se modifico frontend.
 - No se modifico base de datos.
 - No se ejecutaron migraciones.
 - No se hizo deploy.
 - No se toco produccion.
+- No se instalaron dependencias frontend.
 - No se cambiaron permisos productivos.
 - No se cambiaron roles.
 - No se cambio nomina.
 - No se cambio finanzas.
-- No se cambiaron CSV existentes.
+- No se cambiaron CSV existentes fuera de los nuevos exportables H18.
 - No se cambio cierre de ciclo.
 - No se cambio H01/H02/H03/H05/H09/H10/H11/H12/H13/H15/H16/H17 funcional.

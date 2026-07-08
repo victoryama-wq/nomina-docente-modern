@@ -54,6 +54,19 @@ export const useAuthStore = defineStore('auth', () => {
     hasPermission('finance.view') ||
     hasPermission('finance.global_view')
   );
+  const canViewOperationalBaseExtraReports = computed(
+    () => isAdmin.value || session.value?.role === 'direccion'
+  );
+  const canViewOperationalCategoryHoursReports = computed(
+    () =>
+      isAdmin.value ||
+      session.value?.role === 'direccion' ||
+      session.value?.role === 'coordinador' ||
+      session.value?.role === 'rh'
+  );
+  const canViewReportsModule = computed(
+    () => canViewOperationalBaseExtraReports.value || canViewOperationalCategoryHoursReports.value
+  );
 
   async function loadProtectedData() {
     error.value = '';
@@ -161,6 +174,9 @@ export const useAuthStore = defineStore('auth', () => {
     canExportTeacherHistory,
     canViewAudit,
     canViewTeachers,
+    canViewOperationalBaseExtraReports,
+    canViewOperationalCategoryHoursReports,
+    canViewReportsModule,
     login,
     logout,
     clearSession,

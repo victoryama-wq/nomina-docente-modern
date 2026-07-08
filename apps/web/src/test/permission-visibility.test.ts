@@ -21,6 +21,7 @@ import {
   financeWorkflowVisibilityForRun,
   financeVisibility,
   fiscalVisibility,
+  operationalReportsVisibility,
   operationalCoordinationState,
   payrollVisibility,
   teacherModalVisibility
@@ -169,5 +170,35 @@ describe('frontend permission visibility helpers', () => {
 
     expect(financeWorkflowVisibilityForRun(accountantSession(), 'APROBADA').showCancelForCorrection).toBe(false);
     expect(financeWorkflowVisibilityForRun(adminSession(), 'CALCULADA').showReview).toBe(true);
+  });
+
+  it('exposes H18 operational reports only to approved roles and separates tabs', () => {
+    expect(operationalReportsVisibility(adminSession())).toMatchObject({
+      canOpenModule: true,
+      showBaseExtraTab: true,
+      showCategoryHoursTab: true
+    });
+
+    expect(operationalReportsVisibility(directionSession())).toMatchObject({
+      canOpenModule: true,
+      showBaseExtraTab: true,
+      showCategoryHoursTab: true
+    });
+
+    expect(operationalReportsVisibility(coordinatorSession())).toMatchObject({
+      canOpenModule: true,
+      showBaseExtraTab: false,
+      showCategoryHoursTab: true
+    });
+
+    expect(operationalReportsVisibility(rhSession())).toMatchObject({
+      canOpenModule: true,
+      showBaseExtraTab: false,
+      showCategoryHoursTab: true
+    });
+
+    expect(operationalReportsVisibility(financeSession()).canOpenModule).toBe(false);
+    expect(operationalReportsVisibility(accountantSession()).canOpenModule).toBe(false);
+    expect(operationalReportsVisibility(accountingSession()).canOpenModule).toBe(false);
   });
 });

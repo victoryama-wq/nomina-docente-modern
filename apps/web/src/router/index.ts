@@ -8,6 +8,7 @@ type RoutePermission =
   | 'canManageIncidences'
   | 'canManageExtras'
   | 'canViewPayroll'
+  | 'canViewReportsModule'
   | 'canViewFinanceReports'
   | 'canManageCalendar'
   | 'canManageCatalogs'
@@ -73,6 +74,12 @@ const router = createRouter({
           name: 'payroll',
           component: () => import('../views/PayrollView.vue'),
           meta: { permission: 'canViewPayroll' }
+        },
+        {
+          path: 'reports',
+          name: 'reports',
+          component: () => import('../views/ReportsView.vue'),
+          meta: { permission: 'canViewReportsModule' }
         },
         {
           path: 'finanzas',

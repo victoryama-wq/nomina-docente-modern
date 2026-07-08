@@ -92,6 +92,34 @@ describe('auth store permission helpers', () => {
     expect(accounting.canManageFiscal).toBe(false);
   });
 
+  it('models H18 operational reports access by role without relying on finance.view', () => {
+    const admin = useAuthStore();
+    admin.session = {
+      ...coordinatorSession(),
+      role: 'admin',
+      isProtectedSuperAdmin: true,
+      permissions: []
+    };
+
+    expect(admin.canViewOperationalBaseExtraReports).toBe(true);
+    expect(admin.canViewOperationalCategoryHoursReports).toBe(true);
+    expect(admin.canViewReportsModule).toBe(true);
+
+    setActivePinia(createPinia());
+    const coordinator = useAuthStore();
+    coordinator.session = coordinatorSession();
+
+    expect(coordinator.canViewOperationalBaseExtraReports).toBe(false);
+    expect(coordinator.canViewOperationalCategoryHoursReports).toBe(true);
+    expect(coordinator.canViewReportsModule).toBe(true);
+
+    setActivePinia(createPinia());
+    const finance = useAuthStore();
+    finance.session = financeSession();
+
+    expect(finance.canViewReportsModule).toBe(false);
+  });
+
   it('keeps manual logout working and clears auth state', async () => {
     const auth = useAuthStore();
     auth.session = coordinatorSession();
