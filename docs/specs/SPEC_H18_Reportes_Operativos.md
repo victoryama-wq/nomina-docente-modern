@@ -23,7 +23,7 @@ Incluye:
 - Definicion de pestanas, filtros, columnas y exportables.
 - Identificacion de fuentes de datos actuales.
 - Reglas de permisos propuestas por rol.
-- Riesgos y decisiones humanas pendientes antes de implementar.
+- Riesgos y pendientes tecnicos restantes antes de implementar.
 - Plan de implementacion por fases.
 
 No incluye:
@@ -67,7 +67,7 @@ Consultar docentes con horas base y horas extra relacionadas con un ciclo, perio
 Regla aprobada para diseno:
 
 - Permitido: Direccion/Subdireccion.
-- Admin: decision pendiente. Puede conservar acceso global solo si se confirma que el patron de soporte tecnico global aplica tambien a este reporte.
+- Permitido: Admin como soporte global.
 
 Denegados:
 
@@ -79,6 +79,8 @@ Denegados:
 - Otros roles no autorizados.
 
 Backend debe validar la regla. Ocultar la pestana en frontend no es suficiente.
+
+Decision funcional cerrada: Admin y Direccion/Subdireccion pueden consultar `Horas base y extras`; Coordinador, RH, Finanzas, Contador y Contabilidad no deben verla.
 
 ### Columnas propuestas
 
@@ -129,11 +131,12 @@ Para periodos con nomina guardada:
   - `payroll_schedule_details`;
   - `payroll_extra_details`.
 
-Decision recomendada:
+Decision aprobada:
 
 - Si existe corrida de nomina no cancelada para el periodo, mostrar datos de snapshot para preservar historia.
 - Si no existe corrida guardada, mostrar datos vivos.
 - Documentar claramente en UI si el origen es `vivo` o `snapshot`.
+- Recordar que al cerrar una quincena, las incidencias y extras capturados pueden retirarse de los modulos vivos; por eso los historicos deben consultar snapshots cuando existan.
 
 ### Reglas de calculo
 
@@ -144,16 +147,17 @@ Decision recomendada:
 - Horas extra externas vienen de `extra_hours`.
 - Horas extra de incidencia vienen de `schedule_incidences.extra_hours_in_schedule`.
 - No mezclar horas extra externas con horas base.
-- No usar `updated_by` como capturador original.
+- No usar `updated_by` como capturador original de extras externos cuando existe `extra_hours.captured_by`.
 
-### Ambiguedad detectada
+### Capturador de incidencias
 
-`schedule_incidences` no tiene campo de capturador original. Solo tiene `updated_by`, que ya fue documentado en H02/H03 como no apto para autoria original.
+Decision funcional cerrada:
 
-Por lo tanto:
+- Para extras externos, el capturador correcto es `extra_hours.captured_by`.
+- Para extras/incidencias de `schedule_incidences.extra_hours_in_schedule`, usar `schedule_incidences.updated_by` como capturador/responsable operativo disponible en el modelo actual.
+- La precision semantica debe mostrarse o documentarse: en incidencias, `updated_by` representa el usuario registrado como capturador/responsable operativo disponible actualmente, no un nuevo campo de autoria historica.
+- No agregar nuevo campo en esta fase.
 
-- para `extra_hours`, el capturador debe ser `extra_hours.captured_by`;
-- para extras de incidencia, el reporte debe mostrar `Sin capturador original` o solo `ultimo actualizador`, pero esto requiere decision humana antes de implementarse.
 
 ## 4. Pestana 2 - Horas base por categoria
 
@@ -197,9 +201,9 @@ Backend debe validar esta exclusion.
 |---|---|---|
 | Docente | `teachers.full_name` | Consultar global o por alcance segun decision H18-F1. |
 | Categoria | `teachers.category` | `V`, `M`, `N`. |
-| Categoria legible | Mapeo UI | `V=VIP`, `M=Medio tiempo`, `N=Nuevo ingreso`. Requiere confirmacion humana. |
-| Horas base esperadas | Regla tecnica vigente `categoryMaxHours` | `V=35`, `M=25`, `N=15`; confirmar como fuente oficial del reporte. |
-| Horas base asignadas | Suma de `schedules` por ciclo | Definir si usa L-V o maximo entre semana/modulos. |
+| Categoria legible | Mapeo UI | `V=VIP`, `M=Medio tiempo`, `N=Nuevo ingreso`. |
+| Horas base esperadas | Regla oficial H18 | `V=35`, `M=25`, `N=15`. |
+| Horas base asignadas | Suma viva de `schedules` por docente/ciclo | Ver formula aprobada abajo. |
 | Horas restantes | Esperadas - asignadas | Si negativo, estado `excedido`. |
 | Coordinacion | `coordinations.name` | Segun registro o capturador. |
 | Ciclo | `academic_cycles` | Filtro requerido. |
@@ -218,21 +222,27 @@ Backend debe validar esta exclusion.
   - excedido;
 - docente activo/inactivo.
 
-### Regla de horas esperadas por categoria
+### Regla oficial de horas esperadas por categoria
 
-Fuente tecnica detectada en codigo actual:
+Decision funcional cerrada:
 
-- `apps/api/src/routes/academic-context.ts`
-- `apps/api/src/routes/schedules.ts`
-- `apps/api/src/routes/extras.ts`
+- H18 usara como fuente oficial la misma regla tecnica vigente de Horarios/Extras.
+- `V` = VIP = 35 horas.
+- `M` = Medio tiempo = 25 horas.
+- `N` = Nuevo ingreso = 15 horas.
+- Cualquier fallback debe documentarse y no debe crear categorias nuevas.
 
-La regla vigente de maxima carga usada por Horarios/Extras es:
+La regla esta reflejada actualmente en:
+
+- `apps/api/src/routes/academic-context.ts`.
+- `apps/api/src/routes/schedules.ts`.
+- `apps/api/src/routes/extras.ts`.
 
 | Categoria tecnica | Nombre operativo sugerido | Horas maximas vigentes |
 |---|---|---:|
 | `V` | VIP | 35 |
 | `M` | Medio tiempo | 25 |
-| `N` u otro fallback | Nuevo ingreso | 15 |
+| `N` | Nuevo ingreso | 15 |
 
 Tambien se detecto que:
 
@@ -241,17 +251,33 @@ Tambien se detecto que:
 - La logica de nomina calcula horas base reales desde `schedules` y calendario.
 - H01 no debe modificarse.
 
-Decision requerida antes de implementar:
+### Formula aprobada de horas base asignadas
 
-- Confirmar que H18 debe usar `V=35`, `M=25`, `N=15` como horas esperadas oficiales para el reporte.
-- Confirmar si las horas asignadas deben compararse contra:
-  - horas L-V semanales;
-  - modulo 1;
-  - modulo 2;
-  - maximo entre semana/modulo 1/modulo 2, como validacion actual de Horarios;
-  - horas por quincena calculadas contra calendario.
+La pestana `Horas base por categoria` se calcula por cuatrimestre/ciclo academico y toma datos vivos del modulo Horarios.
 
-No se deben inventar valores nuevos.
+Si se actualiza un horario en Horarios, el reporte debe reflejarlo porque no usa snapshot para esta pestana.
+
+Para cada docente y ciclo:
+
+```sql
+horas_l_v = SUM(hours_l + hours_m + hours_x + hours_j + hours_v)
+horas_modulo_1 = horas_l_v + SUM(hours_s1)
+horas_modulo_2 = horas_l_v + SUM(hours_s2)
+horas_base_asignadas = GREATEST(horas_l_v, horas_modulo_1, horas_modulo_2)
+horas_restantes = horas_esperadas_categoria - horas_base_asignadas
+```
+
+Esta comparacion sigue la logica vigente del modulo Horarios, donde la carga se valida contra semana, modulo 1 y modulo 2.
+
+Estados:
+
+- `completo`: `horas_base_asignadas = horas_esperadas_categoria`.
+- `faltante`: `horas_base_asignadas < horas_esperadas_categoria`.
+- `excedido`: `horas_base_asignadas > horas_esperadas_categoria`.
+
+El reporte puede mostrar tambien, como columnas de apoyo, `horas_l_v`, `horas_modulo_1` y `horas_modulo_2` para explicar el estado.
+
+No se calcula por una sola quincena y no debe usar calendario de nomina para esta comparacion.
 
 ## 5. Fuentes de datos
 
@@ -268,6 +294,7 @@ No se deben inventar valores nuevos.
 | Extras de incidencia snapshot | `payroll_lines.schedule_extra_hours`, `payroll_schedule_details.schedule_extra_hours` | Snapshot de nomina guardada. |
 | Extras externos vivos | `extra_hours.hours` | Capturados en modulo Extras. |
 | Capturador extra externo | `extra_hours.captured_by` -> `app_users` | Fuente correcta de capturador. |
+| Capturador/responsable de incidencia | `schedule_incidences.updated_by` -> `app_users` | Decision H18: representa el responsable operativo disponible en el modelo actual. |
 | Extras externos snapshot | `payroll_lines.logged_extra_hours`, `payroll_extra_details.hours` | `payroll_extra_details` no conserva `captured_by`. |
 | Motivo extra | `extra_hours.reason`, `payroll_extra_details.reason_snapshot` | Snapshot no incluye observaciones/referencia. |
 | Fecha actividad extra | `extra_hours.activity_date`, `payroll_extra_details.activity_date` | Usar para rango de fechas. |
@@ -284,7 +311,7 @@ Si se decide crear permisos formales como `operational.reports.base_extra` y `op
 
 | Rol | Pestana 1 | Pestana 2 | Observacion |
 |---|---|---|---|
-| Admin | Pendiente decision | Permitido | Soporte global existente, pero Tab 1 pide exclusividad Direccion/Subdireccion. |
+| Admin | Permitido | Permitido | Soporte global aprobado para H18. |
 | Direccion/Subdireccion (`direccion`) | Permitido | Permitido | Rol tecnico vigente para Subdireccion. |
 | Coordinador | Denegado | Permitido | Mantener alcance operativo si se decide filtrar por actor. |
 | RH | Denegado | Permitido | No debe obtener datos financieros extra por este modulo. |
@@ -341,7 +368,7 @@ Ubicacion tecnica sugerida:
 
 Guardas propuestas:
 
-- `requireOperationalBaseExtraReport`: rol `direccion`; admin opcional segun decision.
+- `requireOperationalBaseExtraReport`: roles `admin` y `direccion`.
 - `requireOperationalCategoryHoursReport`: roles permitidos menos `finanzas`, `contador`, `contabilidad`.
 
 ## 8. Frontend propuesto
@@ -362,7 +389,7 @@ Elementos:
 - Tabla densa y escaneable.
 - Resumen de totales.
 - Boton CSV.
-- Boton Excel solo si se aprueba.
+- Boton Excel solo si se aprueba la dependencia/infraestructura XLSX real.
 
 Integracion:
 
@@ -401,10 +428,23 @@ Excel:
 - Opcion A: CSV compatible con Excel, usando H11.
 - Opcion B: `.xlsx` real.
 
-Si se requiere `.xlsx` real:
+Decision funcional cerrada:
 
-- Revisar si ya existe dependencia aprobada.
-- Si no existe, pedir aprobacion antes de agregar dependencia.
+- La preferencia funcional es exportar XLSX real.
+- CSV H11 se mantiene como respaldo obligatorio.
+
+Revision tecnica H18-F0:
+
+- `package.json` raiz: no contiene dependencia XLSX.
+- `apps/api/package.json`: no contiene `exceljs`, `xlsx` ni helper de workbook.
+- `apps/web/package.json`: no contiene `exceljs` ni `xlsx`.
+- `package-lock.json`: no se detecto dependencia XLSX/Excel instalada.
+- No se encontro infraestructura Excel real existente en esta revision documental.
+
+Recomendacion tecnica:
+
+- Para H18-F3, si se aprueba XLSX real, usar una dependencia server-side como `exceljs` en `apps/api`.
+- No instalar dependencia hasta aprobacion tecnica explicita.
 - No agregar dependencia en H18-F0.
 
 ## 10. Riesgos
@@ -413,27 +453,47 @@ Si se requiere `.xlsx` real:
 |---|---|---|
 | Calculo incorrecto de horas base | Alto | Reusar logica actual de Horarios/Nomina y cubrir con pruebas H04. |
 | Confundir horas base con horas extra | Alto | Columnas separadas y definicion clara de fuentes. |
-| Usar capturador incorrecto | Alto | Usar `extra_hours.captured_by`; no usar `updated_by` salvo decision explicita. |
+| Usar capturador incorrecto | Alto | Usar `extra_hours.captured_by` para extras externos y `schedule_incidences.updated_by` para responsable operativo de incidencia. |
 | Exponer Tab 1 fuera de Direccion/Subdireccion | Alto | Guard backend por rol. |
 | Exponer Tab 2 a Finanzas/Contador/Contabilidad | Alto | Guard backend por rol y pruebas. |
 | Usar `finance.view` o `reports.view` indebidamente | Alto | No reutilizar permisos amplios sin validar exclusiones. |
 | Mezclar datos vivos con snapshots | Medio | Priorizar snapshots si existe nomina guardada; indicar origen. |
 | Cambiar H01 accidentalmente | Alto | No tocar formula; solo leer datos y probar regresion. |
 | Exponer datos fiscales | Alto | Excluir RFC, banco, paymentType, constancias y datos fiscales. |
-| Excel real requiere dependencia nueva | Medio | Documentar y pedir aprobacion antes de implementar. |
+| Excel real requiere dependencia nueva | Medio | No existe dependencia XLSX instalada; proponer `exceljs` y pedir aprobacion antes de implementar. |
 
-## 11. Decisiones humanas pendientes
+## 11. Decisiones funcionales aprobadas y pendientes tecnicos
 
-- [ ] Admin podra ver pestana 1 como soporte global?
-- [ ] H18 debe usar `V=35`, `M=25`, `N=15` como fuente oficial de horas esperadas por categoria?
-- [ ] VIP cuantas horas debe tener para este reporte?
-- [ ] Medio tiempo cuantas horas debe tener para este reporte?
-- [ ] Nuevo ingreso cuantas horas debe tener para este reporte?
-- [ ] Horas asignadas en pestana 2 se comparan contra semana, modulo 1, modulo 2, maximo entre modulos o periodo de nomina?
-- [ ] Excel debe ser XLSX real o basta CSV compatible Excel?
-- [ ] Reporte usa datos vivos, snapshots o regla mixta para periodos historicos?
-- [ ] Como mostrar extras de incidencia sin capturador original?
-- [ ] Pestana 2 excluye tambien roles financieros futuros similares a Direccion Financiera si aparecen?
+### Decisiones funcionales aprobadas
+
+- Admin puede ver `Horas base y extras` como soporte global.
+- Direccion/Subdireccion puede ver `Horas base y extras`.
+- Coordinador, RH, Finanzas, Contador y Contabilidad no ven `Horas base y extras`.
+- `Horas base por categoria` esta disponible para Admin, Direccion/Subdireccion, Coordinador y RH.
+- `Horas base por categoria` excluye Finanzas, Contador y Contabilidad.
+- Horas oficiales por categoria:
+  - VIP: 35.
+  - Medio tiempo: 25.
+  - Nuevo ingreso: 15.
+- Equivalencias tecnicas:
+  - `V`: VIP.
+  - `M`: Medio tiempo.
+  - `N`: Nuevo ingreso.
+- Pestana 2 se calcula por cuatrimestre/ciclo academico con datos vivos de Horarios.
+- Pestana 2 no se calcula por una sola quincena.
+- Si existe nomina/corrida guardada no cancelada para una quincena o periodo, reportes historicos usan snapshots.
+- Si no existe snapshot/corrida guardada, se usan datos vivos.
+- Extras externos usan `extra_hours.captured_by`.
+- Incidencias/extras de `schedule_incidences.extra_hours_in_schedule` usan `updated_by` como capturador/responsable operativo disponible.
+- Se prefiere XLSX real, manteniendo CSV H11 como respaldo obligatorio.
+
+### Pendientes tecnicos restantes
+
+- Definir si H18-F1 crea helpers de permiso por rol o permisos formales nuevos. Si se crean permisos nuevos, requerira migracion H05.
+- Definir ubicacion final de rutas: extender `reports.ts` o crear archivo separado de reportes operativos.
+- Aprobar instalacion de `exceljs` u otra dependencia XLSX antes de H18-F3.
+- Definir si los snapshots historicos deben exponer capturador de extra externo cuando `payroll_extra_details` no conserva `captured_by`.
+- Decidir si roles financieros futuros similares a Direccion Financiera deben quedar excluidos de pestana 2 por regla general.
 
 ## 12. Plan de implementacion propuesto
 
@@ -461,7 +521,7 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 ### H18-F3 Exportables
 
 - CSV H11 para ambas pestanas.
-- Evaluar XLSX real solo con aprobacion.
+- XLSX real solo si antes se aprueba e instala dependencia; recomendacion inicial: `exceljs` en backend.
 - Pruebas de BOM, CRLF y acentos.
 
 ### H18-F4 Pruebas
@@ -495,4 +555,3 @@ Confirmado en H18-F0:
 - No se cambiaron CSV existentes.
 - No se cambio cierre de ciclo.
 - No se cambio H01/H02/H03/H05/H09/H10/H11/H12/H13/H15/H16/H17 funcional.
-

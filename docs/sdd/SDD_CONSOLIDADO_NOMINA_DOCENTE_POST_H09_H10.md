@@ -36,7 +36,7 @@ Estado por H:
 | H13 | Cerrado documental; checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback. |
 | H15 | Desplegado en produccion; `browserSessionPersistence`, timeout 60 min, modal 5 min antes y logout por inactividad vigentes. |
 | H17 | Normalizacion productiva ejecutada para 197 docentes; Directorio mantiene edicion por `teachers.created_by`; 12 remanentes documentados. |
-| H18 | En SPEC; modulo Reportes Operativos propuesto con pestanas de horas base/extras y horas base por categoria, sin implementacion tecnica todavia. |
+| H18 | En SPEC; decisiones funcionales principales aprobadas para Reportes Operativos, sin implementacion tecnica todavia. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -357,7 +357,7 @@ Regla de precedencia:
 | H13 | Cerrado documental / checklist productivo permanente | Usar checklist H13 antes de cada deploy y actualizarlo solo si cambia infraestructura real. |
 | H15 | Desplegado productivamente | Mantener observacion operativa del ciclo real de 60 minutos y reapertura de navegador si se requiere evidencia adicional. |
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
-| H18 | En SPEC | Definir decisiones pendientes antes de implementar: acceso Admin en pestana 1, fuente oficial de horas esperadas por categoria y uso de snapshots vs datos vivos. |
+| H18 | En SPEC con decisiones funcionales aprobadas | Implementar despues de cerrar pendientes tecnicos: guardas backend, consultas, pruebas y decision de dependencia XLSX. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
