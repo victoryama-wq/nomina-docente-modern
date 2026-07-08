@@ -36,7 +36,7 @@ Estado por H:
 | H13 | Cerrado documental; checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback. |
 | H15 | Desplegado en produccion; `browserSessionPersistence`, timeout 60 min, modal 5 min antes y logout por inactividad vigentes. |
 | H17 | Normalizacion productiva ejecutada para 197 docentes; Directorio mantiene edicion por `teachers.created_by`; 12 remanentes documentados. |
-| H18 | H18-F1 backend y H18-F2 frontend implementados para Reportes Operativos: endpoints JSON, CSV H11, XLSX server-side con `exceljs`, ruta `/reports`, menu y pestanas por rol; deploy pendiente. |
+| H18 | H18-F1 backend y H18-F2 frontend implementados para Reportes Operativos; H18-F3 prevalidacion local automatizada documentada; smoke manual Excel/sesion real y deploy pendientes. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -320,7 +320,7 @@ Documentos vigentes:
 | Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
-| Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md` y `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | H18-F1 backend y H18-F2 frontend implementados; deploy pendiente |
+| Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md` y `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | H18-F1/F2 implementados; H18-F3 prevalidacion automatizada OK con smoke manual pendiente; deploy pendiente |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -357,7 +357,7 @@ Regla de precedencia:
 | H13 | Cerrado documental / checklist productivo permanente | Usar checklist H13 antes de cada deploy y actualizarlo solo si cambia infraestructura real. |
 | H15 | Desplegado productivamente | Mantener observacion operativa del ciclo real de 60 minutos y reapertura de navegador si se requiere evidencia adicional. |
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
-| H18 | Backend F1 y frontend F2 implementados / deploy pendiente | Continuar con validacion manual de CSV/XLSX y deploy controlado H18-F5, manteniendo guardas backend por rol, CSV H11 como respaldo y XLSX server-side con `exceljs`. |
+| H18 | Backend F1 y frontend F2 implementados / H18-F3 prevalidacion automatizada / deploy pendiente | Completar smoke manual CSV/XLSX con sesion real y deploy controlado H18-F5, manteniendo guardas backend por rol, CSV H11 como respaldo y XLSX server-side con `exceljs`. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |

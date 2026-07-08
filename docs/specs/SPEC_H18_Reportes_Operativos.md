@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: H18-F1 backend implementado y H18-F2 frontend implementado. Deploy y validacion manual pendientes.
+Estado: H18-F1 backend implementado, H18-F2 frontend implementado y H18-F3 prevalidacion local automatizada documentada. Deploy y validacion manual con sesion real/Excel pendientes.
 
 ## 1. Resumen ejecutivo
 
@@ -492,6 +492,7 @@ Recomendacion tecnica:
 
 - Validar manualmente descargas CSV/XLSX desde la UI en ambiente controlado.
 - Ejecutar deploy controlado H18-F5 con checklist H13.
+- Ejecutar smoke manual con sesion real/autorizada para cerrar H18-F3 sin observaciones.
 - Definir si en una fase futura se crean permisos formales nuevos; no se hizo en H18-F1/F2 para evitar migracion H05.
 - Definir si los snapshots historicos deben exponer capturador de extra externo cuando `payroll_extra_details` no conserva `captured_by`.
 - Decidir si roles financieros futuros similares a Direccion Financiera deben quedar excluidos de pestana 2 por regla general.
@@ -526,8 +527,9 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 ### H18-F3 Exportables
 
 - CSV H11 y XLSX real ya quedan disponibles desde backend H18-F1.
-- H18-F3 puede enfocarse en validacion manual/controlada de archivos descargados desde UI.
-- Pruebas de BOM, CRLF y acentos.
+- Prevalidacion local automatizada documentada en `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`.
+- Queda pendiente validacion manual/controlada de archivos descargados desde UI con sesion real y Excel institucional.
+- Pruebas de BOM, CRLF y acentos deben cerrarse con evidencia manual antes de deploy si operacion lo exige.
 
 ### H18-F4 Pruebas
 
