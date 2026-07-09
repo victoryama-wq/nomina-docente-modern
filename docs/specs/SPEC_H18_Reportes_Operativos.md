@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: H18-F1 backend implementado, H18-F2 frontend implementado, H18-F3 prevalidacion local automatizada documentada, H18-F5 deploy productivo ejecutado y H18-F6 UX de filtros desplegado productivamente. Queda pendiente validacion manual con sesion real/Excel para cierre operativo.
+Estado: H18 cerrado operativo. H18-F1 backend, H18-F2 frontend, H18-F5 deploy productivo, H18-F6 UX de filtros y hotfix snapshot `ped.line_key` quedaron implementados/desplegados; validacion post-hotfix con sesion real y Excel institucional documentada.
 
 ## 1. Resumen ejecutivo
 
@@ -13,7 +13,7 @@ H18 propone un nuevo modulo llamado `Reportes` para consulta operativa no financ
 
 El objetivo es dar visibilidad operativa sobre horas base, horas extra, capturadores, categorias, ciclos, quincenas y coordinaciones sin modificar la formula de nomina, sin cambiar permisos productivos y sin alterar reportes financieros o CSV existentes.
 
-H18-F1 implementa backend, CSV y XLSX real server-side. H18-F2 implementa la vista frontend, ruta `/reports`, menu, pestanas, filtros, tablas, resumenes, descarga CSV/XLSX y pruebas de visibilidad. H18-F5 despliega backend/frontend a produccion sin migraciones ni cambios de base de datos. H18-F6 mejora filtros visibles para usar ciclos/quincenas legibles y busqueda general, conservando IDs solo internamente. No modifica permisos productivos, roles, datos reales ni H01.
+H18-F1 implementa backend, CSV y XLSX real server-side. H18-F2 implementa la vista frontend, ruta `/reports`, menu, pestanas, filtros, tablas, resumenes, descarga CSV/XLSX y pruebas de visibilidad. H18-F5 despliega backend/frontend a produccion sin migraciones ni cambios de base de datos. H18-F6 mejora filtros visibles para usar ciclos/quincenas legibles y busqueda general, conservando IDs solo internamente. El hotfix `c1e858b` corrige la consulta snapshot de `Horas base y extras` sin crear columnas ni migraciones. H18 queda cerrado operativo sin modificar permisos productivos, roles, datos reales ni H01.
 
 ## 2. Alcance
 
@@ -506,7 +506,7 @@ Recomendacion tecnica:
 | Exponer datos fiscales | Alto | Excluir RFC, banco, paymentType, constancias y datos fiscales. |
 | Excel real requiere dependencia nueva | Medio-bajo | H18-F1 instala `exceljs` en API con aprobacion explicita; revisar auditoria npm antes de deploy. |
 
-## 11. Decisiones funcionales aprobadas y pendientes tecnicos
+## 11. Decisiones funcionales aprobadas y pendientes futuros
 
 ### Decisiones funcionales aprobadas
 
@@ -531,10 +531,8 @@ Recomendacion tecnica:
 - Incidencias/extras de `schedule_incidences.extra_hours_in_schedule` usan `updated_by` como capturador/responsable operativo disponible.
 - XLSX real queda aprobado e implementado server-side en H18-F1 con `exceljs`; CSV H11 se mantiene como respaldo obligatorio.
 
-### Pendientes tecnicos restantes
+### Pendientes futuros no bloqueantes
 
-- Validar manualmente descargas CSV/XLSX desde la UI con sesion real/autorizada y Excel institucional.
-- Ejecutar smoke manual por rol para cerrar H18 operativo sin observaciones.
 - Definir si en una fase futura se crean permisos formales nuevos; no se hizo en H18-F1/F2 para evitar migracion H05.
 - Definir si los snapshots historicos deben exponer capturador de extra externo cuando `payroll_extra_details` no conserva `captured_by`.
 - Decidir si roles financieros futuros similares a Direccion Financiera deben quedar excluidos de pestana 2 por regla general.
@@ -570,8 +568,8 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 
 - CSV H11 y XLSX real ya quedan disponibles desde backend H18-F1.
 - Prevalidacion local automatizada documentada en `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`.
-- Queda pendiente validacion manual/controlada de archivos descargados desde UI con sesion real y Excel institucional.
-- Pruebas de BOM, CRLF y acentos deben cerrarse con evidencia manual antes de deploy si operacion lo exige.
+- Validacion manual/controlada de archivos descargados desde UI con sesion real y Excel institucional cerrada en `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md`.
+- Pruebas de BOM, CRLF y acentos se mantienen cubiertas por H11 y por la validacion operativa de CSV H18.
 
 ### H18-F4 Pruebas
 
@@ -588,7 +586,7 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 - Se desplego Firebase Hosting live.
 - Healthchecks publicos aprobados.
 - Smoke tecnico aprobado.
-- Smoke manual por rol y validacion Excel institucional quedan pendientes para cierre operativo.
+- Smoke manual por rol y validacion Excel institucional cerrados en `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md`.
 
 ### H18-F6 UX filtros amigables
 
@@ -600,9 +598,18 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 - Revision Cloud Run: `nomina-api-00049-2hn`.
 - Hosting live: `2026-07-09 13:11:55`.
 
+### Hotfix snapshot H18
+
+- Implementado en `c1e858b fix(h18): correct operational reports snapshot query`.
+- Desplegado en Cloud Run `nomina-api-00050-zdm`.
+- Corrige referencia a columna inexistente `ped.line_key`.
+- Usa relacion real por `payroll_run_id`, `teacher_id` y `coordination_id`.
+- No crea migracion ni modifica base de datos.
+- Validacion post-hotfix cerrada en `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md`.
+
 ## 13. Que NO se hizo
 
-Confirmado hasta H18-F5:
+Confirmado hasta cierre operativo H18:
 
 - No se modifico base de datos.
 - No se ejecutaron migraciones.

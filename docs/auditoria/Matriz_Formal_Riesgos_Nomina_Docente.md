@@ -23,7 +23,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H13 cerrado documentalmente con checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback.
 - H15 desplegado productivamente en Firebase Hosting live; sesion por inactividad y `browserSessionPersistence` quedan operativos.
 - H17 ejecutado: Directorio usa `teachers.created_by` como capturador tecnico; correccion por coordinacion descartada y 197 docentes fueron normalizados con backup y mapping aprobado.
-- H18-F1 backend y H18-F2 frontend implementados para modulo Reportes Operativos; H18-F5 deploy productivo ejecutado con smoke tecnico OK; H18-F6 filtros amigables desplegados productivamente; smoke manual CSV/XLSX con sesion real pendiente para cierre operativo.
+- H18 cerrado operativo: Reportes Operativos desplegado, filtros amigables H18-F6 vigentes, hotfix snapshot `ped.line_key` aplicado y CSV/XLSX validados en Excel institucional.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
 Arquitectura vigente:
@@ -61,7 +61,7 @@ Arquitectura vigente:
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
 | H15 | Persistencia de sesion e inactividad | Seguridad frontend / Firebase Auth | Desplegado productivamente | Bajo: queda observacion operativa del ciclo real de 60 minutos y reapertura de navegador | P2 cerrado operativo | Mantener pruebas H15 y observar comportamiento en operacion normal | Cumplido con predeploy, deploy Hosting live y smoke postdeploy minimo | Solo si se cambia politica de tiempo o UX |
 | H17 | `teachers.created_by` nulo por carga masiva | Directorio / Permisos operativos / Datos productivos | Normalizacion productiva ejecutada para 197 docentes; 12 remanentes documentados | Bajo-medio: queda validacion funcional por coordinadoras y decision futura sobre remanentes | P1 datos controlados / monitoreo | Mantener regla por capturador; validar acceso operativo y no tocar remanentes sin nuevo mapping aprobado | Validacion por coordinadoras y cierre/documentacion de los 12 remanentes si se decide atenderlos | Si, solo para remanentes o excepciones futuras |
-| H18 | Modulo Reportes Operativos desplegado con UX de filtros H18-F6 | Reportes / Permisos / Operacion academica | H18-F1 backend y H18-F2 frontend implementados; H18-F5 deploy productivo ejecutado con smoke tecnico OK; H18-F6 desplegado productivamente con healthchecks OK | Bajo-medio: queda riesgo de validacion manual de exportables/roles y snapshot sin capturador historico externo | P2 monitoreo / cierre pendiente | Completar smoke CSV/XLSX desde UI con sesion real y Excel institucional; no crear permisos ni migraciones sin H05 | Smoke manual autorizado de roles/exportables aprobado | Si, solo si se agregan permisos nuevos o cambios de BD |
+| H18 | Modulo Reportes Operativos desplegado con UX de filtros H18-F6 y hotfix snapshot | Reportes / Permisos / Operacion academica | Cerrado operativo | Bajo: riesgo residual por regresion futura o nuevas necesidades de snapshots historicos | P2 cerrado operativo | Mantener pruebas H18, guardas backend por rol y exportables CSV/XLSX; no crear permisos ni migraciones sin H05 | Cumplido con deploy H18-F5/F6, hotfix `ped.line_key` y validacion post-hotfix en Excel institucional | Solo si se agregan permisos nuevos o cambios de BD |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -154,7 +154,7 @@ Orden recomendado:
 3. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
 4. **H15 operativo.** Mantener smoke de sesion/inactividad si se ajusta la politica de tiempo o UX del modal.
 5. **H17 monitoreo.** Validar acceso real de coordinadoras y resolver remanentes solo con nuevo mapping aprobado.
-6. **H18 Reportes Operativos.** Backend F1, frontend F2, deploy H18-F5 y deploy H18-F6 ya ejecutados con smoke tecnico OK. Continuar con smoke manual CSV/XLSX con sesion real y Excel institucional para cierre operativo.
+6. **H18 Reportes Operativos.** Cerrado operativo. Mantener pruebas/regresion, guardas por rol y monitoreo de exportables CSV/XLSX.
 
 ## 6. Decisiones humanas pendientes
 
