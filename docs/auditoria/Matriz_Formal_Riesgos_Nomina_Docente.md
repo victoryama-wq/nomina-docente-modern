@@ -24,6 +24,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H15 desplegado productivamente en Firebase Hosting live; sesion por inactividad y `browserSessionPersistence` quedan operativos.
 - H17 ejecutado: Directorio usa `teachers.created_by` como capturador tecnico; correccion por coordinacion descartada y 197 docentes fueron normalizados con backup y mapping aprobado.
 - H18 cerrado operativo: Reportes Operativos desplegado, filtros amigables H18-F6 vigentes, hotfix snapshot `ped.line_key` aplicado y CSV/XLSX validados en Excel institucional.
+- H19 iniciado como validacion read-only: CSV `docentes.csv` cruzado contra Cloud SQL sin escrituras; SQL propuesto queda en ROLLBACK y requiere aprobacion antes de cualquier `UPDATE`.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
 Arquitectura vigente:
@@ -62,6 +63,7 @@ Arquitectura vigente:
 | H15 | Persistencia de sesion e inactividad | Seguridad frontend / Firebase Auth | Desplegado productivamente | Bajo: queda observacion operativa del ciclo real de 60 minutos y reapertura de navegador | P2 cerrado operativo | Mantener pruebas H15 y observar comportamiento en operacion normal | Cumplido con predeploy, deploy Hosting live y smoke postdeploy minimo | Solo si se cambia politica de tiempo o UX |
 | H17 | `teachers.created_by` nulo por carga masiva | Directorio / Permisos operativos / Datos productivos | Normalizacion productiva ejecutada para 197 docentes; 12 remanentes documentados | Bajo-medio: queda validacion funcional por coordinadoras y decision futura sobre remanentes | P1 datos controlados / monitoreo | Mantener regla por capturador; validar acceso operativo y no tocar remanentes sin nuevo mapping aprobado | Validacion por coordinadoras y cierre/documentacion de los 12 remanentes si se decide atenderlos | Si, solo para remanentes o excepciones futuras |
 | H18 | Modulo Reportes Operativos desplegado con UX de filtros H18-F6 y hotfix snapshot | Reportes / Permisos / Operacion academica | Cerrado operativo | Bajo: riesgo residual por regresion futura o nuevas necesidades de snapshots historicos | P2 cerrado operativo | Mantener pruebas H18, guardas backend por rol y exportables CSV/XLSX; no crear permisos ni migraciones sin H05 | Cumplido con deploy H18-F5/F6, hotfix `ped.line_key` y validacion post-hotfix en Excel institucional | Solo si se agregan permisos nuevos o cambios de BD |
+| H19 | Actualizacion controlada de Directorio desde CSV | Directorio / Datos productivos / Permisos operativos | Validacion read-only completada; SQL propuesto en ROLLBACK para 29 candidatos de `teachers.created_by` | Medio hasta aprobar/rechazar candidatos; bajo si se conserva proceso H05/backup/preview | P1 datos controlados | No ejecutar sin backup, preview ROLLBACK y aprobacion humana; mantener excluidos fiscales, pago, nomina y snapshots | Cierre posterior solo si se aprueba y ejecuta con evidencia, o si se descarta formalmente | Si, para aprobar cambios y resolver 10 docentes sin match |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -155,6 +157,7 @@ Orden recomendado:
 4. **H15 operativo.** Mantener smoke de sesion/inactividad si se ajusta la politica de tiempo o UX del modal.
 5. **H17 monitoreo.** Validar acceso real de coordinadoras y resolver remanentes solo con nuevo mapping aprobado.
 6. **H18 Reportes Operativos.** Cerrado operativo. Mantener pruebas/regresion, guardas por rol y monitoreo de exportables CSV/XLSX.
+7. **H19 Directorio.** Revisar los 29 candidatos de `created_by`, resolver 10 docentes sin match y decidir si se autoriza ventana con backup.
 
 ## 6. Decisiones humanas pendientes
 
@@ -169,6 +172,7 @@ Pendientes reales despues de H02/H03:
 - Decidir si se requiere sanitizacion CSV injection por exportable o si se mantiene sin transformar datos exportados.
 - Validar H17 con usuarios autorizados y decidir si los 12 remanentes requieren una segunda ventana de datos.
 - Para H18, decidir solo si en fases futuras se agregan permisos formales nuevos; `exceljs` ya fue aprobado e instalado en backend/API.
+- Para H19, aprobar o rechazar los 29 candidatos y corregir/decidir los 10 docentes sin match antes de cualquier escritura.
 
 ## 7. Recomendacion final
 

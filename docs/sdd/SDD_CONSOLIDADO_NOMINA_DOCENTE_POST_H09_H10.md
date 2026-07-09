@@ -37,6 +37,7 @@ Estado por H:
 | H15 | Desplegado en produccion; `browserSessionPersistence`, timeout 60 min, modal 5 min antes y logout por inactividad vigentes. |
 | H17 | Normalizacion productiva ejecutada para 197 docentes; Directorio mantiene edicion por `teachers.created_by`; 12 remanentes documentados. |
 | H18 | Cerrado operativo; Reportes Operativos desplegado, filtros amigables H18-F6 vigentes y hotfix snapshot `ped.line_key` aplicado en `nomina-api-00050-zdm`. |
+| H19 | Iniciado en validacion read-only; CSV `docentes.csv` cruzado contra Cloud SQL sin escrituras y SQL propuesto en ROLLBACK para `teachers.created_by`. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -53,6 +54,7 @@ Ultimos hitos productivos relevantes:
 - H18 Reportes Operativos: deploy productivo API/Hosting ejecutado el 2026-07-08; API revision `nomina-api-00048-js8`, Hosting live `2026-07-08 12:33:41`, sin migraciones ni cambios de BD; smoke tecnico OK.
 - H18-F6 Reportes Operativos: deploy productivo ejecutado el 2026-07-09; API revision `nomina-api-00049-2hn`, Hosting live `2026-07-09 13:11:55`, filtros con ciclos/quincenas legibles y busqueda general en vez de IDs tecnicos.
 - H18 hotfix snapshot: deploy productivo API ejecutado el 2026-07-09; API revision `nomina-api-00050-zdm`, sin deploy Hosting, sin migraciones, sin cambios de BD; corrige `ped.line_key`; cierre operativo validado en Excel institucional.
+- H19 Directorio Docentes: validacion read-only del CSV `docentes.csv`; se generaron mapping y SQL en `ROLLBACK` para 29 candidatos de `teachers.created_by`, sin ejecutar escrituras.
 
 ## 2. Arquitectura vigente
 
