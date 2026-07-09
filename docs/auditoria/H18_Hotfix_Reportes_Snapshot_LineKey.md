@@ -123,6 +123,56 @@ Resultado: suite `skipped` por no tener PostgreSQL local de test activo/configur
 - No se ejecuto `npm audit fix`.
 - No se hizo deploy.
 
-## 8. Siguiente paso recomendado
+## 8. Deploy productivo
 
-Ejecutar la suite de integracion H18 contra `nomina_docente_test` cuando PostgreSQL local este disponible y, si pasa, preparar deploy controlado del hotfix backend/API.
+Deploy ejecutado el 2026-07-09.
+
+### Commit desplegado
+
+```text
+c1e858b fix(h18): correct operational reports snapshot query
+```
+
+### Build API
+
+| Elemento | Valor |
+|---|---|
+| Imagen | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h18-hotfix-c1e858b` |
+| Cloud Build ID | `06b6b1df-6e21-4cad-9701-7879647d4e44` |
+| Digest | `sha256:c9aa7627cca75508ed152c8eec5713b5b1b1a0464d22940a4167f503cde3e8ea` |
+
+### Cloud Run
+
+| Elemento | Valor |
+|---|---|
+| Revision anterior | `nomina-api-00049-2hn` |
+| Revision nueva | `nomina-api-00050-zdm` |
+| Trafico | `100%` a `nomina-api-00050-zdm` |
+| URL publica | `https://nomina-api-443985127112.us-central1.run.app` |
+
+### Healthchecks postdeploy
+
+| Validacion | Resultado |
+|---|---|
+| `/api/health` via Hosting | `200` |
+| `/api/health` directo Cloud Run | `200` |
+| `/api/auth/session` sin token | `401` esperado |
+| `/api/reports/operational/base-extra?...` sin token | `401` esperado |
+| Logs `severity>=ERROR` en `nomina-api-00050-zdm` | Sin errores al momento de la verificacion |
+
+### Confirmaciones del deploy
+
+- No se desplego Firebase Hosting.
+- No se ejecutaron migraciones.
+- No se ejecuto `db:migrate`.
+- No se ejecutaron seeds.
+- No se importaron datos.
+- No se modifico base de datos.
+- No se tocaron datos fiscales.
+- No se cambio formula H01.
+- No se ejecuto `npm audit fix`.
+- No se instalaron dependencias.
+
+## 9. Siguiente paso recomendado
+
+Validar con sesion real/autorizada que la pestana `Horas base y extras` consulta una quincena guardada sin error SQL y que CSV/XLSX snapshot descargan correctamente.
