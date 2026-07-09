@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: H18-F1 backend implementado, H18-F2 frontend implementado, H18-F3 prevalidacion local automatizada documentada, H18-F5 deploy productivo ejecutado y H18-F6 UX de filtros implementado localmente. H18-F6 queda pendiente de deploy posterior y validacion manual con sesion real/Excel para cierre operativo.
+Estado: H18-F1 backend implementado, H18-F2 frontend implementado, H18-F3 prevalidacion local automatizada documentada, H18-F5 deploy productivo ejecutado y H18-F6 UX de filtros desplegado productivamente. Queda pendiente validacion manual con sesion real/Excel para cierre operativo.
 
 ## 1. Resumen ejecutivo
 
@@ -535,7 +535,6 @@ Recomendacion tecnica:
 
 - Validar manualmente descargas CSV/XLSX desde la UI con sesion real/autorizada y Excel institucional.
 - Ejecutar smoke manual por rol para cerrar H18 operativo sin observaciones.
-- Ejecutar deploy controlado posterior de H18-F6.
 - Definir si en una fase futura se crean permisos formales nuevos; no se hizo en H18-F1/F2 para evitar migracion H05.
 - Definir si los snapshots historicos deben exponer capturador de extra externo cuando `payroll_extra_details` no conserva `captured_by`.
 - Decidir si roles financieros futuros similares a Direccion Financiera deben quedar excluidos de pestana 2 por regla general.
@@ -593,12 +592,13 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 
 ### H18-F6 UX filtros amigables
 
-- Implementado localmente.
+- Implementado y desplegado productivamente el 2026-07-09.
 - Reemplaza filtros visibles por ID con selectores de ciclo/quincena y busqueda general.
 - Agrega endpoints read-only de filtros H18.
 - Agrega parametro `q` a consultas y exportaciones.
 - Mantiene contratos existentes y IDs internos para compatibilidad.
-- Pendiente de deploy controlado posterior.
+- Revision Cloud Run: `nomina-api-00049-2hn`.
+- Hosting live: `2026-07-09 13:11:55`.
 
 ## 13. Que NO se hizo
 

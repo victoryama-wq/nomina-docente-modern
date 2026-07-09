@@ -180,6 +180,60 @@ Confirmado:
 - No se cambio formula H01.
 - No se expusieron datos fiscales.
 
-## 10. Pendiente
+## 10. Deploy productivo H18-F6
 
-H18-F6 queda pendiente de deploy controlado posterior y smoke manual con sesion real/Excel institucional.
+Deploy ejecutado el 2026-07-09.
+
+### Commit desplegado
+
+```text
+325075f feat(h18): improve operational reports filters ux
+```
+
+### API Cloud Run
+
+| Elemento | Valor |
+|---|---|
+| Revision anterior | `nomina-api-00048-js8` |
+| Revision nueva | `nomina-api-00049-2hn` |
+| Imagen | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h18-f6-prod-325075f` |
+| Cloud Build ID | `104b6e79-1bec-4489-88ac-f366c19b18d8` |
+| Trafico | `100%` a `nomina-api-00049-2hn` |
+
+### Firebase Hosting
+
+| Elemento | Valor |
+|---|---|
+| Sitio | `nomina-docente-prod` |
+| Canal | `live` |
+| URL | `https://nomina-docente-prod.web.app` |
+| Release live | `2026-07-09 13:11:55` |
+
+### Healthchecks
+
+| Validacion | Resultado |
+|---|---|
+| `/` via Hosting | `200` |
+| `/reports` via Hosting | `200` |
+| `/api/health` via Hosting | `200` |
+| `/api/health` directo Cloud Run | `200` |
+| `/api/auth/session` sin token | `401` esperado |
+| `/api/reports/operational/filters/cycles` sin token | `401` esperado |
+
+Logs de `nomina-api-00049-2hn`: sin errores `severity>=ERROR` al momento de la verificacion.
+
+### Confirmaciones del deploy
+
+- No se ejecutaron migraciones.
+- No se ejecuto `db:migrate`.
+- No se ejecutaron seeds.
+- No se importaron datos.
+- No se modifico base de datos.
+- No se tocaron datos fiscales.
+- No se cambio H01.
+- No se ejecuto `npm audit fix`.
+- No se instalaron dependencias.
+
+### Pendiente
+
+H18-F6 queda pendiente de smoke manual con sesion real/Excel institucional para cerrar H18 operativo.

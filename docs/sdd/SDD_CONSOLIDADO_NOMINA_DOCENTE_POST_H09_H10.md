@@ -13,7 +13,7 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00048-js8` |
+| Revision Cloud Run vigente documentada | `nomina-api-00049-2hn` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
@@ -36,7 +36,7 @@ Estado por H:
 | H13 | Cerrado documental; checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback. |
 | H15 | Desplegado en produccion; `browserSessionPersistence`, timeout 60 min, modal 5 min antes y logout por inactividad vigentes. |
 | H17 | Normalizacion productiva ejecutada para 197 docentes; Directorio mantiene edicion por `teachers.created_by`; 12 remanentes documentados. |
-| H18 | H18-F1 backend y H18-F2 frontend implementados; H18-F5 deploy productivo ejecutado con smoke tecnico OK; H18-F6 filtros amigables implementados localmente y pendientes de deploy; smoke manual Excel/sesion real pendiente para cierre operativo. |
+| H18 | H18-F1 backend y H18-F2 frontend implementados; H18-F5 deploy productivo ejecutado con smoke tecnico OK; H18-F6 filtros amigables desplegados productivamente; smoke manual Excel/sesion real pendiente para cierre operativo. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -51,7 +51,7 @@ Ultimos hitos productivos relevantes:
 - H15 deploy productivo: Hosting live confirmado el 2026-06-03 15:16:08, sin despliegue API, sin migracion y sin cambios de datos; smoke minimo de sesion/logout aprobado.
 - H17 Directorio: se descarto correccion por coordinacion; se normalizaron 197 docentes en `teachers.created_by` con backup y mapping aprobado; quedan 12 remanentes documentados.
 - H18 Reportes Operativos: deploy productivo API/Hosting ejecutado el 2026-07-08; API revision `nomina-api-00048-js8`, Hosting live `2026-07-08 12:33:41`, sin migraciones ni cambios de BD; smoke tecnico OK y smoke manual por rol/Excel pendiente.
-- H18-F6 Reportes Operativos: mejora local de filtros para mostrar ciclos/quincenas legibles y busqueda general en vez de IDs tecnicos; pendiente de deploy posterior.
+- H18-F6 Reportes Operativos: deploy productivo ejecutado el 2026-07-09; API revision `nomina-api-00049-2hn`, Hosting live `2026-07-09 13:11:55`, filtros con ciclos/quincenas legibles y busqueda general en vez de IDs tecnicos; smoke manual por rol/Excel pendiente.
 
 ## 2. Arquitectura vigente
 
@@ -322,7 +322,7 @@ Documentos vigentes:
 | Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
-| Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`, `docs/auditoria/H18_Deploy_Productivo_Reportes_Operativos.md` y `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | H18-F1/F2 implementados; H18-F5 desplegado con smoke tecnico OK; H18-F6 implementado local pendiente de deploy; smoke manual por rol/Excel pendiente |
+| Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`, `docs/auditoria/H18_Deploy_Productivo_Reportes_Operativos.md` y `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | H18-F1/F2 implementados; H18-F5 desplegado con smoke tecnico OK; H18-F6 desplegado productivamente; smoke manual por rol/Excel pendiente |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -359,7 +359,7 @@ Regla de precedencia:
 | H13 | Cerrado documental / checklist productivo permanente | Usar checklist H13 antes de cada deploy y actualizarlo solo si cambia infraestructura real. |
 | H15 | Desplegado productivamente | Mantener observacion operativa del ciclo real de 60 minutos y reapertura de navegador si se requiere evidencia adicional. |
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
-| H18 | Backend F1 y frontend F2 implementados / H18-F5 deploy productivo ejecutado / H18-F6 filtros amigables implementados localmente | Desplegar H18-F6 y completar smoke manual CSV/XLSX con sesion real, manteniendo guardas backend por rol, CSV H11 como respaldo y XLSX server-side con `exceljs`. |
+| H18 | Backend F1 y frontend F2 implementados / H18-F5 deploy productivo ejecutado / H18-F6 desplegado productivamente | Completar smoke manual CSV/XLSX con sesion real, manteniendo guardas backend por rol, CSV H11 como respaldo y XLSX server-side con `exceljs`. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |

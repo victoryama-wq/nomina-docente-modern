@@ -293,6 +293,46 @@ Recomendacion inmediata:
 
 ## 12. Nota posterior H18-F6
 
-El 2026-07-09 se implemento localmente H18-F6 para reemplazar filtros visibles por ID con selectores de ciclo/quincena y busqueda general.
+El 2026-07-09 se desplego productivamente H18-F6 para reemplazar filtros visibles por ID con selectores de ciclo/quincena y busqueda general.
 
-Esta mejora no forma parte del deploy documentado en este archivo y queda pendiente de deploy controlado posterior.
+Resumen del deploy H18-F6:
+
+| Elemento | Resultado |
+|---|---|
+| Commit desplegado | `325075f feat(h18): improve operational reports filters ux` |
+| Revision anterior | `nomina-api-00048-js8` |
+| Revision nueva | `nomina-api-00049-2hn` |
+| Imagen | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h18-f6-prod-325075f` |
+| Cloud Build ID | `104b6e79-1bec-4489-88ac-f366c19b18d8` |
+| Hosting live | `2026-07-09 13:11:55` |
+| Healthchecks | `200` en `/`, `/reports`, `/api/health`; `401` esperado en rutas sin token |
+| Logs Cloud Run | Sin errores `severity>=ERROR` al momento de la verificacion |
+
+Confirmaciones:
+
+- No se ejecutaron migraciones.
+- No se ejecuto `db:migrate`.
+- No se ejecutaron seeds.
+- No se importaron datos.
+- No se modifico base de datos.
+- No se tocaron datos fiscales.
+- No se cambio H01.
+- No se ejecuto `npm audit fix`.
+- No se instalaron dependencias.
+
+El detalle completo queda en `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md`.
+
+Pendiente para cierre operativo:
+
+- Smoke manual con sesion real por rol.
+- Descarga CSV/XLSX desde UI.
+- Apertura en Excel institucional.
+
+Rollback especifico H18-F6, si fuera necesario:
+
+```powershell
+gcloud run services update-traffic nomina-api `
+  --project nomina-docente-prod `
+  --region us-central1 `
+  --to-revisions nomina-api-00048-js8=100
+```
