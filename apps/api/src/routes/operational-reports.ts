@@ -474,16 +474,17 @@ async function listBaseExtraSnapshotRows(
     `
       WITH extra_detail AS (
         SELECT
-          ped.line_key,
+          ped.teacher_id,
+          ped.coordination_id,
           string_agg(DISTINCT ped.reason_snapshot, '; ' ORDER BY ped.reason_snapshot) FILTER (WHERE ped.reason_snapshot IS NOT NULL AND ped.reason_snapshot <> '') AS reason,
           string_agg(DISTINCT ped.activity_date::text, '; ' ORDER BY ped.activity_date::text) FILTER (WHERE ped.activity_date IS NOT NULL) AS activity_date
         FROM payroll_extra_details ped
-        WHERE ped.run_id = $1::uuid
-        GROUP BY ped.line_key
+        WHERE ped.payroll_run_id = $1::uuid
+        GROUP BY ped.teacher_id, ped.coordination_id
       )
       SELECT
         'snapshot'::text AS source,
-        pl.cycle_id::text AS "cycleId",
+        pr.cycle_id::text AS "cycleId",
         $2::text AS "cycleLabel",
         $3::uuid::text AS "calendarConfigId",
         $4::text AS "periodLabel",
@@ -509,8 +510,11 @@ async function listBaseExtraSnapshotRows(
         ed.reason,
         ed.activity_date AS "activityDate"
       FROM payroll_lines pl
-      LEFT JOIN extra_detail ed ON ed.line_key = pl.line_key
-      WHERE pl.run_id = $1::uuid
+      JOIN payroll_runs pr ON pr.id = pl.payroll_run_id
+      LEFT JOIN extra_detail ed
+        ON ed.teacher_id IS NOT DISTINCT FROM pl.teacher_id
+       AND ed.coordination_id IS NOT DISTINCT FROM pl.coordination_id
+      WHERE pl.payroll_run_id = $1::uuid
         AND ($5::uuid IS NULL OR pl.teacher_id = $5::uuid)
         AND ($6::uuid IS NULL OR pl.coordination_id = $6::uuid)
         AND ($7::text IS NULL OR pl.category_snapshot = $7::text)

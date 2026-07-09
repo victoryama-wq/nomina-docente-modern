@@ -173,6 +173,108 @@ async function seedCategoryHourScenarios(): Promise<void> {
   }
 }
 
+async function seedBaseExtraSnapshotScenario(): Promise<void> {
+  const client = await connectTestDb();
+  try {
+    await client.query(`
+      INSERT INTO payroll_lines (
+        id,
+        payroll_run_id,
+        teacher_id,
+        coordination_id,
+        teacher_name_snapshot,
+        coordination_name_snapshot,
+        payment_type_snapshot,
+        category_snapshot,
+        base_hours,
+        absences,
+        delays,
+        delay_discount_hours,
+        gross_base_amount,
+        absence_discount_amount,
+        delay_discount_amount,
+        base_net_amount,
+        schedule_extra_hours,
+        schedule_extra_amount,
+        logged_extra_hours,
+        logged_extra_amount,
+        total_extra_hours,
+        total_extra_amount,
+        total_amount,
+        alerts
+      ) VALUES (
+        '71000000-0000-4000-8000-000000000181',
+        '${TEST_IDS.payrollRun}',
+        '${TEST_IDS.teacherIdiomas}',
+        '${TEST_COORDINATIONS.idiomas.id}',
+        'Docente QA Idiomas Uno',
+        'Idiomas',
+        '',
+        'N',
+        12.00,
+        0,
+        0,
+        0,
+        1200.00,
+        0,
+        0,
+        1200.00,
+        1.00,
+        100.00,
+        3.00,
+        300.00,
+        4.00,
+        400.00,
+        1600.00,
+        '[]'::jsonb
+      )
+      ON CONFLICT (id) DO UPDATE
+      SET base_hours = EXCLUDED.base_hours,
+          schedule_extra_hours = EXCLUDED.schedule_extra_hours,
+          logged_extra_hours = EXCLUDED.logged_extra_hours,
+          total_extra_hours = EXCLUDED.total_extra_hours,
+          total_amount = EXCLUDED.total_amount;
+
+      INSERT INTO payroll_extra_details (
+        id,
+        payroll_run_id,
+        extra_id,
+        teacher_id,
+        coordination_id,
+        teacher_name_snapshot,
+        coordination_name_snapshot,
+        reason_snapshot,
+        activity_date,
+        hours,
+        tabulator_amount,
+        total_amount,
+        source_payload
+      ) VALUES (
+        '72000000-0000-4000-8000-000000000181',
+        '${TEST_IDS.payrollRun}',
+        '${TEST_IDS.extraOwn}',
+        '${TEST_IDS.teacherIdiomas}',
+        '${TEST_COORDINATIONS.idiomas.id}',
+        'Docente QA Idiomas Uno',
+        'Idiomas',
+        'Snapshot H18 extra validado',
+        '2026-05-20',
+        3.00,
+        100.00,
+        300.00,
+        '{"source":"h18-test"}'::jsonb
+      )
+      ON CONFLICT (id) DO UPDATE
+      SET reason_snapshot = EXCLUDED.reason_snapshot,
+          activity_date = EXCLUDED.activity_date,
+          hours = EXCLUDED.hours,
+          total_amount = EXCLUDED.total_amount;
+    `);
+  } finally {
+    await client.end();
+  }
+}
+
 describeIfDb('H18 operational reports backend integration coverage', () => {
   let app: FastifyInstance | null = null;
 
@@ -357,6 +459,73 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
 
     const serialized = JSON.stringify(body);
     expect(serialized).not.toMatch(/rfc|bank|paymentType|constancia/i);
+  });
+
+  it('returns base-extra snapshot rows for saved payroll periods without referencing nonexistent line_key columns', async () => {
+    await seedBaseExtraSnapshotScenario();
+
+    const response = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/base-extra?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&type=withExtras`
+    });
+    expect(response.statusCode).toBe(200);
+
+    const body = response.json();
+    expect(body.meta.source).toBe('snapshot');
+    expect(body.meta.snapshotRunId).toBe(TEST_IDS.payrollRun);
+
+    const rows = body.rows as Array<Record<string, string | null>>;
+    expect(rows).toEqual([
+      expect.objectContaining({
+        source: 'snapshot',
+        cycleId: TEST_IDS.cycle,
+        calendarConfigId: TEST_IDS.calendarConfig,
+        teacherId: TEST_IDS.teacherIdiomas,
+        teacherName: 'Docente QA Idiomas Uno',
+        coordinationId: TEST_COORDINATIONS.idiomas.id,
+        coordinationName: 'Idiomas',
+        baseHours: '12.00',
+        incidenceExtraHours: '1.00',
+        externalExtraHours: '3.00',
+        totalExtraHours: '4.00',
+        reason: 'Snapshot H18 extra validado',
+        activityDate: '2026-05-20'
+      })
+    ]);
+
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toMatch(/rfc|bank|paymentType|constancia/i);
+  });
+
+  it('exports base-extra snapshot rows as CSV and XLSX for saved payroll periods', async () => {
+    await seedBaseExtraSnapshotScenario();
+
+    const csvResponse = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/base-extra/export?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&type=withExtras&format=csv`
+    });
+    expect(csvResponse.statusCode).toBe(200);
+    expect(csvResponse.headers['content-type']).toContain('text/csv; charset=utf-8');
+    const csv = withoutBom(csvResponse.body);
+    expect(csv).toContain('snapshot');
+    expect(csv).toContain('Snapshot H18 extra validado');
+    expect(csv).not.toMatch(/RFC|Banco|paymentType|Constancia/i);
+
+    const xlsxResponse = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/base-extra/export?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&type=withExtras&format=xlsx`
+    });
+    expect(xlsxResponse.statusCode).toBe(200);
+    expect(xlsxResponse.headers['content-type']).toContain(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(rawBuffer(xlsxResponse) as unknown as ArrayBuffer);
+    const worksheet = workbook.getWorksheet('Horas base y extras');
+    expect(worksheet).toBeDefined();
+    expect(worksheet!.getCell('A2').value).toBe('snapshot');
+    expect(worksheet!.getCell('M2').value).toBe('Snapshot H18 extra validado');
   });
 
   it('filters base-extra by friendly search q across teacher, coordination and capturer text', async () => {
