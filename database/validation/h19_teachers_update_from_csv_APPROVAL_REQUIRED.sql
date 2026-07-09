@@ -1,7 +1,9 @@
--- H19 - Propuesta de actualizacion teachers.created_by desde docentes.csv
+-- H19 - Propuesta regenerada de actualizacion teachers.created_by desde docentes.csv
+-- Fecha de regeneracion: 2026-07-09
 -- NO EJECUTAR SIN BACKUP CLOUD SQL Y APROBACION HUMANA EXPLICITA.
 -- Generado en modo seguro: ROLLBACK por defecto, sin COMMIT operativo.
 -- Alcance: solo teachers.created_by para docentes con match unico y responsable resuelto.
+-- El SQL anterior de H19 queda reemplazado por esta regeneracion contra el CSV actualizado.
 -- Prohibido: payment_type/tipo_pago, email fiscal, RFC, banco, cuenta, CLABE, constancias, nomina y snapshots.
 
 \echo 'H19 preview: validar base exacta nomina_docente'
@@ -49,7 +51,7 @@ INSERT INTO h19_teacher_created_by_mapping (
   (71, '4b8a9a5d-5c22-4452-b136-a0c640bd710a'::uuid, 'BEATRIZ PACHECO OJEDA', 'Merit Berenice Bazan Garcia', NULL::uuid, '', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_NULL'),
   (75, '0a6b732b-cadd-4da8-ad7d-c46cc4127a2b'::uuid, 'ARMANDO CHAVARRIA MORALES', 'Leonardo Sayas', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
   (76, 'b8ace0e8-c6b5-4476-ac6e-ae869ea6d54e'::uuid, 'DANIEL JESUS MEX KANTUN', 'Leonardo Sayas', '61744d7e-6f64-4bfe-82b0-d4c056aad239'::uuid, 'eslivet.aguilar@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
-  (78, 'eafaf2aa-8e95-4d8c-b11e-eaf70d3f400d'::uuid, 'DANIELA AURORA PÉREZ EDGAR', 'Leonardo Sayas', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
+  (78, 'eafaf2aa-8e95-4d8c-b11e-eaf70d3f400d'::uuid, 'DANIELA AURORA PEREZ EDGAR', 'Leonardo Sayas', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
   (79, '1fb66a61-6027-4617-bbb8-5d6e51b9de4b'::uuid, 'DANIELA GEORGINA MARQUEZ ALAMILLA', 'Leonardo Sayas', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
   (81, 'd904dc05-5b92-4c92-b130-b79a91e0e31a'::uuid, 'HUMBERTO GARCIA LUNA BAEZA', 'Leonardo Sayas', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
   (82, '928b7da7-7149-49ea-a554-f1249fa3571a'::uuid, 'ISRAEL JESREEL FAJARDO GONZALEZ', 'Leonardo Sayas', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
@@ -60,7 +62,7 @@ INSERT INTO h19_teacher_created_by_mapping (
   (90, '21c077f2-fc1d-4d66-a671-0f7627835fdf'::uuid, 'LEYDI JAQUELIN ALCOCER URBIETA', 'Leonardo Sayas', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
   (91, 'eebddcef-fc1c-4744-8ab2-a61aa85b0848'::uuid, 'MELINA ABRIL DIAZ CARRILLO', 'Leonardo Sayas', '31b89aa5-b102-40e1-a61f-5b4f6bd2189e'::uuid, 'merit.bazan@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
   (92, 'afc1732c-208d-4790-a444-5b6c72fe8ef5'::uuid, 'MIGUEL SANCHEZ RODRIGUEZ', 'Leonardo Sayas', '5377a59d-8e09-4d56-b993-c1c7205ba8af'::uuid, 'zulma.martinez@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
-  (93, '38f7dbe8-d7c3-478e-b2f7-d796fda3ed8b'::uuid, 'RAUL IÑAKI CHAN AGUILAR', 'Leonardo Sayas', '61744d7e-6f64-4bfe-82b0-d4c056aad239'::uuid, 'eslivet.aguilar@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
+  (93, '38f7dbe8-d7c3-478e-b2f7-d796fda3ed8b'::uuid, 'RAUL INAKI CHAN AGUILAR', 'Leonardo Sayas', '61744d7e-6f64-4bfe-82b0-d4c056aad239'::uuid, 'eslivet.aguilar@tecplayacar.edu.mx', 'ebf0079f-598e-40d9-8b4f-d08d9922f3fa'::uuid, 'brian.sayas@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
   (96, 'f8070581-4eed-45a1-bbd3-919801e2a4b7'::uuid, 'ALBERTO MONTERO CEME', 'Oriana Nah Rosado', NULL::uuid, '', 'df3ad085-321c-45b5-9054-e6a036d70793'::uuid, 'oriana.nah@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_NULL'),
   (104, '300ffabf-0913-4476-9fc2-4389f21cd3ce'::uuid, 'DAISY MARGARITA MENDEZ TRIGUEROS', 'Oriana Nah Rosado', '051543e4-4058-42b0-83ad-7d2cd25e1dd5'::uuid, 'victor.yama@tecplayacar.edu.mx', 'df3ad085-321c-45b5-9054-e6a036d70793'::uuid, 'oriana.nah@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_DIFERENTE'),
   (116, '9cc536e5-48c1-4398-8c43-68e836069975'::uuid, 'MAYRA ISABEL GARCIA MARTIN', 'Oriana Nah Rosado', NULL::uuid, '', 'df3ad085-321c-45b5-9054-e6a036d70793'::uuid, 'oriana.nah@tecplayacar.edu.mx', 'UPDATE_CANDIDATO_CREATED_BY_NULL'),
@@ -103,8 +105,7 @@ SELECT count(*) AS would_update FROM candidate;
 
 \echo 'H19 preview: UPDATE queda dentro de transaccion con ROLLBACK'
 UPDATE teachers t
-SET
-  created_by = m.new_created_by
+SET created_by = m.new_created_by
 FROM h19_teacher_created_by_mapping m
 JOIN app_users u ON u.id = m.new_created_by
 WHERE t.id = m.teacher_id

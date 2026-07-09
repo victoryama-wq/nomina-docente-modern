@@ -4,8 +4,12 @@ Fecha: 2026-07-09
 
 ## 1. Contexto
 
-H19 inicia la validacion controlada de un CSV de Directorio Docentes para
-proponer, sin ejecutar, una actualizacion limitada sobre docentes existentes.
+H19 valida de forma controlada un CSV de Directorio Docentes para proponer, sin
+ejecutar, una actualizacion limitada sobre docentes existentes.
+
+Esta version reemplaza la validacion H19 previa porque el usuario actualizo el
+archivo `docentes.csv` y pidio regenerar mapping, candidatos y SQL desde el CSV
+normalizado. El SQL anterior H19 no debe usarse como base final de ejecucion.
 
 Archivo fuente revisado:
 
@@ -69,7 +73,7 @@ No se exportaron ni usaron:
 - Documentos fiscales.
 - Correo fiscal de `teachers.email`.
 
-## 3. Validacion del CSV
+## 3. Validacion del CSV actualizado
 
 Columnas detectadas:
 
@@ -115,6 +119,19 @@ Conteo por responsable/creador:
 | Zulma Martinez Duque | 26 |
 | Leonardo Sayas | 22 |
 | Lidia Medina Lozano | 13 |
+
+Comparacion contra la validacion H19 anterior versionada:
+
+| Metrica | Validacion anterior | Regeneracion actual | Cambio |
+|---|---:|---:|---|
+| Total filas CSV | 147 | 147 | Sin cambio |
+| Responsables unicos | 6 | 6 | Sin cambio |
+| Docentes duplicados CSV | 0 | 0 | Sin cambio |
+| Filas sin docente | 0 | 0 | Sin cambio |
+| Filas sin responsable/creador | 0 | 0 | Sin cambio |
+
+Los nombres de responsables ya se encuentran normalizados en el CSV actual y
+resuelven como `MATCH_EXACTO`.
 
 ## 4. Mapping responsable CSV a `app_users`
 
@@ -275,7 +292,13 @@ Propiedades:
 - Termina en `ROLLBACK`.
 - No contiene `COMMIT` operativo.
 
-El SQL no fue ejecutado.
+El SQL fue regenerado contra el CSV actualizado y no fue ejecutado.
+
+Reporte nominal creado:
+
+```text
+docs/auditoria/H19_Candidatos_CreatedBy_Docentes.md
+```
 
 ## 9. Decisiones humanas pendientes
 
