@@ -290,3 +290,9 @@ Recomendacion inmediata:
 2. Validar CSV/XLSX en Excel institucional.
 3. Si todo pasa, cerrar H18 como operativo.
 4. Si falla permiso, exportable o rendimiento, evaluar rollback API/Hosting segun severidad.
+
+## 12. Nota posterior H18-F6
+
+El 2026-07-09 se implemento localmente H18-F6 para reemplazar filtros visibles por ID con selectores de ciclo/quincena y busqueda general.
+
+Esta mejora no forma parte del deploy documentado en este archivo y queda pendiente de deploy controlado posterior.

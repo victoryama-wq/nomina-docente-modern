@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: H18-F1 backend implementado, H18-F2 frontend implementado, H18-F3 prevalidacion local automatizada documentada y H18-F5 deploy productivo ejecutado. Validacion manual con sesion real/Excel pendiente para cierre operativo.
+Estado: H18-F1 backend implementado, H18-F2 frontend implementado, H18-F3 prevalidacion local automatizada documentada, H18-F5 deploy productivo ejecutado y H18-F6 UX de filtros implementado localmente. H18-F6 queda pendiente de deploy posterior y validacion manual con sesion real/Excel para cierre operativo.
 
 ## 1. Resumen ejecutivo
 
@@ -13,7 +13,7 @@ H18 propone un nuevo modulo llamado `Reportes` para consulta operativa no financ
 
 El objetivo es dar visibilidad operativa sobre horas base, horas extra, capturadores, categorias, ciclos, quincenas y coordinaciones sin modificar la formula de nomina, sin cambiar permisos productivos y sin alterar reportes financieros o CSV existentes.
 
-H18-F1 implementa backend, CSV y XLSX real server-side. H18-F2 implementa la vista frontend, ruta `/reports`, menu, pestanas, filtros, tablas, resumenes, descarga CSV/XLSX y pruebas de visibilidad. H18-F5 despliega backend/frontend a produccion sin migraciones ni cambios de base de datos. No modifica permisos productivos, roles, datos reales ni H01.
+H18-F1 implementa backend, CSV y XLSX real server-side. H18-F2 implementa la vista frontend, ruta `/reports`, menu, pestanas, filtros, tablas, resumenes, descarga CSV/XLSX y pruebas de visibilidad. H18-F5 despliega backend/frontend a produccion sin migraciones ni cambios de base de datos. H18-F6 mejora filtros visibles para usar ciclos/quincenas legibles y busqueda general, conservando IDs solo internamente. No modifica permisos productivos, roles, datos reales ni H01.
 
 ## 2. Alcance
 
@@ -98,7 +98,30 @@ Decision funcional cerrada: Admin y Direccion/Subdireccion pueden consultar `Hor
 | Observaciones/referencia | `extra_hours.observations`, `extra_hours.reference` | Solo para extras externos vivos. |
 | Totales | Sumas derivadas | Usar helpers decimales existentes al implementar. |
 
-### Filtros propuestos
+### Filtros aprobados H18-F6
+
+La UI no debe mostrar IDs tecnicos como filtros principales.
+
+Filtros visibles:
+
+- `Ciclo / cuatrimestre`: lista desplegable con nombre, codigo y estado.
+- `Quincena guardada`: lista dependiente del ciclo, solo para corridas no canceladas; si queda vacia se consulta dato vivo del ciclo cuando aplica.
+- `Busqueda general`: busca por docente, coordinacion, capturador de extra externo y responsable de incidencia.
+- `Categoria`: `Todas`, `VIP`, `Medio tiempo`, `Nuevo ingreso`.
+- `Tipo`: `Todos`, `Con extras`, `Sin extras`.
+
+No mostrar como filtros visibles:
+
+- `Docente ID`.
+- `Coordinacion ID`.
+- `Capturador ID`.
+- `Desde`.
+- `Hasta`.
+- `Origen`.
+
+El backend resuelve `source=auto`; la tabla puede mostrar etiqueta informativa `Datos vivos` o `Nomina guardada`.
+
+### Filtros tecnicos soportados por API
 
 - ciclo academico;
 - quincena/periodo;
@@ -208,7 +231,25 @@ Backend debe validar esta exclusion.
 | Periodo/quincena | `payroll_calendar_config`, si aplica | Si se requiere por periodo. |
 | Estado | Derivado | `completo`, `faltante`, `excedido`. |
 
-### Filtros propuestos
+### Filtros aprobados H18-F6
+
+Filtros visibles:
+
+- `Ciclo / cuatrimestre`: lista desplegable obligatoria.
+- `Busqueda general`: busca por docente o coordinacion.
+- `Categoria`: `Todas`, `VIP`, `Medio tiempo`, `Nuevo ingreso`.
+- `Estado`: `Todos`, `Completo`, `Faltante`, `Excedido`.
+- `Estatus docente`: `Todos`, `Activo`, `Inactivo`.
+
+No debe pedir quincena. La pestana 2 se calcula por ciclo/cuatrimestre con datos vivos de Horarios.
+
+No mostrar como filtros visibles:
+
+- `Ciclo ID`.
+- `Coordinacion ID`.
+- `Docente ID`.
+
+### Filtros tecnicos soportados por API
 
 - ciclo academico;
 - coordinacion;
@@ -336,6 +377,8 @@ GET /reports/operational/base-extra
 GET /reports/operational/base-extra/export
 GET /reports/operational/category-hours
 GET /reports/operational/category-hours/export
+GET /reports/operational/filters/cycles
+GET /reports/operational/filters/payroll-periods?cycleId=...
 ```
 
 Parametros sugeridos:
@@ -492,6 +535,7 @@ Recomendacion tecnica:
 
 - Validar manualmente descargas CSV/XLSX desde la UI con sesion real/autorizada y Excel institucional.
 - Ejecutar smoke manual por rol para cerrar H18 operativo sin observaciones.
+- Ejecutar deploy controlado posterior de H18-F6.
 - Definir si en una fase futura se crean permisos formales nuevos; no se hizo en H18-F1/F2 para evitar migracion H05.
 - Definir si los snapshots historicos deben exponer capturador de extra externo cuando `payroll_extra_details` no conserva `captured_by`.
 - Decidir si roles financieros futuros similares a Direccion Financiera deben quedar excluidos de pestana 2 por regla general.
@@ -546,6 +590,15 @@ Esta fase. Documenta alcance, fuentes, permisos, riesgos y decisiones.
 - Healthchecks publicos aprobados.
 - Smoke tecnico aprobado.
 - Smoke manual por rol y validacion Excel institucional quedan pendientes para cierre operativo.
+
+### H18-F6 UX filtros amigables
+
+- Implementado localmente.
+- Reemplaza filtros visibles por ID con selectores de ciclo/quincena y busqueda general.
+- Agrega endpoints read-only de filtros H18.
+- Agrega parametro `q` a consultas y exportaciones.
+- Mantiene contratos existentes y IDs internos para compatibilidad.
+- Pendiente de deploy controlado posterior.
 
 ## 13. Que NO se hizo
 

@@ -124,6 +124,12 @@ Columnas visibles:
 
 Los filtros usan entradas directas de ID cuando no existe catalogo frontend reutilizable. Esto conserva el alcance de H18-F2 sin crear endpoints nuevos.
 
+Nota posterior H18-F6:
+
+- H18-F6 reemplaza los filtros visibles por ID con selectores de ciclo/quincena y busqueda general.
+- Los IDs quedan solo como valores internos de API.
+- H18-F2 se conserva como evidencia historica del alcance inicial, no como UX vigente.
+
 ## 5. Descargas CSV/XLSX
 
 Se agregaron funciones frontend en `apps/web/src/api.ts` para:

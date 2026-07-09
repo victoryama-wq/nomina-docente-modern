@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import {
   AlertTriangle,
   BarChart3,
@@ -14,6 +14,8 @@ import { useAuthStore } from '../stores/auth';
 import {
   downloadOperationalBaseExtraReport,
   downloadOperationalCategoryHoursReport,
+  fetchOperationalReportCycles,
+  fetchOperationalReportPayrollPeriods,
   fetchOperationalBaseExtraReport,
   fetchOperationalCategoryHoursReport,
   type BaseExtraReportFilters,
@@ -23,6 +25,8 @@ import {
   type CategoryHoursReportRow,
   type CategoryHoursStatusFilter,
   type ExportFormat,
+  type OperationalReportCycleFilterOption,
+  type OperationalReportPayrollPeriodOption,
   type OperationalReportSourceFilter
 } from '../api';
 
@@ -31,23 +35,17 @@ type ReportTab = 'base-extra' | 'category-hours';
 interface BaseExtraForm {
   cycleId: string;
   calendarConfigId: string;
-  teacherId: string;
-  coordinationId: string;
   category: string;
-  capturedBy: string;
-  dateFrom: string;
-  dateTo: string;
   type: BaseExtraReportTypeFilter;
-  source: OperationalReportSourceFilter;
+  q: string;
 }
 
 interface CategoryHoursForm {
   cycleId: string;
-  coordinationId: string;
-  teacherId: string;
   category: string;
   status: CategoryHoursStatusFilter;
   teacherStatus: string;
+  q: string;
 }
 
 const authStore = useAuthStore();
@@ -55,33 +53,30 @@ const authStore = useAuthStore();
 const activeTab = ref<ReportTab>('base-extra');
 const loadingBaseExtra = ref(false);
 const loadingCategoryHours = ref(false);
+const loadingFilters = ref(false);
 const exporting = ref('');
 const errorMessage = ref('');
 const noticeMessage = ref('');
 
 const baseExtraRows = ref<BaseExtraReportRow[]>([]);
 const categoryHoursRows = ref<CategoryHoursReportRow[]>([]);
+const cycleOptions = ref<OperationalReportCycleFilterOption[]>([]);
+const payrollPeriodOptions = ref<OperationalReportPayrollPeriodOption[]>([]);
 
 const baseExtraFilters = reactive<BaseExtraForm>({
   cycleId: '',
   calendarConfigId: '',
-  teacherId: '',
-  coordinationId: '',
   category: '',
-  capturedBy: '',
-  dateFrom: '',
-  dateTo: '',
   type: 'all',
-  source: 'auto'
+  q: ''
 });
 
 const categoryHoursFilters = reactive<CategoryHoursForm>({
   cycleId: '',
-  coordinationId: '',
-  teacherId: '',
   category: '',
   status: 'all',
-  teacherStatus: ''
+  teacherStatus: '',
+  q: ''
 });
 
 const canViewBaseExtra = computed(() => authStore.canViewOperationalBaseExtraReports);
@@ -157,7 +152,10 @@ function compactFilters<T extends Record<string, string>>(filters: T) {
 }
 
 function baseExtraPayload(): BaseExtraReportFilters {
-  return compactFilters(baseExtraFilters) as BaseExtraReportFilters;
+  return {
+    ...(compactFilters(baseExtraFilters) as BaseExtraReportFilters),
+    source: 'auto' as OperationalReportSourceFilter
+  };
 }
 
 function categoryHoursPayload(): CategoryHoursReportFilters {
@@ -177,7 +175,7 @@ function formatHours(value: string | number | null | undefined) {
 }
 
 function sourceLabel(source: string) {
-  return source === 'snapshot' ? 'snapshot' : 'vivo';
+  return source === 'snapshot' ? 'Nomina guardada' : 'Datos vivos';
 }
 
 function statusLabel(status: CategoryHoursReportRow['status']) {
@@ -208,7 +206,7 @@ async function loadBaseExtraReport() {
 async function loadCategoryHoursReport() {
   resetMessages();
   if (!categoryHoursFilters.cycleId.trim()) {
-    errorMessage.value = 'Captura el ID del ciclo para consultar horas por categoria.';
+    errorMessage.value = 'Selecciona un ciclo para consultar horas por categoria.';
     return;
   }
   loadingCategoryHours.value = true;
@@ -238,7 +236,7 @@ async function exportBaseExtra(format: ExportFormat) {
 async function exportCategoryHours(format: ExportFormat) {
   resetMessages();
   if (!categoryHoursFilters.cycleId.trim()) {
-    errorMessage.value = 'Captura el ID del ciclo antes de exportar.';
+    errorMessage.value = 'Selecciona un ciclo antes de exportar.';
     return;
   }
   exporting.value = `category-hours-${format}`;
@@ -255,15 +253,11 @@ function clearBaseExtraFilters() {
   Object.assign(baseExtraFilters, {
     cycleId: '',
     calendarConfigId: '',
-    teacherId: '',
-    coordinationId: '',
     category: '',
-    capturedBy: '',
-    dateFrom: '',
-    dateTo: '',
     type: 'all',
-    source: 'auto'
+    q: ''
   });
+  payrollPeriodOptions.value = [];
   baseExtraRows.value = [];
   resetMessages();
 }
@@ -271,15 +265,60 @@ function clearBaseExtraFilters() {
 function clearCategoryHoursFilters() {
   Object.assign(categoryHoursFilters, {
     cycleId: '',
-    coordinationId: '',
-    teacherId: '',
     category: '',
     status: 'all',
-    teacherStatus: ''
+    teacherStatus: '',
+    q: ''
   });
   categoryHoursRows.value = [];
   resetMessages();
 }
+
+async function loadPayrollPeriodsForCycle(cycleId: string) {
+  if (!cycleId || !canViewBaseExtra.value) {
+    payrollPeriodOptions.value = [];
+    return;
+  }
+  try {
+    const result = await fetchOperationalReportPayrollPeriods(cycleId);
+    payrollPeriodOptions.value = result.periods;
+  } catch (error) {
+    payrollPeriodOptions.value = [];
+    errorMessage.value = error instanceof Error ? error.message : 'No fue posible cargar quincenas guardadas.';
+  }
+}
+
+async function loadFilterOptions() {
+  if (!canViewAnyReport.value) return;
+  loadingFilters.value = true;
+  try {
+    const result = await fetchOperationalReportCycles();
+    cycleOptions.value = result.cycles;
+    const defaultCycle = result.cycles.find((cycle) => cycle.status === 'ACTIVO') || result.cycles[0] || null;
+    if (defaultCycle) {
+      if (!baseExtraFilters.cycleId) baseExtraFilters.cycleId = defaultCycle.id;
+      if (!categoryHoursFilters.cycleId) categoryHoursFilters.cycleId = defaultCycle.id;
+      if (canViewBaseExtra.value) await loadPayrollPeriodsForCycle(baseExtraFilters.cycleId);
+    }
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'No fue posible cargar filtros de reportes.';
+  } finally {
+    loadingFilters.value = false;
+  }
+}
+
+watch(
+  () => baseExtraFilters.cycleId,
+  async (cycleId, previousCycleId) => {
+    if (cycleId === previousCycleId) return;
+    baseExtraFilters.calendarConfigId = '';
+    await loadPayrollPeriodsForCycle(cycleId);
+  }
+);
+
+onMounted(() => {
+  void loadFilterOptions();
+});
 </script>
 
 <template>
@@ -340,20 +379,34 @@ function clearCategoryHoursFilters() {
 
         <div class="filter-grid">
           <label>
-            Ciclo ID
-            <input v-model.trim="baseExtraFilters.cycleId" placeholder="Opcional si hay ciclo activo" />
+            Ciclo / cuatrimestre
+            <select v-model="baseExtraFilters.cycleId" data-testid="base-extra-cycle-select" :disabled="loadingFilters">
+              <option value="">Ciclo activo automatico</option>
+              <option v-for="cycle in cycleOptions" :key="cycle.id" :value="cycle.id">
+                {{ cycle.label }}
+              </option>
+            </select>
           </label>
           <label>
-            Quincena ID
-            <input v-model.trim="baseExtraFilters.calendarConfigId" placeholder="calendarConfigId" />
+            Quincena guardada
+            <select
+              v-model="baseExtraFilters.calendarConfigId"
+              data-testid="base-extra-period-select"
+              :disabled="!baseExtraFilters.cycleId || loadingFilters"
+            >
+              <option value="">Consulta viva del ciclo</option>
+              <option v-for="period in payrollPeriodOptions" :key="period.calendarConfigId" :value="period.calendarConfigId">
+                {{ period.label }}
+              </option>
+            </select>
           </label>
-          <label>
-            Docente ID
-            <input v-model.trim="baseExtraFilters.teacherId" placeholder="teacherId" />
-          </label>
-          <label>
-            Coordinacion ID
-            <input v-model.trim="baseExtraFilters.coordinationId" placeholder="coordinationId" />
+          <label class="wide">
+            Busqueda general
+            <input
+              v-model.trim="baseExtraFilters.q"
+              data-testid="base-extra-search"
+              placeholder="Buscar docente, coordinacion o capturador"
+            />
           </label>
           <label>
             Categoria
@@ -365,31 +418,11 @@ function clearCategoryHoursFilters() {
             </select>
           </label>
           <label>
-            Capturador ID
-            <input v-model.trim="baseExtraFilters.capturedBy" placeholder="capturedBy" />
-          </label>
-          <label>
-            Desde
-            <input v-model="baseExtraFilters.dateFrom" type="date" />
-          </label>
-          <label>
-            Hasta
-            <input v-model="baseExtraFilters.dateTo" type="date" />
-          </label>
-          <label>
             Tipo
             <select v-model="baseExtraFilters.type">
               <option value="all">Todos</option>
               <option value="withExtras">Con extras</option>
               <option value="withoutExtras">Sin extras</option>
-            </select>
-          </label>
-          <label>
-            Origen
-            <select v-model="baseExtraFilters.source">
-              <option value="auto">Automatico</option>
-              <option value="live">Vivo</option>
-              <option value="snapshot">Snapshot</option>
             </select>
           </label>
         </div>
@@ -511,16 +544,21 @@ function clearCategoryHoursFilters() {
 
         <div class="filter-grid category">
           <label>
-            Ciclo ID *
-            <input v-model.trim="categoryHoursFilters.cycleId" data-testid="category-cycle-id" placeholder="cycleId requerido" />
+            Ciclo / cuatrimestre *
+            <select v-model="categoryHoursFilters.cycleId" data-testid="category-cycle-select" :disabled="loadingFilters">
+              <option value="">Selecciona ciclo</option>
+              <option v-for="cycle in cycleOptions" :key="cycle.id" :value="cycle.id">
+                {{ cycle.label }}
+              </option>
+            </select>
           </label>
-          <label>
-            Coordinacion ID
-            <input v-model.trim="categoryHoursFilters.coordinationId" placeholder="coordinationId" />
-          </label>
-          <label>
-            Docente ID
-            <input v-model.trim="categoryHoursFilters.teacherId" placeholder="teacherId" />
+          <label class="wide">
+            Busqueda general
+            <input
+              v-model.trim="categoryHoursFilters.q"
+              data-testid="category-hours-search"
+              placeholder="Buscar docente o coordinacion"
+            />
           </label>
           <label>
             Categoria
@@ -844,6 +882,10 @@ function clearCategoryHoursFilters() {
   text-transform: uppercase;
 }
 
+.filter-grid label.wide {
+  grid-column: span 2;
+}
+
 .filter-grid input,
 .filter-grid select {
   min-height: 2.75rem;
@@ -987,6 +1029,10 @@ td small {
 
   .actions-row button {
     flex: 1 1 46%;
+  }
+
+  .filter-grid label.wide {
+    grid-column: span 1;
   }
 }
 </style>

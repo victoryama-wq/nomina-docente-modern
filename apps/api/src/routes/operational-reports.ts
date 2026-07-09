@@ -16,6 +16,23 @@ interface CycleLookupRow {
   label: string;
 }
 
+interface OperationalCycleFilterRow {
+  id: string;
+  label: string;
+  status: string;
+  quarterCode: string | null;
+  periodLabel: string | null;
+}
+
+interface OperationalPayrollPeriodFilterRow {
+  calendarConfigId: string;
+  payrollRunId: string | null;
+  label: string;
+  payrollStart: string;
+  payrollEnd: string;
+  status: string | null;
+}
+
 interface CalendarLookupRow {
   id: string;
   cycleId: string;
@@ -81,7 +98,8 @@ const baseExtraQuerySchema = z.object({
   dateFrom: z.string().trim().min(1).optional(),
   dateTo: z.string().trim().min(1).optional(),
   type: z.enum(['all', 'withExtras', 'withoutExtras']).default('all'),
-  source: z.enum(['auto', 'live', 'snapshot']).default('auto')
+  source: z.enum(['auto', 'live', 'snapshot']).default('auto'),
+  q: z.string().trim().min(1).max(120).optional()
 });
 
 const baseExtraExportQuerySchema = baseExtraQuerySchema.extend({
@@ -94,11 +112,16 @@ const categoryHoursQuerySchema = z.object({
   teacherId: uuidField.optional(),
   category: z.string().trim().min(1).optional(),
   status: z.enum(['all', 'completo', 'faltante', 'excedido']).default('all'),
-  teacherStatus: z.string().trim().min(1).optional()
+  teacherStatus: z.string().trim().min(1).optional(),
+  q: z.string().trim().min(1).max(120).optional()
 });
 
 const categoryHoursExportQuerySchema = categoryHoursQuerySchema.extend({
   format: z.enum(['csv', 'xlsx']).default('csv')
+});
+
+const payrollPeriodFilterQuerySchema = z.object({
+  cycleId: uuidField
 });
 
 function isAdmin(user: SessionUser | undefined): boolean {
@@ -132,11 +155,66 @@ function requireOperationalCategoryHoursReport() {
   };
 }
 
+function requireOperationalReportsModule() {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    await authenticate(request, reply);
+    if (reply.sent) return;
+
+    if (!hasAllowedRole(request.user, ['direccion', 'coordinador', 'rh'])) {
+      await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para consultar reportes operativos.' });
+    }
+  };
+}
+
 function categoryLabel(category: string): string {
   if (category === 'V') return 'VIP';
   if (category === 'M') return 'Medio tiempo';
   if (category === 'N') return 'Nuevo ingreso';
   return category || 'Nuevo ingreso';
+}
+
+async function listOperationalCycleFilters(): Promise<OperationalCycleFilterRow[]> {
+  return query<OperationalCycleFilterRow>(
+    `
+      SELECT
+        id::text,
+        CONCAT_WS(' - ', period_label, quarter_code) || ' / ' || status AS label,
+        status::text,
+        quarter_code AS "quarterCode",
+        period_label AS "periodLabel"
+      FROM academic_cycles
+      ORDER BY
+        CASE status
+          WHEN 'ACTIVO' THEN 0
+          WHEN 'PLANEACION' THEN 1
+          WHEN 'CERRADO' THEN 2
+          ELSE 3
+        END,
+        created_at DESC
+    `
+  );
+}
+
+async function listOperationalPayrollPeriodFilters(cycleId: string): Promise<OperationalPayrollPeriodFilterRow[]> {
+  return query<OperationalPayrollPeriodFilterRow>(
+    `
+      SELECT DISTINCT ON (pcc.id)
+        pcc.id::text AS "calendarConfigId",
+        pr.id::text AS "payrollRunId",
+        pcc.period_label || ' / ' || pcc.payroll_start::text || ' a ' || pcc.payroll_end::text || ' - ' || pr.status AS label,
+        pcc.payroll_start::text AS "payrollStart",
+        pcc.payroll_end::text AS "payrollEnd",
+        pr.status::text
+      FROM payroll_calendar_config pcc
+      JOIN payroll_runs pr
+        ON pr.cycle_id = pcc.cycle_id
+       AND pr.weights->>'calendarConfigId' = pcc.id::text
+       AND pr.status <> 'CANCELADA'
+      WHERE pcc.cycle_id = $1::uuid
+      ORDER BY pcc.id, pr.calculated_at DESC NULLS LAST, pr.created_at DESC
+    `,
+    [cycleId]
+  );
 }
 
 function expectedCategoryHours(category: string): string {
@@ -356,6 +434,15 @@ async function listBaseExtraLiveRows(
         OR ($9::text = 'withExtras' AND (COALESCE(ie.incidence_extra_hours, 0) + COALESCE(ee.external_extra_hours, 0)) > 0)
         OR ($9::text = 'withoutExtras' AND (COALESCE(ie.incidence_extra_hours, 0) + COALESCE(ee.external_extra_hours, 0)) = 0)
       )
+        AND (
+          $12::text IS NULL
+          OR t.full_name ILIKE '%' || $12::text || '%'
+          OR COALESCE(c.name, '') ILIKE '%' || $12::text || '%'
+          OR COALESCE(ee.external_extra_captured_by_email, '') ILIKE '%' || $12::text || '%'
+          OR COALESCE(ee.external_extra_captured_by_name, '') ILIKE '%' || $12::text || '%'
+          OR COALESCE(ie.incidence_updated_by_email, '') ILIKE '%' || $12::text || '%'
+          OR COALESCE(ie.incidence_updated_by_name, '') ILIKE '%' || $12::text || '%'
+        )
       ORDER BY c.name NULLS LAST, t.full_name
     `,
     [
@@ -369,7 +456,8 @@ async function listBaseExtraLiveRows(
       filters.dateTo ?? null,
       filters.type,
       cycle.label,
-      calendar?.periodLabel ?? null
+      calendar?.periodLabel ?? null,
+      filters.q ?? null
     ]
   );
 
@@ -431,6 +519,12 @@ async function listBaseExtraSnapshotRows(
           OR ($8::text = 'withExtras' AND COALESCE(pl.total_extra_hours, 0) > 0)
           OR ($8::text = 'withoutExtras' AND COALESCE(pl.total_extra_hours, 0) = 0)
         )
+        AND (
+          $9::text IS NULL
+          OR pl.teacher_name_snapshot ILIKE '%' || $9::text || '%'
+          OR COALESCE(pl.coordination_name_snapshot, '') ILIKE '%' || $9::text || '%'
+          OR COALESCE(ed.reason, '') ILIKE '%' || $9::text || '%'
+        )
       ORDER BY pl.coordination_name_snapshot, pl.teacher_name_snapshot
     `,
     [
@@ -441,7 +535,8 @@ async function listBaseExtraSnapshotRows(
       filters.teacherId ?? null,
       filters.coordinationId ?? null,
       filters.category ?? null,
-      filters.type
+      filters.type,
+      filters.q ?? null
     ]
   );
   return rows;
@@ -560,6 +655,11 @@ async function listCategoryHoursRows(
           AND ($4::text IS NULL OR t.category = $4::text)
           AND ($5::text IS NULL OR t.status::text = $5::text)
           AND ($7::text[] IS NULL OR st.coordination_id IS NOT NULL)
+          AND (
+            $8::text IS NULL
+            OR t.full_name ILIKE '%' || $8::text || '%'
+            OR COALESCE(c.name, '') ILIKE '%' || $8::text || '%'
+          )
       ),
       status_rows AS (
         SELECT
@@ -596,7 +696,8 @@ async function listCategoryHoursRows(
       filters.category ?? null,
       filters.teacherStatus ?? null,
       filters.status,
-      user?.role === 'coordinador' ? scopeIds : null
+      user?.role === 'coordinador' ? scopeIds : null,
+      filters.q ?? null
     ]
   );
 
@@ -723,6 +824,25 @@ async function sendXlsx(
 }
 
 export async function registerOperationalReportRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/reports/operational/filters/cycles', { preHandler: requireOperationalReportsModule() }, async () => {
+    const cycles = await listOperationalCycleFilters();
+    return { cycles };
+  });
+
+  app.get(
+    '/reports/operational/filters/payroll-periods',
+    { preHandler: requireOperationalBaseExtraReport() },
+    async (request, reply) => {
+      const parsed = payrollPeriodFilterQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'BAD_REQUEST', message: 'ParÃ¡metros invÃ¡lidos.', details: parsed.error.flatten() });
+      }
+
+      const periods = await listOperationalPayrollPeriodFilters(parsed.data.cycleId);
+      return { periods };
+    }
+  );
+
   app.get('/reports/operational/base-extra', { preHandler: requireOperationalBaseExtraReport() }, async (request, reply) => {
     const parsed = baseExtraQuerySchema.safeParse(request.query);
     if (!parsed.success) {

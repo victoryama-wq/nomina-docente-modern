@@ -902,6 +902,7 @@ export interface BaseExtraReportFilters {
   dateTo?: string;
   type?: BaseExtraReportTypeFilter;
   source?: OperationalReportSourceFilter;
+  q?: string;
 }
 
 export interface BaseExtraReportRow {
@@ -946,6 +947,7 @@ export interface CategoryHoursReportFilters {
   category?: string;
   status?: CategoryHoursStatusFilter;
   teacherStatus?: string;
+  q?: string;
 }
 
 export interface CategoryHoursReportRow {
@@ -972,6 +974,23 @@ export interface CategoryHoursReportResponse {
     coordinatorScope?: string[] | null;
   };
   rows: CategoryHoursReportRow[];
+}
+
+export interface OperationalReportCycleFilterOption {
+  id: string;
+  label: string;
+  status: string;
+  quarterCode?: string | null;
+  periodLabel?: string | null;
+}
+
+export interface OperationalReportPayrollPeriodOption {
+  calendarConfigId: string;
+  payrollRunId?: string | null;
+  label: string;
+  payrollStart: string;
+  payrollEnd: string;
+  status?: string | null;
 }
 
 async function getIdToken(): Promise<string> {
@@ -1451,6 +1470,18 @@ export async function fetchOperationalBaseExtraReport(
   filters: BaseExtraReportFilters = {}
 ): Promise<BaseExtraReportResponse> {
   return request(`/reports/operational/base-extra${queryString(filters as Record<string, unknown>)}`);
+}
+
+export async function fetchOperationalReportCycles(): Promise<{
+  cycles: OperationalReportCycleFilterOption[];
+}> {
+  return request('/reports/operational/filters/cycles');
+}
+
+export async function fetchOperationalReportPayrollPeriods(cycleId: string): Promise<{
+  periods: OperationalReportPayrollPeriodOption[];
+}> {
+  return request(`/reports/operational/filters/payroll-periods${queryString({ cycleId })}`);
 }
 
 export async function downloadOperationalBaseExtraReport(

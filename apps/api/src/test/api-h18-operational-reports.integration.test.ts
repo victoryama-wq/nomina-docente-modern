@@ -204,6 +204,49 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
     }
   });
 
+  it('exposes friendly filter catalogs only to approved H18 roles', async () => {
+    const cycles = await injectAs(app!, coordinatorActor(), {
+      method: 'GET',
+      url: '/api/reports/operational/filters/cycles'
+    });
+    expect(cycles.statusCode).toBe(200);
+    expect(cycles.json().cycles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: TEST_IDS.cycle,
+          label: expect.stringContaining('H04 QA Local 2026'),
+          status: expect.any(String)
+        })
+      ])
+    );
+
+    const deniedCycles = await injectAs(app!, financeActor(), {
+      method: 'GET',
+      url: '/api/reports/operational/filters/cycles'
+    });
+    expect(deniedCycles.statusCode).toBe(403);
+
+    const periods = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/filters/payroll-periods?cycleId=${TEST_IDS.cycle}`
+    });
+    expect(periods.statusCode).toBe(200);
+    expect(periods.json().periods).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          calendarConfigId: TEST_IDS.calendarConfig,
+          label: expect.stringContaining('H04 QA Mayo 15-28 2026')
+        })
+      ])
+    );
+
+    const deniedPeriods = await injectAs(app!, coordinatorActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/filters/payroll-periods?cycleId=${TEST_IDS.cycle}`
+    });
+    expect(deniedPeriods.statusCode).toBe(403);
+  });
+
   it('enforces category-hours report access and coordinator operational scope', async () => {
     for (const actor of [adminActor(), directionActor(), coordinatorActor(), rhActor()]) {
       const response = await injectAs(app!, actor, {
@@ -265,6 +308,25 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
     });
   });
 
+  it('filters category-hours by friendly search q and applies it to exports', async () => {
+    const response = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/category-hours?cycleId=${TEST_IDS.cycle}&q=Modulo`
+    });
+    expect(response.statusCode).toBe(200);
+    const rows = response.json().rows as Array<Record<string, string>>;
+    expect(rows.map((row) => row.teacherName)).toEqual(['Docente H18 Modulo Mayor']);
+
+    const exportResponse = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/category-hours/export?cycleId=${TEST_IDS.cycle}&q=Modulo&format=csv`
+    });
+    expect(exportResponse.statusCode).toBe(200);
+    const csv = withoutBom(exportResponse.body);
+    expect(csv).toContain('Docente H18 Modulo Mayor');
+    expect(csv).not.toContain('Docente H18 VIP Completo');
+  });
+
   it('requires cycleId for category-hours', async () => {
     const response = await injectAs(app!, adminActor(), {
       method: 'GET',
@@ -295,6 +357,26 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
 
     const serialized = JSON.stringify(body);
     expect(serialized).not.toMatch(/rfc|bank|paymentType|constancia/i);
+  });
+
+  it('filters base-extra by friendly search q across teacher, coordination and capturer text', async () => {
+    const response = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/base-extra?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&source=live&type=withExtras&q=multi`
+    });
+    expect(response.statusCode).toBe(200);
+    const rows = response.json().rows as Array<Record<string, string>>;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.some((row) => row.externalExtraCapturedByEmail?.includes('qa.coordinador.multi'))).toBe(true);
+
+    const exportResponse = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/base-extra/export?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&source=live&type=withExtras&q=multi&format=csv`
+    });
+    expect(exportResponse.statusCode).toBe(200);
+    const csv = withoutBom(exportResponse.body);
+    expect(csv).toContain('QA Coordinador Multi');
+    expect(csv).not.toMatch(/RFC|Banco|paymentType|Constancia/i);
   });
 
   it('exports operational reports as CSV with H11 encoding guarantees', async () => {
