@@ -334,3 +334,21 @@ Antes de cualquier ventana de escritura:
 - No se tocaron snapshots.
 - No se toco `updated_by`.
 - No se toco `coordination_id`.
+
+## 11. Estado posterior a la aprobacion
+
+La aprobacion humana posterior resolvio los 29 candidatos y autorizo revisar
+los 10 docentes sin match nominal. El resultado fue:
+
+- 7 docentes existentes bajo otra variante, detectados por correo unico;
+- 3 nuevas contrataciones confirmadas;
+- 0 ambiguos;
+- 0 omitidos.
+
+Despues de backup `1783642001652` y preview exacto en `ROLLBACK`, se ejecutaron
+36 actualizaciones de `created_by` y 3 altas minimas. La evidencia final se
+encuentra en:
+
+```text
+docs/auditoria/H19_Resultado_Actualizacion_y_Altas_Docentes.md
+```

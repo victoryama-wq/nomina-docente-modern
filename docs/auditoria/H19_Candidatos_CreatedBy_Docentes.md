@@ -6,7 +6,9 @@ Este documento es nominal y read-only. Lista candidatos generados desde el CSV
 actualizado `docentes.csv` para una posible actualizacion futura de
 `teachers.created_by`.
 
-No se ejecuto SQL de escritura.
+Al generar este reporte no se habia ejecutado SQL de escritura. Los 29
+candidatos fueron aprobados y ejecutados posteriormente con backup, preview y
+validacion posterior documentados.
 
 ## Tabla A - created_by diferente
 
@@ -81,3 +83,19 @@ No se ejecuto SQL de escritura.
 - No se hizo deploy.
 - No se modifico base de datos.
 - No se incluyeron datos fiscales.
+
+## Resultado posterior
+
+- Los 29 candidatos originales fueron actualizados correctamente.
+- Los 3 casos inicialmente NULL quedaron incluidos dentro de esos 29.
+- Los 10 sin match nominal se revisaron por identificador, correo, nombre
+  normalizado y similitud: 7 ya existian y 3 fueron altas minimas.
+- El resultado consolidado fue 36 UPDATE y 3 INSERT.
+- Backup Cloud SQL: `1783642001652`, estado `SUCCESSFUL`.
+- No hubo DELETE, migracion, deploy, datos fiscales, nomina ni snapshots.
+
+Detalle:
+
+```text
+docs/auditoria/H19_Resultado_Actualizacion_y_Altas_Docentes.md
+```
