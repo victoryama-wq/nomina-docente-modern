@@ -6,7 +6,7 @@ Fecha: 2026-07-16
 
 Se implemento el alcance compartido read-only de docentes en el preview de Nomina para Coordinadores. El cambio separa la autorizacion del docente de las filas usadas para calcularlo, sin modificar H01, la precision monetaria ni los alcances de edicion operativa.
 
-Estado: implementado localmente, validado y pendiente de deploy controlado.
+Estado: cerrado operativo y desplegado en produccion.
 
 ## 2. Diagnostico del alcance anterior
 
@@ -132,22 +132,25 @@ Observacion: el primer intento de integracion contra `localhost:55432` no conect
 - Impacto H01: ninguno.
 - Impacto BD: ninguno.
 - Migraciones: ninguna.
-- Produccion: no tocada.
-- Deploy: no realizado.
+- Produccion: codigo API/frontend desplegado sin cambios de BD.
+- Deploy: revision Cloud Run `nomina-api-00051-9s5` y Hosting release `1784228039752000` activos.
 
-## 10. Pendientes
+## 10. Cierre productivo
 
-- Smoke local/manual por Coordinador con datos representativos.
-- Predeploy y deploy controlado en una fase posterior aprobada.
-- Smoke postdeploy confirmando carga compartida y modo solo lectura.
+- Smoke autenticado de Coordinador aprobado con docentes propios, docentes compartidos y exclusiones fuera de alcance.
+- Smoke autenticado de Admin aprobado sin perdida de alcance, lineas ni totales.
+- Ausencia de duplicaciones y datos fiscales confirmada.
+- Evidencia completa: `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`.
+- H20 queda cerrado operativo; solo permanece monitoreo normal de regresion.
 
 ## 11. Confirmaciones
 
 - No se modifico la formula H01.
 - No se modifico precision monetaria.
-- No se modifico base de datos productiva.
+- No se modifico Cloud SQL ni datos productivos.
 - No se ejecutaron migraciones.
-- No se hizo deploy.
+- Se desplego exclusivamente codigo API/frontend H20.
+- No hubo escrituras de Nomina ni finalizacion de corridas durante el smoke.
 - No se agregaron permisos.
 - No se concedio acceso fiscal.
 - No se cambio propiedad ni edicion de Horarios, Incidencias, Extras o Directorio.

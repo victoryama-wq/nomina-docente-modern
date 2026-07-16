@@ -115,3 +115,16 @@ No se agregan controles de edicion ni finalizacion.
 - Cambiar propiedad o edicion en Directorio, Horarios, Incidencias o Extras.
 - Agregar permisos o roles.
 - Ejecutar migraciones o deploy.
+
+## 12. Estado de implementacion y cierre
+
+Estado: **cerrado operativo**.
+
+- Commit funcional: `56553f4 feat(h20): expand coordinator payroll preview scope`.
+- Revision Cloud Run vigente: `nomina-api-00051-9s5`.
+- Firebase Hosting H20 activo: release `1784228039752000`, version `41bf160c7c3595b6`.
+- Pruebas API 22/22, Web 58/58 e integracion PostgreSQL 60/60 aprobadas.
+- Smoke autenticado Coordinador/Admin satisfactorio.
+- Criterios de aceptacion cumplidos sin cambios H01, migraciones, escrituras de Nomina, permisos nuevos ni exposicion fiscal.
+
+Evidencia: `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`.

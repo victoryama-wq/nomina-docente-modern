@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-07-09
+Actualizacion: 2026-07-16
 
 ## 1. Contexto
 
@@ -25,7 +25,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H17 ejecutado: Directorio usa `teachers.created_by` como capturador tecnico; correccion por coordinacion descartada y 197 docentes fueron normalizados con backup y mapping aprobado.
 - H18 cerrado operativo: Reportes Operativos desplegado, filtros amigables H18-F6 vigentes, hotfix snapshot `ped.line_key` aplicado y CSV/XLSX validados en Excel institucional.
 - H19 ejecutado de forma controlada: backup exitoso, preview en ROLLBACK, 36 actualizaciones de `teachers.created_by`, 3 altas minimas y validacion posterior sin duplicados.
-- H20 implementado localmente: el preview de Coordinador resuelve docentes elegibles por responsabilidad o carga en sus coordinaciones y muestra el calculo completo read-only; deploy pendiente.
+- H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
 Arquitectura vigente:
@@ -65,7 +65,7 @@ Arquitectura vigente:
 | H17 | `teachers.created_by` nulo por carga masiva | Directorio / Permisos operativos / Datos productivos | Normalizacion productiva ejecutada para 197 docentes; 12 remanentes documentados | Bajo-medio: queda validacion funcional por coordinadoras y decision futura sobre remanentes | P1 datos controlados / monitoreo | Mantener regla por capturador; validar acceso operativo y no tocar remanentes sin nuevo mapping aprobado | Validacion por coordinadoras y cierre/documentacion de los 12 remanentes si se decide atenderlos | Si, solo para remanentes o excepciones futuras |
 | H18 | Modulo Reportes Operativos desplegado con UX de filtros H18-F6 y hotfix snapshot | Reportes / Permisos / Operacion academica | Cerrado operativo | Bajo: riesgo residual por regresion futura o nuevas necesidades de snapshots historicos | P2 cerrado operativo | Mantener pruebas H18, guardas backend por rol y exportables CSV/XLSX; no crear permisos ni migraciones sin H05 | Cumplido con deploy H18-F5/F6, hotfix `ped.line_key` y validacion post-hotfix en Excel institucional | Solo si se agregan permisos nuevos o cambios de BD |
 | H19 | Actualizacion controlada de Directorio desde CSV | Directorio / Datos productivos / Permisos operativos | Ejecutado y documentado: 36 `created_by` actualizados y 3 altas minimas, con backup y preview exacto | Bajo; riesgo residual solo ante futuras cargas manuales sin el mismo control | P1 cerrado / monitoreo | Repetir backup, matching nominal, preview y guardas de duplicidad para futuras cargas | Cumplido con validacion posterior, 0 discrepancias y 0 duplicados | Solo para futuras cargas o excepciones |
-| H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Implementado y validado localmente; deploy pendiente | Bajo-medio hasta smoke productivo: el cambio es read-only y esta cubierto por pruebas, pero falta validar con sesiones reales | P1 predeploy | Mantener elegibilidad por docente separada del calculo completo; no reutilizar esta regla para editar modulos operativos | Deploy controlado y smoke por Coordinador confirman docente unico, carga completa, 403 al finalizar y ausencia fiscal | Si para autorizar deploy productivo |
+| H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -162,7 +162,7 @@ Orden recomendado:
 5. **H17 monitoreo.** Validar acceso real de coordinadoras y resolver remanentes solo con nuevo mapping aprobado.
 6. **H18 Reportes Operativos.** Cerrado operativo. Mantener pruebas/regresion, guardas por rol y monitoreo de exportables CSV/XLSX.
 7. **H19 Directorio.** Cerrado controlado; monitorear Directorio y repetir el procedimiento solo ante una nueva carga aprobada.
-8. **H20 Nomina compartida.** Implementado localmente; completar smoke y deploy controlado sin migracion ni cambios H01.
+8. **H20 Nomina compartida.** Cerrado operativo; mantener pruebas y monitoreo de alcance, totales y seguridad fiscal.
 
 ## 6. Decisiones humanas pendientes
 
@@ -178,7 +178,7 @@ Pendientes reales despues de H02/H03:
 - Validar H17 con usuarios autorizados y decidir si los 12 remanentes requieren una segunda ventana de datos.
 - Para H18, decidir solo si en fases futuras se agregan permisos formales nuevos; `exceljs` ya fue aprobado e instalado en backend/API.
 - Para futuras cargas tipo H19, exigir nueva aprobacion, backup, matching por identificador/correo/nombre y preview en ROLLBACK.
-- Para H20, aprobar deploy solo despues de confirmar que el payload de Coordinador no incluye `paymentType` ni alertas/datos fiscales y que `payroll.finalize` permanece bloqueado.
+- H20 no tiene decisiones pendientes; cualquier ampliacion futura de alcance, escritura o permisos requiere nueva SPEC y aprobacion humana.
 
 ## 7. Recomendacion final
 

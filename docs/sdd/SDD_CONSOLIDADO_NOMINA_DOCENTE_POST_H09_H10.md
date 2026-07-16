@@ -38,7 +38,7 @@ Estado por H:
 | H17 | Normalizacion productiva ejecutada para 197 docentes; Directorio mantiene edicion por `teachers.created_by`; 12 remanentes documentados. |
 | H18 | Cerrado operativo; Reportes Operativos desplegado, filtros amigables H18-F6 vigentes y hotfix snapshot `ped.line_key` aplicado en `nomina-api-00050-zdm`. |
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
-| H20 | Implementado y validado localmente; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, y calcula su carga completa entre coordinaciones. Deploy pendiente. |
+| H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -56,7 +56,7 @@ Ultimos hitos productivos relevantes:
 - H18-F6 Reportes Operativos: deploy productivo ejecutado el 2026-07-09; API revision `nomina-api-00049-2hn`, Hosting live `2026-07-09 13:11:55`, filtros con ciclos/quincenas legibles y busqueda general en vez de IDs tecnicos.
 - H18 hotfix snapshot: deploy productivo API ejecutado el 2026-07-09; API revision `nomina-api-00050-zdm`, sin deploy Hosting, sin migraciones, sin cambios de BD; corrige `ped.line_key`; cierre operativo validado en Excel institucional.
 - H19 Directorio Docentes: backup `1783642001652`, preview exacto en `ROLLBACK`, 36 UPDATE de `teachers.created_by` y 3 INSERT minimos; 7 de los 10 sin match nominal ya existian, 3 fueron nuevas altas y no se crearon duplicados.
-- H20 Nomina compartida: implementacion local validada el 2026-07-16; 60/60 pruebas API de integracion en `nomina_docente_test`; sin migracion, sin cambio H01 y sin deploy.
+- H20 Nomina compartida: deploy productivo ejecutado el 2026-07-16; API revision `nomina-api-00051-9s5`, Hosting release `1784228039752000`; smoke autenticado Coordinador/Admin aprobado, sin migracion, escritura de Nomina ni cambio H01.
 
 ## 2. Arquitectura vigente
 
@@ -328,7 +328,7 @@ Documentos vigentes:
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
 | Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`, `docs/auditoria/H18_Deploy_Productivo_Reportes_Operativos.md`, `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md`, `docs/auditoria/H18_Hotfix_Reportes_Snapshot_LineKey.md` y `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | Cerrado operativo; H18-F1/F2/F5/F6 y hotfix snapshot desplegados; CSV/XLSX validados en Excel institucional |
-| Nomina compartida Coordinador | `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md` y `docs/auditoria/H20_Alcance_Compartido_Nomina_Coordinadores.md` | H02/H03 Fase 4/5, ajuste docentes compartidos y H04 Fase 4/5 | Implementado y validado localmente; deploy pendiente |
+| Nomina compartida Coordinador | `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`, `docs/auditoria/H20_Alcance_Compartido_Nomina_Coordinadores.md` y `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md` | H02/H03 Fase 4/5, ajuste docentes compartidos y H04 Fase 4/5 | Cerrado operativo; revision `nomina-api-00051-9s5` y Hosting H20 activos, smoke autenticado satisfactorio |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -366,7 +366,7 @@ Regla de precedencia:
 | H15 | Desplegado productivamente | Mantener observacion operativa del ciclo real de 60 minutos y reapertura de navegador si se requiere evidencia adicional. |
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
-| H20 | Implementado local / pendiente de deploy | Ejecutar smoke local por Coordinador y deploy controlado; confirmar docente unico, desglose entre coordinaciones y ausencia de datos fiscales. |
+| H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -392,18 +392,15 @@ Para cualquier fase posterior:
 
 Orden recomendado:
 
-1. H20 deploy controlado:
-   - validar con sesion real de Coordinador sin guardar Nomina;
-   - confirmar calculo completo, desglose y ausencia fiscal.
-2. H07 Google Provider `hd`:
+1. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
-3. H08 refactor gradual:
+2. H08 refactor gradual:
    - solo despues de cubrir con pruebas y sin cambiar reglas.
-4. CSV injection:
+3. CSV injection:
    - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
-5. H13 operativo continuo:
+4. H13 operativo continuo:
    - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
-6. Cierre global de matriz:
+5. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 
 ## 10. Confirmacion de alcance de esta consolidacion
