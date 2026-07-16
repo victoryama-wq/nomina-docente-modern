@@ -26,6 +26,19 @@ import {
 type DecimalString = string;
 type CoordinationScope = string[] | null;
 
+interface PayrollPreviewTeacherAccess {
+  teacherId: string;
+  ownedByActor: boolean;
+  inActorCoordination: boolean;
+}
+
+interface PayrollReadScope {
+  coordinationIds: CoordinationScope;
+  teacherIds: string[] | null;
+  teacherAccess: Map<string, PayrollPreviewTeacherAccess>;
+  actorCoordinationIds: string[];
+}
+
 interface PayrollContextQuery {
   cycleId?: string;
 }
@@ -162,7 +175,7 @@ interface PayrollLine {
   coordinationId: string;
   teacherName: string;
   coordinationName: string;
-  paymentType: string;
+  paymentType?: string;
   category: string;
   baseHours: DecimalString;
   absences: DecimalString;
@@ -182,6 +195,17 @@ interface PayrollLine {
   alerts: string[];
   scheduleCount: number;
   loggedExtraCount: number;
+}
+
+interface PayrollTeacherSummary extends PayrollLine {
+  isTeacherAggregate: true;
+  coordinationIds: string[];
+  coordinationNames: string[];
+  scope: {
+    ownedByActor: boolean;
+    inActorCoordination: boolean;
+    hasOtherCoordinations: boolean;
+  };
 }
 
 interface InternalPayrollLine extends PayrollLine {
@@ -236,6 +260,7 @@ interface PayrollCalculation {
   lines: InternalPayrollLine[];
   details: PayrollScheduleDetail[];
   extraDetails: PayrollExtraDetail[];
+  readScope: PayrollReadScope;
 }
 
 interface PayrollLineRow {
@@ -509,8 +534,83 @@ function payrollCoordinationScope(actor: SessionUser, scope: ActorScope): Coordi
   return canViewAllPayroll(actor) ? null : scope.coordinationIds;
 }
 
+async function resolvePayrollPreviewTeacherScope(
+  client: PoolClient,
+  actor: SessionUser,
+  scope: ActorScope,
+  cycleId: string
+): Promise<PayrollReadScope> {
+  if (actor.role !== 'coordinador') {
+    return {
+      coordinationIds: payrollCoordinationScope(actor, scope),
+      teacherIds: null,
+      teacherAccess: new Map(),
+      actorCoordinationIds: scope.coordinationIds
+    };
+  }
+
+  const result = await client.query<PayrollPreviewTeacherAccess>(
+    `
+      SELECT
+        t.id AS "teacherId",
+        (t.created_by = $1) AS "ownedByActor",
+        EXISTS (
+          SELECT 1
+          FROM schedules s_scope
+          WHERE s_scope.teacher_id = t.id
+            AND s_scope.cycle_id = $2
+            AND s_scope.coordination_id = ANY($3::uuid[])
+        ) AS "inActorCoordination"
+      FROM teachers t
+      WHERE t.created_by = $1
+         OR EXISTS (
+           SELECT 1
+           FROM schedules s_scope
+           WHERE s_scope.teacher_id = t.id
+             AND s_scope.cycle_id = $2
+             AND s_scope.coordination_id = ANY($3::uuid[])
+         )
+      ORDER BY t.id
+    `,
+    [actor.id, cycleId, scope.coordinationIds]
+  );
+
+  return {
+    coordinationIds: null,
+    teacherIds: result.rows.map((row) => row.teacherId),
+    teacherAccess: new Map(result.rows.map((row) => [row.teacherId, row])),
+    actorCoordinationIds: scope.coordinationIds
+  };
+}
+
 function publicAlerts(alerts: string[]): string[] {
   return alerts.filter((alert) => !alert.startsWith('extra:'));
+}
+
+const FISCAL_PAYROLL_ALERTS = new Set([
+  'RFC pendiente',
+  'Datos bancarios pendientes',
+  'Correo pendiente',
+  'Constancia fiscal pendiente'
+]);
+
+function canViewFiscalPayrollData(actor: SessionUser): boolean {
+  return (
+    actor.role === 'admin' ||
+    actor.isProtectedSuperAdmin ||
+    actor.permissions.includes('fiscal.view') ||
+    actor.permissions.includes('fiscal.manage')
+  );
+}
+
+function publicPayrollLines(lines: PayrollLine[], actor: SessionUser): PayrollLine[] {
+  const canViewFiscal = canViewFiscalPayrollData(actor);
+  return lines.map((line) => {
+    const alerts = line.alerts.filter((alert) => canViewFiscal || !FISCAL_PAYROLL_ALERTS.has(alert));
+    if (canViewFiscal) return { ...line, alerts };
+    const { paymentType: _paymentType, ...publicLine } = line;
+    return { ...publicLine, alerts };
+  });
 }
 
 function buildCsv(headers: string[], rows: unknown[][]): string {
@@ -626,15 +726,22 @@ async function listPayrollSchedules(
   client: PoolClient,
   cycleId: string,
   calendarConfigId: string | null,
-  coordinationScope: CoordinationScope
+  readScope: PayrollReadScope
 ): Promise<PayrollScheduleRow[]> {
   const params: unknown[] = [cycleId, calendarConfigId];
   let visibility = '';
-  if (coordinationScope) {
-    if (coordinationScope.length === 0) {
+  if (readScope.teacherIds) {
+    if (readScope.teacherIds.length === 0) {
       visibility = 'AND false';
     } else {
-      params.push(coordinationScope);
+      params.push(readScope.teacherIds);
+      visibility = 'AND s.teacher_id = ANY($3::uuid[])';
+    }
+  } else if (readScope.coordinationIds) {
+    if (readScope.coordinationIds.length === 0) {
+      visibility = 'AND false';
+    } else {
+      params.push(readScope.coordinationIds);
       visibility = 'AND s.coordination_id = ANY($3::uuid[])';
     }
   }
@@ -705,15 +812,22 @@ async function listPayrollExtras(
   cycleId: string,
   payrollStart: string,
   payrollEnd: string,
-  coordinationScope: CoordinationScope
+  readScope: PayrollReadScope
 ): Promise<PayrollExtraRow[]> {
   const params: unknown[] = [cycleId, payrollStart, payrollEnd];
   let visibility = '';
-  if (coordinationScope) {
-    if (coordinationScope.length === 0) {
+  if (readScope.teacherIds) {
+    if (readScope.teacherIds.length === 0) {
       visibility = 'AND false';
     } else {
-      params.push(coordinationScope);
+      params.push(readScope.teacherIds);
+      visibility = 'AND eh.teacher_id = ANY($4::uuid[])';
+    }
+  } else if (readScope.coordinationIds) {
+    if (readScope.coordinationIds.length === 0) {
+      visibility = 'AND false';
+    } else {
+      params.push(readScope.coordinationIds);
       visibility = 'AND eh.coordination_id = ANY($4::uuid[])';
     }
   }
@@ -1022,13 +1136,68 @@ function buildSummary(lines: InternalPayrollLine[]): PayrollSummary {
   };
 }
 
-function publicCalculation(calculation: PayrollCalculation) {
+function buildTeacherSummaries(lines: PayrollLine[], readScope: PayrollReadScope): PayrollTeacherSummary[] {
+  const summaries = new Map<string, PayrollTeacherSummary>();
+  const actorCoordinationIds = new Set(readScope.actorCoordinationIds);
+
+  for (const line of lines) {
+    const existing = summaries.get(line.teacherId);
+    if (!existing) {
+      const access = readScope.teacherAccess.get(line.teacherId);
+      summaries.set(line.teacherId, {
+        ...line,
+        key: `teacher:${line.teacherId}`,
+        isTeacherAggregate: true,
+        coordinationIds: [line.coordinationId],
+        coordinationNames: [line.coordinationName],
+        scope: {
+          ownedByActor: access?.ownedByActor ?? false,
+          inActorCoordination: access?.inActorCoordination ?? false,
+          hasOtherCoordinations: !actorCoordinationIds.has(line.coordinationId)
+        }
+      });
+      continue;
+    }
+
+    if (!existing.coordinationIds.includes(line.coordinationId)) existing.coordinationIds.push(line.coordinationId);
+    if (!existing.coordinationNames.includes(line.coordinationName)) existing.coordinationNames.push(line.coordinationName);
+    existing.coordinationName = existing.coordinationNames.join(', ');
+    existing.baseHours = apiHours(addHours(existing.baseHours, line.baseHours));
+    existing.absences = apiHours(addHours(existing.absences, line.absences));
+    existing.delays = apiHours(addHours(existing.delays, line.delays));
+    existing.delayDiscountHours = apiHours(addHours(existing.delayDiscountHours, line.delayDiscountHours));
+    existing.grossBaseAmount = apiMoney(addMoney(existing.grossBaseAmount, line.grossBaseAmount));
+    existing.absenceDiscountAmount = apiMoney(addMoney(existing.absenceDiscountAmount, line.absenceDiscountAmount));
+    existing.delayDiscountAmount = apiMoney(addMoney(existing.delayDiscountAmount, line.delayDiscountAmount));
+    existing.baseNetAmount = apiMoney(addMoney(existing.baseNetAmount, line.baseNetAmount));
+    existing.scheduleExtraHours = apiHours(addHours(existing.scheduleExtraHours, line.scheduleExtraHours));
+    existing.scheduleExtraAmount = apiMoney(addMoney(existing.scheduleExtraAmount, line.scheduleExtraAmount));
+    existing.loggedExtraHours = apiHours(addHours(existing.loggedExtraHours, line.loggedExtraHours));
+    existing.loggedExtraAmount = apiMoney(addMoney(existing.loggedExtraAmount, line.loggedExtraAmount));
+    existing.totalExtraHours = apiHours(addHours(existing.totalExtraHours, line.totalExtraHours));
+    existing.totalExtraAmount = apiMoney(addMoney(existing.totalExtraAmount, line.totalExtraAmount));
+    existing.totalAmount = apiMoney(addMoney(existing.totalAmount, line.totalAmount));
+    existing.scheduleCount += line.scheduleCount;
+    existing.loggedExtraCount += line.loggedExtraCount;
+    existing.alerts = [...new Set([...existing.alerts, ...line.alerts])];
+    existing.scope.hasOtherCoordinations ||= !actorCoordinationIds.has(line.coordinationId);
+  }
+
+  return [...summaries.values()].sort((left, right) => left.teacherName.localeCompare(right.teacherName));
+}
+
+function publicCalculation(calculation: PayrollCalculation, actor: SessionUser) {
+  const internalLines = calculation.lines.map(({ storageAlerts: _storageAlerts, ...line }) => line);
+  const lines = publicPayrollLines(internalLines, actor);
   return {
     activeCycle: calculation.activeCycle,
     input: calculation.input,
     calendar: calculation.calendar,
-    summary: calculation.summary,
-    lines: calculation.lines.map(({ storageAlerts: _storageAlerts, ...line }) => line),
+    summary: summaryFromLines(lines),
+    lines,
+    ...(actor.role === 'coordinador'
+      ? { teacherSummaries: buildTeacherSummaries(lines, calculation.readScope) }
+      : {}),
     details: calculation.details,
     extraDetails: calculation.extraDetails
   };
@@ -1038,17 +1207,17 @@ async function calculatePayroll(client: PoolClient, actor: SessionUser, body: Pa
   const cycle = await ensureWorkingCycle(client, actor, body.cycleId);
   if (cycle.status !== 'ACTIVO') throw new Error('La nomina solo puede calcularse cuando el ciclo esta activo.');
   const actorScope = await loadActorScope(client, actor, { module: 'payroll.calculatePayroll' });
-  const coordinationScope = payrollCoordinationScope(actor, actorScope);
+  const readScope = await resolvePayrollPreviewTeacherScope(client, actor, actorScope, cycle.id);
   const resolved = await resolvePayrollBody(client, cycle, body);
   const input = normalizePayrollInput(resolved.body, cycle);
   const calendar = buildPayrollCalendar(resolved.body, resolved.blackoutDates);
-  const schedules = await listPayrollSchedules(client, cycle.id, resolved.body.calendarConfigId || null, coordinationScope);
+  const schedules = await listPayrollSchedules(client, cycle.id, resolved.body.calendarConfigId || null, readScope);
   const extras = await listPayrollExtras(
     client,
     cycle.id,
     resolved.body.payrollStart,
     resolved.body.payrollEnd,
-    coordinationScope
+    readScope
   );
 
   const lineMap = new Map<string, InternalPayrollLine>();
@@ -1067,7 +1236,8 @@ async function calculatePayroll(client: PoolClient, actor: SessionUser, body: Pa
     summary: buildSummary(lines),
     lines,
     details,
-    extraDetails
+    extraDetails,
+    readScope
   };
 }
 
@@ -1091,15 +1261,27 @@ async function latestPayrollDefaults(client: PoolClient, cycle: CycleRow): Promi
 async function listRecentRuns(
   client: PoolClient,
   cycleId: string,
-  coordinationScope: CoordinationScope
+  readScope: PayrollReadScope
 ): Promise<PayrollRunRow[]> {
   const params: unknown[] = [cycleId];
-  const summaryExpression = coordinationScope ? "'{}'::jsonb" : 'pr.summary';
+  const isRestricted = readScope.teacherIds !== null || readScope.coordinationIds !== null;
+  const summaryExpression = isRestricted ? "'{}'::jsonb" : 'pr.summary';
   let visibility = '';
 
-  if (coordinationScope) {
-    if (!coordinationScope.length) return [];
-    params.push(coordinationScope);
+  if (readScope.teacherIds) {
+    if (!readScope.teacherIds.length) return [];
+    params.push(readScope.teacherIds);
+    visibility = `
+        AND EXISTS (
+          SELECT 1
+          FROM payroll_lines pl
+          WHERE pl.payroll_run_id = pr.id
+            AND pl.teacher_id = ANY($2::uuid[])
+        )
+    `;
+  } else if (readScope.coordinationIds) {
+    if (!readScope.coordinationIds.length) return [];
+    params.push(readScope.coordinationIds);
     visibility = `
         AND EXISTS (
           SELECT 1
@@ -1165,14 +1347,20 @@ async function loadPayrollRun(client: PoolClient, id: string): Promise<PayrollRu
 async function loadPayrollLines(
   client: PoolClient,
   runId: string,
-  actor: SessionUser,
-  coordinationScope: CoordinationScope
+  readScope: PayrollReadScope
 ): Promise<PayrollLine[]> {
   const params: unknown[] = [runId];
   let visibility = '';
-  if (!canViewAllPayroll(actor)) {
-    if (coordinationScope && coordinationScope.length > 0) {
-      params.push(coordinationScope);
+  if (readScope.teacherIds) {
+    if (readScope.teacherIds.length > 0) {
+      params.push(readScope.teacherIds);
+      visibility = 'AND pl.teacher_id = ANY($2::uuid[])';
+    } else {
+      visibility = 'AND false';
+    }
+  } else if (readScope.coordinationIds) {
+    if (readScope.coordinationIds.length > 0) {
+      params.push(readScope.coordinationIds);
       visibility = 'AND pl.coordination_id = ANY($2::uuid[])';
     } else {
       visibility = 'AND false';
@@ -1248,14 +1436,20 @@ async function loadPayrollLines(
 async function loadPayrollScheduleDetails(
   client: PoolClient,
   runId: string,
-  actor: SessionUser,
-  coordinationScope: CoordinationScope
+  readScope: PayrollReadScope
 ): Promise<PayrollScheduleDetail[]> {
   const params: unknown[] = [runId];
   let visibility = '';
-  if (!canViewAllPayroll(actor)) {
-    if (coordinationScope && coordinationScope.length > 0) {
-      params.push(coordinationScope);
+  if (readScope.teacherIds) {
+    if (readScope.teacherIds.length > 0) {
+      params.push(readScope.teacherIds);
+      visibility = 'AND teacher_id = ANY($2::uuid[])';
+    } else {
+      visibility = 'AND false';
+    }
+  } else if (readScope.coordinationIds) {
+    if (readScope.coordinationIds.length > 0) {
+      params.push(readScope.coordinationIds);
       visibility = 'AND coordination_id = ANY($2::uuid[])';
     } else {
       visibility = 'AND false';
@@ -1301,14 +1495,20 @@ async function loadPayrollScheduleDetails(
 async function loadPayrollExtraDetails(
   client: PoolClient,
   runId: string,
-  actor: SessionUser,
-  coordinationScope: CoordinationScope
+  readScope: PayrollReadScope
 ): Promise<PayrollExtraDetail[]> {
   const params: unknown[] = [runId];
   let visibility = '';
-  if (!canViewAllPayroll(actor)) {
-    if (coordinationScope && coordinationScope.length > 0) {
-      params.push(coordinationScope);
+  if (readScope.teacherIds) {
+    if (readScope.teacherIds.length > 0) {
+      params.push(readScope.teacherIds);
+      visibility = 'AND teacher_id = ANY($2::uuid[])';
+    } else {
+      visibility = 'AND false';
+    }
+  } else if (readScope.coordinationIds) {
+    if (readScope.coordinationIds.length > 0) {
+      params.push(readScope.coordinationIds);
       visibility = 'AND coordination_id = ANY($2::uuid[])';
     } else {
       visibility = 'AND false';
@@ -1747,7 +1947,8 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       const cycle = await ensureWorkingCycle(client, actor, parsed.data.cycleId);
       const defaults = await latestPayrollDefaults(client, cycle);
       const actorScope = await loadActorScope(client, actor, { module: 'payroll.context' });
-      const runs = await listRecentRuns(client, cycle.id, payrollCoordinationScope(actor, actorScope));
+      const readScope = await resolvePayrollPreviewTeacherScope(client, actor, actorScope, cycle.id);
+      const runs = await listRecentRuns(client, cycle.id, readScope);
       const calendarPeriods = await listCalendarConfigs(client, cycle.id);
       return { cycle, defaults, runs, calendarPeriods };
     });
@@ -1771,7 +1972,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
     }
 
     const calculation = await withTransaction((client) => calculatePayroll(client, request.user!, parsed.data));
-    return publicCalculation(calculation);
+    return publicCalculation(calculation, request.user!);
   });
 
   app.post('/payroll/runs', { preHandler: requirePermissionOrProtectedSuperAdmin('payroll.finalize') }, async (request, reply) => {
@@ -1790,7 +1991,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
 
       await reply.code(201).send({
         run: result.run,
-        ...publicCalculation(result.calculation),
+        ...publicCalculation(result.calculation, request.user!),
         message: 'Nómina guardada correctamente.'
       });
     } catch (error) {
@@ -1817,11 +2018,11 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       const run = await loadPayrollRun(client, parsed.data.id);
       if (!run) return null;
       const actorScope = await loadActorScope(client, actor, { module: 'payroll.getRun' });
-      const coordinationScope = payrollCoordinationScope(actor, actorScope);
-      const lines = await loadPayrollLines(client, run.id, actor, coordinationScope);
-      const details = await loadPayrollScheduleDetails(client, run.id, actor, coordinationScope);
-      const extraDetails = await loadPayrollExtraDetails(client, run.id, actor, coordinationScope);
-      return { run, lines, details, extraDetails };
+      const readScope = await resolvePayrollPreviewTeacherScope(client, actor, actorScope, run.cycleId);
+      const lines = await loadPayrollLines(client, run.id, readScope);
+      const details = await loadPayrollScheduleDetails(client, run.id, readScope);
+      const extraDetails = await loadPayrollExtraDetails(client, run.id, readScope);
+      return { run, lines, details, extraDetails, readScope };
     });
 
     if (!result) {
@@ -1830,6 +2031,7 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
     }
 
     const weights = result.run.weights || {};
+    const lines = publicPayrollLines(result.lines, actor);
     return {
       run: result.run,
       input: {
@@ -1849,8 +2051,9 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
         module2Saturdays: Number(weights.module2Saturdays || 0),
         blackoutDates: Array.isArray(weights.blackoutDates) ? weights.blackoutDates : []
       },
-      summary: summaryFromLines(result.lines),
-      lines: result.lines,
+      summary: summaryFromLines(lines),
+      lines,
+      ...(actor.role === 'coordinador' ? { teacherSummaries: buildTeacherSummaries(lines, result.readScope) } : {}),
       details: result.details,
       extraDetails: result.extraDetails
     };
@@ -1879,10 +2082,10 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
         const run = await loadPayrollRun(client, parsed.data.id);
         if (!run) return null;
         const actorScope = await loadActorScope(client, actor, { module: 'payroll.exportRun' });
-        const coordinationScope = payrollCoordinationScope(actor, actorScope);
-        const lines = await loadPayrollLines(client, run.id, actor, coordinationScope);
-        const details = await loadPayrollScheduleDetails(client, run.id, actor, coordinationScope);
-        const extraDetails = await loadPayrollExtraDetails(client, run.id, actor, coordinationScope);
+        const readScope = await resolvePayrollPreviewTeacherScope(client, actor, actorScope, run.cycleId);
+        const lines = await loadPayrollLines(client, run.id, readScope);
+        const details = await loadPayrollScheduleDetails(client, run.id, readScope);
+        const extraDetails = await loadPayrollExtraDetails(client, run.id, readScope);
         return { run, lines, details, extraDetails };
       });
 

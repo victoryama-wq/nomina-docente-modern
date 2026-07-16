@@ -21,6 +21,12 @@ import {
 import ConfirmModal from '../components/modals/ConfirmModal.vue';
 import { moneyLabel } from '../utils/format';
 import { buildPayrollDetailCsvRows, downloadPayrollDetailCsv } from '../utils/payrollDetailCsv';
+import {
+  extraDetailsForPayrollLine,
+  payrollDisplayLines,
+  payrollTeacherScopeLabels,
+  scheduleDetailsForPayrollLine
+} from '../utils/payrollPreview';
 
 type AlertFilter = 'TODOS' | 'CON_ALERTAS' | 'SIN_ALERTAS';
 type PayrollViewMode = 'RESUMEN' | 'DETALLE';
@@ -107,13 +113,13 @@ const payrollCycleBlockCard = computed(() => {
 
 const filteredLines = computed(() => {
   const text = searchText.value.toLowerCase().trim();
-  return (currentPreview.value?.lines || []).filter((line) => {
+  return payrollDisplayLines(currentPreview.value).filter((line) => {
     const hasAlerts = line.alerts.length > 0;
     const haystack = [
       line.teacherName,
       line.coordinationName,
       line.category,
-      line.paymentType,
+      line.paymentType || '',
       line.alerts.join(' ')
     ]
       .join(' ')
@@ -133,15 +139,11 @@ const selectedLine = computed(() => {
 });
 
 const selectedScheduleDetails = computed<PayrollScheduleDetail[]>(() => {
-  const line = selectedLine.value;
-  if (!line) return [];
-  return (currentPreview.value?.details || []).filter((detail) => detail.lineKey === line.key);
+  return scheduleDetailsForPayrollLine(selectedLine.value, currentPreview.value?.details || []);
 });
 
 const selectedExtraDetails = computed<PayrollExtraDetail[]>(() => {
-  const line = selectedLine.value;
-  if (!line) return [];
-  return (currentPreview.value?.extraDetails || []).filter((detail) => detail.lineKey === line.key);
+  return extraDetailsForPayrollLine(selectedLine.value, currentPreview.value?.extraDetails || []);
 });
 
 const selectedLineDetailTotals = computed(() => {
@@ -189,6 +191,11 @@ const isGlobalPayrollReadOnly = computed(
 const isPayrollPreviewOnly = computed(() => authStore.canPreviewPayroll && !authStore.canFinalizePayroll);
 const actorScopeLabel = computed(() => {
   const coordinations = authStore.session?.actorCoordinations || [];
+  if (authStore.session?.role === 'coordinador') {
+    return coordinations.length
+      ? `docentes propios y carga en ${coordinations.map((coordination) => coordination.name).join(', ')}`
+      : 'docentes bajo tu responsabilidad';
+  }
   return coordinations.length ? coordinations.map((coordination) => coordination.name).join(', ') : 'registros capturados por tu usuario';
 });
 const canExportPayrollRun = computed(
@@ -796,7 +803,10 @@ onMounted(() => {
                 <td>
                   <strong>{{ line.teacherName }}</strong>
                   <span>{{ categoryLabel(line.category) }}</span>
-                  <small>{{ paymentLabel(line.paymentType) }}</small>
+                  <small v-if="line.paymentType && authStore.canViewFiscal">{{ paymentLabel(line.paymentType) }}</small>
+                  <div v-if="payrollTeacherScopeLabels(line).length" class="payroll-scope-labels">
+                    <span v-for="label in payrollTeacherScopeLabels(line)" :key="label" class="badge neutral">{{ label }}</span>
+                  </div>
                 </td>
                 <td>
                   <strong>{{ line.coordinationName }}</strong>
@@ -849,6 +859,7 @@ onMounted(() => {
               <strong>{{ line.teacherName }}</strong>
               <span>{{ line.coordinationName }}</span>
               <small>{{ formatHours(line.baseHours) }} h base / {{ formatHours(line.totalExtraHours) }} h extras</small>
+              <span v-for="label in payrollTeacherScopeLabels(line)" :key="label" class="badge neutral">{{ label }}</span>
               <em>{{ moneyLabel(line.totalAmount) }}</em>
             </button>
             <div v-if="!filteredLines.length" class="empty-cell">No hay líneas con el filtro actual.</div>
@@ -897,7 +908,7 @@ onMounted(() => {
                     <tr v-for="detail in selectedScheduleDetails" :key="detail.scheduleId">
                       <td>
                         <strong>{{ detail.subjectName }}</strong>
-                        <span>Grupo {{ detail.groupCode }} / {{ detail.tabulatorName }} {{ moneyLabel(detail.tabulatorAmount) }}</span>
+                        <span>{{ detail.coordinationName }} / Grupo {{ detail.groupCode }} / {{ detail.tabulatorName }} {{ moneyLabel(detail.tabulatorAmount) }}</span>
                       </td>
                       <td>
                         <strong>{{ formatHours(detail.baseHours) }} h</strong>
@@ -942,7 +953,7 @@ onMounted(() => {
                       <td>{{ formatDate(detail.activityDate) }}</td>
                       <td>
                         <strong>{{ detail.reason }}</strong>
-                        <span>{{ moneyLabel(detail.tabulatorAmount) }} por hora</span>
+                        <span>{{ detail.coordinationName }} / {{ moneyLabel(detail.tabulatorAmount) }} por hora</span>
                       </td>
                       <td><strong>{{ formatHours(detail.hours) }} h</strong></td>
                       <td><strong>{{ moneyLabel(detail.totalAmount) }}</strong></td>

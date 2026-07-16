@@ -1543,6 +1543,20 @@ td span {
   font-weight: 950;
 }
 
+.payroll-scope-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.payroll-scope-labels .badge,
+.payroll-line-card > .badge {
+  display: inline-flex;
+  width: fit-content;
+  white-space: normal;
+}
+
 .payroll-detail-panel {
   min-width: 0;
   display: grid;

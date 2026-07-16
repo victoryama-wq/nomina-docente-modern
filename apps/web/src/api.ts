@@ -506,7 +506,7 @@ export interface PayrollLine {
   coordinationId: string;
   teacherName: string;
   coordinationName: string;
-  paymentType: string;
+  paymentType?: string;
   category: string;
   baseHours: number;
   absences: number;
@@ -526,6 +526,14 @@ export interface PayrollLine {
   alerts: string[];
   scheduleCount: number;
   loggedExtraCount: number;
+  isTeacherAggregate?: boolean;
+  coordinationIds?: string[];
+  coordinationNames?: string[];
+  scope?: {
+    ownedByActor: boolean;
+    inActorCoordination: boolean;
+    hasOtherCoordinations: boolean;
+  };
 }
 
 export interface PayrollScheduleDetail {
@@ -651,6 +659,7 @@ export interface PayrollPreview {
   calendar: PayrollCalendar;
   summary: PayrollSummary;
   lines: PayrollLine[];
+  teacherSummaries?: PayrollLine[];
   details: PayrollScheduleDetail[];
   extraDetails: PayrollExtraDetail[];
   run?: PayrollRun;

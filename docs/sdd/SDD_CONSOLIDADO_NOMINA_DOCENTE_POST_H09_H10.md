@@ -38,6 +38,7 @@ Estado por H:
 | H17 | Normalizacion productiva ejecutada para 197 docentes; Directorio mantiene edicion por `teachers.created_by`; 12 remanentes documentados. |
 | H18 | Cerrado operativo; Reportes Operativos desplegado, filtros amigables H18-F6 vigentes y hotfix snapshot `ped.line_key` aplicado en `nomina-api-00050-zdm`. |
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
+| H20 | Implementado y validado localmente; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, y calcula su carga completa entre coordinaciones. Deploy pendiente. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -55,6 +56,7 @@ Ultimos hitos productivos relevantes:
 - H18-F6 Reportes Operativos: deploy productivo ejecutado el 2026-07-09; API revision `nomina-api-00049-2hn`, Hosting live `2026-07-09 13:11:55`, filtros con ciclos/quincenas legibles y busqueda general en vez de IDs tecnicos.
 - H18 hotfix snapshot: deploy productivo API ejecutado el 2026-07-09; API revision `nomina-api-00050-zdm`, sin deploy Hosting, sin migraciones, sin cambios de BD; corrige `ped.line_key`; cierre operativo validado en Excel institucional.
 - H19 Directorio Docentes: backup `1783642001652`, preview exacto en `ROLLBACK`, 36 UPDATE de `teachers.created_by` y 3 INSERT minimos; 7 de los 10 sin match nominal ya existian, 3 fueron nuevas altas y no se crearon duplicados.
+- H20 Nomina compartida: implementacion local validada el 2026-07-16; 60/60 pruebas API de integracion en `nomina_docente_test`; sin migracion, sin cambio H01 y sin deploy.
 
 ## 2. Arquitectura vigente
 
@@ -299,7 +301,7 @@ Documentos vigentes:
 | Horarios | Permitidos en ciclos `ACTIVO` y `PLANEACION`; bloqueados en `CERRADO`; coordinadores operan segun capturador/alcance; Admin global. | H02/H03 Fase 3, H09/H10 Fase 2, H09/H10 Fase 4. |
 | Incidencias | Permitidas solo en ciclo operativo activo y ventana abierta; bloqueadas en `PLANEACION` y `CERRADO`; validacion por horario/coordinacion. | H02/H03 Fase 3, H09/H10 Fase 2. |
 | Extras | Listado segun rol; edicion por propiedad/captured_by donde aplique; Direccion/Subdireccion solo modifica propios; bloqueados en `PLANEACION` y `CERRADO`. | H02/H03 Fase 3, H04 Fase 5, H09/H10 Fase 2. |
-| Nomina | Preview con `payroll.preview`; guardar con `payroll.finalize`; H01 intocable; bloqueada en `PLANEACION` y `CERRADO`; `PAGADA` terminal. | H01, H03 Fase 4, H09/H10 Fase 1. |
+| Nomina | Preview con `payroll.preview`; guardar con `payroll.finalize`; H01 intocable; bloqueada en `PLANEACION` y `CERRADO`; `PAGADA` terminal. H20 permite al Coordinador consultar el calculo completo de docentes propios o con horario en sus coordinaciones, sin ampliar edicion, fiscal ni finalizacion. | H01, H03 Fase 4, H09/H10 Fase 1, SPEC y auditoria H20. |
 | Finanzas | `finance.view` consulta; `finance.export` exporta; `finance.workflow` cambia estados; no cancelar `PAGADA`; no usar `BORRADOR`/`CERRADA` como acciones. | H03 Fase 4, H09/H10 Fase 1. |
 | Expediente fiscal | Ver/editar/constancias separados por permisos fiscales y documentales; Coordinador/Direccion/Contador no gestionan fiscal. | H03 Fase 4, H02/H03 Fase 5. |
 | Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. | H09/H10 Fase 3, Fase 4, deploy H09/H10. |
@@ -326,6 +328,7 @@ Documentos vigentes:
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
 | Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`, `docs/auditoria/H18_Deploy_Productivo_Reportes_Operativos.md`, `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md`, `docs/auditoria/H18_Hotfix_Reportes_Snapshot_LineKey.md` y `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | Cerrado operativo; H18-F1/F2/F5/F6 y hotfix snapshot desplegados; CSV/XLSX validados en Excel institucional |
+| Nomina compartida Coordinador | `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md` y `docs/auditoria/H20_Alcance_Compartido_Nomina_Coordinadores.md` | H02/H03 Fase 4/5, ajuste docentes compartidos y H04 Fase 4/5 | Implementado y validado localmente; deploy pendiente |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -363,6 +366,7 @@ Regla de precedencia:
 | H15 | Desplegado productivamente | Mantener observacion operativa del ciclo real de 60 minutos y reapertura de navegador si se requiere evidencia adicional. |
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
+| H20 | Implementado local / pendiente de deploy | Ejecutar smoke local por Coordinador y deploy controlado; confirmar docente unico, desglose entre coordinaciones y ausencia de datos fiscales. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -388,15 +392,18 @@ Para cualquier fase posterior:
 
 Orden recomendado:
 
-1. H07 Google Provider `hd`:
+1. H20 deploy controlado:
+   - validar con sesion real de Coordinador sin guardar Nomina;
+   - confirmar calculo completo, desglose y ausencia fiscal.
+2. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
-2. H08 refactor gradual:
+3. H08 refactor gradual:
    - solo despues de cubrir con pruebas y sin cambiar reglas.
-3. CSV injection:
+4. CSV injection:
    - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
-4. H13 operativo continuo:
+5. H13 operativo continuo:
    - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
-5. Cierre global de matriz:
+6. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 
 ## 10. Confirmacion de alcance de esta consolidacion
