@@ -236,7 +236,7 @@ const blankSchedule = (): SchedulePayload => ({
   teacherId: '',
   coordinationId: null,
   coordinationName: '',
-  subjectName: '',
+  subjectId: '',
   groupCode: '',
   tabulatorId: '',
   tabulatorName: '',
@@ -830,7 +830,7 @@ function editSchedule(schedule: Schedule) {
     teacherId: schedule.teacherId,
     coordinationId: isAdmin.value ? schedule.coordinationId : currentUserCoordination.value?.id || null,
     coordinationName: isAdmin.value ? schedule.coordinationName : currentCoordinatorName.value,
-    subjectName: schedule.subjectName,
+    subjectId: schedule.subjectId || '',
     groupCode: schedule.groupCode,
     tabulatorId: schedule.tabulatorId || '',
     tabulatorName: schedule.tabulatorName,
@@ -1569,10 +1569,12 @@ onMounted(() => {
               </label>
               <label>
                 <span>Asignatura</span>
-                <input v-model.trim="scheduleForm.subjectName" list="schedule-subjects" required />
-                <datalist id="schedule-subjects">
-                  <option v-for="subject in scheduleSubjects" :key="subject.id" :value="subject.name" />
-                </datalist>
+                <select v-model="scheduleForm.subjectId" required>
+                  <option disabled value="">Selecciona asignatura</option>
+                  <option v-for="subject in scheduleSubjects" :key="subject.id" :value="subject.id">
+                    {{ subject.name }}
+                  </option>
+                </select>
               </label>
               <label>
                 <span>Grupo</span>

@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-18
 
-Estado: diagnostico y diseno aprobable; no implementado.
+Estado: implementado y validado en local/test; pendiente de migracion y deploy productivo.
 
 ## 1. Objetivo
 
@@ -73,8 +73,7 @@ Fuera de alcance:
 
 ## 5. Modelo de datos propuesto
 
-H21 requiere una futura migracion H05. El siguiente prefijo disponible es
-`013`; nombre propuesto:
+H21 implementa una migracion H05 aditiva con prefijo `013`:
 
 ```text
 database/013_h21_subject_import_search.sql
@@ -84,9 +83,9 @@ La migracion se disena para:
 
 1. habilitar `unaccent` y `pg_trgm`, disponibles en Cloud SQL pero actualmente
    no instalados;
-2. crear una funcion inmutable canonica de normalizacion de catalogos;
+2. crear una funcion canonica `STABLE` y una columna almacenada mantenida por trigger;
 3. agregar `subjects.official_code text NULL`;
-4. agregar `subjects.normalized_name` como valor generado desde `name`;
+4. agregar `subjects.normalized_name` con backfill y trigger;
 5. crear indice unico parcial para
    `upper(btrim(official_code)) WHERE official_code IS NOT NULL`;
 6. crear indice GIN trigram sobre `normalized_name`.
@@ -95,7 +94,8 @@ La migracion se disena para:
 que exista un mapping institucional aprobado. Toda nueva asignatura creada por
 importacion debe incluir clave.
 
-No se crea ni ejecuta esta migracion en H21-F0.
+La migracion fue aplicada y validada solo en `nomina_docente_test`. No se ha
+ejecutado en produccion.
 
 ## 6. Normalizacion canonica
 
@@ -356,22 +356,29 @@ eso `INACTIVACION_CON_USO_OPERATIVO` es bloqueante.
 
 ## 16. Fases sugeridas
 
-1. H21-F0: diagnostico y diseno, este documento.
-2. H21-F1: migracion 013 y helper canonico en `nomina_docente_test`.
-3. H21-F2: API template/preview/apply y pruebas PostgreSQL.
-4. H21-F3: UI de importacion y busqueda normalizada.
-5. H21-F4: validacion local con CSV sintetico y backup/rollback documentado.
+1. H21-F0: diagnostico y diseno, completado.
+2. H21-F1: migracion 013 y helper canonico en `nomina_docente_test`, completado.
+3. H21-F2: API template/preview/apply y pruebas PostgreSQL, completado.
+4. H21-F3: Horarios estrictos con `subjectId`, completado.
+5. H21-F4: UI, busqueda normalizada y validacion local, completado.
 6. H21-F5: deploy controlado solo tras H05, H13 y aprobacion humana.
 
-## 17. Decisiones pendientes antes de implementar
+## 17. Decisiones cerradas y pendientes de release
 
-- aprobar migracion `013` y extensiones `unaccent`/`pg_trgm`;
-- aprobar el nombre final `official_code` y formato institucional de `clave`;
-- aprobar `id` opcional en la plantilla para bootstrap legacy;
-- decidir si Horarios seguira creando asignaturas libres sin clave o debera
-  seleccionar exclusivamente el catalogo activo;
-- aprobar parser CSV directo despues de revision npm;
-- confirmar limite final de archivo y filas.
+Quedaron implementadas y validadas en local/test las siguientes decisiones:
+
+- migracion `013` con `unaccent`, `pg_trgm`, `official_code` y
+  `normalized_name`;
+- `id` opcional para asociar registros existentes y `clave` oficial unica
+  cuando se informa;
+- Horarios selecciona exclusivamente asignaturas del catalogo mediante
+  `subjectId` y no crea asignaturas por texto libre;
+- parser CSV directo `@fast-csv/parse` en API;
+- limites de 512 KiB y 5000 filas.
+
+Antes de produccion siguen pendientes H05/H13, backup, aprobacion humana,
+validacion con CSV institucional y smoke Admin/Coordinador. No se ha ejecutado
+la migracion `013` ni se ha hecho deploy en produccion.
 
 ## 18. Confirmaciones H21-F0
 

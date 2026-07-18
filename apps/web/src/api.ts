@@ -170,7 +170,9 @@ export interface CloseAcademicCycleResponse {
 
 export interface SubjectOption {
   id: string;
+  officialCode?: string | null;
   name: string;
+  status?: 'ACTIVO' | 'INACTIVO';
 }
 
 export interface TabulatorOption {
@@ -182,6 +184,7 @@ export interface TabulatorOption {
 
 export interface CatalogSubject {
   id: string;
+  officialCode: string | null;
   name: string;
   status: 'ACTIVO' | 'INACTIVO';
   scheduleCount: number;
@@ -292,7 +295,7 @@ export interface SchedulePayload {
   responsibleUserId?: string | null;
   coordinationId?: string | null;
   coordinationName: string;
-  subjectName: string;
+  subjectId: string;
   groupCode: string;
   tabulatorId?: string;
   tabulatorName: string;
@@ -304,6 +307,55 @@ export interface SchedulePayload {
   hoursV: number;
   hoursS1: number;
   hoursS2: number;
+}
+
+export type SubjectImportClassification =
+  | 'NUEVA'
+  | 'ACTUALIZAR_CLAVE'
+  | 'ACTUALIZAR_NOMBRE'
+  | 'ACTUALIZAR_ESTATUS'
+  | 'ACTUALIZAR_MULTIPLE'
+  | 'SIN_CAMBIOS'
+  | 'INACTIVAR'
+  | 'DUPLICADO_CLAVE_CSV'
+  | 'DUPLICADO_NOMBRE_CSV'
+  | 'POSIBLE_DUPLICADO_NOMBRE'
+  | 'ID_NO_EXISTE'
+  | 'ID_CLAVE_INCOMPATIBLE'
+  | 'CLAVE_EXISTENTE_NOMBRE_INCOMPATIBLE'
+  | 'INACTIVACION_CON_USO_OPERATIVO'
+  | 'CAMPO_OBLIGATORIO_FALTANTE'
+  | 'ESTATUS_INVALIDO'
+  | 'ERROR';
+
+export interface SubjectImportPreviewRow {
+  line: number;
+  id: string | null;
+  officialCode: string | null;
+  name: string;
+  status: 'ACTIVO' | 'INACTIVO' | null;
+  classification: SubjectImportClassification;
+  blocking: boolean;
+  existingSubjectId: string | null;
+  expectedCurrent: { officialCode: string | null; name: string; status: 'ACTIVO' | 'INACTIVO' } | null;
+  changes: Array<'officialCode' | 'name' | 'status'>;
+  message: string;
+}
+
+export interface SubjectImportPreview {
+  fileSha256: string;
+  catalogFingerprint: string;
+  totalRows: number;
+  summary: Record<SubjectImportClassification, number>;
+  hasBlockingErrors: boolean;
+  rows: SubjectImportPreviewRow[];
+}
+
+export interface SubjectImportApplyResult {
+  inserted: number;
+  updated: number;
+  unchanged: number;
+  total: number;
 }
 
 export interface IncidenceSchedule {
@@ -1231,6 +1283,49 @@ export async function fetchCatalogsContext(): Promise<{
   summary: CatalogSummary;
 }> {
   return request('/catalogs/context');
+}
+
+export async function fetchCatalogSubjects(filters: {
+  q?: string;
+  status?: 'ACTIVO' | 'INACTIVO' | 'TODOS';
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<{
+  subjects: CatalogSubject[];
+  pagination: { page: number; pageSize: number; total: number };
+}> {
+  return request(`/catalogs/subjects${queryString(filters)}`);
+}
+
+export async function downloadSubjectImportTemplate(scope: 'blank' | 'catalog' = 'blank'): Promise<void> {
+  return downloadAuthenticatedFile(
+    `/catalogs/subjects/import/template${queryString({ scope })}`,
+    `plantilla-importacion-asignaturas-${scope}.csv`,
+    'No fue posible descargar la plantilla de asignaturas.'
+  );
+}
+
+export async function previewSubjectImport(payload: {
+  fileName: string;
+  base64Data: string;
+}): Promise<{ preview: SubjectImportPreview }> {
+  return request('/catalogs/subjects/import/preview', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function applySubjectImport(payload: {
+  fileName: string;
+  base64Data: string;
+  fileSha256: string;
+  catalogFingerprint: string;
+  confirmed: true;
+}): Promise<{ result: SubjectImportApplyResult; message: string }> {
+  return request('/catalogs/subjects/import/apply', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function createCatalogSubject(payload: SubjectPayload): Promise<{ subject: CatalogSubject; message: string }> {

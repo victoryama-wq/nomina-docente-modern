@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
   BookOpen,
   DollarSign,
   Edit3,
+  FileUp,
   Plus,
   RefreshCw,
   Save,
@@ -16,6 +17,7 @@ import { useAuthStore } from '../stores/auth';
 import {
   createCatalogSubject,
   createCatalogTabulator,
+  fetchCatalogSubjects,
   fetchCatalogsContext,
   updateCatalogSubject,
   updateCatalogTabulator,
@@ -25,6 +27,7 @@ import {
   type SubjectPayload,
   type TabulatorPayload
 } from '../api';
+import SubjectImportModal from '../components/modals/SubjectImportModal.vue';
 import { moneyLabel } from '../utils/format';
 
 type CatalogTab = 'subjects' | 'tabulators';
@@ -43,6 +46,11 @@ const searchText = ref('');
 const statusFilter = ref<StatusFilter>('ACTIVO');
 const pageBusy = ref(false);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
+const subjectPage = ref(1);
+const subjectPageSize = 25;
+const subjectTotal = ref(0);
+const importModalOpen = ref(false);
+let subjectSearchTimer: number | undefined;
 
 const subjectModalOpen = ref(false);
 const subjectSaving = ref(false);
@@ -59,14 +67,7 @@ const tabulatorForm = ref<TabulatorPayload>({
   sortOrder: 100
 });
 
-const filteredSubjects = computed(() => {
-  const text = searchText.value.trim().toLowerCase();
-  return subjects.value.filter((subject) => {
-    const matchesStatus = statusFilter.value === 'TODOS' || subject.status === statusFilter.value;
-    const haystack = [subject.name, subject.status, subject.scheduleCount, subject.activeScheduleCount].join(' ').toLowerCase();
-    return matchesStatus && (!text || haystack.includes(text));
-  });
-});
+const filteredSubjects = computed(() => subjects.value);
 
 const filteredTabulators = computed(() => {
   const text = searchText.value.trim().toLowerCase();
@@ -109,11 +110,45 @@ async function loadCatalogs() {
     subjects.value = data.subjects;
     tabulators.value = data.tabulators;
     summary.value = data.summary;
+    await loadSubjectPage(1);
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar catálogos.');
   } finally {
     pageBusy.value = false;
   }
+}
+
+async function loadSubjectPage(page = subjectPage.value) {
+  if (!authStore.canManageCatalogs) return;
+  pageBusy.value = true;
+  try {
+    const data = await fetchCatalogSubjects({
+      q: searchText.value.trim(),
+      status: statusFilter.value,
+      page,
+      pageSize: subjectPageSize
+    });
+    subjects.value = data.subjects;
+    subjectPage.value = data.pagination.page;
+    subjectTotal.value = data.pagination.total;
+  } catch (err) {
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible buscar asignaturas.');
+  } finally {
+    pageBusy.value = false;
+  }
+}
+
+function scheduleSubjectSearch() {
+  window.clearTimeout(subjectSearchTimer);
+  subjectSearchTimer = window.setTimeout(() => void loadSubjectPage(1), 250);
+}
+
+async function handleImportApplied(result: { inserted: number; updated: number; unchanged: number }) {
+  await loadCatalogs();
+  setNotice(
+    'ok',
+    `Importacion aplicada: ${result.inserted} nuevas, ${result.updated} actualizadas y ${result.unchanged} sin cambios.`
+  );
 }
 
 function newSubject() {
@@ -225,6 +260,12 @@ async function saveTabulator() {
 onMounted(() => {
   loadCatalogs();
 });
+
+watch([searchText, statusFilter, activeTab], () => {
+  if (activeTab.value === 'subjects') scheduleSubjectSearch();
+});
+
+onUnmounted(() => window.clearTimeout(subjectSearchTimer));
 </script>
 
 <template>
@@ -246,6 +287,10 @@ onMounted(() => {
         <button v-if="activeTab === 'subjects'" class="primary-inline" type="button" @click="newSubject">
           <Plus :size="17" />
           Nueva asignatura
+        </button>
+        <button v-if="activeTab === 'subjects'" class="secondary-action" type="button" @click="importModalOpen = true">
+          <FileUp :size="17" />
+          Importar CSV
         </button>
         <button v-else class="primary-inline" type="button" @click="newTabulator">
           <Plus :size="17" />
@@ -298,7 +343,7 @@ onMounted(() => {
       <div class="filters-row catalogs">
         <label class="search-box">
           <Search :size="17" />
-          <input v-model="searchText" placeholder="Buscar por nombre, estatus o uso" />
+          <input v-model="searchText" :placeholder="activeTab === 'subjects' ? 'Buscar asignatura sin importar acentos' : 'Buscar por nombre, estatus o uso'" />
         </label>
         <select v-model="statusFilter">
           <option value="TODOS">Todos</option>
@@ -312,6 +357,7 @@ onMounted(() => {
           <thead>
             <tr>
               <th>Asignatura</th>
+              <th>Clave</th>
               <th>Estatus</th>
               <th>Uso operativo</th>
               <th>Histórico</th>
@@ -320,13 +366,14 @@ onMounted(() => {
           </thead>
           <tbody>
             <tr v-if="!filteredSubjects.length">
-              <td colspan="5" class="empty-cell">No hay asignaturas con el filtro actual.</td>
+              <td colspan="6" class="empty-cell">No hay asignaturas con el filtro actual.</td>
             </tr>
             <tr v-for="subject in filteredSubjects" :key="subject.id">
               <td>
                 <strong>{{ subject.name }}</strong>
                 <span>Catálogo de captura para horarios</span>
               </td>
+              <td>{{ subject.officialCode || 'Legacy sin clave' }}</td>
               <td>
                 <span class="badge" :class="subject.status === 'ACTIVO' ? 'ok' : 'muted'">{{ subject.status }}</span>
               </td>
@@ -393,7 +440,22 @@ onMounted(() => {
           </tbody>
         </table>
       </div>
+      <div v-if="activeTab === 'subjects' && subjectTotal > subjectPageSize" class="pagination-row">
+        <button class="secondary-action" type="button" :disabled="subjectPage <= 1 || pageBusy" @click="loadSubjectPage(subjectPage - 1)">
+          Anterior
+        </button>
+        <span>Pagina {{ subjectPage }} de {{ Math.ceil(subjectTotal / subjectPageSize) }}</span>
+        <button class="secondary-action" type="button" :disabled="subjectPage * subjectPageSize >= subjectTotal || pageBusy" @click="loadSubjectPage(subjectPage + 1)">
+          Siguiente
+        </button>
+      </div>
     </section>
+
+    <SubjectImportModal
+      :show="importModalOpen"
+      @close="importModalOpen = false"
+      @applied="handleImportApplied"
+    />
 
     <div v-if="subjectModalOpen" class="modal-backdrop" @click.self="closeSubjectModal">
       <form class="modal-card" @submit.prevent="saveSubject">

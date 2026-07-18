@@ -26,7 +26,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H18 cerrado operativo: Reportes Operativos desplegado, filtros amigables H18-F6 vigentes, hotfix snapshot `ped.line_key` aplicado y CSV/XLSX validados en Excel institucional.
 - H19 ejecutado de forma controlada: backup exitoso, preview en ROLLBACK, 36 actualizaciones de `teachers.created_by`, 3 altas minimas y validacion posterior sin duplicados.
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
-- H21 iniciado como diagnostico/diseno de importacion CSV y busqueda normalizada de Asignaturas; sin codigo, SQL, migracion ni cambios de datos.
+- H21 implementado y validado en local/test con migracion `013`, importacion atomica, busqueda normalizada y Horarios por catalogo; produccion sin cambios.
 - Alineacion documental post-H20 verificada contra Cloud Run, Firebase Hosting y H05 en modo read-only; no cambia el estado ni la prioridad de los riesgos.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
@@ -68,7 +68,7 @@ Arquitectura vigente:
 | H18 | Modulo Reportes Operativos desplegado con UX de filtros H18-F6 y hotfix snapshot | Reportes / Permisos / Operacion academica | Cerrado operativo | Bajo: riesgo residual por regresion futura o nuevas necesidades de snapshots historicos | P2 cerrado operativo | Mantener pruebas H18, guardas backend por rol y exportables CSV/XLSX; no crear permisos ni migraciones sin H05 | Cumplido con deploy H18-F5/F6, hotfix `ped.line_key` y validacion post-hotfix en Excel institucional | Solo si se agregan permisos nuevos o cambios de BD |
 | H19 | Actualizacion controlada de Directorio desde CSV | Directorio / Datos productivos / Permisos operativos | Ejecutado y documentado: 36 `created_by` actualizados y 3 altas minimas, con backup y preview exacto | Bajo; riesgo residual solo ante futuras cargas manuales sin el mismo control | P1 cerrado / monitoreo | Repetir backup, matching nominal, preview y guardas de duplicidad para futuras cargas | Cumplido con validacion posterior, 0 discrepancias y 0 duplicados | Solo para futuras cargas o excepciones |
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
-| H21 | Importacion masiva y busqueda de Asignaturas sin clave oficial/normalizacion | Catalogos / Horarios / Historicos / Seguridad de datos | Diagnostico y diseno; no implementado | Alto si se actualiza por nombre o se inactiva materia con uso operativo; controlable con clave, preview, transaccion e H05 | P1 diseno | Aprobar clave institucional, bootstrap por `id`, normalizacion indexada, parser CSV y migracion `013`; nunca fusionar por nombre | SPEC/diagnostico aprobados, migracion y pruebas en test, preview/apply seguros y validacion historica | Si, antes de migracion e implementacion |
+| H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Implementado y validado en local/test; pendiente de produccion | Medio hasta completar H05/H13 y smoke; bajo despues de validar CSV institucional | P1 release | Mantener preview/apply atomico, matching por ID/clave, bloqueo operativo y cero fusion por nombre | Suites API/web/integracion, migracion `013` controlada, backup, smoke Admin/Coordinador y export de evidencia | Si, antes de migracion/deploy productivo |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -158,7 +158,7 @@ Cerrado/desplegado:
 
 Orden recomendado:
 
-1. **H21 Asignaturas.** Cerrar decisiones de clave, bootstrap legacy, auto-creacion desde Horarios, parser y migracion `013` antes de implementar.
+1. **H21 Asignaturas.** Preparar migracion/deploy productivo controlado con H05/H13; la implementacion local/test ya esta completa.
 2. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
 3. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
 4. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
@@ -183,7 +183,7 @@ Pendientes reales despues de H02/H03:
 - Para H18, decidir solo si en fases futuras se agregan permisos formales nuevos; `exceljs` ya fue aprobado e instalado en backend/API.
 - Para futuras cargas tipo H19, exigir nueva aprobacion, backup, matching por identificador/correo/nombre y preview en ROLLBACK.
 - H20 no tiene decisiones pendientes; cualquier ampliacion futura de alcance, escritura o permisos requiere nueva SPEC y aprobacion humana.
-- H21 requiere aprobar el formato de clave institucional, el uso de `id` para asociar registros legacy, la politica de auto-creacion desde Horarios, el parser CSV y la migracion `013` antes de cualquier implementacion.
+- H21 no tiene decisiones tecnicas pendientes para la implementacion local/test. El paso productivo requiere aprobacion humana de H05/H13, backup, migracion `013`, CSV institucional y smoke; no se ejecuta automaticamente.
 
 ## 7. Recomendacion final
 

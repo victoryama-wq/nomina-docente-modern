@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import {
   RefreshCw, CalendarClock, Search, Clock3, Building2,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-vue-next';
 import {
   fetchSchedulesContext,
+  fetchCatalogSubjects,
   createSchedule,
   updateSchedule,
   deleteSchedule,
@@ -50,6 +51,8 @@ const scheduleStatusFilter = ref<ScheduleLoadStatus>('TODOS');
 const onlyMyEditableSchedules = ref(false);
 const scheduleTeacherSearch = ref('');
 const scheduleTeacherPickerOpen = ref(false);
+const scheduleSubjectSearch = ref('');
+const scheduleSubjectPickerOpen = ref(false);
 const scheduleModalOpen = ref(false);
 const scheduleSaving = ref(false);
 const scheduleFormError = ref('');
@@ -58,13 +61,14 @@ const pendingDeleteSchedule = ref<Schedule | null>(null);
 const deletingSchedule = ref(false);
 const pageBusy = ref(false);
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
+let subjectSearchTimer: number | undefined;
 
 const blankSchedule = (): SchedulePayload => ({
   teacherId: '',
   responsibleUserId: null,
   coordinationId: null,
   coordinationName: '',
-  subjectName: '',
+  subjectId: '',
   groupCode: '',
   tabulatorId: '',
   tabulatorName: '',
@@ -362,6 +366,8 @@ function newSchedule() {
   editingScheduleId.value = null;
   scheduleTeacherSearch.value = '';
   scheduleTeacherPickerOpen.value = false;
+  scheduleSubjectSearch.value = '';
+  scheduleSubjectPickerOpen.value = false;
   scheduleFormError.value = '';
   scheduleForm.value = {
     ...blankSchedule(),
@@ -380,6 +386,8 @@ function closeScheduleModal() {
   scheduleForm.value = blankSchedule();
   scheduleTeacherSearch.value = '';
   scheduleTeacherPickerOpen.value = false;
+  scheduleSubjectSearch.value = '';
+  scheduleSubjectPickerOpen.value = false;
   scheduleFormError.value = '';
 }
 
@@ -406,6 +414,45 @@ function onScheduleTeacherSearchInput() {
   if (scheduleTeacherSearch.value.toLowerCase() !== expected) {
     scheduleForm.value.teacherId = '';
   }
+}
+
+function subjectOptionLabel(subject: SubjectOption) {
+  return subject.officialCode ? `${subject.name} / ${subject.officialCode}` : subject.name;
+}
+
+async function searchScheduleSubjects(query = scheduleSubjectSearch.value) {
+  try {
+    const data = await fetchCatalogSubjects({ q: query.trim(), status: 'ACTIVO', page: 1, pageSize: 25 });
+    const current = editingSchedule.value;
+    const options: SubjectOption[] = [...data.subjects];
+    if (current?.subjectId && !options.some((subject) => subject.id === current.subjectId)) {
+      options.unshift({ id: current.subjectId, name: current.subjectName, status: 'INACTIVO' });
+    }
+    scheduleSubjects.value = options;
+  } catch (err) {
+    scheduleFormError.value = err instanceof Error ? err.message : 'No fue posible buscar asignaturas.';
+  }
+}
+
+function scheduleSubjectLookup() {
+  window.clearTimeout(subjectSearchTimer);
+  subjectSearchTimer = window.setTimeout(() => void searchScheduleSubjects(), 220);
+}
+
+function onScheduleSubjectSearchInput() {
+  scheduleSubjectPickerOpen.value = true;
+  const selected = scheduleSubjects.value.find((subject) => subject.id === scheduleForm.value.subjectId);
+  if (!selected || scheduleSubjectSearch.value !== subjectOptionLabel(selected)) {
+    scheduleForm.value.subjectId = '';
+  }
+  scheduleSubjectLookup();
+}
+
+function selectScheduleSubject(subject: SubjectOption) {
+  scheduleForm.value.subjectId = subject.id;
+  scheduleSubjectSearch.value = subjectOptionLabel(subject);
+  scheduleSubjectPickerOpen.value = false;
+  scheduleFormError.value = '';
 }
 
 function applySelectedTabulator() {
@@ -438,7 +485,7 @@ function editSchedule(schedule: Schedule) {
     responsibleUserId: canChooseScheduleCoordination.value ? schedule.createdById || null : null,
     coordinationId: canChooseScheduleCoordination.value ? schedule.coordinationId : currentUserCoordination.value?.id || null,
     coordinationName: canChooseScheduleCoordination.value ? schedule.coordinationName : currentCoordinatorName.value,
-    subjectName: schedule.subjectName,
+    subjectId: schedule.subjectId || '',
     groupCode: schedule.groupCode,
     tabulatorId: schedule.tabulatorId || '',
     tabulatorName: schedule.tabulatorName,
@@ -453,6 +500,11 @@ function editSchedule(schedule: Schedule) {
   };
   scheduleTeacherSearch.value = `${schedule.teacherName} / ${categoryLimitLabel(schedule.teacherCategory)}`;
   scheduleTeacherPickerOpen.value = false;
+  scheduleSubjectSearch.value = schedule.subjectName;
+  if (schedule.subjectId && !scheduleSubjects.value.some((subject) => subject.id === schedule.subjectId)) {
+    scheduleSubjects.value.unshift({ id: schedule.subjectId, name: schedule.subjectName, status: 'INACTIVO' });
+  }
+  scheduleSubjectPickerOpen.value = false;
   scheduleFormError.value = '';
   scheduleModalOpen.value = true;
   clearNotice();
@@ -467,6 +519,10 @@ async function saveSchedule() {
   scheduleFormError.value = '';
   if (!selectedScheduleTeacher.value) {
     scheduleFormError.value = 'Selecciona un docente activo desde el buscador.';
+    return;
+  }
+  if (!scheduleForm.value.subjectId) {
+    scheduleFormError.value = 'Selecciona una asignatura del catalogo.';
     return;
   }
   if (!scheduleForm.value.tabulatorId) {
@@ -559,6 +615,8 @@ onMounted(() => {
     loadSchedules();
   }
 });
+
+onUnmounted(() => window.clearTimeout(subjectSearchTimer));
 </script>
 
 <template>
@@ -732,7 +790,9 @@ onMounted(() => {
       :is-admin="canChooseScheduleCoordination"
       :form="scheduleForm"
       v-model:teacher-search-text="scheduleTeacherSearch"
+      v-model:subject-search-text="scheduleSubjectSearch"
       :teacher-picker-open="scheduleTeacherPickerOpen"
+      :subject-picker-open="scheduleSubjectPickerOpen"
       :filtered-teacher-options="filteredScheduleTeacherOptions"
       :responsibles="scheduleResponsibles"
       :current-coordinator-name="currentCoordinatorName"
@@ -750,6 +810,10 @@ onMounted(() => {
       @input-teacher-search="onScheduleTeacherSearchInput"
       @escape-teacher-search="scheduleTeacherPickerOpen = false"
       @select-teacher="selectScheduleTeacher"
+      @focus-subject-search="scheduleSubjectPickerOpen = true; searchScheduleSubjects()"
+      @input-subject-search="onScheduleSubjectSearchInput"
+      @escape-subject-search="scheduleSubjectPickerOpen = false"
+      @select-subject="selectScheduleSubject"
       @apply-tabulator="applySelectedTabulator"
     />
 

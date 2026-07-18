@@ -57,7 +57,7 @@ const teacher: ScheduleTeacher = {
   currentMod2Hours: 0
 };
 
-const subjects: SubjectOption[] = [{ id: 'subject-qa', name: 'Asignatura QA' }];
+const subjects: SubjectOption[] = [{ id: 'subject-qa', officialCode: 'QA-01', name: 'Asignatura QA', status: 'ACTIVO' }];
 const tabulators: TabulatorOption[] = [{ id: 'tab-qa', name: 'Tabulador QA', amount: '100.00', sortOrder: 1 }];
 
 function scheduleForm(): SchedulePayload {
@@ -67,7 +67,7 @@ function scheduleForm(): SchedulePayload {
     responsibleUserId: 'user-coord-idiomas',
     coordinationId: 'coord-idiomas',
     coordinationName: 'Idiomas',
-    subjectName: 'Asignatura QA',
+    subjectId: 'subject-qa',
     groupCode: 'QA-1',
     tabulatorId: 'tab-qa',
     tabulatorName: 'Tabulador QA',
@@ -92,6 +92,8 @@ function mountScheduleModal(isAdmin: boolean) {
       form: scheduleForm(),
       teacherSearchText: 'Docente QA',
       teacherPickerOpen: false,
+      subjectSearchText: 'Asignatura QA / QA-01',
+      subjectPickerOpen: false,
       filteredTeacherOptions: [teacher],
       responsibles,
       currentCoordinatorName: 'Idiomas',
@@ -120,5 +122,16 @@ describe('ScheduleModal coordination visibility', () => {
     const disabledInputs = coordinator.findAll('input[disabled]');
     expect(coordinator.text()).toContain('Responsable operativo');
     expect(disabledInputs.some((input) => (input.element as HTMLInputElement).value === 'Idiomas')).toBe(true);
+  });
+
+  it('uses a catalog picker and emits the selected subject instead of accepting a free catalog name', async () => {
+    const wrapper = mountScheduleModal(false);
+    const inputs = wrapper.findAll('input');
+    const subjectInput = inputs.find((input) => input.attributes('placeholder') === 'Buscar asignatura por nombre o clave');
+    expect(subjectInput).toBeDefined();
+    expect(wrapper.find('datalist#schedule-subjects').exists()).toBe(false);
+
+    await subjectInput!.trigger('focus');
+    expect(wrapper.emitted('focusSubjectSearch')).toHaveLength(1);
   });
 });

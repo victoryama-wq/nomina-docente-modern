@@ -18,6 +18,8 @@ defineProps<{
   form: SchedulePayload;
   teacherSearchText: string;
   teacherPickerOpen: boolean;
+  subjectSearchText: string;
+  subjectPickerOpen: boolean;
   filteredTeacherOptions: ScheduleTeacher[];
   responsibles: ScheduleResponsibleOption[];
   currentCoordinatorName: string;
@@ -39,6 +41,11 @@ defineEmits<{
   (e: 'inputTeacherSearch'): void;
   (e: 'escapeTeacherSearch'): void;
   (e: 'selectTeacher', teacher: ScheduleTeacher): void;
+  (e: 'update:subjectSearchText', value: string): void;
+  (e: 'focusSubjectSearch'): void;
+  (e: 'inputSubjectSearch'): void;
+  (e: 'escapeSubjectSearch'): void;
+  (e: 'selectSubject', subject: SubjectOption): void;
   (e: 'applyTabulator'): void;
 }>();
 
@@ -130,10 +137,30 @@ function remainingHoursLabel(value: number, maxHours: number) {
         </label>
         <label>
           <span>Asignatura</span>
-          <input v-model.trim="form.subjectName" list="schedule-subjects" required />
-          <datalist id="schedule-subjects">
-            <option v-for="subject in subjects" :key="subject.id" :value="subject.name" />
-          </datalist>
+          <div class="combo-box">
+            <Search :size="17" />
+            <input
+              :value="subjectSearchText"
+              autocomplete="off"
+              placeholder="Buscar asignatura por nombre o clave"
+              required
+              @input="$emit('update:subjectSearchText', ($event.target as HTMLInputElement).value); $emit('inputSubjectSearch')"
+              @focus="$emit('focusSubjectSearch')"
+              @keydown.escape="$emit('escapeSubjectSearch')"
+            />
+            <div v-if="subjectPickerOpen" class="combo-list">
+              <button
+                v-for="subject in subjects"
+                :key="subject.id"
+                type="button"
+                @mousedown.prevent="$emit('selectSubject', subject)"
+              >
+                <strong>{{ subject.name }}</strong>
+                <span>{{ subject.officialCode || 'Sin clave legacy' }}</span>
+              </button>
+              <p v-if="!subjects.length">No hay asignaturas activas con esa busqueda.</p>
+            </div>
+          </div>
         </label>
         <label>
           <span>Grupo</span>
