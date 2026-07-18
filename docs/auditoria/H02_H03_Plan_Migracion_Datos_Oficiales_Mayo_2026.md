@@ -262,7 +262,7 @@ $517,510.00
 Backup nuevo recomendado antes de la migracion de datos:
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 & $gcloud sql export sql nomina-docente-web `
   "gs://nomina-docente-prod-sql-imports/backups/pre-h02h03-data-migration-$stamp.sql.gz" `

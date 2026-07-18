@@ -14,7 +14,7 @@ normalizado. El SQL anterior H19 no debe usarse como base final de ejecucion.
 Archivo fuente revisado:
 
 ```text
-C:\Users\Admin\Downloads\docentes.csv
+docentes.csv (archivo local aprobado; ruta de perfil omitida)
 ```
 
 Objetivo funcional:
@@ -33,7 +33,7 @@ migracion, seed ni deploy.
 | Elemento | Valor |
 |---|---|
 | Rama | `feature/h02-h03-user-coordinations-permissions` |
-| CSV | `C:\Users\Admin\Downloads\docentes.csv` |
+| CSV | `docentes.csv` (archivo local aprobado; ruta de perfil omitida) |
 | Encoding CSV | UTF-8 con BOM |
 | Base consultada | Cloud SQL `nomina_docente` |
 | Metodo | Cloud SQL Auth Proxy local, consultas read-only |

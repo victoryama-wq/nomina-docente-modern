@@ -1,5 +1,7 @@
 # Nómina Docente Modern
 
+Última verificación documental e infraestructura: 2026-07-18.
+
 Nueva plataforma para Nómina Docente.
 
 Stack inicial:
@@ -37,6 +39,9 @@ Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` 
 Estado productivo consolidado posterior a H20:
 
 - Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00051-9s5`.
+- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h20-prod-56553f4`.
+- Digest vigente: `sha256:3773e95e35836acb5ba30382d0465a800accd38491092abd625a07b4719839ac`.
+- Configuración Cloud Run verificada: CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, mínimo `0` y máximo `3` instancias.
 - Firebase Hosting live: release `1784228039752000`, version `41bf160c7c3595b6`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
@@ -75,6 +80,7 @@ Documentos de estado relevantes:
 - `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md`
 - `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`
 - `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`
+- `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md`
 
 ## Comandos útiles
 
@@ -85,18 +91,13 @@ npm run build
 firebase deploy --only hosting --project nomina-docente-prod
 ```
 
-Para preparar la importación de datos legacy:
-
-```powershell
-npm run legacy:csv-to-sql -- --directorio database/imports/Directorio.csv --usuarios database/imports/Coord_Academicos.csv --out database/imports/legacy_import.sql
-```
-
-Guía completa: `database/import_legacy_data.md`.
+La importación legacy ya no es un procedimiento operativo. La guía
+`database/import_legacy_data.md` se conserva únicamente como evidencia histórica; cualquier carga futura requiere SPEC, H05, backup, preview y aprobación humana.
 
 Para reconstruir y publicar la API:
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 $image = 'us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:latest'
 & $gcloud builds submit . --config cloudbuild.api.yaml --substitutions _IMAGE=$image --project=nomina-docente-prod
 & $gcloud run deploy nomina-api `
@@ -112,7 +113,9 @@ $image = 'us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:lates
   --min-instances 0 `
   --max-instances 3 `
   --cpu 1 `
-  --memory 512Mi
+  --memory 512Mi `
+  --concurrency 80 `
+  --timeout 300s
 ```
 
 Checklist minimo antes de deploy:

@@ -1,8 +1,11 @@
 # Manual de entrega - Nómina Docente
 
 **Proyecto:** Nómina Docente  
-**Versión de entrega:** 1.0 productiva  
-**Fecha:** 8 de mayo de 2026  
+**Versión de entrega:** 1.1 post-H20
+
+**Fecha original:** 8 de mayo de 2026
+
+**Última actualización:** 18 de julio de 2026
 **Ambiente:** Producción Google Cloud / Firebase  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
 **Administrador general protegido:** `victor.yama@tecplayacar.edu.mx`
@@ -13,7 +16,7 @@
 
 Nómina Docente es una Web App administrativa para gestionar la operación académica y financiera de docentes: directorio, horarios, incidencias, extras, calendario operativo, cálculo de nómina, reportes financieros, expediente fiscal y auditoría.
 
-El sistema reemplaza gradualmente la operación legacy en Google Apps Script y hojas de cálculo. La nueva plataforma usa Firebase Auth con inicio de sesión por Google, frontend moderno en Vue 3, backend en Cloud Run y base de datos PostgreSQL en Cloud SQL.
+El sistema moderno sustituyó la operación legacy en Google Apps Script, retirada del repositorio en H06/H14. La plataforma usa Firebase Auth con inicio de sesión por Google, frontend moderno en Vue 3, backend en Cloud Run y base de datos PostgreSQL en Cloud SQL.
 
 La operación quedó organizada por ciclos escolares y quincenas. Esto permite preparar un ciclo futuro en planeación sin afectar el ciclo vigente, capturar horarios limpios por ciclo, cerrar ciclos anteriores como histórico y calcular nómina solamente sobre quincenas oficiales del Calendario Operativo.
 
@@ -41,6 +44,8 @@ La operación quedó organizada por ciclos escolares y quincenas. Esto permite p
 - Guardado definitivo de nómina.
 - Restauración para corrección cuando una nómina se cancela.
 - Finanzas y reportes sobre nóminas guardadas.
+- Reportes Operativos H18 de horas base/extras y carga por categoría, con exportación CSV/XLSX.
+- Preview H20 para Coordinador con docentes propios o compartidos por horario, en modo solo lectura y sin datos fiscales.
 - Exportaciones CSV.
 - PDF de reportes financieros.
 - PDF de comprobantes de pago en efectivo.
@@ -78,6 +83,8 @@ Estas funciones pueden agregarse posteriormente sin rehacer la arquitectura prin
 | Hosting | Firebase Hosting | Publicación de Web App y rewrite de API |
 | Contenedores | Artifact Registry | Imagen Docker del API |
 | Secretos | Secret Manager | Contraseña de base de datos |
+
+Estado productivo verificado el 2026-07-18: revisión Cloud Run `nomina-api-00051-9s5`, imagen `h20-prod-56553f4`, Firebase Hosting release `1784228039752000` y version `41bf160c7c3595b6`.
 
 ### 3.2 URLs de producción
 
@@ -124,11 +131,11 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 | Rol | Alcance |
 |---|---|
 | Admin | Acceso completo, usuarios, calendario, nómina, finanzas, auditoría y configuración |
-| Coordinador | Captura operativa de docentes, horarios, incidencias y extras según permisos |
-| Dirección/Subdirección | Mismos accesos operativos que Coordinador, consulta global de Nómina viva y consulta global de Finanzas sin acciones de flujo |
-| RH | Mismos accesos operativos que Coordinador y gestión global de expedientes fiscales |
+| Coordinador | Consulta global de Directorio; edición por `teachers.created_by`; operación por alcance/capturador; preview H20 de docentes propios o compartidos sin finalización ni datos fiscales |
+| Dirección/Subdirección | Consulta global de Nómina y Reportes; sin finalización ni workflow financiero; edición de Extras solo propios cuando aplica |
+| RH | Gestión global de expedientes fiscales y acceso autorizado a carga por categoría |
 | Finanzas | Consulta financiera, expediente fiscal, reportes y pagos |
-| Contador | Consulta financiera/fiscal y reportes contables |
+| Contador/Contabilidad | Exportación y consulta financiera autorizada; sin gestión fiscal ni workflow |
 
 ### 4.4 Permisos funcionales
 
@@ -140,13 +147,13 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 | `incidences.manage` | Gestionar incidencias |
 | `extras.manage` | Gestionar extras |
 | `payroll.view` | Ver nómina |
-| `payroll.calculate` | Calcular nómina |
+| `payroll.preview` | Consultar vista previa de nómina según alcance |
 | `payroll.finalize` | Guardar nómina |
 | `reports.view` | Ver reportes |
 | `statistics.view` | Ver estadísticas |
-| `finance.view` | Ver finanzas y expediente fiscal |
+| `finance.view` | Ver finanzas; no habilita fiscal, exportación ni workflow por sí solo |
 | `finance.global_view` | Ver Finanzas de todas las coordinaciones en modo consulta |
-| `fiscal.manage` | Gestionar expedientes fiscales y constancias |
+| `fiscal.manage` | Gestionar datos fiscales; documentos usan permisos separados |
 | `calendar.manage` | Gestionar calendario operativo |
 | `closures.manage` | Gestionar cierres |
 | `access.manage` | Gestionar accesos |
@@ -167,6 +174,7 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 | Capturar Incidencias | `/incidencias` | Faltas, retardos y extras de horario por quincena |
 | Capturar Extras | `/extras` | Horas extra externas por quincena |
 | Nómina | `/nomina` | Vista previa, cálculo y guardado de nómina |
+| Reportes Operativos | `/reports` | Horas base/extras y carga por categoría con CSV/XLSX |
 | Reportes y Finanzas | `/finanzas` | Pagos, reportes, PDF, CSV y trazabilidad financiera |
 | Calendario Operativo | `/calendario` | Ciclos, quincenas, módulos y días inhábiles |
 | Control de Accesos | `/accesos` | Usuarios, roles y estatus |
@@ -247,7 +255,8 @@ Reglas clave:
 - Existe exportación de docentes activos.
 - Existe exportación completa con historial de cambios.
 - El borrado de docentes respeta dependencias operativas.
-- Los coordinadores solo pueden editar docentes de su coordinación; Admin puede editar cualquiera.
+- Coordinador puede consultar el detalle operativo de todos los docentes. Solo puede editar docentes cuyo `teachers.created_by` corresponde a su usuario; Admin conserva alcance global. Los datos fiscales requieren permisos separados.
+- H19 normalizó productivamente `teachers.created_by` en 36 docentes existentes y registró 3 altas mínimas con backup, preview `ROLLBACK` y validación sin duplicados. Es evidencia de mantenimiento, no un procedimiento de carga automática.
 
 ### 6.5 Expediente Fiscal
 
@@ -429,7 +438,7 @@ Reglas de cálculo:
 
 Alcance por rol:
 
-- Coordinador consulta la nómina viva de su coordinación.
+- Coordinador consulta, en modo solo lectura, docentes propios o con horario en sus coordinaciones y ve la carga completa del docente entre coordinaciones. No puede guardar/finalizar ni ver datos fiscales.
 - Dirección/Subdirección consulta la nómina viva de todas las coordinaciones en modo solo lectura.
 - Admin puede consultar, calcular y guardar la nómina.
 
@@ -489,7 +498,19 @@ Estados de nómina:
 | `CANCELADA` | Cancelada para corrección |
 | `CERRADA` | Estado histórico reservado |
 
-### 6.17 Comprobantes de pago en efectivo
+### 6.17 Reportes Operativos
+
+El módulo independiente `/reports` ofrece:
+
+- `Horas base y extras`: disponible para Admin y Dirección/Subdirección.
+- `Horas base por categoría`: disponible para Admin, Dirección/Subdirección, Coordinador y RH; Coordinador limitado a su alcance operativo.
+- Filtros legibles por ciclo/quincena y búsqueda general, sin IDs técnicos visibles.
+- Exportación CSV UTF-8 y XLSX real generado en API.
+- Datos vivos o snapshots según exista una corrida guardada no cancelada.
+
+No expone RFC, banco, cuenta, CLABE, `paymentType` ni constancias.
+
+### 6.18 Comprobantes de pago en efectivo
 
 El sistema genera comprobantes PDF para docentes con pago en efectivo. Cada comprobante contiene:
 
@@ -503,7 +524,7 @@ El sistema genera comprobantes PDF para docentes con pago en efectivo. Cada comp
 
 El formato está pensado para media carta: dos comprobantes por hoja tamaño carta.
 
-### 6.18 Auditoría y Bitácora
+### 6.19 Auditoría y Bitácora
 
 Registra eventos relevantes:
 
@@ -614,6 +635,8 @@ Permite filtrar por:
 
 ## 9. Datos cargados al cierre preoperativo
 
+Estado documental: snapshot histórico del 2026-05-08; no representa conteos productivos actuales. H17 y H19 modificaron posteriormente `teachers.created_by` y registraron altas controladas sin duplicados.
+
 Después de la limpieza preoperativa, se conservaron datos maestros y se limpió la capa transaccional de pruebas.
 
 | Concepto | Conteo |
@@ -654,7 +677,8 @@ gs://nomina-docente-prod-sql-imports/backups/preoperativo-limpieza-20260508-1108
 12. Reportes financieros leen nóminas guardadas, no capturas vivas.
 13. Cancelar nómina restaura datos para corrección y deja histórico.
 14. La carga máxima depende de categoría docente.
-15. Admin puede ver/editar globalmente; coordinadores operan con restricciones por coordinación.
+15. Admin puede ver/editar globalmente; coordinadores operan según autoría y alcance, y H20 amplía únicamente su preview de nómina en modo lectura.
+16. H05 controla migraciones; no se reaplica SQL histórico ni se ejecuta producción sin backup y aprobación.
 
 ---
 
@@ -711,7 +735,7 @@ npx firebase deploy --only hosting --project nomina-docente-prod
 ### 12.3 Desplegar backend
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 $image = 'us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:latest'
 
 & $gcloud builds submit . `
@@ -724,8 +748,18 @@ $image = 'us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:lates
   --project nomina-docente-prod `
   --region us-central1 `
   --platform managed `
+  --service-account nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com `
+  --set-cloudsql-instances nomina-docente-prod:us-central1:nomina-docente-web `
+  --min-instances 0 `
+  --max-instances 3 `
+  --cpu 1 `
+  --memory 512Mi `
+  --concurrency 80 `
+  --timeout 300s `
   --quiet
 ```
+
+Antes de ejecutar, revisar variables, secretos y CORS con H13. El ejemplo no sustituye el procedimiento de release ni autoriza cambios productivos.
 
 ### 12.4 Validación rápida
 
@@ -749,7 +783,7 @@ Respuesta esperada:
 ### 13.1 Exportar respaldo manual
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $uri = "gs://nomina-docente-prod-sql-imports/backups/backup-$stamp.sql.gz"
 
@@ -765,6 +799,8 @@ $uri = "gs://nomina-docente-prod-sql-imports/backups/backup-$stamp.sql.gz"
 - Hacer respaldo manual antes de cierres importantes, importaciones masivas o limpiezas.
 - No almacenar contraseñas en archivos del repo.
 - Usar Secret Manager para credenciales.
+- Para migraciones, ejecutar primero `db:migrate:inspect`, revisar H05 y crear backup; nunca usar `apply` sin aprobación explícita.
+- Rollback API: devolver tráfico a la revisión anterior documentada. Rollback Hosting: restaurar el release anterior. H20 no tiene migración de BD que revertir.
 
 ---
 

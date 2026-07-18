@@ -12,7 +12,7 @@ No ejecutar esta limpieza hasta que:
 ### Cloud Run revision service
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 & $gcloud run services delete nomina-api-h02h03-review `
   --project=nomina-docente-prod `
   --region=us-central1 `
@@ -22,7 +22,7 @@ $gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gc
 ### Firebase Hosting preview channel
 
 ```powershell
-$firebase = 'C:\Users\Admin\AppData\Roaming\npm\firebase.cmd'
+$firebase = (Get-Command firebase.cmd).Source
 & $firebase hosting:channel:delete h02-h03-review `
   --project nomina-docente-prod `
   --force
@@ -31,7 +31,7 @@ $firebase = 'C:\Users\Admin\AppData\Roaming\npm\firebase.cmd'
 ### Base Cloud SQL de revision
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 & $gcloud sql databases delete nomina_docente_h02h03_review `
   --instance=nomina-docente-web `
   --project=nomina-docente-prod `

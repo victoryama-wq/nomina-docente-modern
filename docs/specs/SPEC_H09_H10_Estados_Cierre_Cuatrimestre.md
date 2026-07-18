@@ -2,7 +2,9 @@
 
 Fecha: 2026-06-01
 
-Estado: SPEC funcional aprobada para diseño técnico posterior. No implementa cambios.
+Estado original de la SPEC: aprobada para diseño técnico posterior; este documento por sí mismo no implementa cambios.
+
+Estado vigente: H09/H10 fue implementado y desplegado. La evidencia actual se encuentra en `docs/auditoria/H09_H10_Deploy_Productivo_Resultado.md` y en el SDD consolidado.
 
 Alcance:
 

@@ -197,7 +197,7 @@ Resultados esperados:
 Imagen sugerida:
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 $image = 'us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h02h03-22b76a7'
 ```
 
@@ -360,4 +360,3 @@ Ejecutar el deploy de revision con:
 - BD de revision cargada con datos actuales.
 - Hosting preview channel.
 - Smoke test por rol.
-

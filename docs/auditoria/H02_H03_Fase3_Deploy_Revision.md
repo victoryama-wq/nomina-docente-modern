@@ -249,7 +249,7 @@ Se revisaron las reglas de los modulos para confirmar que la logica operacional 
 Eliminar servicio API de revision:
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 & $gcloud run services delete nomina-api-h02h03-review `
   --project=nomina-docente-prod `
   --region=us-central1 `
@@ -265,7 +265,7 @@ firebase hosting:channel:delete h02-h03-review --project nomina-docente-prod
 Eliminar BD de revision si ya no se requiere:
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 & $gcloud sql databases delete nomina_docente_h02h03_review `
   --instance=nomina-docente-web `
   --project=nomina-docente-prod `
@@ -295,4 +295,3 @@ Validar especialmente:
 - Extras visibles y editables solo por capturador.
 - Nomina preview sin guardado para Coordinador.
 - Fiscal/Finanzas H03 sin regresion.
-

@@ -239,7 +239,7 @@ Confirmado:
 Revertir trafico a la revision previa:
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 & $gcloud run services update-traffic nomina-api `
   --region us-central1 `
   --project nomina-docente-prod `

@@ -1,7 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-07-16
+Ultima actualizacion de estado productivo: 2026-07-18
 
 ## 1. Resumen ejecutivo
 
@@ -33,7 +33,12 @@ Alcance de H13:
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
 | Revision Cloud Run vigente documentada | `nomina-api-00051-9s5` |
+| Revision anterior / rollback inmediato | `nomina-api-00050-zdm` |
 | Imagen API vigente H20 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h20-prod-56553f4` |
+| Digest API vigente H20 | `sha256:3773e95e35836acb5ba30382d0465a800accd38491092abd625a07b4719839ac` |
+| CPU / memoria | `1` / `512Mi` |
+| Concurrencia / timeout | `80` / `300 s` |
+| Instancias min / max | `0` / `3` |
 | Imagen API H11 documentada | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h11-prod-4e0c214` |
 | Firebase Hosting release vigente | `1784228039752000` |
 | Firebase Hosting version vigente | `41bf160c7c3595b6` |
@@ -129,7 +134,8 @@ Configuracion productiva documentada:
 | Cloud SQL attached | `nomina-docente-prod:us-central1:nomina-docente-web` |
 | CPU documentada | `1` |
 | Memoria documentada | `512Mi` |
-| Max instances documentadas | `2` en H11; revisar si se cambia por ventana futura |
+| Min instances verificadas | `0` |
+| Max instances verificadas | `3` |
 | Concurrency documentada | `80` |
 | Timeout documentado | `300` |
 | Trafico esperado | `100%` a la revision vigente despues de deploy |
@@ -350,6 +356,10 @@ Cada deploy productivo debe registrar una fila equivalente:
 | 2026-06-01 | `0c5c8b5` | `nomina-api-00044-pk9` | `nomina-api-00045-v8h` | `2026-06-01 16:15:53` | `1780348318919` | No | OK | OK no destructivo | `H09_H10_Deploy_Productivo_Resultado.md` |
 | 2026-06-03 | `4e0c214` | `nomina-api-00045-v8h` | `nomina-api-00046-6ck` | `2026-06-03 10:21:16` | `1780499832076` | No | OK | CSV OK autorizado | `H11_Deploy_Productivo_Resultado.md` y `H11_Cierre_CSV_UTF8_PostDeploy.md` |
 | 2026-06-03 | `0989092` | `nomina-api-00046-6ck` | `nomina-api-00046-6ck` | `2026-06-03 15:16:08` | `1780517600085` | No | OK | H15 sesion/logout OK; API no desplegada | `H15_Deploy_Productivo_Resultado.md` |
+| 2026-07-08 | `1cefd18` | `nomina-api-00047-bxq` | `nomina-api-00048-js8` | `2026-07-08 12:33:41` | No requerido; sin escritura BD | No | OK | H18 tecnico OK | `H18_Deploy_Productivo_Reportes_Operativos.md` |
+| 2026-07-09 | `325075f` | `nomina-api-00048-js8` | `nomina-api-00049-2hn` | `2026-07-09 13:11:55` | No requerido; sin escritura BD | No | OK | H18-F6 filtros OK | `H18_Fase6_UX_Filtros_Reportes_Operativos.md` |
+| 2026-07-09 | `c1e858b` | `nomina-api-00049-2hn` | `nomina-api-00050-zdm` | Sin deploy Hosting | No requerido; sin escritura BD | No | OK | Hotfix snapshot OK | `H18_Hotfix_Reportes_Snapshot_LineKey.md` |
+| 2026-07-16 | `56553f4` | `nomina-api-00050-zdm` | `nomina-api-00051-9s5` | `1784228039752000` / `41bf160c7c3595b6` | No requerido; sin escritura BD | No | OK | H20 Coordinador/Admin OK | `H20_Deploy_Productivo_Alcance_Compartido_Nomina.md` |
 
 ## 15. Relacion con fases cerradas
 
@@ -364,6 +374,9 @@ Cada deploy productivo debe registrar una fila equivalente:
 | H11 | H13 conserva evidencia de deploy y smoke CSV. |
 | H12 | H13 respeta politica de no intervencion sobre catalogos historicos. |
 | H15 | H13 exige backup, healthcheck y smoke de sesion para cambios de autenticacion frontend. |
+| H18 | H13 conserva la cronologia de deploy inicial, UX F6 y hotfix snapshot. |
+| H19 | H13 exige backup, preview `ROLLBACK` y validacion de duplicados para cargas de datos. |
+| H20 | H13 conserva revision, imagen, Hosting y smoke autenticado del alcance compartido. |
 
 ## 16. Estado final H13
 

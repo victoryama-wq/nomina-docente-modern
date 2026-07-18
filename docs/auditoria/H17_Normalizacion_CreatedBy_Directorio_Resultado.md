@@ -51,7 +51,7 @@ Propiedades del archivo versionado:
 Para la ventana productiva se genero una copia temporal local con el mismo
 contenido y cambio controlado del cierre de transaccion a `COMMIT`:
 
-- `C:\Users\Admin\AppData\Local\Temp\h17_created_by_from_csv_COMMIT_EXECUTION.sql`
+- `%TEMP%\h17_created_by_from_csv_COMMIT_EXECUTION.sql` (copia temporal usada durante la ejecución)
 
 La copia temporal no forma parte del repositorio.
 

@@ -1,5 +1,12 @@
 # SDD Retrospectivo: Nómina Docente Vue 3 + Firebase Auth + Cloud Run + PostgreSQL
 
+Estado documental: **histórico**.
+
+Fuente vigente que lo sustituye:
+`docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md`.
+
+Se conserva como evidencia retrospectiva del estado posterior a H02/H03; no debe usarse como fuente única para fases nuevas.
+
 ## 0. Estado actual posterior a H02/H03
 
 Actualizacion: 2026-05-27.

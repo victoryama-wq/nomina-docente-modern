@@ -4,8 +4,10 @@
 **Ambiente:** Producción  
 **URL:** `https://nomina-docente-prod.web.app`  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
-**Versión:** 1.0 operativa  
-**Fecha de actualización:** 9 de mayo de 2026
+**Versión:** 1.1 post-H20
+
+**Fecha original:** 9 de mayo de 2026
+**Última actualización:** 18 de julio de 2026
 
 ---
 
@@ -22,6 +24,7 @@ Nómina Docente es una plataforma web para administrar la operación académica 
 - Captura de incidencias.
 - Captura de horas extra.
 - Vista previa y guardado de nómina.
+- Reportes Operativos de horas base/extras y carga por categoría.
 - Reportes financieros.
 - Auditoría y bitácora.
 
@@ -62,10 +65,11 @@ Los permisos se aplican en dos niveles:
 | Rol | Alcance general |
 |---|---|
 | Admin | Acceso completo al sistema, usuarios, calendario, catálogos, nómina, finanzas y auditoría |
-| Coordinador | Captura y consulta operativa de docentes, horarios, incidencias, extras y nómina de su coordinación |
-| Dirección/Subdirección | Acceso operativo tipo coordinación y consulta global de nómina viva y finanzas en modo lectura |
-| RH | Acceso operativo tipo coordinación y gestión de expedientes fiscales |
-| Finanzas / Contador | Consulta de nóminas guardadas, reportes financieros, pagos y pendientes fiscales |
+| Coordinador | Consulta global de Directorio; edición de docentes por capturador; operación por alcance; preview H20 de docentes propios o compartidos, sin finalización ni fiscal |
+| Dirección/Subdirección | Consulta global de nómina y Reportes Operativos; sin finalización ni workflow financiero |
+| RH | Gestión de expedientes fiscales y consulta autorizada de carga por categoría |
+| Finanzas | Nóminas guardadas, reportes financieros, pagos y workflow según permiso; sin Reportes Operativos H18 |
+| Contador/Contabilidad | Exportación y consulta financiera autorizada; sin workflow, gestión fiscal ni Reportes Operativos H18 |
 
 ### 3.1 Matriz resumida de módulos
 
@@ -73,7 +77,7 @@ Los permisos se aplican en dos niveles:
 |---|---:|---:|---:|---:|---:|
 | Dashboard | Sí | Sí | Sí | Sí | Sí |
 | Directorio Docente | Sí | Sí | Sí | Sí | Consulta |
-| Expediente Fiscal | Sí | Según permiso | Según permiso | Sí | Sí |
+| Expediente Fiscal | Sí | No | Lectura no sensible según vista | Sí | Finanzas sí; Contador no gestiona |
 | Control de Accesos | Sí | No | No | No | No |
 | Catálogos | Sí | No | No | No | No |
 | Calendario | Sí | No | No | No | No |
@@ -81,6 +85,7 @@ Los permisos se aplican en dos niveles:
 | Capturar Incidencias | Sí | Sí | Sí | Sí | No |
 | Capturar Extras | Sí | Sí | Sí | Sí | No |
 | Nómina | Sí | Consulta de su alcance | Consulta global | Consulta según permiso | Consulta |
+| Reportes Operativos | Ambas pestañas | Solo carga por categoría | Ambas pestañas | Solo carga por categoría | No |
 | Finanzas | Sí | Consulta de su alcance | Consulta global | Consulta según permiso | Sí |
 | Auditoría | Sí | No | No | No | No |
 
@@ -155,7 +160,7 @@ El formulario se abre en una ventana modal para no perder la vista de la tabla.
 3. Actualizar la información.
 4. Guardar.
 
-Las coordinaciones solo deben editar docentes de su responsabilidad. Admin puede editar cualquier docente.
+Coordinador puede consultar todos los docentes mediante el detalle operativo, incluido correo y teléfono. Solo puede editar docentes cuyo capturador técnico (`teachers.created_by`) corresponda a su usuario. Admin puede editar cualquier docente; los campos fiscales mantienen permisos separados.
 
 ### 6.5 Eliminación de docente
 
@@ -487,6 +492,8 @@ Para la quincena seleccionada:
 
 La nómina puede consultarse antes de guardarse para revisión operativa. Esto permite detectar errores en incidencias o extras antes del cierre definitivo.
 
+Para Coordinador, H20 incluye docentes creados por él o que tengan horario en alguna de sus coordinaciones. Cada docente aparece una vez y muestra su carga completa entre coordinaciones, siempre en modo solo lectura, sin datos fiscales y sin botón `Guardar nómina`.
+
 ### 14.4 Guardar nómina
 
 El botón `Guardar nómina` es exclusivo para Admin.
@@ -499,18 +506,30 @@ Al guardar:
 - Se bloquea la quincena para edición operativa.
 - Incidencias y Extras quedan cerrados para esa quincena.
 
-## 15. Reportes y Finanzas
+## 15. Reportes Operativos y Finanzas
+
+### 15.1 Reportes Operativos
+
+La ruta `/reports` es independiente de Finanzas y contiene:
+
+- `Horas base y extras`: visible solo para Admin y Dirección/Subdirección.
+- `Horas base por categoría`: visible para Admin, Dirección/Subdirección, Coordinador y RH.
+- Filtros por ciclo/quincena con nombres legibles y búsqueda general.
+- Descarga CSV y Excel XLSX con los mismos filtros de la consulta.
+- Uso automático de datos vivos o snapshot según exista nómina guardada no cancelada.
+
+Coordinador queda limitado a su alcance operativo en la pestaña permitida. Finanzas, Contador y Contabilidad no ven este módulo. Los reportes no muestran RFC, banco, cuenta, CLABE, tipo de pago ni constancias.
 
 El módulo `Finanzas` trabaja con nóminas ya guardadas. No recalcula desde datos vivos.
 
-### 15.1 Vistas principales
+### 15.2 Vistas principales
 
 - Pagos.
 - Coordinaciones.
 - Pendientes.
 - Histórico.
 
-### 15.2 Resumen financiero
+### 15.3 Resumen financiero
 
 Muestra:
 
@@ -521,7 +540,7 @@ Muestra:
 - Resumen por forma de pago.
 - Nómina seleccionada.
 
-### 15.3 Exportaciones
+### 15.4 Exportaciones
 
 Según permisos, permite generar:
 
@@ -534,7 +553,7 @@ Según permisos, permite generar:
 
 Dirección/Subdirección puede consultar globalmente y descargar el PDF por coordinaciones conforme al alcance definido.
 
-### 15.4 Comprobante de pago en efectivo
+### 15.5 Comprobante de pago en efectivo
 
 El sistema genera comprobantes para docentes con pago en efectivo.
 
@@ -547,7 +566,7 @@ Características:
 - Monto.
 - Espacio para firma de conformidad.
 
-### 15.5 Flujo financiero
+### 15.6 Flujo financiero
 
 Estados disponibles:
 
@@ -559,7 +578,7 @@ Estados disponibles:
 | PAGADA | Pago ejecutado |
 | CANCELADA | Nómina cancelada para corrección |
 
-### 15.6 Corrección de nómina
+### 15.7 Corrección de nómina
 
 Si se detecta un error después de guardar:
 
@@ -1107,7 +1126,19 @@ Reglas:
 - Al guardar la nómina, Incidencias y Extras de esa quincena quedan bloqueados para mantener trazabilidad.
 - Si hay corrección posterior, Admin debe cancelar o reabrir el flujo según el estado financiero y volver a capturar/corregir donde corresponda.
 
-### 22.12 Reportes y Finanzas
+### 22.12 Reportes Operativos y Finanzas
+
+En `Reportes`, el selector de ciclo y la quincena guardada usan etiquetas legibles; la búsqueda general filtra docente, coordinación o capturador según la pestaña. `CSV` y `Excel` exportan exactamente los filtros aplicados. La etiqueta de origen informa `Datos vivos` o `Nómina guardada` sin pedir al usuario seleccionar el origen técnico.
+
+Permisos de Reportes Operativos:
+
+| Rol | Horas base y extras | Horas base por categoría |
+|---|---:|---:|
+| Admin | Sí | Sí |
+| Dirección/Subdirección | Sí | Sí |
+| Coordinador | No | Sí, según alcance |
+| RH | No | Sí |
+| Finanzas/Contador/Contabilidad | No | No |
 
 Finanzas consulta nóminas guardadas. No calcula desde datos vivos.
 
@@ -1205,10 +1236,11 @@ Solo Admin debe tener acceso normal a este módulo.
 | Rol | Puede ver | Puede capturar o modificar | No debe poder hacer |
 |---|---|---|---|
 | Admin | Todos los módulos y todos los datos | Usuarios, docentes, fiscal, catálogos, calendario, horarios, incidencias, extras, nómina, finanzas y auditoría | Eliminar al administrador general protegido |
-| Coordinador | Dashboard, Directorio, Horarios, Incidencias, Extras, Nómina y Finanzas de su alcance | Docentes/horarios de su coordinación, incidencias de sus horarios, extras capturados por él | Administrar usuarios, calendario, catálogos, auditoría o finanzas globales |
+| Coordinador | Dashboard, Directorio global de lectura, Horarios, Incidencias, Extras, Nómina H20 y Reportes de categoría según alcance | Docentes propios por `created_by`, horarios/incidencias según alcance y extras capturados por él | Editar docentes ajenos, finalizar nómina, ver fiscal, administrar usuarios/calendario/catálogos/auditoría o finanzas globales |
 | Dirección/Subdirección | Dashboard, operación tipo coordinación, nómina viva global y finanzas globales de lectura | Sin acciones financieras o destructivas; opera solo lo permitido por su configuración | Guardar nómina, cambiar estados financieros, administrar calendario o accesos |
 | RH | Dashboard, Directorio, Expediente Fiscal y operación permitida | Actualizar expedientes fiscales y datos faltantes | Guardar nómina, administrar accesos, calendario, catálogos o auditoría |
-| Finanzas/Contador | Nóminas guardadas, pagos, reportes, pendientes fiscales e histórico | Generar reportes y revisar estados según permiso financiero | Capturar horarios, incidencias, extras o administrar usuarios |
+| Finanzas | Nóminas guardadas, pagos, reportes financieros, pendientes fiscales e histórico | Generar exportables y revisar estados según permiso financiero | Reportes Operativos H18, capturar horarios/incidencias/extras o administrar usuarios |
+| Contador/Contabilidad | Nóminas guardadas y exportaciones autorizadas | Exportar según permiso | Workflow, gestión fiscal, Reportes Operativos H18 o captura académica |
 
 Notas:
 
@@ -1227,6 +1259,8 @@ Notas:
 | Nómina | `Resumen CSV` | Líneas resumidas de nómina guardada | Revisión interna |
 | Nómina | `Horarios CSV` | Horarios considerados en la corrida | Validación académica |
 | Nómina | `Extras CSV` | Extras considerados en la corrida | Validación de pagos adicionales |
+| Reportes Operativos | CSV / XLSX `Horas base y extras` | Horas base, incidencias y extras, con origen vivo/snapshot | Admin y Dirección/Subdirección |
+| Reportes Operativos | CSV / XLSX `Horas base por categoría` | Carga esperada, asignada, restante y estado | Admin, Dirección/Subdirección, Coordinador y RH |
 | Finanzas | PDF `Resumen` | Resumen ejecutivo de nómina | Dirección, Finanzas o Administración |
 | Finanzas | PDF `Coordinaciones` | Resumen por coordinación | Revisión por área |
 | Finanzas | PDF `Efectivo` | Comprobantes de pago en efectivo | Firma de conformidad |

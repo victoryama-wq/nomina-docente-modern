@@ -2,6 +2,13 @@
 
 Fecha: 2026-07-08
 
+Estado documental: **histórico de deploy inicial H18 y actualización H18-F6**.
+
+Fuente de cierre vigente:
+`docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md`.
+
+Los pendientes descritos en la cronología inicial no deben interpretarse como estado actual cuando el documento de cierre los registra como resueltos.
+
 ## 1. Resumen
 
 Se ejecuto deploy controlado de H18 para publicar el modulo `Reportes` en produccion, con backend Cloud Run y frontend Firebase Hosting live.

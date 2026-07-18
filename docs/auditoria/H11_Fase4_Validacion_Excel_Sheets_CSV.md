@@ -7,7 +7,7 @@
 - Fecha de validacion local: 2026-06-03.
 - Base usada: `nomina_docente_test`.
 - Origen de CSV: rutas backend invocadas con `app.inject()` y actores de prueba H04, mas helpers frontend H11-F3B.
-- Carpeta temporal de evidencia: `C:\Users\Admin\AppData\Local\Temp\nomina-h11-f4-csv-1780498870152`.
+- Carpeta temporal de evidencia: `%TEMP%\nomina-h11-f4-csv-1780498870152` (ruta local temporal, ya no operativa).
 - Herramientas usadas:
   - Excel Windows via COM: disponible, version `16.0`.
   - Parser tecnico Node: BOM, CRLF, headers, columnas, comillas, comas, saltos internos y mojibake.

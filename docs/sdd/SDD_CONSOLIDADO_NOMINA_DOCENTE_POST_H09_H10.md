@@ -1,7 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-07-16
+Ultima actualizacion: 2026-07-18
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -15,6 +15,10 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
 | Revision Cloud Run vigente documentada | `nomina-api-00051-9s5` |
+| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00050-zdm` |
+| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h20-prod-56553f4` |
+| Digest API vigente | `sha256:3773e95e35836acb5ba30382d0465a800accd38491092abd625a07b4719839ac` |
+| Recursos Cloud Run | CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, min `0`, max `3` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
 | Firebase Hosting release vigente | `1784228039752000` |
 | Firebase Hosting version vigente | `41bf160c7c3595b6` |
@@ -22,6 +26,7 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true`, en monitoreo |
+| Control H05 verificado | 15 baseline, 0 pendientes, 0 checksum mismatch |
 
 Estado por H:
 
@@ -314,6 +319,18 @@ Documentos vigentes:
 
 ## 5. Documentos fuente de verdad
 
+Precedencia documental vigente:
+
+1. Acta de deploy/cierre mas reciente para el estado puntual del release.
+2. Este SDD consolidado para arquitectura, modulos y reglas vigentes.
+3. Matriz formal de riesgos vigente.
+4. SPEC aprobada de la fase o modulo.
+5. Diseno tecnico aprobado.
+6. Auditorias de implementacion y validacion.
+7. Inventarios, dry-runs y documentos historicos.
+
+Codex debe leer primero este SDD, la matriz y los documentos especificos de la fase nueva. Una referencia historica no sustituye el estado vigente aunque conserve valores correctos para su fecha.
+
 | Area | Documento principal | Documentos historicos relacionados | Estado |
 |---|---|---|---|
 | Estado consolidado | `docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md` | SDD retrospectivo, README, matriz | Vigente principal |
@@ -332,6 +349,8 @@ Documentos vigentes:
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
 | Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`, `docs/auditoria/H18_Deploy_Productivo_Reportes_Operativos.md`, `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md`, `docs/auditoria/H18_Hotfix_Reportes_Snapshot_LineKey.md` y `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | Cerrado operativo; H18-F1/F2/F5/F6 y hotfix snapshot desplegados; CSV/XLSX validados en Excel institucional |
 | Nomina compartida Coordinador | `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`, `docs/auditoria/H20_Alcance_Compartido_Nomina_Coordinadores.md` y `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md` | H02/H03 Fase 4/5, ajuste docentes compartidos y H04 Fase 4/5 | Cerrado operativo; revision `nomina-api-00051-9s5` y Hosting H20 activos, smoke autenticado satisfactorio |
+| Manuales | `docs/Manual_Entrega_Nomina_Docente.md` y `docs/Manual_Uso_Nomina_Docente.md` | DOCX generados desde ambas fuentes Markdown | Vigentes post-H20; Markdown es la fuente editable |
+| Alineacion post-H20 | `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md` | README, H13, manuales y documentos historicos clasificados | Evidencia read-only de Git, Cloud Run, Hosting, Cloud SQL y H05 |
 
 ## 6. Documentos historicos / no usar como fuente primaria
 
@@ -349,13 +368,7 @@ Documentos vigentes:
 | `docs/sdd/SDD_Retrospectivo_Nomina_Docente.md` | Buen resumen historico, pero ya acumula informacion de varias etapas y no debe ser unica fuente futura. | SDD consolidado actual. |
 | `Codigo.gs` / `index.html` historicos en Git | Legacy retirado; no representa reglas actuales. | H06/H14 y SDD consolidado. |
 
-Regla de precedencia:
-
-1. Documento de cierre/deploy mas reciente.
-2. Diseno tecnico aprobado.
-3. SPEC aprobada.
-4. SDD retrospectivo.
-5. Inventarios, dry-runs y documentos de fase antigua como referencia historica.
+La regla de precedencia de esta seccion se aplica tambien a los documentos historicos listados arriba.
 
 ## 7. Riesgos pendientes
 

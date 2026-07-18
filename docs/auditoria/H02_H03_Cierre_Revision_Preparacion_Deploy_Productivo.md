@@ -249,7 +249,7 @@ Antes de autorizar produccion se requiere:
 Ejecutar antes de cualquier cambio productivo:
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 & $gcloud sql export sql nomina-docente-web `
   "gs://nomina-docente-prod-sql-imports/backups/pre-h02h03-$stamp.sql.gz" `
@@ -328,7 +328,7 @@ git log --oneline -5
 Usar tag productivo trazable:
 
 ```powershell
-$gcloud = 'C:\Users\Admin\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd'
+$gcloud = (Get-Command gcloud.cmd).Source
 $commit = git rev-parse --short HEAD
 $image = "us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h02h03-prod-$commit"
 & $gcloud builds submit . `

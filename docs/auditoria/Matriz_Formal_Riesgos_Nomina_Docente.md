@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-07-16
+Actualizacion: 2026-07-18
 
 ## 1. Contexto
 
@@ -26,6 +26,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H18 cerrado operativo: Reportes Operativos desplegado, filtros amigables H18-F6 vigentes, hotfix snapshot `ped.line_key` aplicado y CSV/XLSX validados en Excel institucional.
 - H19 ejecutado de forma controlada: backup exitoso, preview en ROLLBACK, 36 actualizaciones de `teachers.created_by`, 3 altas minimas y validacion posterior sin duplicados.
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
+- Alineacion documental post-H20 verificada contra Cloud Run, Firebase Hosting y H05 en modo read-only; no cambia el estado ni la prioridad de los riesgos.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
 Arquitectura vigente:

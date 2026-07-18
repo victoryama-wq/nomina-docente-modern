@@ -1,5 +1,13 @@
 # Infraestructura Google Cloud preparada
 
+Estado documental: **histórico**.
+
+Fuente vigente que lo sustituye:
+`docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md` y
+`docs/auditoria/H13_Checklist_Productivo_Permanente.md`.
+
+Los datos siguientes documentan la preparación inicial. La configuración actual debe verificarse en modo read-only antes de cada deploy.
+
 Proyecto:
 
 ```text
@@ -102,7 +110,7 @@ Validacion realizada:
 4. Se verifico que existe el trigger `app_users_protected_super_admin_guard`.
 5. Se verifico `https://nomina-docente-prod.web.app/api/health` con respuesta `ok: true`.
 
-Migraciones aplicadas:
+Migraciones aplicadas al momento de esta evidencia histórica:
 
 ```text
 001_initial_schema.sql

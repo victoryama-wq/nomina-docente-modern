@@ -1,5 +1,12 @@
 # Cierre Global Matriz de Riesgos Nomina Docente - 2026-06-03
 
+Estado documental: **histórico**.
+
+Fuente vigente:
+`docs/auditoria/Matriz_Formal_Riesgos_Nomina_Docente.md`.
+
+Este cierre conserva el estado real del 2026-06-03; las fases H15-H20 posteriores se consolidan en la matriz y el SDD vigentes.
+
 ## 1. Resumen ejecutivo
 
 La matriz de riesgos del sistema Nomina Docente queda cerrada operativamente para los riesgos principales identificados.

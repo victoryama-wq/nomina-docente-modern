@@ -23,7 +23,7 @@ solo para el lote aprobado.
 
 Archivo local validado:
 
-- `C:\Users\Admin\Downloads\Hoja de cálculo sin título - Hoja 1.csv`
+- Archivo CSV local aprobado `Hoja de cálculo sin título - Hoja 1.csv` (ruta de perfil omitida)
 
 Columnas detectadas:
 

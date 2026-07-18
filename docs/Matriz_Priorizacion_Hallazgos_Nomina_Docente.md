@@ -1,5 +1,12 @@
 # Matriz de Priorizacion de Hallazgos - Nomina Docente
 
+Estado documental: **superado por la matriz formal vigente**.
+
+Fuente vigente:
+`docs/auditoria/Matriz_Formal_Riesgos_Nomina_Docente.md`.
+
+Se conserva como inventario histórico de priorización inicial.
+
 Fecha de elaboracion: 2026-05-15
 
 ## Alcance
