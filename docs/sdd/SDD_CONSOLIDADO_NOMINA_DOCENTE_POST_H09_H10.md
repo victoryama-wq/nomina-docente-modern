@@ -47,6 +47,7 @@ Estado por H:
 | H18 | Cerrado operativo; Reportes Operativos desplegado, filtros amigables H18-F6 vigentes y hotfix snapshot `ped.line_key` aplicado en `nomina-api-00050-zdm`. |
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
+| H21 | Diagnostico y diseno; importacion CSV y busqueda normalizada de Asignaturas no implementadas. Requiere decisiones y futura migracion H05 `013`. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -315,7 +316,7 @@ Documentos vigentes:
 | Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. | H09/H10 Fase 3, Fase 4, deploy H09/H10. |
 | Accesos | Roles y usuarios gestionados por Admin; no mostrar checkboxes manuales de coordinaciones como fuente operativa final; subdireccion usa `direccion`. | H02/H03 Fase 5, H04 Fase 5. |
 | Auditoria | Export CSV y eventos; evidencia de cierre H10 via `audit_log`; no registrar secretos ni datos fiscales completos innecesarios. | H03 Fase 4, H09/H10 Fase 3, H11 inventario. |
-| Catalogos | H12 cerrado documental; politica operativa privilegia inactivar y conservar historicos/snapshots sin cambiar el sistema actual. | Matriz formal H12, SPEC H12 y cierre documental H12. |
+| Catalogos | H12 mantiene la politica de inactivar y conservar historia. H21 diagnostica importacion CSV de Asignaturas y busqueda sin acentos; no esta implementado y no cambia el catalogo actual. | SPEC/cierre H12, SPEC H21 y diagnostico H21. |
 
 ## 5. Documentos fuente de verdad
 
@@ -344,6 +345,7 @@ Codex debe leer primero este SDD, la matriz y los documentos especificos de la f
 | Estados/cierre | `docs/auditoria/H09_H10_Deploy_Productivo_Resultado.md` | SPEC, diseno, fases 1-4, predeploy | Deploy/cierre vigente; SPEC/diseno aprobados |
 | CSV/codificacion | `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md` | H11 Fase 1, Fase 2, Fase 3A, Fase 3B, Fase 4, deploy H11-F5 y cierre postdeploy | Cerrado operativo; exportables criticos estandarizados y validados en Excel institucional |
 | Catalogos historicos | `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md` | SPEC H12 | Cerrado documental; politica operativa sin implementacion tecnica |
+| Importacion de Asignaturas | `docs/specs/SPEC_H21_Importacion_CSV_Asignaturas.md` y `docs/auditoria/H21_Diagnostico_Importacion_CSV_Asignaturas.md` | H12, H05, Catalogos y Horarios | Diagnostico/diseno; no implementado, migracion `013` solo propuesta |
 | Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
@@ -383,6 +385,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
+| H21 | Diagnostico/diseno | Resolver decisiones de clave institucional, bootstrap legacy, auto-creacion desde Horarios, parser CSV y migracion `013` antes de implementar. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -408,15 +411,17 @@ Para cualquier fase posterior:
 
 Orden recomendado:
 
-1. H07 Google Provider `hd`:
+1. H21 importacion CSV de Asignaturas:
+   - aprobar decisiones pendientes y preparar migracion `013` solo en local/test mediante H05.
+2. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
-2. H08 refactor gradual:
+3. H08 refactor gradual:
    - solo despues de cubrir con pruebas y sin cambiar reglas.
-3. CSV injection:
+4. CSV injection:
    - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
-4. H13 operativo continuo:
+5. H13 operativo continuo:
    - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
-5. Cierre global de matriz:
+6. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 
 ## 10. Confirmacion de alcance de esta consolidacion
