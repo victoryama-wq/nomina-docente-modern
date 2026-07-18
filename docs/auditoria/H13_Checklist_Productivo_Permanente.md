@@ -1,6 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
+Ultima actualizacion de estado productivo: 2026-07-16
 
 ## 1. Resumen ejecutivo
 
@@ -31,8 +32,11 @@ Alcance de H13:
 | Cloud Run API | Servicio `nomina-api` |
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
-| Revision Cloud Run vigente documentada | `nomina-api-00046-6ck` |
+| Revision Cloud Run vigente documentada | `nomina-api-00051-9s5` |
+| Imagen API vigente H20 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h20-prod-56553f4` |
 | Imagen API H11 documentada | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h11-prod-4e0c214` |
+| Firebase Hosting release vigente | `1784228039752000` |
+| Firebase Hosting version vigente | `41bf160c7c3595b6` |
 | Instancia Cloud SQL | `nomina-docente-web` |
 | Base productiva | `nomina_docente` |
 | Usuario DB aplicativo | `app_nomina` |
@@ -41,7 +45,7 @@ Alcance de H13:
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true` en monitoreo |
 
-La revision vigente debe confirmarse antes de cada deploy con Cloud Run, porque este documento registra el ultimo estado conocido al cierre de H13.
+La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues del cierre operativo H20.
 
 ## 3. Variables no secretas Cloud Run
 

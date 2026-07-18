@@ -133,7 +133,7 @@ Observacion: el primer intento de integracion contra `localhost:55432` no conect
 - Impacto BD: ninguno.
 - Migraciones: ninguna.
 - Produccion: codigo API/frontend desplegado sin cambios de BD.
-- Deploy: revision Cloud Run `nomina-api-00051-9s5` y Hosting release `1784228039752000` activos.
+- Deploy: revision Cloud Run `nomina-api-00051-9s5`, Hosting release `1784228039752000` y version `41bf160c7c3595b6` activos.
 
 ## 10. Cierre productivo
 
@@ -141,6 +141,7 @@ Observacion: el primer intento de integracion contra `localhost:55432` no conect
 - Smoke autenticado de Admin aprobado sin perdida de alcance, lineas ni totales.
 - Ausencia de duplicaciones y datos fiscales confirmada.
 - Evidencia completa: `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`.
+- Commit documental de cierre: `02cb416 docs(h20): record shared payroll scope production deploy`.
 - H20 queda cerrado operativo; solo permanece monitoreo normal de regresion.
 
 ## 11. Confirmaciones

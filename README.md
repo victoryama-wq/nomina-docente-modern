@@ -34,9 +34,10 @@ API via Hosting: https://nomina-docente-prod.web.app/api/health
 
 Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
-Estado productivo consolidado posterior a H15:
+Estado productivo consolidado posterior a H20:
 
-- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00046-6ck`.
+- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00051-9s5`.
+- Firebase Hosting live: release `1784228039752000`, version `41bf160c7c3595b6`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.
@@ -49,6 +50,10 @@ Estado productivo consolidado posterior a H15:
 - H12 catalogos historicos: cerrado documental como politica operativa.
 - H13 checklist productivo permanente: cerrado documental; usar antes de cada deploy.
 - H15 sesion por inactividad: desplegado en Firebase Hosting live; `browserSessionPersistence`, timeout 60 minutos y modal de advertencia vigentes.
+- H17 Directorio: normalizacion productiva ejecutada y documentada bajo control de `teachers.created_by`.
+- H18 Reportes Operativos: cerrado operativo con filtros amigables y hotfix snapshot desplegado.
+- H19 Directorio: actualizacion controlada y altas minimas ejecutadas sin duplicados.
+- H20 Nomina compartida: cerrado operativo en `nomina-api-00051-9s5`; smoke autenticado Coordinador/Admin aprobado, sin migraciones ni cambios H01.
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 
 Documentos de estado relevantes:
@@ -68,6 +73,8 @@ Documentos de estado relevantes:
 - `docs/auditoria/H15_Deploy_Productivo_Resultado.md`
 - `docs/auditoria/H16_Metadata_Favicon_WebApp.md`
 - `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md`
+- `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`
+- `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`
 
 ## Comandos útiles
 

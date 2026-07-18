@@ -14,6 +14,12 @@ Resultado final: **H20 cerrado operativo**.
 56553f4 feat(h20): expand coordinator payroll preview scope
 ```
 
+Commit documental de cierre:
+
+```text
+02cb416 docs(h20): record shared payroll scope production deploy
+```
+
 La rama `feature/h02-h03-user-coordinations-permissions` fue subida y sincronizada con `origin` antes del deploy.
 
 ## 3. Pruebas predeploy

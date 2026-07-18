@@ -121,6 +121,7 @@ No se agregan controles de edicion ni finalizacion.
 Estado: **cerrado operativo**.
 
 - Commit funcional: `56553f4 feat(h20): expand coordinator payroll preview scope`.
+- Commit documental: `02cb416 docs(h20): record shared payroll scope production deploy`.
 - Revision Cloud Run vigente: `nomina-api-00051-9s5`.
 - Firebase Hosting H20 activo: release `1784228039752000`, version `41bf160c7c3595b6`.
 - Pruebas API 22/22, Web 58/58 e integracion PostgreSQL 60/60 aprobadas.

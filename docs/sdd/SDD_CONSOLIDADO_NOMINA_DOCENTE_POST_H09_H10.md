@@ -1,6 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
+Ultima actualizacion: 2026-07-16
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -13,8 +14,10 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00050-zdm` |
+| Revision Cloud Run vigente documentada | `nomina-api-00051-9s5` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
+| Firebase Hosting release vigente | `1784228039752000` |
+| Firebase Hosting version vigente | `41bf160c7c3595b6` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
