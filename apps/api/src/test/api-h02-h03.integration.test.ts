@@ -24,6 +24,7 @@ const ids = {
   scheduleMulti: '50000000-0000-4000-8000-000000000002',
   extraOwn: '60000000-0000-4000-8000-000000000001',
   payrollRun: '70000000-0000-4000-8000-000000000001',
+  subject: '30000000-0000-4000-8000-000000000001',
   tabulator: '30000000-0000-4000-8000-000000000002'
 } as const;
 
@@ -32,7 +33,7 @@ function scheduleBody(overrides: Record<string, unknown> = {}) {
     cycleId: ids.cycle,
     teacherId: ids.teacherMulti,
     coordinationId: TEST_COORDINATIONS.adetur.id,
-    subjectName: 'H04 QA Materia Base',
+    subjectId: ids.subject,
     groupCode: 'QA-MU-01',
     tabulatorId: ids.tabulator,
     tabulatorName: 'H04 QA Tabulador 100',

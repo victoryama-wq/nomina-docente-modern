@@ -129,7 +129,7 @@ const scheduleBodySchema = z.object({
   responsibleUserId: z.string().uuid().optional().nullable(),
   coordinationId: z.string().uuid().optional().nullable(),
   coordinationName: z.string().trim().max(120).optional().default(''),
-  subjectName: z.string().trim().min(1).max(160),
+  subjectId: z.string().uuid(),
   groupCode: z
     .string()
     .trim()
@@ -540,24 +540,21 @@ async function assertScheduleWritableByActor(
   if (isOwnRecord(scope, schedule.createdById)) return;
   throw new Error('Solo puedes editar o eliminar horarios capturados por tu usuario.');
 }
-async function getOrCreateSubject(client: PoolClient, subjectName: string): Promise<string | null> {
-  const name = normalizeText(subjectName);
-  if (!name) return null;
-
-  const existing = await client.query<{ id: string; status: string }>(
-    'SELECT id, status FROM subjects WHERE lower(name) = lower($1) LIMIT 1',
-    [name]
+async function resolveSubject(
+  client: PoolClient,
+  subjectId: string,
+  currentSubjectId: string | null = null
+): Promise<{ id: string; name: string; status: 'ACTIVO' | 'INACTIVO' }> {
+  const result = await client.query<{ id: string; name: string; status: 'ACTIVO' | 'INACTIVO' }>(
+    'SELECT id, name, status FROM subjects WHERE id = $1 LIMIT 1',
+    [subjectId]
   );
-  if (existing.rows[0]) {
-    if (existing.rows[0].status !== 'ACTIVO') throw new Error('La asignatura seleccionada está inactiva.');
-    return existing.rows[0].id;
+  const subject = result.rows[0];
+  if (!subject) throw new Error('Selecciona una asignatura valida del catalogo.');
+  if (subject.status !== 'ACTIVO' && subject.id !== currentSubjectId) {
+    throw new Error('La asignatura seleccionada esta inactiva.');
   }
-
-  const created = await client.query<{ id: string }>(
-    'INSERT INTO subjects (name, status) VALUES ($1, $2) RETURNING id',
-    [name, 'ACTIVO']
-  );
-  return created.rows[0].id;
+  return subject;
 }
 
 async function resolveTabulator(client: PoolClient, body: ScheduleBody): Promise<{ id: string; name: string; amount: DecimalString }> {
@@ -902,7 +899,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
 
       const responsible = await loadScheduleResponsible(client, actor, parsed.data);
       const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data, responsible);
-      const subjectId = await getOrCreateSubject(client, parsed.data.subjectName);
+      const subject = await resolveSubject(client, parsed.data.subjectId);
       const tabulator = await resolveTabulator(client, parsed.data);
 
       const created = await client.query<{ id: string }>(
@@ -934,8 +931,8 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
           cycle.id,
           coordinationId,
           teacher.id,
-          subjectId,
-          normalizeText(parsed.data.subjectName),
+          subject.id,
+          subject.name,
           parsed.data.groupCode,
           tabulator.id,
           tabulator.name,
@@ -990,7 +987,7 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
         responsibleUserId: parsed.data.responsibleUserId || before.createdById
       });
       const coordinationId = await resolveScheduleCoordination(client, actor, teacher, parsed.data, responsible);
-      const subjectId = await getOrCreateSubject(client, parsed.data.subjectName);
+      const subject = await resolveSubject(client, parsed.data.subjectId, before.subjectId);
       const tabulator = await resolveTabulator(client, parsed.data);
 
       await client.query(
@@ -1022,8 +1019,8 @@ export async function registerScheduleRoutes(app: FastifyInstance): Promise<void
           cycle.id,
           coordinationId,
           teacher.id,
-          subjectId,
-          normalizeText(parsed.data.subjectName),
+          subject.id,
+          subject.name,
           parsed.data.groupCode,
           tabulator.id,
           tabulator.name,

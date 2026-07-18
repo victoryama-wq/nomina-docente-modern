@@ -41,6 +41,7 @@ export const TEST_IDS = {
   payrollRun: '70000000-0000-4000-8000-000000000001',
   closablePayrollRunA: '70000000-0000-4000-8000-000000000021',
   closablePayrollRunB: '70000000-0000-4000-8000-000000000022',
+  subject: '30000000-0000-4000-8000-000000000001',
   tabulator: '30000000-0000-4000-8000-000000000002'
 } as const;
 
@@ -59,7 +60,7 @@ export function scheduleBody(overrides: Record<string, unknown> = {}) {
     cycleId: TEST_IDS.cycle,
     teacherId: TEST_IDS.teacherMulti,
     coordinationId: TEST_COORDINATIONS.adetur.id,
-    subjectName: 'H04 QA Materia Base',
+    subjectId: TEST_IDS.subject,
     groupCode: 'QA-MU-01',
     tabulatorId: TEST_IDS.tabulator,
     tabulatorName: 'H04 QA Tabulador 100',
