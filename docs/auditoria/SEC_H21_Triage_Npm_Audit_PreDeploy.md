@@ -2,8 +2,8 @@
 
 Fecha: 2026-07-20
 
-Estado: `REQUIERE_ACTUALIZACION_CONTROLADA`; H21-F5 bloqueado hasta resolver
-la vulnerabilidad critica en una fase SEC separada.
+Estado: triage historico atendido por SEC-H21; vulnerabilidad critica corregida
+con `websocket-driver@0.7.5` y regresion completa aprobada el 2026-07-20.
 
 ## 1. Alcance
 
@@ -57,25 +57,27 @@ firebase@11.10.0 / firebase-admin@13.10.0
 
 El lockfile declara `faye-websocket` con rango
 `websocket-driver >=0.5.1`, por lo que `0.7.5` es compatible con ese contrato.
-La remediacion no se aplica en esta fase porque requiere cambio controlado de
-lockfile, instalacion reproducible y regresion API/web/integracion.
+La remediacion no se aplico durante este triage inicial. Posteriormente se
+completo en la fase SEC-H21 documentada en
+`docs/auditoria/SEC_H21_Correccion_Websocket_Driver.md`.
 
-## 4. Recomendacion SEC separada
+## 4. Resolucion SEC-H21
 
-1. Crear commit independiente de seguridad.
-2. Actualizar exclusivamente la resolucion transitiva a `websocket-driver
-   0.7.5`, sin `--force` y sin cambios mayores.
-3. Confirmar el diff de `package-lock.json` y que no cambien paquetes no
-   relacionados.
-4. Ejecutar `npm run test:api`, `npm run test:web`,
-   `npm run test:api:integration`, `npm run typecheck` y `npm run build`.
-5. Repetir `npm audit --json` y confirmar la eliminacion del hallazgo critico.
-6. Solo entonces reabrir la decision de H21-F5.
+1. Se actualizo exclusivamente la resolucion transitiva a
+   `websocket-driver@0.7.5`.
+2. El unico diff de dependencias fue `package-lock.json`: version, URL e
+   integrity del paquete corregido.
+3. `firebase@11.10.0` y `firebase-admin@13.10.0` permanecieron sin cambio.
+4. `npm audit --json` quedo en 0 critical y 15 vulnerabilidades no criticas.
+5. API, web, integracion, typecheck y build aprobaron la regresion.
+6. H21-F5 permanece bloqueado solo por las colisiones del preview
+   institucional, no por este advisory.
 
 ## 5. Confirmaciones
 
-- No se modificaron `package.json` ni `package-lock.json`.
-- No se instalaron ni actualizaron dependencias.
+- No se modifico ningun `package.json`.
+- `package-lock.json` cambio unicamente para resolver
+  `websocket-driver@0.7.5`.
 - No se ejecuto `npm audit fix`.
 - No se uso `--force`.
 - No se hizo deploy.

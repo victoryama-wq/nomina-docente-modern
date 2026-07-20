@@ -86,6 +86,14 @@ transitivas ya presentes como `exceljs`, `firebase-admin`, `vite`,
 parte del cierre H21-F4. La remediacion debe tratarse en una fase de seguridad
 separada y con pruebas de regresion.
 
+Actualizacion SEC-H21 del 2026-07-20:
+
+- resolucion transitiva actualizada de `websocket-driver@0.7.4` a `0.7.5`;
+- 0 vulnerabilidades critical y advisory `GHSA-xv26-6w52-cph6` ausente;
+- 15 vulnerabilidades no criticas restantes documentadas;
+- regresion aprobada: API 22/22, web 61/61 e integracion 79/79;
+- sin `npm audit fix`, sin `--force` y sin cambios mayores de Firebase.
+
 ## 7. Riesgos pendientes
 
 - aplicar `013` en produccion requiere H05, backup y aprobacion humana;
@@ -99,13 +107,13 @@ Validacion posterior de predeploy del 2026-07-20:
   estables y cinco grupos normalizados preservados;
 - preview de la plantilla institucional base: 271 sin cambios y 10 bloqueantes
   por cinco colisiones normalizadas; sin apply;
-- vulnerabilidad critica transitiva `websocket-driver@0.7.4` pendiente de fase
-  SEC controlada;
-- H21-F5 permanece bloqueado.
+- vulnerabilidad critica transitiva corregida con `websocket-driver@0.7.5`;
+- H21-F5 permanece bloqueado por las 10 filas del preview, no por SEC-H21.
 
 Evidencias:
 
 - `docs/auditoria/SEC_H21_Triage_Npm_Audit_PreDeploy.md`;
+- `docs/auditoria/SEC_H21_Correccion_Websocket_Driver.md`;
 - `docs/auditoria/H21_Ensayo_Migracion_013_Datos_Productivos_Temporales.md`;
 - `docs/auditoria/H21_Validacion_CSV_Institucional_PreDeploy.md`.
 
