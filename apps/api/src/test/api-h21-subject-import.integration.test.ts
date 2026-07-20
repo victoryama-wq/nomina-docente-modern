@@ -35,6 +35,23 @@ async function seedAccentedSubject(): Promise<void> {
   }
 }
 
+async function seedHistoricalNormalizedDuplicate(): Promise<void> {
+  const client = await connectTestDb();
+  try {
+    await client.query(`
+      INSERT INTO subjects (id, official_code, name, status) VALUES
+        ('30000000-0000-4000-8000-000000000092', NULL, 'Planeacion y Control de Presupuestos', 'ACTIVO'),
+        ('30000000-0000-4000-8000-000000000093', NULL, 'PLANEACION Y CONTROL DE PRESUPUESTOS', 'INACTIVO')
+      ON CONFLICT (id) DO UPDATE
+      SET official_code = EXCLUDED.official_code,
+          name = EXCLUDED.name,
+          status = EXCLUDED.status
+    `);
+  } finally {
+    await client.end();
+  }
+}
+
 describeIfDb('H21 subject CSV import and normalized search', () => {
   let app: FastifyInstance | null = null;
 
@@ -48,6 +65,7 @@ describeIfDb('H21 subject CSV import and normalized search', () => {
   });
 
   it('offers H11 CSV template only to administrators', async () => {
+    await seedHistoricalNormalizedDuplicate();
     const response = await injectAs(app!, adminActor(), {
       method: 'GET',
       url: '/api/catalogs/subjects/import/template'
@@ -64,6 +82,16 @@ describeIfDb('H21 subject CSV import and normalized search', () => {
     });
     expect(catalog.statusCode).toBe(200);
     expect(catalog.body).toContain('H04 QA Materia Base');
+    expect(catalog.body).toContain('Planeacion y Control de Presupuestos');
+    expect(catalog.body).not.toContain('PLANEACION Y CONTROL DE PRESUPUESTOS');
+
+    const catalogWithInactive = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: '/api/catalogs/subjects/import/template?scope=catalog&includeInactive=true'
+    });
+    expect(catalogWithInactive.statusCode).toBe(200);
+    expect(catalogWithInactive.body).toContain('Planeacion y Control de Presupuestos');
+    expect(catalogWithInactive.body).toContain('PLANEACION Y CONTROL DE PRESUPUESTOS');
 
     for (const actor of [coordinatorActor(), directionActor(), rhActor(), financeActor(), accountantActor(), accountingActor()]) {
       const denied = await injectAs(app!, actor, {
@@ -72,6 +100,82 @@ describeIfDb('H21 subject CSV import and normalized search', () => {
       });
       expect(denied.statusCode).toBe(403);
     }
+  });
+
+  it('allows canonical updates by ID when only an inactive historical duplicate shares the normalized name', async () => {
+    await seedHistoricalNormalizedDuplicate();
+    const base64Data = csvBase64([
+      '30000000-0000-4000-8000-000000000092,H21-PLAN,Planeacion y Control de Presupuestos,ACTIVO'
+    ]);
+    const previewResponse = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/catalogs/subjects/import/preview',
+      payload: { fileName: 'canonica.csv', base64Data }
+    });
+    expect(previewResponse.statusCode).toBe(200);
+    const preview = previewResponse.json().preview;
+    expect(preview.hasBlockingErrors).toBe(false);
+    expect(preview.summary.ACTUALIZAR_CLAVE).toBe(1);
+
+    const applyResponse = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/catalogs/subjects/import/apply',
+      payload: {
+        fileName: 'canonica.csv',
+        base64Data,
+        fileSha256: preview.fileSha256,
+        catalogFingerprint: preview.catalogFingerprint,
+        confirmed: true
+      }
+    });
+    expect(applyResponse.statusCode).toBe(200);
+
+    const db = await connectTestDb();
+    try {
+      const subjects = await db.query<{ id: string; official_code: string | null; status: string }>(`
+        SELECT id, official_code, status::text
+        FROM subjects
+        WHERE id IN (
+          '30000000-0000-4000-8000-000000000092',
+          '30000000-0000-4000-8000-000000000093'
+        )
+        ORDER BY id
+      `);
+      expect(subjects.rows).toEqual([
+        { id: '30000000-0000-4000-8000-000000000092', official_code: 'H21-PLAN', status: 'ACTIVO' },
+        { id: '30000000-0000-4000-8000-000000000093', official_code: null, status: 'INACTIVO' }
+      ]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  it('keeps new normalized collisions and two active CSV variants blocked', async () => {
+    await seedHistoricalNormalizedDuplicate();
+    const newCollision = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/catalogs/subjects/import/preview',
+      payload: {
+        fileName: 'nueva-colision.csv',
+        base64Data: csvBase64([',H21-OTRA,PLANEACION Y CONTROL DE PRESUPUESTOS,ACTIVO'])
+      }
+    });
+    expect(newCollision.statusCode).toBe(200);
+    expect(newCollision.json().preview.summary.POSIBLE_DUPLICADO_NOMBRE).toBe(1);
+
+    const activeVariants = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/catalogs/subjects/import/preview',
+      payload: {
+        fileName: 'dos-activas.csv',
+        base64Data: csvBase64([
+          '30000000-0000-4000-8000-000000000092,,Planeacion y Control de Presupuestos,ACTIVO',
+          '30000000-0000-4000-8000-000000000093,,PLANEACION Y CONTROL DE PRESUPUESTOS,ACTIVO'
+        ])
+      }
+    });
+    expect(activeVariants.statusCode).toBe(200);
+    expect(activeVariants.json().preview.summary.DUPLICADO_NOMBRE_CSV).toBe(2);
   });
 
   it('previews and atomically applies one code assignment and one new subject', async () => {

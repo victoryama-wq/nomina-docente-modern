@@ -254,11 +254,17 @@ export async function buildSubjectImportPreview(
   const idCounts = new Map<string, number>();
   const codeCounts = new Map<string, number>();
   const nameCounts = new Map<string, number>();
+  const activeNameCounts = new Map<string, number>();
   parsed.rows.forEach((row, index) => {
     if (row.id) idCounts.set(row.id.toLowerCase(), (idCounts.get(row.id.toLowerCase()) || 0) + 1);
     if (row.officialCode) codeCounts.set(row.officialCode, (codeCounts.get(row.officialCode) || 0) + 1);
     const normalizedName = normalizedNames[index];
-    if (normalizedName) nameCounts.set(normalizedName, (nameCounts.get(normalizedName) || 0) + 1);
+    if (normalizedName) {
+      nameCounts.set(normalizedName, (nameCounts.get(normalizedName) || 0) + 1);
+      if (row.status === 'ACTIVO') {
+        activeNameCounts.set(normalizedName, (activeNameCounts.get(normalizedName) || 0) + 1);
+      }
+    }
   });
 
   const rows = parsed.rows.map<SubjectImportPreviewRow>((row, index) => {
@@ -281,10 +287,6 @@ export async function buildSubjectImportPreview(
     if (row.officialCode && (codeCounts.get(row.officialCode) || 0) > 1) {
       return blockingRow(row, 'DUPLICADO_CLAVE_CSV', 'El CSV repite la misma clave.');
     }
-    if ((nameCounts.get(normalizedName) || 0) > 1) {
-      return blockingRow(row, 'DUPLICADO_NOMBRE_CSV', 'El CSV repite el mismo nombre normalizado.');
-    }
-
     const subjectById = row.id ? byId.get(row.id.toLowerCase()) || null : null;
     const subjectByCode = row.officialCode ? byCode.get(row.officialCode) || null : null;
     if (row.id && !subjectById) {
@@ -292,6 +294,14 @@ export async function buildSubjectImportPreview(
     }
     if (subjectById && subjectByCode && subjectById.id !== subjectByCode.id) {
       return blockingRow(row, 'ID_CLAVE_INCOMPATIBLE', 'El ID y la clave pertenecen a asignaturas distintas.');
+    }
+
+    const csvNameCollision = (nameCounts.get(normalizedName) || 0) > 1;
+    if (
+      csvNameCollision &&
+      ((activeNameCounts.get(normalizedName) || 0) > 1 || !subjectById)
+    ) {
+      return blockingRow(row, 'DUPLICADO_NOMBRE_CSV', 'El CSV repite el mismo nombre normalizado.');
     }
 
     const existing = subjectById || subjectByCode;
@@ -322,8 +332,21 @@ export async function buildSubjectImportPreview(
       );
     }
     const normalizedMatches = (byNormalized.get(normalizedName) || []).filter((subject) => subject.id !== existing.id);
-    if (normalizedMatches.length > 0) {
+    const activeNormalizedMatches = normalizedMatches.filter((subject) => subject.status === 'ACTIVO');
+    if (activeNormalizedMatches.length > 0 || (normalizedMatches.length > 0 && subjectById?.id !== existing.id)) {
       return blockingRow(row, 'POSIBLE_DUPLICADO_NOMBRE', 'El nombre normalizado colisiona con otra asignatura.', existing);
+    }
+    if (
+      normalizedMatches.length > 0 &&
+      existing.status === 'INACTIVO' &&
+      (row.status !== 'INACTIVO' || (row.officialCode !== null && row.officialCode !== existing.officialCode))
+    ) {
+      return blockingRow(
+        row,
+        'POSIBLE_DUPLICADO_NOMBRE',
+        'El duplicado historico inactivo no puede recibir clave ni reactivarse por inferencia.',
+        existing
+      );
     }
     if (row.status === 'INACTIVO' && existing.status === 'ACTIVO' && existing.activeScheduleCount > 0) {
       return blockingRow(

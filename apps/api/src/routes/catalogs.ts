@@ -60,7 +60,12 @@ const subjectImportApplySchema = subjectImportFileSchema.extend({
 });
 
 const subjectImportTemplateSchema = z.object({
-  scope: z.enum(['blank', 'catalog']).optional().default('blank')
+  scope: z.enum(['blank', 'catalog']).optional().default('blank'),
+  includeInactive: z
+    .enum(['true', 'false'])
+    .optional()
+    .default('false')
+    .transform((value) => value === 'true')
 });
 
 const tabulatorBodySchema = z.object({
@@ -134,7 +139,7 @@ async function auditCatalog(
   );
 }
 
-async function listSubjects(client?: PoolClient): Promise<SubjectRow[]> {
+async function listSubjects(client?: PoolClient, includeInactive = true): Promise<SubjectRow[]> {
   const sql = `
     SELECT
       s.id,
@@ -148,12 +153,13 @@ async function listSubjects(client?: PoolClient): Promise<SubjectRow[]> {
     FROM subjects s
     LEFT JOIN schedules sc ON sc.subject_id = s.id
     LEFT JOIN academic_cycles ac ON ac.id = sc.cycle_id
+    WHERE ($1::boolean OR s.status = 'ACTIVO')
     GROUP BY s.id
     ORDER BY
       CASE s.status WHEN 'ACTIVO' THEN 1 ELSE 2 END,
       s.name ASC
   `;
-  const result = client ? await client.query<SubjectRow>(sql) : await query<SubjectRow>(sql);
+  const result = client ? await client.query<SubjectRow>(sql, [includeInactive]) : await query<SubjectRow>(sql, [includeInactive]);
   return Array.isArray(result) ? result : result.rows;
 }
 
@@ -351,7 +357,12 @@ export async function registerCatalogRoutes(app: FastifyInstance): Promise<void>
     }
     const rows =
       parsed.data.scope === 'catalog'
-        ? (await listSubjects()).map((subject) => [subject.id, subject.officialCode || '', subject.name, subject.status])
+        ? (await listSubjects(undefined, parsed.data.includeInactive)).map((subject) => [
+            subject.id,
+            subject.officialCode || '',
+            subject.name,
+            subject.status
+          ])
         : [];
     const csv = `${buildCsv(['id', 'clave', 'nombre', 'estatus'], rows)}\r\n`;
     await reply
