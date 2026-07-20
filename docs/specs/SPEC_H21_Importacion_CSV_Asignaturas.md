@@ -380,7 +380,10 @@ Antes de produccion siguen pendientes H05/H13, backup, aprobacion humana,
 validacion con CSV institucional y smoke Admin/Coordinador. No se ha ejecutado
 la migracion `013` ni se ha hecho deploy en produccion.
 
-## 18. Confirmaciones H21-F0
+## 18. Confirmaciones historicas H21-F0
+
+Las siguientes confirmaciones describen exclusivamente el diagnostico F0 y no
+el estado actual de implementacion:
 
 - No se modifico codigo.
 - No se modifico SQL.
@@ -391,3 +394,18 @@ la migracion `013` ni se ha hecho deploy en produccion.
 - No se cambiaron permisos.
 - No se hizo deploy.
 - No se modifico H01.
+
+## 19. Estado posterior H21-F1 a H21-F4
+
+- F1-F4 estan implementadas y validadas en local/test.
+- La migracion `013` fue aplicada en `nomina_docente_test` y ensayada sobre una
+  restauracion temporal de produccion; no fue aplicada en produccion.
+- Los fingerprints de asignaturas, horarios y snapshots permanecieron iguales
+  durante el ensayo.
+- Los cinco grupos normalizados legacy fueron preservados sin merge.
+- El preview del catalogo restaurado detecto 10 filas bloqueantes asociadas a
+  esos cinco grupos; no se ejecuto apply.
+- `npm audit` reporta un hallazgo critico transitivo en
+  `websocket-driver@0.7.4`; H21-F5 queda bloqueado hasta una actualizacion SEC
+  controlada.
+- No se ha hecho deploy H21.

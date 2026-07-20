@@ -47,7 +47,7 @@ Estado por H:
 | H18 | Cerrado operativo; Reportes Operativos desplegado, filtros amigables H18-F6 vigentes y hotfix snapshot `ped.line_key` aplicado en `nomina-api-00050-zdm`. |
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
-| H21 | Implementado y validado en local/test: migracion `013`, importacion CSV atomica, busqueda normalizada y Horarios por `subjectId`. Pendiente de migracion/deploy productivo. |
+| H21 | Implementado y validado en local/test; ensayo `013` satisfactorio en restauracion temporal. Deploy bloqueado por vulnerabilidad critica transitiva y 10 filas en cinco colisiones normalizadas del preview institucional base. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -385,7 +385,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
-| H21 | Implementado local/test | Preparar H05/H13, backup, migracion `013` y deploy controlado solo con aprobacion humana. |
+| H21 | Implementado local/test; predeploy bloqueado | Resolver fase SEC de `websocket-driver`, aprobar claves para cinco colisiones, repetir preview institucional y despues preparar H05/H13. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -412,7 +412,7 @@ Para cualquier fase posterior:
 Orden recomendado:
 
 1. H21 importacion CSV de Asignaturas:
-   - preparar H05/H13, backup, validacion institucional y deploy controlado; la migracion `013` ya fue aplicada solo en `nomina_docente_test`.
+   - resolver primero el hallazgo SEC y las cinco colisiones del CSV; despues repetir preview y preparar H05/H13 para una ventana controlada.
 2. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
 3. H08 refactor gradual:

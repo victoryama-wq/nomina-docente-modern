@@ -93,6 +93,22 @@ separada y con pruebas de regresion.
 - ejecutar smoke por Admin y Coordinador despues de un deploy autorizado;
 - mantener monitoreo de vulnerabilidades npm sin ejecutar fixes automaticos.
 
+Validacion posterior de predeploy del 2026-07-20:
+
+- ensayo `013` satisfactorio en restauracion temporal, con fingerprints
+  estables y cinco grupos normalizados preservados;
+- preview de la plantilla institucional base: 271 sin cambios y 10 bloqueantes
+  por cinco colisiones normalizadas; sin apply;
+- vulnerabilidad critica transitiva `websocket-driver@0.7.4` pendiente de fase
+  SEC controlada;
+- H21-F5 permanece bloqueado.
+
+Evidencias:
+
+- `docs/auditoria/SEC_H21_Triage_Npm_Audit_PreDeploy.md`;
+- `docs/auditoria/H21_Ensayo_Migracion_013_Datos_Productivos_Temporales.md`;
+- `docs/auditoria/H21_Validacion_CSV_Institucional_PreDeploy.md`.
+
 ## 8. Confirmaciones
 
 - Sin produccion.
