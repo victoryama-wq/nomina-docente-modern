@@ -14,19 +14,19 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00051-9s5` |
-| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00050-zdm` |
-| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h20-prod-56553f4` |
-| Digest API vigente | `sha256:3773e95e35836acb5ba30382d0465a800accd38491092abd625a07b4719839ac` |
+| Revision Cloud Run vigente documentada | `nomina-api-00052-xtm` |
+| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00051-9s5` |
+| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h21-prod-1b449a1` |
+| Digest API vigente | `sha256:b087fd5b77771df23367dc630c06e7f59132e8c803f5809e1ed628e026bf839c` |
 | Recursos Cloud Run | CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, min `0`, max `3` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
-| Firebase Hosting release vigente | `1784228039752000` |
-| Firebase Hosting version vigente | `41bf160c7c3595b6` |
+| Firebase Hosting release vigente | `1784583329978000` |
+| Firebase Hosting version vigente | `79673723ffe4f297` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true`, en monitoreo |
-| Control H05 verificado | 15 baseline, 0 pendientes, 0 checksum mismatch |
+| Control H05 verificado | 16 registradas: 15 baseline y `013` aplicada; 0 pendientes, 0 checksum mismatch |
 
 Estado por H:
 
@@ -36,7 +36,7 @@ Estado por H:
 | H02 | Cerrado operativo; `user_coordinations` existe, pero el fallback legacy sigue activo en monitoreo. |
 | H03 | Cerrado operativo; permisos fiscales, documentales, financieros, workflow y preview separados. |
 | H04 | Implementado hasta Fase 5; H04-F6 Playwright queda opcional posterior. |
-| H05 | Cerrado con tablas de control y baseline productivo de 15 migraciones, 0 pendientes, 0 checksum mismatch. |
+| H05 | Cerrado con tablas de control; 15 baseline y migracion `013` aplicada, 0 pendientes, 0 checksum mismatch. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
@@ -47,7 +47,7 @@ Estado por H:
 | H18 | Cerrado operativo; Reportes Operativos desplegado, filtros amigables H18-F6 vigentes y hotfix snapshot `ped.line_key` aplicado en `nomina-api-00050-zdm`. |
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
-| H21 | Implementado y prevalidado; SEC critica corregida y cinco duplicados reales conciliados satisfactoriamente en restauracion temporal. Produccion sigue sin `013`, conciliacion ni deploy H21. |
+| H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -66,6 +66,7 @@ Ultimos hitos productivos relevantes:
 - H18 hotfix snapshot: deploy productivo API ejecutado el 2026-07-09; API revision `nomina-api-00050-zdm`, sin deploy Hosting, sin migraciones, sin cambios de BD; corrige `ped.line_key`; cierre operativo validado en Excel institucional.
 - H19 Directorio Docentes: backup `1783642001652`, preview exacto en `ROLLBACK`, 36 UPDATE de `teachers.created_by` y 3 INSERT minimos; 7 de los 10 sin match nominal ya existian, 3 fueron nuevas altas y no se crearon duplicados.
 - H20 Nomina compartida: deploy productivo ejecutado el 2026-07-16; API revision `nomina-api-00051-9s5`, Hosting release `1784228039752000`; smoke autenticado Coordinador/Admin aprobado, sin migracion, escritura de Nomina ni cambio H01.
+- H21 Asignaturas: backup `1784582556252`, migracion `013` aplicada con H05, ocho horarios conciliados sin tocar snapshots y deploy `nomina-api-00052-xtm` / Hosting `1784583329978000`; smoke autenticado Catalogos/Horarios aprobado.
 
 ## 2. Arquitectura vigente
 
@@ -316,7 +317,7 @@ Documentos vigentes:
 | Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. | H09/H10 Fase 3, Fase 4, deploy H09/H10. |
 | Accesos | Roles y usuarios gestionados por Admin; no mostrar checkboxes manuales de coordinaciones como fuente operativa final; subdireccion usa `direccion`. | H02/H03 Fase 5, H04 Fase 5. |
 | Auditoria | Export CSV y eventos; evidencia de cierre H10 via `audit_log`; no registrar secretos ni datos fiscales completos innecesarios. | H03 Fase 4, H09/H10 Fase 3, H11 inventario. |
-| Catalogos | H12 mantiene la politica de inactivar y conservar historia. H21 agrega importacion CSV atomica y busqueda sin acentos; la plantilla usa activos por defecto y no permite altas por colision normalizada. La conciliacion legacy esta prevalidada, no ejecutada en produccion. | SPEC/cierre H12, SPEC H21, plan y ensayo de conciliacion H21. |
+| Catalogos | H12 mantiene la politica de inactivar y conservar historia. H21 agrega importacion CSV atomica y busqueda sin acentos; la plantilla usa activos por defecto y no permite altas por colision normalizada. Cinco duplicados legacy quedaron inactivos y sus ocho horarios apuntan a los canonicos. | SPEC/cierre H12, SPEC y acta productiva H21. |
 
 ## 5. Documentos fuente de verdad
 
@@ -345,7 +346,7 @@ Codex debe leer primero este SDD, la matriz y los documentos especificos de la f
 | Estados/cierre | `docs/auditoria/H09_H10_Deploy_Productivo_Resultado.md` | SPEC, diseno, fases 1-4, predeploy | Deploy/cierre vigente; SPEC/diseno aprobados |
 | CSV/codificacion | `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md` | H11 Fase 1, Fase 2, Fase 3A, Fase 3B, Fase 4, deploy H11-F5 y cierre postdeploy | Cerrado operativo; exportables criticos estandarizados y validados en Excel institucional |
 | Catalogos historicos | `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md` | SPEC H12 | Cerrado documental; politica operativa sin implementacion tecnica |
-| Importacion de Asignaturas | `docs/specs/SPEC_H21_Importacion_CSV_Asignaturas.md`, `docs/auditoria/H21_Diagnostico_Importacion_CSV_Asignaturas.md`, `docs/auditoria/H21_Plan_Conciliacion_Duplicados_Reales.md` y `docs/auditoria/H21_Ensayo_Conciliacion_Duplicados_Temporal.md` | H12, H05, Catalogos y Horarios | Implementado y prevalidado; `013`, conciliacion y deploy productivos pendientes |
+| Importacion de Asignaturas | `docs/auditoria/H21_Deploy_Productivo_Importacion_Asignaturas.md` y `docs/specs/SPEC_H21_Importacion_CSV_Asignaturas.md` | Diagnostico, plan y ensayo de conciliacion H21; H12/H05 | Cerrado operativo; `013`, conciliacion, deploy y smoke aprobados; CSV institucional definitivo no aplicado |
 | Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
@@ -385,7 +386,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
-| H21 | Prevalidado; ventana productiva pendiente | Ejecutar H05/H13, backup, `013`, preview SQL en ROLLBACK, conciliacion y smoke; SEC y colisiones ya resueltos tecnicamente. |
+| H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -411,16 +412,16 @@ Para cualquier fase posterior:
 
 Orden recomendado:
 
-1. H21 importacion CSV de Asignaturas:
-   - preparar H05/H13 y backup para una ventana controlada; ejecutar `013`, preview SQL, conciliacion aprobada y smoke. SEC y las cinco colisiones ya fueron resueltas y ensayadas.
-2. H07 Google Provider `hd`:
+1. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
-3. H08 refactor gradual:
+2. H08 refactor gradual:
    - solo despues de cubrir con pruebas y sin cambiar reglas.
-4. CSV injection:
+3. CSV injection:
    - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
-5. H13 operativo continuo:
+4. H13 operativo continuo:
    - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
+5. H21 operacion futura:
+   - aplicar un CSV institucional solo con archivo definitivo aprobado, preview sin bloqueantes, backup y autorizacion humana independiente.
 6. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 

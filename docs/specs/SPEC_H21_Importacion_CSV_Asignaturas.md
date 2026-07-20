@@ -2,8 +2,8 @@
 
 Fecha: 2026-07-20
 
-Estado: implementado y prevalidado con datos productivos temporales; pendiente
-de migracion, conciliacion y deploy productivo controlados.
+Estado: cerrado operativo; migracion 013, conciliacion productiva, deploy y
+smoke autenticado aprobados. CSV institucional definitivo no aplicado.
 
 ## 1. Objetivo
 
@@ -362,7 +362,7 @@ eso `INACTIVACION_CON_USO_OPERATIVO` es bloqueante.
 3. H21-F2: API template/preview/apply y pruebas PostgreSQL, completado.
 4. H21-F3: Horarios estrictos con `subjectId`, completado.
 5. H21-F4: UI, busqueda normalizada y validacion local, completado.
-6. H21-F5: deploy controlado solo tras H05, H13 y aprobacion humana.
+6. H21-F5: deploy controlado, migracion, conciliacion y smoke completados.
 
 ## 17. Decisiones cerradas y pendientes de release
 
@@ -382,10 +382,10 @@ UUID acentuados como canonicos, mover ocho horarios vivos e inactivar los cinco
 duplicados. La solucion fue ensayada en una restauracion temporal y el preview
 del catalogo activo quedo sin bloqueantes.
 
-Antes de produccion siguen pendientes H05/H13, backup on-demand, autorizacion
-final de ventana, aplicacion productiva de `013`, preview SQL en `ROLLBACK`,
-conciliacion controlada y smoke Admin/Coordinador. No se ha ejecutado la
-migracion `013`, la conciliacion ni el deploy en produccion.
+H21-F5 se ejecuto con H05/H13, backup on-demand, preview SQL en `ROLLBACK`,
+conciliacion controlada y smoke Admin/Horarios. La migracion `013`, API y
+Hosting estan vigentes en produccion. El CSV institucional definitivo no se
+aplico y requiere una autorizacion futura independiente.
 
 ## 18. Confirmaciones historicas H21-F0
 
@@ -402,11 +402,12 @@ el estado actual de implementacion:
 - No se hizo deploy.
 - No se modifico H01.
 
-## 19. Estado posterior H21-F1 a H21-F4
+## 19. Estado posterior H21-F1 a H21-F5
 
-- F1-F4 estan implementadas y validadas en local/test.
-- La migracion `013` fue aplicada en `nomina_docente_test` y ensayada sobre una
-  restauracion temporal de produccion; no fue aplicada en produccion.
+- F1-F4 fueron implementadas y validadas en local/test; F5 fue ejecutada y
+  validada en produccion.
+- La migracion `013` fue aplicada mediante H05; produccion quedo con 16
+  migraciones registradas, `pending=0` y cero checksum mismatch.
 - Los fingerprints de asignaturas, horarios y snapshots permanecieron iguales
   durante el ensayo.
 - El preview inicial preservo cinco grupos legacy y detecto 10 filas
@@ -418,11 +419,15 @@ el estado actual de implementacion:
   inactivo.
 - El ensayo temporal movio ocho horarios, dejo cinco canonicos activos y cinco
   duplicados inactivos, sin cambiar snapshots ni corridas.
-- La plantilla activa posterior tuvo 276 filas `SIN_CAMBIOS`, cero
+- La plantilla activa productiva tuvo 277 filas `SIN_CAMBIOS`, cero
   `DUPLICADO_NOMBRE_CSV` y cero bloqueantes.
 - SEC-H21 corrigio `websocket-driver` a `0.7.5`; `npm audit` mantiene cero
   vulnerabilidades criticas.
-- No se ha hecho deploy H21.
+- La conciliacion productiva movio ocho horarios, dejo cinco canonicos activos,
+  cinco duplicados inactivos y cero huerfanos, sin cambiar snapshots/corridas.
+- Cloud Run `nomina-api-00052-xtm` y Hosting release `1784583329978000` estan
+  vigentes; smoke autenticado Catalogos/Horarios aprobado.
+- No se aplico CSV institucional definitivo.
 
 ## 20. Regla aprobada para duplicados historicos conciliados
 
@@ -440,3 +445,15 @@ el estado actual de implementacion:
 
 Mapping, SQL y ensayo: `H21_Plan_Conciliacion_Duplicados_Reales.md` y
 `H21_Ensayo_Conciliacion_Duplicados_Temporal.md`.
+
+## 21. Cierre productivo
+
+El acta `docs/auditoria/H21_Deploy_Productivo_Importacion_Asignaturas.md` es la
+fuente de verdad del deploy H21. Confirma backup `1784582556252`, migracion
+`013`, conciliacion de ocho horarios, revision `nomina-api-00052-xtm`, Hosting
+`1784583329978000` / `79673723ffe4f297`, smoke aprobado y cero vulnerabilidades
+criticas npm.
+
+El conteo de 282 asignaturas existia antes de `013`; ni la migracion ni la
+conciliacion contienen altas de `subjects`. La plantilla activa quedo en 277
+filas por una asignatura operativa creada antes de la ventana H21-F5.

@@ -1,7 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-07-18
+Ultima actualizacion de estado productivo: 2026-07-20
 
 ## 1. Resumen ejecutivo
 
@@ -32,16 +32,16 @@ Alcance de H13:
 | Cloud Run API | Servicio `nomina-api` |
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
-| Revision Cloud Run vigente documentada | `nomina-api-00051-9s5` |
-| Revision anterior / rollback inmediato | `nomina-api-00050-zdm` |
-| Imagen API vigente H20 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h20-prod-56553f4` |
-| Digest API vigente H20 | `sha256:3773e95e35836acb5ba30382d0465a800accd38491092abd625a07b4719839ac` |
+| Revision Cloud Run vigente documentada | `nomina-api-00052-xtm` |
+| Revision anterior / rollback inmediato | `nomina-api-00051-9s5` |
+| Imagen API vigente H21 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h21-prod-1b449a1` |
+| Digest API vigente H21 | `sha256:b087fd5b77771df23367dc630c06e7f59132e8c803f5809e1ed628e026bf839c` |
 | CPU / memoria | `1` / `512Mi` |
 | Concurrencia / timeout | `80` / `300 s` |
 | Instancias min / max | `0` / `3` |
 | Imagen API H11 documentada | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h11-prod-4e0c214` |
-| Firebase Hosting release vigente | `1784228039752000` |
-| Firebase Hosting version vigente | `41bf160c7c3595b6` |
+| Firebase Hosting release vigente | `1784583329978000` |
+| Firebase Hosting version vigente | `79673723ffe4f297` |
 | Instancia Cloud SQL | `nomina-docente-web` |
 | Base productiva | `nomina_docente` |
 | Usuario DB aplicativo | `app_nomina` |
@@ -50,7 +50,7 @@ Alcance de H13:
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true` en monitoreo |
 
-La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues del cierre operativo H20.
+La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues del cierre operativo H21.
 
 ## 3. Variables no secretas Cloud Run
 
@@ -173,8 +173,8 @@ Estado H05 productivo:
 - Tablas administrativas existentes:
   - `schema_migrations`;
   - `schema_migration_runs`.
-- Baseline productivo:
-  - 15 migraciones registradas;
+- Control productivo:
+  - 16 migraciones registradas: 15 baseline y `013` aplicada;
   - `pending = 0`;
   - `checksum mismatch = 0`.
 - Migraciones historicas `001` a `012` no deben reaplicarse.
@@ -360,6 +360,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | 2026-07-09 | `325075f` | `nomina-api-00048-js8` | `nomina-api-00049-2hn` | `2026-07-09 13:11:55` | No requerido; sin escritura BD | No | OK | H18-F6 filtros OK | `H18_Fase6_UX_Filtros_Reportes_Operativos.md` |
 | 2026-07-09 | `c1e858b` | `nomina-api-00049-2hn` | `nomina-api-00050-zdm` | Sin deploy Hosting | No requerido; sin escritura BD | No | OK | Hotfix snapshot OK | `H18_Hotfix_Reportes_Snapshot_LineKey.md` |
 | 2026-07-16 | `56553f4` | `nomina-api-00050-zdm` | `nomina-api-00051-9s5` | `1784228039752000` / `41bf160c7c3595b6` | No requerido; sin escritura BD | No | OK | H20 Coordinador/Admin OK | `H20_Deploy_Productivo_Alcance_Compartido_Nomina.md` |
+| 2026-07-20 | `1b449a1` | `nomina-api-00051-9s5` | `nomina-api-00052-xtm` | `1784583329978000` / `79673723ffe4f297` | `1784582556252` | `013` | OK | H21 Catalogos/Horarios OK; sin Apply CSV | `H21_Deploy_Productivo_Importacion_Asignaturas.md` |
 
 ## 15. Relacion con fases cerradas
 
@@ -377,6 +378,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | H18 | H13 conserva la cronologia de deploy inicial, UX F6 y hotfix snapshot. |
 | H19 | H13 exige backup, preview `ROLLBACK` y validacion de duplicados para cargas de datos. |
 | H20 | H13 conserva revision, imagen, Hosting y smoke autenticado del alcance compartido. |
+| H21 | H13 registro backup, migracion `013`, conciliacion controlada, API/Hosting y smoke autenticado; cualquier Apply CSV futuro requiere nueva aprobacion. |
 
 ## 16. Estado final H13
 
