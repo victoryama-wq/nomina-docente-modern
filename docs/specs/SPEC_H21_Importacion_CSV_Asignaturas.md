@@ -1,8 +1,9 @@
 # SPEC H21 - Importacion CSV de Asignaturas
 
-Fecha: 2026-07-18
+Fecha: 2026-07-20
 
-Estado: implementado y validado en local/test; pendiente de migracion y deploy productivo.
+Estado: implementado y prevalidado con datos productivos temporales; pendiente
+de migracion, conciliacion y deploy productivo controlados.
 
 ## 1. Objetivo
 
@@ -376,9 +377,15 @@ Quedaron implementadas y validadas en local/test las siguientes decisiones:
 - parser CSV directo `@fast-csv/parse` en API;
 - limites de 512 KiB y 5000 filas.
 
-Antes de produccion siguen pendientes H05/H13, backup, aprobacion humana,
-validacion con CSV institucional y smoke Admin/Coordinador. No se ha ejecutado
-la migracion `013` ni se ha hecho deploy en produccion.
+La decision humana sobre los cinco pares legacy ya fue aprobada: conservar los
+UUID acentuados como canonicos, mover ocho horarios vivos e inactivar los cinco
+duplicados. La solucion fue ensayada en una restauracion temporal y el preview
+del catalogo activo quedo sin bloqueantes.
+
+Antes de produccion siguen pendientes H05/H13, backup on-demand, autorizacion
+final de ventana, aplicacion productiva de `013`, preview SQL en `ROLLBACK`,
+conciliacion controlada y smoke Admin/Coordinador. No se ha ejecutado la
+migracion `013`, la conciliacion ni el deploy en produccion.
 
 ## 18. Confirmaciones historicas H21-F0
 
@@ -402,10 +409,34 @@ el estado actual de implementacion:
   restauracion temporal de produccion; no fue aplicada en produccion.
 - Los fingerprints de asignaturas, horarios y snapshots permanecieron iguales
   durante el ensayo.
-- Los cinco grupos normalizados legacy fueron preservados sin merge.
-- El preview del catalogo restaurado detecto 10 filas bloqueantes asociadas a
-  esos cinco grupos; no se ejecuto apply.
-- `npm audit` reporta un hallazgo critico transitivo en
-  `websocket-driver@0.7.4`; H21-F5 queda bloqueado hasta una actualizacion SEC
-  controlada.
+- El preview inicial preservo cinco grupos legacy y detecto 10 filas
+  bloqueantes; no se ejecuto apply.
+- La decision humana posterior confirmo los cinco pares como duplicados reales
+  y aprobo los UUID canonicos.
+- `1b449a1` agrega el SQL de conciliacion, plantillas activas por defecto y la
+  excepcion segura para canonicos identificados por UUID con duplicado historico
+  inactivo.
+- El ensayo temporal movio ocho horarios, dejo cinco canonicos activos y cinco
+  duplicados inactivos, sin cambiar snapshots ni corridas.
+- La plantilla activa posterior tuvo 276 filas `SIN_CAMBIOS`, cero
+  `DUPLICADO_NOMBRE_CSV` y cero bloqueantes.
+- SEC-H21 corrigio `websocket-driver` a `0.7.5`; `npm audit` mantiene cero
+  vulnerabilidades criticas.
 - No se ha hecho deploy H21.
+
+## 20. Regla aprobada para duplicados historicos conciliados
+
+1. La asignatura canonica se identifica obligatoriamente por UUID.
+2. Un duplicado historico `INACTIVO` con el mismo `normalized_name` no bloquea
+   una actualizacion del canonico por UUID.
+3. Una alta sin UUID que colisione con cualquier nombre normalizado existente
+   sigue bloqueada.
+4. Dos filas `ACTIVO` con el mismo nombre normalizado dentro del CSV siguen
+   bloqueadas.
+5. La plantilla de catalogo incluye solo activos por defecto; los inactivos se
+   solicitan explicitamente con `includeInactive=true` por Admin.
+6. No existe merge, DELETE, reactivacion o cambio de identidad automatico.
+7. Los snapshots historicos conservan sus referencias y textos originales.
+
+Mapping, SQL y ensayo: `H21_Plan_Conciliacion_Duplicados_Reales.md` y
+`H21_Ensayo_Conciliacion_Duplicados_Temporal.md`.

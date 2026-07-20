@@ -2,8 +2,8 @@
 
 Fecha: 2026-07-20
 
-Estado: diagnostico productivo read-only completado; decisiones humanas
-pendientes; sin escrituras.
+Estado: diagnostico productivo read-only completado; decision humana resuelta
+posteriormente en el plan de conciliacion; sin escrituras en esta fase.
 
 ## 1. Objetivo y fuente
 
@@ -130,7 +130,7 @@ tiene los eventos de auditoria descritos arriba.
 Esta evidencia temporal no determina por si sola si dos UUID representan la
 misma asignatura.
 
-## 7. Decisiones humanas pendientes
+## 7. Decisiones humanas pendientes al momento del diagnostico
 
 Para cada grupo se requiere elegir una de estas rutas:
 
@@ -180,3 +180,14 @@ esta fase documental.
 - Sin deploy.
 - Sin cambios de codigo.
 - Sin exposicion de datos personales, fiscales o financieros.
+
+## 11. Resolucion posterior
+
+El 2026-07-20 se confirmo que los cinco pares representan duplicados reales y
+se aprobaron los UUID acentuados como canonicos. La decision, el mapping exacto
+y el ensayo en restauracion temporal se documentan en:
+
+- `H21_Plan_Conciliacion_Duplicados_Reales.md`;
+- `H21_Ensayo_Conciliacion_Duplicados_Temporal.md`.
+
+Este apartado no altera la naturaleza read-only del diagnostico original.

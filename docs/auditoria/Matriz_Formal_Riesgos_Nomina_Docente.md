@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-07-18
+Actualizacion: 2026-07-20
 
 ## 1. Contexto
 
@@ -26,7 +26,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H18 cerrado operativo: Reportes Operativos desplegado, filtros amigables H18-F6 vigentes, hotfix snapshot `ped.line_key` aplicado y CSV/XLSX validados en Excel institucional.
 - H19 ejecutado de forma controlada: backup exitoso, preview en ROLLBACK, 36 actualizaciones de `teachers.created_by`, 3 altas minimas y validacion posterior sin duplicados.
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
-- H21 implementado y validado en local/test con migracion `013`, importacion atomica, busqueda normalizada y Horarios por catalogo; produccion sin cambios.
+- H21 implementado y prevalidado: SEC critica corregida, cinco pares legacy aprobados y conciliacion de ocho horarios ensayada en restauracion temporal; produccion sin cambios.
 - Alineacion documental post-H20 verificada contra Cloud Run, Firebase Hosting y H05 en modo read-only; no cambia el estado ni la prioridad de los riesgos.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
@@ -68,7 +68,7 @@ Arquitectura vigente:
 | H18 | Modulo Reportes Operativos desplegado con UX de filtros H18-F6 y hotfix snapshot | Reportes / Permisos / Operacion academica | Cerrado operativo | Bajo: riesgo residual por regresion futura o nuevas necesidades de snapshots historicos | P2 cerrado operativo | Mantener pruebas H18, guardas backend por rol y exportables CSV/XLSX; no crear permisos ni migraciones sin H05 | Cumplido con deploy H18-F5/F6, hotfix `ped.line_key` y validacion post-hotfix en Excel institucional | Solo si se agregan permisos nuevos o cambios de BD |
 | H19 | Actualizacion controlada de Directorio desde CSV | Directorio / Datos productivos / Permisos operativos | Ejecutado y documentado: 36 `created_by` actualizados y 3 altas minimas, con backup y preview exacto | Bajo; riesgo residual solo ante futuras cargas manuales sin el mismo control | P1 cerrado / monitoreo | Repetir backup, matching nominal, preview y guardas de duplicidad para futuras cargas | Cumplido con validacion posterior, 0 discrepancias y 0 duplicados | Solo para futuras cargas o excepciones |
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
-| H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Implementado local/test; ensayo temporal aprobado; SEC critica corregida; F5 bloqueado | Medio-alto para release por 10 filas bloqueantes; integridad de migracion y regresion de dependencias validadas | P1 bloqueado | Resolver cinco colisiones por ID/clave, repetir preview y aplicar H05/H13 | Audit sin critical cumplido; falta preview institucional sin bloqueantes no aprobados, backup, migracion controlada y smoke Admin/Coordinador | Si, antes de migracion/deploy productivo |
+| H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Implementado y prevalidado; SEC critica y cinco colisiones resueltas; F5 productivo pendiente | Medio para release: conciliacion y `013` ya se ensayaron, pero la ventana productiva sigue requiriendo backup y control H05/H13 | P1 preparado | Ejecutar H05/H13, backup, `013`, preview SQL en ROLLBACK, conciliacion aprobada y smoke Admin/Coordinador | Falta ejecucion productiva controlada, preview del CSV institucional final y smoke; ensayo activo quedo 276/276 sin bloqueantes | Si, para autorizar la ventana productiva |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -183,7 +183,9 @@ Pendientes reales despues de H02/H03:
 - Para H18, decidir solo si en fases futuras se agregan permisos formales nuevos; `exceljs` ya fue aprobado e instalado en backend/API.
 - Para futuras cargas tipo H19, exigir nueva aprobacion, backup, matching por identificador/correo/nombre y preview en ROLLBACK.
 - H20 no tiene decisiones pendientes; cualquier ampliacion futura de alcance, escritura o permisos requiere nueva SPEC y aprobacion humana.
-- H21 requiere decidir claves oficiales para cinco grupos normalizados legacy; SEC-H21 ya corrigio `websocket-driver@0.7.5`. El paso productivo sigue sujeto a H05/H13, backup, nuevo preview institucional y smoke.
+- H21 ya tiene decision humana para los cinco pares legacy y SEC-H21 corrigio
+  `websocket-driver@0.7.5`. El paso productivo sigue sujeto a autorizacion de
+  ventana, H05/H13, backup, preview SQL/CSV y smoke.
 
 ## 7. Recomendacion final
 

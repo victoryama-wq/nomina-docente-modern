@@ -1,7 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-07-18
+Ultima actualizacion: 2026-07-20
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -47,7 +47,7 @@ Estado por H:
 | H18 | Cerrado operativo; Reportes Operativos desplegado, filtros amigables H18-F6 vigentes y hotfix snapshot `ped.line_key` aplicado en `nomina-api-00050-zdm`. |
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
-| H21 | Implementado y validado en local/test; ensayo `013` satisfactorio en restauracion temporal. Deploy bloqueado por vulnerabilidad critica transitiva y 10 filas en cinco colisiones normalizadas del preview institucional base. |
+| H21 | Implementado y prevalidado; SEC critica corregida y cinco duplicados reales conciliados satisfactoriamente en restauracion temporal. Produccion sigue sin `013`, conciliacion ni deploy H21. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -316,7 +316,7 @@ Documentos vigentes:
 | Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. | H09/H10 Fase 3, Fase 4, deploy H09/H10. |
 | Accesos | Roles y usuarios gestionados por Admin; no mostrar checkboxes manuales de coordinaciones como fuente operativa final; subdireccion usa `direccion`. | H02/H03 Fase 5, H04 Fase 5. |
 | Auditoria | Export CSV y eventos; evidencia de cierre H10 via `audit_log`; no registrar secretos ni datos fiscales completos innecesarios. | H03 Fase 4, H09/H10 Fase 3, H11 inventario. |
-| Catalogos | H12 mantiene la politica de inactivar y conservar historia. H21 agrega en local/test importacion CSV con preview/apply atomico y busqueda sin acentos; produccion permanece sin cambios. | SPEC/cierre H12, SPEC H21 y auditorias H21 F1-F4. |
+| Catalogos | H12 mantiene la politica de inactivar y conservar historia. H21 agrega importacion CSV atomica y busqueda sin acentos; la plantilla usa activos por defecto y no permite altas por colision normalizada. La conciliacion legacy esta prevalidada, no ejecutada en produccion. | SPEC/cierre H12, SPEC H21, plan y ensayo de conciliacion H21. |
 
 ## 5. Documentos fuente de verdad
 
@@ -345,7 +345,7 @@ Codex debe leer primero este SDD, la matriz y los documentos especificos de la f
 | Estados/cierre | `docs/auditoria/H09_H10_Deploy_Productivo_Resultado.md` | SPEC, diseno, fases 1-4, predeploy | Deploy/cierre vigente; SPEC/diseno aprobados |
 | CSV/codificacion | `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md` | H11 Fase 1, Fase 2, Fase 3A, Fase 3B, Fase 4, deploy H11-F5 y cierre postdeploy | Cerrado operativo; exportables criticos estandarizados y validados en Excel institucional |
 | Catalogos historicos | `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md` | SPEC H12 | Cerrado documental; politica operativa sin implementacion tecnica |
-| Importacion de Asignaturas | `docs/specs/SPEC_H21_Importacion_CSV_Asignaturas.md`, `docs/auditoria/H21_Diagnostico_Importacion_CSV_Asignaturas.md` y auditorias H21 F1-F4 | H12, H05, Catalogos y Horarios | Implementado y validado en local/test; migracion `013`, API atomica, UI y Horarios por catalogo; produccion pendiente |
+| Importacion de Asignaturas | `docs/specs/SPEC_H21_Importacion_CSV_Asignaturas.md`, `docs/auditoria/H21_Diagnostico_Importacion_CSV_Asignaturas.md`, `docs/auditoria/H21_Plan_Conciliacion_Duplicados_Reales.md` y `docs/auditoria/H21_Ensayo_Conciliacion_Duplicados_Temporal.md` | H12, H05, Catalogos y Horarios | Implementado y prevalidado; `013`, conciliacion y deploy productivos pendientes |
 | Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
@@ -385,7 +385,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H17 | Normalizacion ejecutada / monitoreo | Validar acceso real de coordinadoras y resolver 12 remanentes solo con nuevo mapping aprobado si operacion lo requiere. |
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
-| H21 | Implementado local/test; predeploy bloqueado | Resolver fase SEC de `websocket-driver`, aprobar claves para cinco colisiones, repetir preview institucional y despues preparar H05/H13. |
+| H21 | Prevalidado; ventana productiva pendiente | Ejecutar H05/H13, backup, `013`, preview SQL en ROLLBACK, conciliacion y smoke; SEC y colisiones ya resueltos tecnicamente. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -412,7 +412,7 @@ Para cualquier fase posterior:
 Orden recomendado:
 
 1. H21 importacion CSV de Asignaturas:
-   - resolver primero el hallazgo SEC y las cinco colisiones del CSV; despues repetir preview y preparar H05/H13 para una ventana controlada.
+   - preparar H05/H13 y backup para una ventana controlada; ejecutar `013`, preview SQL, conciliacion aprobada y smoke. SEC y las cinco colisiones ya fueron resueltas y ensayadas.
 2. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
 3. H08 refactor gradual:
