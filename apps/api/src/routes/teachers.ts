@@ -7,6 +7,11 @@ import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
 import { firebaseAdmin } from '../firebase.js';
 import { buildCsv as serializeCsv, csvAttachmentHeaders } from '../lib/csv.js';
+import {
+  TeacherExternalIdentifierConflictError,
+  isTeacherExternalIdentifierConflict,
+  normalizeTeacherExternalIdentifierKey
+} from '../lib/teacher-identifiers.js';
 import type { ActorScope, SessionUser } from '../types.js';
 import { type CoordinationRow } from './academic-context.js';
 
@@ -169,6 +174,36 @@ function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
     message: error.issues[0]?.message || 'Datos inválidos.'
+  });
+}
+
+async function assertTeacherExternalIdentifierAvailable(
+  client: PoolClient,
+  externalIdentifier: string,
+  excludedTeacherId: string | null = null
+): Promise<void> {
+  const identifierKey = normalizeTeacherExternalIdentifierKey(externalIdentifier);
+  if (!identifierKey) return;
+
+  const duplicate = await client.query<{ id: string }>(
+    `
+      SELECT id
+      FROM teachers
+      WHERE upper(btrim(external_identifier)) = $1
+        AND ($2::uuid IS NULL OR id <> $2::uuid)
+      LIMIT 1
+    `,
+    [identifierKey, excludedTeacherId]
+  );
+
+  if (duplicate.rowCount) throw new TeacherExternalIdentifierConflictError();
+}
+
+async function sendTeacherExternalIdentifierConflict(reply: FastifyReply): Promise<void> {
+  await reply.code(409).send({
+    error: 'IDENTIFICADOR_DUPLICADO',
+    code: 'IDENTIFICADOR_DUPLICADO',
+    message: 'Ya existe otro docente con el mismo identificador institucional.'
   });
 }
 
@@ -661,6 +696,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
         parsed.data.coordinationId,
         parsed.data.coordinationName
       );
+      await assertTeacherExternalIdentifierAvailable(client, parsed.data.externalIdentifier);
       const fullName = buildFullName(parsed.data);
       const normalizedName = normalizeComparable(fullName);
       const fiscalValues = canManageTeacherFiscal(actor)
@@ -734,8 +770,15 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const after = await loadTeacherById(client, created.rows[0].id);
       await auditTeacher(client, actor, 'TEACHER_CREATED', created.rows[0].id, null, after);
       return after;
+    }).catch(async (error: unknown) => {
+      if (isTeacherExternalIdentifierConflict(error)) {
+        await sendTeacherExternalIdentifierConflict(reply);
+        return null;
+      }
+      throw error;
     });
 
+    if (reply.sent) return;
     await reply.code(201).send({ teacher: teacher ? sanitizeTeacherForActor(actor, teacher) : teacher, message: 'Docente registrado correctamente.' });
   });
 
@@ -771,6 +814,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
         parsed.data.coordinationId,
         parsed.data.coordinationName
       );
+      await assertTeacherExternalIdentifierAvailable(client, parsed.data.externalIdentifier, before.id);
       const fullName = buildFullName(parsed.data);
       const normalizedName = normalizeComparable(fullName);
       const fiscalValues = canManageTeacherFiscal(actor)
@@ -844,8 +888,15 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const after = await loadTeacherById(client, before.id);
       await auditTeacher(client, actor, 'TEACHER_UPDATED', before.id, before, after);
       return after;
+    }).catch(async (error: unknown) => {
+      if (isTeacherExternalIdentifierConflict(error)) {
+        await sendTeacherExternalIdentifierConflict(reply);
+        return null;
+      }
+      throw error;
     });
 
+    if (reply.sent) return;
     return { teacher: teacher ? sanitizeTeacherForActor(actor, teacher) : teacher, message: 'Docente actualizado correctamente.' };
   });
 
