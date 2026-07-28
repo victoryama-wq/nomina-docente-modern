@@ -1,7 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-07-20
+Ultima actualizacion: 2026-07-28
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -48,6 +48,7 @@ Estado por H:
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
 | H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
+| H22 | Diagnostico y diseno; importacion CSV operativa de docentes exclusiva de Admin, sin implementacion, migracion ni deploy. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -387,6 +388,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
 | H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
+| H22 | Diagnostico y diseno | Cerrar decisiones de nombre descompuesto, rol RH, inactivacion y concurrencia antes de implementar importacion CSV de docentes. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -422,7 +424,9 @@ Orden recomendado:
    - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
 5. H21 operacion futura:
    - aplicar un CSV institucional solo con archivo definitivo aprobado, preview sin bloqueantes, backup y autorizacion humana independiente.
-6. Cierre global de matriz:
+6. H22 Importacion de docentes:
+   - cerrar decisiones funcionales pendientes y renovar la validacion productiva read-only antes de H22-F1.
+7. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 
 ## 10. Confirmacion de alcance de esta consolidacion

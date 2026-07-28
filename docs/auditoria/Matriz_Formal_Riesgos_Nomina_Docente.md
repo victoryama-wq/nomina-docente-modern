@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-07-20
+Actualizacion: 2026-07-28
 
 ## 1. Contexto
 
@@ -27,6 +27,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H19 ejecutado de forma controlada: backup exitoso, preview en ROLLBACK, 36 actualizaciones de `teachers.created_by`, 3 altas minimas y validacion posterior sin duplicados.
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
 - H21 cerrado operativo: migracion `013`, conciliacion de cinco pares/8 horarios, deploy `nomina-api-00052-xtm` y smoke autenticado Catalogos/Horarios aprobados; CSV institucional definitivo no aplicado.
+- H22 iniciado en diagnostico y diseno documental para importacion CSV operativa de docentes, sin codigo, migracion ni deploy.
 - Alineacion documental post-H20 verificada contra Cloud Run, Firebase Hosting y H05 en modo read-only; no cambia el estado ni la prioridad de los riesgos.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
@@ -69,6 +70,7 @@ Arquitectura vigente:
 | H19 | Actualizacion controlada de Directorio desde CSV | Directorio / Datos productivos / Permisos operativos | Ejecutado y documentado: 36 `created_by` actualizados y 3 altas minimas, con backup y preview exacto | Bajo; riesgo residual solo ante futuras cargas manuales sin el mismo control | P1 cerrado / monitoreo | Repetir backup, matching nominal, preview y guardas de duplicidad para futuras cargas | Cumplido con validacion posterior, 0 discrepancias y 0 duplicados | Solo para futuras cargas o excepciones |
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
 | H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Cerrado operativo; `013`, conciliacion, deploy y smoke autenticado aprobados | Bajo: riesgo residual por regresion o por aplicar en el futuro un CSV institucional sin control | P1 cerrado operativo | Mantener pruebas, H05/H13 y preview sin bloqueantes antes de cualquier Apply futuro | Cumplido con backup `1784582556252`, 277/277 sin cambios, cero bloqueantes y revision `nomina-api-00052-xtm` | Solo para Apply de un CSV institucional futuro |
+| H22 | Importacion masiva de docentes operativos por CSV | Directorio / Permisos / Datos operativos / Seguridad | Diagnostico y diseno; no implementado | Medio: riesgo por reasignacion de propiedad, datos fiscales mezclados en entidad, identificador sin unicidad fisica e inactivaciones con dependencias | P1 diseno | Implementar solo despues de cerrar decisiones de nombre, RH, inactivacion y concurrencia; Admin exclusivo, preview sin escrituras y Apply atomico | Pruebas API/frontend/integracion, validacion productiva read-only, cero exposicion fiscal y deploy controlado | Si, para las cuatro decisiones funcionales/tecnicas pendientes |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -167,6 +169,7 @@ Orden recomendado:
 7. **H19 Directorio.** Cerrado controlado; monitorear Directorio y repetir el procedimiento solo ante una nueva carga aprobada.
 8. **H20 Nomina compartida.** Cerrado operativo; mantener pruebas y monitoreo de alcance, totales y seguridad fiscal.
 9. **H21 Asignaturas.** Cerrado operativo; cualquier CSV institucional futuro requiere preview, backup y autorizacion independiente.
+10. **H22 Docentes.** Cerrar decisiones de diseno y revalidar duplicados productivos read-only antes de implementar.
 
 ## 6. Decisiones humanas pendientes
 
@@ -186,6 +189,10 @@ Pendientes reales despues de H02/H03:
 - H21 no tiene pendientes de implementacion o deploy. El CSV institucional
   definitivo no fue aplicado y conserva una decision humana independiente;
   SEC-H21 mantiene `websocket-driver@0.7.5` y cero vulnerabilidades criticas.
+- H22 requiere decidir el tratamiento del nombre completo frente a sus campos
+  descompuestos, si RH puede ser responsable operativo, el bloqueo de
+  inactivaciones con dependencias y la garantia concurrente de unicidad del
+  identificador.
 
 ## 7. Recomendacion final
 
