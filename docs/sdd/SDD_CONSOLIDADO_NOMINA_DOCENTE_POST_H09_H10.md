@@ -26,7 +26,7 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true`, en monitoreo |
-| Control H05 verificado | 16 registradas: 15 baseline y `013` aplicada; 0 pendientes, 0 checksum mismatch |
+| Control H05 productivo | 16 registradas: 15 baseline y `013` aplicada; `014` creada/aplicada solo en test y pendiente de futura aprobacion productiva; 0 checksum mismatch |
 
 Estado por H:
 
@@ -36,7 +36,7 @@ Estado por H:
 | H02 | Cerrado operativo; `user_coordinations` existe, pero el fallback legacy sigue activo en monitoreo. |
 | H03 | Cerrado operativo; permisos fiscales, documentales, financieros, workflow y preview separados. |
 | H04 | Implementado hasta Fase 5; H04-F6 Playwright queda opcional posterior. |
-| H05 | Cerrado con tablas de control; 15 baseline y migracion `013` aplicada, 0 pendientes, 0 checksum mismatch. |
+| H05 | Cerrado con tablas de control; produccion conserva 15 baseline y `013` aplicada. `014` H22 esta validada solo en test y pendiente de una fase productiva aprobada. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
@@ -48,7 +48,7 @@ Estado por H:
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
 | H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
-| H22 | Diagnostico y diseno; plantilla nominal corregida a diez columnas, componentes de nombre separados y `full_name`/`normalized_name` derivados. Sin implementacion, migracion ni deploy. |
+| H22 | F1A implementada en local/test: decisiones de responsable/inactivacion cerradas, produccion validada read-only sin identificadores duplicados e indice `014` aplicado solo en test. Importador y deploy pendientes. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -388,7 +388,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
 | H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
-| H22 | Diagnostico y diseno | Decision nominal cerrada; resolver rol RH, inactivacion, concurrencia/unicidad y validacion productiva read-only antes de implementar. |
+| H22 | F1A local/test | RH excluido como responsable H22; inactivacion con dependencias bloqueada; unicidad fisica `014` validada en test; importador/frontend/productivo pendientes. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -425,7 +425,9 @@ Orden recomendado:
 5. H21 operacion futura:
    - aplicar un CSV institucional solo con archivo definitivo aprobado, preview sin bloqueantes, backup y autorizacion humana independiente.
 6. H22 Importacion de docentes:
-   - cerrar decisiones funcionales pendientes y renovar la validacion productiva read-only antes de H22-F1.
+- implementar backend y frontend del importador sobre las decisiones cerradas
+  en F1A; aplicar `014` en produccion solo en una fase posterior con backup,
+  H05 y aprobacion.
 7. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 

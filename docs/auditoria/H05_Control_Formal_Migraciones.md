@@ -823,3 +823,37 @@ H05-F5:
 - Confirmacion manual.
 - Baseline produccion.
 - Validacion post-baseline.
+
+## 17. H22-F1A - Migracion 014 en local/test
+
+El 2026-07-28 se creo:
+
+```text
+database/014_h22_teacher_external_identifier_unique.sql
+```
+
+La migracion contiene solo el indice unico parcial
+`teachers_external_identifier_unique_idx` sobre
+`upper(btrim(external_identifier))`, excluyendo valores vacios.
+
+Validacion H05 en `nomina_docente_test`:
+
+- 16 migraciones existentes registradas como baseline local/test;
+- `014` aplicada mediante `db:migrate:apply`;
+- 17 registradas;
+- 16 baseline;
+- 1 aplicada (`014`);
+- `pending=0`;
+- `checksum mismatch=0`.
+
+Validacion productiva previa, exclusivamente read-only:
+
+- 16 migraciones registradas;
+- 15 baseline;
+- `013` aplicada;
+- `pending=0`;
+- `checksum mismatch=0`;
+- cero grupos duplicados de identificador normalizado.
+
+`014` no fue aplicada en produccion. Su aplicacion productiva requiere fase
+posterior, backup, H13, H05 y aprobacion manual.

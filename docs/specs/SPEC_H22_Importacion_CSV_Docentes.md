@@ -174,15 +174,15 @@ es:
 | `admin` | Si | Tiene alcance global y el alta individual ya registra al actor. |
 | `coordinador` | Si | `created_by` habilita propiedad y edicion individual. |
 | `direccion` | Si | La regla backend actual reconoce propiedad por `created_by`; existe precedente aprobado H17/H19. |
-| `rh` | Pendiente de decision | Tiene `teachers.manage`, pero la rama de propiedad de Directorio no usa `created_by` para RH. |
+| `rh` | No | Tiene `teachers.manage`, pero no puede asignarse como responsable operativo mediante H22. |
 | `finanzas` | No | No administra datos operativos del docente por propiedad. |
 | `contador` | No | Sin permiso operativo de Directorio. |
 | `contabilidad` | No | Sin permiso operativo de Directorio. |
 
-La implementacion no debe ampliar el conjunto sin una decision humana
-explicita. La recomendacion conservadora para H22-F1 es permitir
-`admin`, `coordinador` y `direccion`, y mantener RH fuera hasta resolver la
-decision indicada.
+La decision humana de H22-F1A permite exclusivamente `admin`, `coordinador` y
+`direccion`. La implementacion no debe ampliar este conjunto. Una fila con RH
+se clasifica como `RESPONSABLE_NO_AUTORIZADO`; esto no modifica los permisos
+vigentes de RH fuera del importador.
 
 ### 4.5 `categoria`
 
@@ -211,7 +211,8 @@ decision indicada.
 - `INACTIVO` explicito genera `INACTIVAR`.
 - `ACTIVO` explicito sobre un inactivo genera `REACTIVAR`.
 
-La inactivacion debe bloquearse cuando existan dependencias vigentes:
+La decision humana de H22-F1A confirma que la inactivacion debe bloquearse
+cuando existan dependencias vigentes:
 
 - Horarios en ciclos `ACTIVO` o `PLANEACION`;
 - Incidencias operativas asociadas a esos horarios;
@@ -473,10 +474,14 @@ Apply:
 12. registra auditoria sanitizada;
 13. confirma toda la transaccion o revierte toda la transaccion.
 
-Para que la unicidad funcional de `external_identifier` sea segura sin
-migracion, H22-F1 debe aplicar el mismo advisory lock en `POST /teachers` y en
-cambios individuales de identificador. Si esa integracion no se acepta, debe
-reabrirse la decision de una migracion con indice unico parcial.
+H22-F1A adopta unicidad fisica mediante
+`teachers_external_identifier_unique_idx`. PostgreSQL es la autoridad final
+para altas/ediciones individuales, que traducen el conflicto exacto a
+`409 / IDENTIFICADOR_DUPLICADO`.
+
+El futuro importador conserva su advisory lock, fingerprints, `FOR UPDATE` y
+transaccion unica. Las rutas individuales no necesitan compartir ese lock para
+garantizar unicidad.
 
 ## 10. Frontend propuesto
 
@@ -571,7 +576,11 @@ operativo del docente.
 
 ## 14. Migracion
 
-H22-F0 no crea migracion.
+H22-F1A crea:
+
+```text
+014_h22_teacher_external_identifier_unique.sql
+```
 
 La primera implementacion puede reutilizar:
 
@@ -584,13 +593,10 @@ La primera implementacion puede reutilizar:
 - transacciones PostgreSQL;
 - advisory locks.
 
-Riesgo residual:
-
-`external_identifier` no tiene unicidad fisica. H22 puede operar sin migracion
-solo si las altas/ediciones individuales y el importador comparten la misma
-guarda de concurrencia. Una migracion futura se justificaria unicamente para
-crear una restriccion unica parcial despues de confirmar en produccion que no
-hay identificadores duplicados.
+La migracion crea un indice unico parcial sobre
+`upper(btrim(external_identifier))` y excluye valores vacios. La validacion
+productiva read-only confirmo cero grupos duplicados. En H22-F1A se aplico
+exclusivamente a `nomina_docente_test`; produccion permanece sin `014`.
 
 ## 15. Pruebas requeridas para H22-F1/F2
 
@@ -645,24 +651,25 @@ hay identificadores duplicados.
 
 ## 16. Decisiones pendientes
 
-Antes de implementar H22-F1 deben cerrarse:
+H22-F1A cierra:
 
-1. confirmar si RH puede ser responsable operativo o queda excluido;
-2. aprobar la regla de bloqueo de inactivacion con dependencias vigentes;
-3. aceptar advisory lock compartido en mutaciones individuales o solicitar
-   una migracion de unicidad para `external_identifier`;
-4. renovar autenticacion institucional y repetir el diagnostico productivo
-   read-only de duplicados antes de implementar Apply.
+- RH excluido como responsable operativo;
+- bloqueo `INACTIVACION_CON_DEPENDENCIAS`;
+- indice unico parcial como autoridad fisica;
+- validacion productiva read-only con cero duplicados.
 
-La decision nominal queda cerrada: la plantilla usa componentes separados y
-el backend deriva `full_name` y `normalized_name`.
+La decision nominal tambien esta cerrada: la plantilla usa componentes
+separados y el backend deriva `full_name` y `normalized_name`.
 
-## 17. Confirmaciones H22-F0
+Permanecen pendientes la implementacion backend del importador, frontend,
+pruebas completas, predeploy, aplicacion productiva aprobada de `014` y deploy.
 
-- No se modifico codigo.
-- No se modifico SQL.
-- No se modifico base de datos.
-- No se ejecutaron migraciones.
+## 17. Estado H22-F1A
+
+- Se agrego proteccion local para identificadores en rutas individuales.
+- Se creo `014` y se aplico solo en `nomina_docente_test`.
+- Produccion fue consultada solo en transaccion read-only.
+- No se aplicaron migraciones en produccion.
 - No se hizo deploy.
 - No se instalaron dependencias.
 - No se cambiaron permisos.

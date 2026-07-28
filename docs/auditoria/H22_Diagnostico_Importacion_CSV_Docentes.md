@@ -236,14 +236,15 @@ Efecto actual:
 | Admin | Si | Global | Permitido | Cerrada |
 | Coordinador | Si | Si | Permitido | Cerrada |
 | Direccion | Si | Si | Permitido | Cerrada por regla y precedente H17/H19 |
-| RH | Si | No en la rama de propiedad | Excluir inicialmente | Requiere confirmacion humana |
+| RH | Si | No en la rama de propiedad | Excluido | Cerrada en H22-F1A |
 | Finanzas | No | No | Denegado | Cerrada |
 | Contador | No | No | Denegado | Cerrada |
 | Contabilidad | No | No | Denegado | Cerrada |
 
 La sesion local/test confirma que `teachers.manage` existe para Admin,
 Coordinador, Direccion y RH. H22 no debe confundir permiso de gestion con rol
-valido para propiedad.
+valido para propiedad. La decision final permite solo `admin`, `coordinador` y
+`direccion`; RH se clasifica como `RESPONSABLE_NO_AUTORIZADO`.
 
 ## 7. Dependencias historicas
 
@@ -282,20 +283,22 @@ Matching aprobado:
 2. identificador institucional;
 3. nombre normalizado como advertencia.
 
-Estado de evidencia:
+Estado de evidencia actualizado por H22-F1A:
 
 - en `nomina_docente_test` no hay identificadores no vacios duplicados;
 - en `nomina_docente_test` no hay nombres normalizados duplicados;
 - ese seed contiene solo dos docentes y no sustituye validacion productiva;
 - H19 documento cero duplicados tras su ejecucion productiva;
-- debe repetirse el SELECT read-only productivo antes de H22-F1 por la
-  credencial expirada durante este diagnostico.
+- produccion tiene 217 docentes, 69 identificadores no vacios y cero grupos
+  duplicados por `upper(btrim(external_identifier))`;
+- `teachers_normalized_name_key` permanece como `UNIQUE (normalized_name)`.
 
 Riesgo:
 
-`external_identifier` carece de unicidad fisica. Se recomienda un advisory
-lock compartido entre importacion y mutaciones individuales. Una migracion se
-reserva como alternativa si se exige unicidad a nivel de esquema.
+H22-F1A agrega en local/test la unicidad fisica mediante
+`teachers_external_identifier_unique_idx`. Las rutas individuales confian en
+PostgreSQL y manejan el `23505` exacto. El futuro importador conserva su
+advisory lock propio.
 
 ## 9. Diseño API
 
@@ -433,24 +436,13 @@ Disponible sin dependencias nuevas:
 
 ## 14. Necesidad de migracion
 
-Resultado H22-F0:
+La decision posterior H22-F1A aprueba
+`014_h22_teacher_external_identifier_unique.sql`.
 
-```text
-No se requiere migracion para la primera implementacion.
-```
-
-Condicion:
-
-las mutaciones individuales e importacion deben compartir control de
-concurrencia para identificadores.
-
-Una migracion futura solo se consideraria para:
-
-- indice unico parcial sobre identificador normalizado;
-- despues de validar produccion sin duplicados;
-- mediante H05, backup y aprobacion independiente.
-
-H22-F0 no crea ni reserva un archivo SQL.
+La migracion crea solo el indice unico parcial sobre
+`upper(btrim(external_identifier))`, excluye vacios y no modifica filas. Fue
+aplicada mediante H05 exclusivamente a `nomina_docente_test`. Produccion
+conserva 16 migraciones registradas y no recibio `014`.
 
 ## 15. Pruebas propuestas
 
@@ -504,35 +496,34 @@ Integracion PostgreSQL:
 | Riesgo/decision | Estado | Recomendacion |
 |---|---|---|
 | Nombre completo vs componentes | Cerrada | Diez columnas; componentes separados y campos derivados por backend. |
-| RH como responsable | Pendiente | Excluir en H22-F1 salvo aprobacion explicita. |
-| Inactivacion con dependencias | Propuesta | Bloquear ciclos ACTIVO/PLANEACION y operaciones vigentes. |
-| Identificador sin UNIQUE | Riesgo tecnico | Advisory lock compartido; migracion solo si se exige garantia fisica. |
-| Validacion productiva | Pendiente tecnico | Renovar gcloud y repetir SELECT read-only. |
+| RH como responsable | Cerrada | Excluido; clasificar como `RESPONSABLE_NO_AUTORIZADO`. |
+| Inactivacion con dependencias | Cerrada | Bloquear ciclos ACTIVO/PLANEACION y operaciones vigentes. |
+| Identificador sin UNIQUE | Mitigada en test | `014` crea el indice; aplicacion productiva pendiente de fase aprobada. |
+| Validacion productiva | Completada read-only | 217 docentes y cero grupos duplicados. |
 | CSV injection | Fuera de alcance | Mantener politica H11; evaluar por exportable aparte. |
 
-Decisiones que permanecen pendientes:
+Pendientes restantes:
 
-- confirmar si RH puede ser responsable operativo;
-- aprobar definitivamente el bloqueo de inactivacion con dependencias;
-- decidir advisory lock compartido frente a unicidad fisica de
-  `external_identifier`;
-- renovar autenticacion institucional;
-- ejecutar validacion productiva read-only antes de implementar Apply.
+- implementar backend del importador;
+- implementar frontend;
+- completar pruebas de Preview/Apply e inactivacion;
+- predeploy;
+- aplicar `014` en produccion solo con backup y aprobacion;
+- deploy posterior.
 
 ## 17. Estado final
 
 H22 queda en:
 
 ```text
-Diagnostico y diseno; no implementado.
+H22-F1A implementada en local/test; importador no implementado.
 ```
 
 Confirmaciones:
 
-- sin codigo;
-- sin SQL;
-- sin BD;
-- sin migraciones;
+- helper y rutas individuales protegidos localmente;
+- migracion `014` creada y aplicada solo en test;
+- produccion read-only y sin escrituras;
 - sin deploy;
 - sin dependencias;
 - sin cambios de permisos;
