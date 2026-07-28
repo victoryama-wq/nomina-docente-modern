@@ -70,7 +70,7 @@ Arquitectura vigente:
 | H19 | Actualizacion controlada de Directorio desde CSV | Directorio / Datos productivos / Permisos operativos | Ejecutado y documentado: 36 `created_by` actualizados y 3 altas minimas, con backup y preview exacto | Bajo; riesgo residual solo ante futuras cargas manuales sin el mismo control | P1 cerrado / monitoreo | Repetir backup, matching nominal, preview y guardas de duplicidad para futuras cargas | Cumplido con validacion posterior, 0 discrepancias y 0 duplicados | Solo para futuras cargas o excepciones |
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
 | H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Cerrado operativo; `013`, conciliacion, deploy y smoke autenticado aprobados | Bajo: riesgo residual por regresion o por aplicar en el futuro un CSV institucional sin control | P1 cerrado operativo | Mantener pruebas, H05/H13 y preview sin bloqueantes antes de cualquier Apply futuro | Cumplido con backup `1784582556252`, 277/277 sin cambios, cero bloqueantes y revision `nomina-api-00052-xtm` | Solo para Apply de un CSV institucional futuro |
-| H22 | Importacion masiva de docentes operativos por CSV | Directorio / Permisos / Datos operativos / Seguridad | Diagnostico y diseno; no implementado | Medio: riesgo por reasignacion de propiedad, datos fiscales mezclados en entidad, identificador sin unicidad fisica e inactivaciones con dependencias | P1 diseno | Implementar solo despues de cerrar decisiones de nombre, RH, inactivacion y concurrencia; Admin exclusivo, preview sin escrituras y Apply atomico | Pruebas API/frontend/integracion, validacion productiva read-only, cero exposicion fiscal y deploy controlado | Si, para las cuatro decisiones funcionales/tecnicas pendientes |
+| H22 | Importacion masiva de docentes operativos por CSV | Directorio / Permisos / Datos operativos / Seguridad | Diagnostico y diseno; decision nominal cerrada con diez columnas, no implementado | Medio: riesgo por reasignacion de propiedad, datos fiscales mezclados en entidad, identificador sin unicidad fisica e inactivaciones con dependencias | P1 diseno | Implementar solo despues de cerrar RH, inactivacion, concurrencia y validacion read-only; Admin exclusivo, preview sin escrituras y Apply atomico | Pruebas API/frontend/integracion, validacion productiva read-only, cero exposicion fiscal y deploy controlado | Si, para las decisiones restantes |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -189,10 +189,10 @@ Pendientes reales despues de H02/H03:
 - H21 no tiene pendientes de implementacion o deploy. El CSV institucional
   definitivo no fue aplicado y conserva una decision humana independiente;
   SEC-H21 mantiene `websocket-driver@0.7.5` y cero vulnerabilidades criticas.
-- H22 requiere decidir el tratamiento del nombre completo frente a sus campos
-  descompuestos, si RH puede ser responsable operativo, el bloqueo de
-  inactivaciones con dependencias y la garantia concurrente de unicidad del
-  identificador.
+- H22 cerro el tratamiento nominal: `nombres`, `apellido_paterno` y
+  `apellido_materno` alimentan los componentes existentes; `full_name` y
+  `normalized_name` son derivados. Permanecen pendientes RH, inactivaciones,
+  concurrencia/unicidad y validacion productiva read-only.
 
 ## 7. Recomendacion final
 

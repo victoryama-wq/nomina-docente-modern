@@ -57,10 +57,12 @@ H22 no puede:
 Los encabezados exactos son:
 
 ```csv
-id,identificador,nombre,responsable_operativo_email,categoria,telefono,ubicacion,estatus
+id,identificador,nombres,apellido_paterno,apellido_materno,responsable_operativo_email,categoria,telefono,ubicacion,estatus
 ```
 
 Las columnas desconocidas, faltantes o repetidas son bloqueantes.
+El CSV no acepta ni exporta columnas independientes llamadas `nombre`,
+`full_name` o `normalized_name`.
 
 ### 4.1 `id`
 
@@ -83,31 +85,61 @@ Las columnas desconocidas, faltantes o repetidas son bloqueantes.
 - La aplicacion debe proteger unicidad funcional aunque el esquema actual no
   tenga una restriccion `UNIQUE`.
 
-### 4.3 `nombre`
+### 4.3 Componentes nominales
 
-- Nombre completo oficial.
-- Obligatorio para nuevas altas.
-- Vacio en un docente existente conserva el valor actual.
-- Debe conservar acentos, `Ñ`, mayusculas institucionales y ortografia
-  autorizada.
-- `teachers.normalized_name` se usa para busqueda y deteccion de colisiones,
-  nunca como identidad suficiente para un UPDATE.
+Mapeo aprobado:
 
-Decision pendiente antes de H22-F1:
+```text
+nombres            -> teachers.first_names
+apellido_paterno   -> teachers.paternal_last_name
+apellido_materno   -> teachers.maternal_last_name
+```
 
-`teachers` conserva tambien `first_names`, `paternal_last_name` y
-`maternal_last_name`. El CSV aprobado no contiene esa descomposicion y no es
-seguro inferirla automaticamente. Antes de habilitar `ACTUALIZAR_NOMBRE` debe
-aprobarse una de estas alternativas:
+`teachers.full_name` y `teachers.normalized_name` son campos derivados por el
+backend. Nunca se reciben directamente desde el CSV.
 
-1. actualizar solo `full_name` y `normalized_name`, declarando los campos
-   descompuestos como legacy/no canonicos;
-2. ampliar la plantilla en una SPEC posterior con columnas separadas;
-3. bloquear cambios de nombre por CSV y mantenerlos exclusivamente en
-   Directorio.
+Para nuevas altas:
 
-Hasta cerrar esa decision, un cambio de nombre debe mostrarse en preview pero
-permanecer bloqueado para Apply.
+- `nombres` es obligatorio;
+- `apellido_paterno` es obligatorio;
+- `apellido_materno` es opcional;
+- se aplican las mismas validaciones vigentes del alta individual;
+- no se inventan apellidos ni se divide automaticamente un nombre completo.
+
+Para docentes existentes:
+
+- una celda vacia conserva el componente actual;
+- cambiar `nombres` actualiza `first_names`;
+- cambiar `apellido_paterno` actualiza `paternal_last_name`;
+- cambiar `apellido_materno` actualiza `maternal_last_name`;
+- una celda vacia no elimina un apellido existente;
+- la eliminacion explicita de un componente queda fuera de H22 v1.
+
+Despues de resolver los valores efectivos, el backend aplica una unica funcion
+canonica:
+
+```text
+first_names
+  + paternal_last_name
+  + maternal_last_name
+      -> full_name
+      -> normalized_name
+```
+
+La funcion debe:
+
+- aplicar `trim` a cada componente;
+- omitir componentes vacios;
+- evitar espacios duplicados;
+- conservar acentos y `Ñ` en `full_name`;
+- aplicar la normalizacion vigente a `normalized_name`;
+- bloquear una colision con la restriccion unica de `normalized_name`;
+- reutilizar o centralizar la logica de altas/ediciones individuales;
+- no introducir una segunda implementacion incompatible.
+
+No se actualiza unicamente `full_name` ni se permite desalinear los componentes
+del nombre. `normalized_name` sigue siendo solo una ayuda de busqueda y
+advertencia, nunca identidad suficiente para un UPDATE.
 
 ### 4.4 `responsable_operativo_email`
 
@@ -215,8 +247,19 @@ Endpoint:
 GET /teachers/import/template?scope=active
 ```
 
-Contenido: docentes `ACTIVO`, ordenados por nombre, con UUID completo y solo
-los ocho campos operativos aprobados.
+Contenido: docentes `ACTIVO`, ordenados por nombre, con UUID completo y los
+diez campos operativos aprobados:
+
+- `id`;
+- `identificador`;
+- `first_names` como `nombres`;
+- `paternal_last_name` como `apellido_paterno`;
+- `maternal_last_name` como `apellido_materno`;
+- correo del responsable operativo;
+- categoria;
+- telefono;
+- ubicacion;
+- estatus.
 
 Nombre:
 
@@ -234,7 +277,8 @@ Endpoint:
 GET /teachers/import/template?scope=all
 ```
 
-Contenido: docentes `ACTIVO` e `INACTIVO`.
+Contenido: docentes `ACTIVO` e `INACTIVO` con los mismos diez campos de
+`scope=active`.
 
 Nombre:
 
@@ -254,6 +298,9 @@ Las tres plantillas usan el helper H11:
 - UUID completo;
 - acentos preservados;
 - sin campos fiscales.
+
+Las plantillas no exportan `full_name`, `normalized_name`, RFC, correo fiscal,
+banco, cuenta, CLABE, `payment_type`, documentos fiscales ni datos de Nomina.
 
 ## 6. Matching definitivo
 
@@ -285,7 +332,7 @@ tokens de consulta existan, aunque no sean contiguos.
 
 - `NUEVO`
 - `ACTUALIZAR_IDENTIFICADOR`
-- `ACTUALIZAR_NOMBRE`, condicionado a la decision de la seccion 4.3
+- `ACTUALIZAR_NOMBRE`
 - `ACTUALIZAR_RESPONSABLE_OPERATIVO`
 - `REASIGNAR_RESPONSABLE_OPERATIVO`
 - `ACTUALIZAR_CATEGORIA`
@@ -318,6 +365,31 @@ tokens de consulta existan, aunque no sean contiguos.
 - `PREVIEW_OBSOLETO`
 - `ERROR`
 
+`ACTUALIZAR_NOMBRE` representa uno o varios cambios en `nombres`,
+`apellido_paterno` o `apellido_materno`, junto con la reconstruccion
+consecuente de `full_name` y `normalized_name`. No se agrega un estado
+equivalente como `ACTUALIZAR_NOMBRE_COMPLETO`.
+
+El preview compara por separado:
+
+| Campo | Actual | Propuesto |
+|---|---|---|
+| Nombres | `first_names` actual | `first_names` efectivo |
+| Apellido paterno | `paternal_last_name` actual | valor efectivo |
+| Apellido materno | `maternal_last_name` actual | valor efectivo |
+| Nombre derivado | `full_name` actual | `full_name` reconstruido |
+
+Cuando cambian componentes nominales y otros datos operativos, la accion
+general es `ACTUALIZAR_MULTIPLE`.
+
+Bloqueos nominales minimos:
+
+- componentes obligatorios faltantes en una nueva alta;
+- UUID e identificador incompatibles;
+- colision de `normalized_name`;
+- posible duplicado nominal en una nueva alta;
+- nombre derivado invalido.
+
 ## 8. Segunda confirmacion
 
 Las siguientes acciones requieren una segunda confirmacion:
@@ -326,7 +398,7 @@ Las siguientes acciones requieren una segunda confirmacion:
 - `INACTIVAR`;
 - `ACTUALIZAR_CATEGORIA`;
 - `ACTUALIZAR_MULTIPLE`;
-- cualquier cambio de nombre si se aprueba en H22-F1.
+- cualquier `ACTUALIZAR_NOMBRE`.
 
 El frontend debe mostrar conteos y before/after. Apply debe enviar las
 categorias de riesgo confirmadas; el backend recalcula el preview y rechaza si
@@ -525,11 +597,25 @@ hay identificadores duplicados.
 - plantilla vacia;
 - plantilla activa;
 - plantilla completa;
+- template con los diez encabezados exactos;
+- export correcto de `nombres`, `apellido_paterno` y `apellido_materno`;
+- ausencia de `full_name` y `normalized_name` en el CSV;
 - UUID completo;
 - ausencia de datos fiscales;
 - nueva alta con `id` vacio;
+- alta con `nombres` y `apellido_paterno`;
+- `apellido_materno` opcional;
 - actualizacion por `id`;
 - actualizacion por identificador;
+- actualizacion individual de cada componente nominal;
+- vacio conserva cada componente nominal existente;
+- reconstruccion correcta de `full_name`;
+- recalculo correcto de `normalized_name`;
+- acentos y `Ñ` preservados;
+- espacios duplicados eliminados;
+- colision normalizada bloqueante;
+- matching no dependiente de componentes nominales;
+- comportamiento nominal equivalente al formulario individual;
 - `id` e identificador incompatibles;
 - identificador duplicado CSV/BD;
 - posible duplicado por nombre;
@@ -561,13 +647,15 @@ hay identificadores duplicados.
 
 Antes de implementar H22-F1 deben cerrarse:
 
-1. tratamiento de cambios de `nombre` frente a los campos descompuestos;
-2. confirmar si RH puede ser responsable operativo o queda excluido;
-3. aprobar la regla de bloqueo de inactivacion con dependencias vigentes;
-4. aceptar advisory lock compartido en mutaciones individuales o solicitar
+1. confirmar si RH puede ser responsable operativo o queda excluido;
+2. aprobar la regla de bloqueo de inactivacion con dependencias vigentes;
+3. aceptar advisory lock compartido en mutaciones individuales o solicitar
    una migracion de unicidad para `external_identifier`;
-5. renovar autenticacion institucional y repetir el diagnostico productivo
+4. renovar autenticacion institucional y repetir el diagnostico productivo
    read-only de duplicados antes de implementar Apply.
+
+La decision nominal queda cerrada: la plantilla usa componentes separados y
+el backend deriva `full_name` y `normalized_name`.
 
 ## 17. Confirmaciones H22-F0
 

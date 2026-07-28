@@ -19,10 +19,35 @@ H22 puede construirse sobre la arquitectura actual sin una migracion inicial:
 La ruta recomendada es `/teachers/import/*`, aunque la pestaña se muestre en
 Catálogos.
 
-No se identifico necesidad obligatoria de migracion para H22-F1. Quedan cinco
-decisiones antes de implementar: nombres descompuestos, rol RH como
-responsable, bloqueo de inactivaciones, estrategia de unicidad concurrente de
-identificador y revalidacion productiva read-only.
+No se identifico necesidad obligatoria de migracion para H22-F1. La decision
+nominal se cerro despues del diagnostico original: la plantilla usa tres
+componentes y el backend deriva `full_name` y `normalized_name`. Permanecen
+pendientes el rol RH, el bloqueo de inactivaciones, la estrategia de unicidad
+concurrente del identificador y la revalidacion productiva read-only.
+
+### 1.1 Decision humana posterior a H22-F0
+
+El diagnostico original identifico correctamente que `teachers` conserva
+`first_names`, `paternal_last_name` y `maternal_last_name`, mientras el primer
+diseño de plantilla proponia una sola columna `nombre`.
+
+La decision aprobada elimina esa incertidumbre:
+
+```csv
+id,identificador,nombres,apellido_paterno,apellido_materno,responsable_operativo_email,categoria,telefono,ubicacion,estatus
+```
+
+Mapeo:
+
+```text
+nombres            -> teachers.first_names
+apellido_paterno   -> teachers.paternal_last_name
+apellido_materno   -> teachers.maternal_last_name
+```
+
+El backend reconstruye `full_name` y recalcula `normalized_name`; ninguna de
+esas columnas se acepta o exporta en el CSV. La semantica queda alineada con el
+formulario individual de Directorio y no requiere inferir apellidos.
 
 ## 2. Evidencia y limites del diagnostico
 
@@ -87,7 +112,7 @@ usa `lower(...) LIKE` sobre nombre, identificador y coordinacion; no consulta
 | Constancia | `/teachers/:id/documents/*` | permisos fiscales documentales |
 
 H22 no debe reutilizar los exportables actuales porque contienen campos
-fiscales. Debe seleccionar explicitamente solo las ocho columnas aprobadas.
+fiscales. Debe seleccionar explicitamente solo las diez columnas aprobadas.
 
 ### 3.3 Alta/edicion actual
 
@@ -164,8 +189,11 @@ Hallazgos:
 ### 5.1 Permitidos
 
 - `external_identifier`;
-- `full_name`, sujeto a decision de consistencia nominal;
-- `normalized_name`, derivado y nunca capturado;
+- `first_names`, recibido como `nombres`;
+- `paternal_last_name`, recibido como `apellido_paterno`;
+- `maternal_last_name`, recibido como `apellido_materno`;
+- `full_name`, derivado por backend;
+- `normalized_name`, derivado por backend y nunca capturado;
 - `created_by`, resuelto por correo;
 - `category`;
 - `phone`;
@@ -183,6 +211,9 @@ Hallazgos:
 - `updated_by`;
 - campos legacy;
 - datos de Horarios, Incidencias, Extras, Nomina, Finanzas y snapshots.
+
+El CSV tampoco acepta ni exporta columnas llamadas `nombre`, `full_name` o
+`normalized_name`.
 
 ## 6. Responsable operativo
 
@@ -426,7 +457,16 @@ H22-F0 no crea ni reserva un archivo SQL.
 Backend/API:
 
 - tres templates y sus permisos;
-- columnas exactas y ausencia fiscal;
+- diez encabezados exactos y ausencia fiscal;
+- export correcto de los tres componentes nominales;
+- ausencia de `full_name` y `normalized_name` en CSV;
+- alta con nombres/apellido paterno y apellido materno opcional;
+- actualizacion separada de cada componente;
+- vacio conserva el componente existente;
+- reconstruccion de `full_name` y `normalized_name`;
+- acentos/`Ñ` preservados y espacios duplicados eliminados;
+- colision normalizada bloqueante;
+- comportamiento equivalente al formulario individual;
 - parser/encoding/limites;
 - matching;
 - responsables;
@@ -463,12 +503,21 @@ Integracion PostgreSQL:
 
 | Riesgo/decision | Estado | Recomendacion |
 |---|---|---|
-| Nombre completo vs componentes | Pendiente | No habilitar cambio nominal hasta decidir regla consistente. |
+| Nombre completo vs componentes | Cerrada | Diez columnas; componentes separados y campos derivados por backend. |
 | RH como responsable | Pendiente | Excluir en H22-F1 salvo aprobacion explicita. |
 | Inactivacion con dependencias | Propuesta | Bloquear ciclos ACTIVO/PLANEACION y operaciones vigentes. |
 | Identificador sin UNIQUE | Riesgo tecnico | Advisory lock compartido; migracion solo si se exige garantia fisica. |
 | Validacion productiva | Pendiente tecnico | Renovar gcloud y repetir SELECT read-only. |
 | CSV injection | Fuera de alcance | Mantener politica H11; evaluar por exportable aparte. |
+
+Decisiones que permanecen pendientes:
+
+- confirmar si RH puede ser responsable operativo;
+- aprobar definitivamente el bloqueo de inactivacion con dependencias;
+- decidir advisory lock compartido frente a unicidad fisica de
+  `external_identifier`;
+- renovar autenticacion institucional;
+- ejecutar validacion productiva read-only antes de implementar Apply.
 
 ## 17. Estado final
 

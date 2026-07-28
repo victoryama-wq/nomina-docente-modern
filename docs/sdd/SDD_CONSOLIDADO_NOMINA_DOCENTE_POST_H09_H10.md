@@ -48,7 +48,7 @@ Estado por H:
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
 | H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
-| H22 | Diagnostico y diseno; importacion CSV operativa de docentes exclusiva de Admin, sin implementacion, migracion ni deploy. |
+| H22 | Diagnostico y diseno; plantilla nominal corregida a diez columnas, componentes de nombre separados y `full_name`/`normalized_name` derivados. Sin implementacion, migracion ni deploy. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -388,7 +388,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
 | H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
-| H22 | Diagnostico y diseno | Cerrar decisiones de nombre descompuesto, rol RH, inactivacion y concurrencia antes de implementar importacion CSV de docentes. |
+| H22 | Diagnostico y diseno | Decision nominal cerrada; resolver rol RH, inactivacion, concurrencia/unicidad y validacion productiva read-only antes de implementar. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
