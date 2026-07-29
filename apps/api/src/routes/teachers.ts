@@ -1,17 +1,33 @@
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { assertCoordinationAllowed, isOwnRecord, loadActorScope, selectCompatibleActorCoordination } from '../actor-scope.js';
-import { requireAnyPermission, requirePermission } from '../auth.js';
+import { authenticate, requireAnyPermission, requirePermission } from '../auth.js';
 import { config } from '../config.js';
 import { query, withTransaction } from '../db.js';
 import { firebaseAdmin } from '../firebase.js';
 import { buildCsv as serializeCsv, csvAttachmentHeaders } from '../lib/csv.js';
 import {
+  TEACHER_IMPORT_HEADERS,
+  TEACHER_IMPORT_RISK_ACTIONS,
+  TeacherImportError,
+  applyTeacherImport,
+  buildTeacherImportPreview,
+  teacherImportBuffer,
+  teacherImportTemplateRows,
+  validateTeacherImportFileName
+} from '../lib/teacher-import.js';
+import {
   TeacherExternalIdentifierConflictError,
   isTeacherExternalIdentifierConflict,
   normalizeTeacherExternalIdentifierKey
 } from '../lib/teacher-identifiers.js';
+import {
+  buildTeacherFullName,
+  normalizeTeacherComparableName,
+  normalizeTeacherNameComponent,
+  normalizeTeacherText
+} from '../lib/teacher-names.js';
 import type { ActorScope, SessionUser } from '../types.js';
 import { type CoordinationRow } from './academic-context.js';
 
@@ -126,34 +142,30 @@ const teacherFiscalBodySchema = z.object({
   bankDetail: z.string().trim().max(140).optional().default('')
 });
 
+const teacherImportFileSchema = z.object({
+  fileName: z.string().trim().min(1).max(180),
+  base64Data: z.string().min(1)
+});
+
+const teacherImportApplySchema = teacherImportFileSchema.extend({
+  fileSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  teachersFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  responsibleUsersFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  confirmedRiskActions: z.array(z.enum(TEACHER_IMPORT_RISK_ACTIONS)).default([])
+});
+
+const teacherImportTemplateSchema = z.object({
+  scope: z.enum(['blank', 'active', 'all']).optional().default('blank')
+});
+
 const documentBodySchema = z.object({
   fileName: z.string().trim().min(1).max(180),
   mimeType: z.enum(['application/pdf', 'image/jpeg', 'image/png']),
   base64Data: z.string().trim().min(1)
 });
 
-function normalizeText(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
-function normalizeUpper(value: string): string {
-  return normalizeText(value).toUpperCase();
-}
-
-function normalizeComparable(value: string): string {
-  return normalizeUpper(value)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function buildFullName(body: z.infer<typeof teacherBodySchema>): string {
-  return [body.firstNames, body.paternalLastName, body.maternalLastName]
-    .map(normalizeUpper)
-    .filter(Boolean)
-    .join(' ');
+  return buildTeacherFullName(body);
 }
 
 function validateTeacherBusinessRules(body: z.infer<typeof teacherBodySchema>): string | null {
@@ -205,6 +217,28 @@ async function sendTeacherExternalIdentifierConflict(reply: FastifyReply): Promi
     code: 'IDENTIFICADOR_DUPLICADO',
     message: 'Ya existe otro docente con el mismo identificador institucional.'
   });
+}
+
+async function requireTeacherImportAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  await authenticate(request, reply);
+  if (reply.sent) return;
+  if (!request.user || !isSystemAdmin(request.user)) {
+    await reply.code(403).send({
+      error: 'FORBIDDEN',
+      code: 'FORBIDDEN',
+      message: 'Solo un administrador puede importar docentes.'
+    });
+  }
+}
+
+async function sendTeacherImportError(reply: FastifyReply, error: unknown): Promise<boolean> {
+  if (!(error instanceof TeacherImportError)) return false;
+  await reply.code(error.statusCode).send({
+    error: error.code,
+    code: error.code,
+    message: error.message
+  });
+  return true;
 }
 
 function isSystemAdmin(actor: SessionUser): boolean {
@@ -302,7 +336,7 @@ async function assertTeacherOwnedByActorCoordination(
 }
 
 async function loadExistingTeacherCoordinationByName(client: PoolClient, coordinationName: string): Promise<CoordinationRow | null> {
-  const name = normalizeText(coordinationName);
+  const name = normalizeTeacherText(coordinationName);
   if (!name) return null;
 
   const result = await client.query<CoordinationRow>(
@@ -335,12 +369,12 @@ async function resolveTeacherCoordinationForActor(
   }
 
   if (isSystemAdmin(actor)) {
-    if (normalizeText(submittedCoordinationName) && !requestedCoordination) {
+    if (normalizeTeacherText(submittedCoordinationName) && !requestedCoordination) {
       throw new Error('La coordinacion indicada no existe o no esta activa.');
     }
     return {
       id: requestedCoordination?.id || null,
-      name: requestedCoordination?.name || normalizeText(submittedCoordinationName)
+      name: requestedCoordination?.name || normalizeTeacherText(submittedCoordinationName)
     };
   }
 
@@ -519,6 +553,70 @@ async function loadTeacherById(client: PoolClient, id: string): Promise<TeacherR
 }
 
 export async function registerTeacherRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/teachers/import/template', { preHandler: requireTeacherImportAdmin }, async (request, reply) => {
+    const parsed = teacherImportTemplateSchema.safeParse(request.query);
+    if (!parsed.success) {
+      sendValidation(reply, parsed.error);
+      return;
+    }
+    const rows = await withTransaction((client) => teacherImportTemplateRows(client, parsed.data.scope));
+    const names = {
+      blank: 'plantilla-importacion-docentes.csv',
+      active: 'docentes-activos-para-edicion.csv',
+      all: 'todos-los-docentes-para-edicion.csv'
+    } as const;
+    const csv = `${serializeCsv(TEACHER_IMPORT_HEADERS, rows)}\r\n`;
+    await reply.headers(csvAttachmentHeaders(names[parsed.data.scope])).send(csv);
+  });
+
+  app.post('/teachers/import/preview', { preHandler: requireTeacherImportAdmin }, async (request, reply) => {
+    const parsed = teacherImportFileSchema.safeParse(request.body);
+    if (!parsed.success) {
+      sendValidation(reply, parsed.error);
+      return;
+    }
+    try {
+      const fileName = validateTeacherImportFileName(parsed.data.fileName);
+      const buffer = teacherImportBuffer(parsed.data.base64Data);
+      const preview = await withTransaction((client) => buildTeacherImportPreview(client, fileName, buffer));
+      return {
+        preview: {
+          ...preview,
+          rows: preview.rows.map(({ responsibleUserId: _responsibleUserId, ...row }) => row)
+        }
+      };
+    } catch (error) {
+      if (await sendTeacherImportError(reply, error)) return;
+      throw error;
+    }
+  });
+
+  app.post('/teachers/import/apply', { preHandler: requireTeacherImportAdmin }, async (request, reply) => {
+    const parsed = teacherImportApplySchema.safeParse(request.body);
+    if (!parsed.success) {
+      sendValidation(reply, parsed.error);
+      return;
+    }
+    try {
+      const fileName = validateTeacherImportFileName(parsed.data.fileName);
+      const buffer = teacherImportBuffer(parsed.data.base64Data);
+      const result = await withTransaction((client) =>
+        applyTeacherImport(client, request.user!, {
+          fileName,
+          buffer,
+          expectedFileSha256: parsed.data.fileSha256,
+          expectedTeachersFingerprint: parsed.data.teachersFingerprint,
+          expectedResponsibleUsersFingerprint: parsed.data.responsibleUsersFingerprint,
+          confirmedRiskActions: parsed.data.confirmedRiskActions
+        })
+      );
+      return { result, message: 'Importacion de docentes aplicada correctamente.' };
+    } catch (error) {
+      if (await sendTeacherImportError(reply, error)) return;
+      throw error;
+    }
+  });
+
   app.get(
     '/teachers',
     { preHandler: requireAnyPermission(['teachers.manage', 'finance.view', 'reports.view', 'fiscal.view']) },
@@ -698,7 +796,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       );
       await assertTeacherExternalIdentifierAvailable(client, parsed.data.externalIdentifier);
       const fullName = buildFullName(parsed.data);
-      const normalizedName = normalizeComparable(fullName);
+      const normalizedName = normalizeTeacherComparableName(fullName);
       const fiscalValues = canManageTeacherFiscal(actor)
         ? {
             paymentType: parsed.data.paymentType,
@@ -747,9 +845,9 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           parsed.data.legacyTeacherId,
           fullName,
           normalizedName,
-          normalizeUpper(parsed.data.firstNames),
-          normalizeUpper(parsed.data.paternalLastName),
-          normalizeUpper(parsed.data.maternalLastName),
+          normalizeTeacherNameComponent(parsed.data.firstNames),
+          normalizeTeacherNameComponent(parsed.data.paternalLastName),
+          normalizeTeacherNameComponent(parsed.data.maternalLastName),
           parsed.data.degree,
           fiscalValues.paymentType,
           parsed.data.category,
@@ -816,7 +914,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       );
       await assertTeacherExternalIdentifierAvailable(client, parsed.data.externalIdentifier, before.id);
       const fullName = buildFullName(parsed.data);
-      const normalizedName = normalizeComparable(fullName);
+      const normalizedName = normalizeTeacherComparableName(fullName);
       const fiscalValues = canManageTeacherFiscal(actor)
         ? {
             paymentType: parsed.data.paymentType,
@@ -864,9 +962,9 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           parsed.data.legacyTeacherId,
           fullName,
           normalizedName,
-          normalizeUpper(parsed.data.firstNames),
-          normalizeUpper(parsed.data.paternalLastName),
-          normalizeUpper(parsed.data.maternalLastName),
+          normalizeTeacherNameComponent(parsed.data.firstNames),
+          normalizeTeacherNameComponent(parsed.data.paternalLastName),
+          normalizeTeacherNameComponent(parsed.data.maternalLastName),
           parsed.data.degree,
           fiscalValues.paymentType,
           parsed.data.category,
