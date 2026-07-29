@@ -38,6 +38,18 @@ export interface DashboardMetrics {
 interface ApiErrorBody {
   message?: string;
   error?: string;
+  code?: string;
+}
+
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code: string
+  ) {
+    super(message);
+    this.name = 'ApiRequestError';
+  }
 }
 
 export interface RoleOption {
@@ -356,6 +368,109 @@ export interface SubjectImportApplyResult {
   updated: number;
   unchanged: number;
   total: number;
+}
+
+export type TeacherImportTemplateScope = 'blank' | 'active' | 'all';
+
+export type TeacherImportRiskAction =
+  | 'REASIGNAR_RESPONSABLE_OPERATIVO'
+  | 'INACTIVAR'
+  | 'ACTUALIZAR_CATEGORIA'
+  | 'ACTUALIZAR_NOMBRE'
+  | 'ACTUALIZAR_MULTIPLE';
+
+export type TeacherImportAction =
+  | 'NUEVO'
+  | 'ACTUALIZAR_IDENTIFICADOR'
+  | 'ACTUALIZAR_NOMBRE'
+  | 'ACTUALIZAR_RESPONSABLE_OPERATIVO'
+  | 'REASIGNAR_RESPONSABLE_OPERATIVO'
+  | 'ACTUALIZAR_CATEGORIA'
+  | 'ACTUALIZAR_CONTACTO'
+  | 'ACTUALIZAR_ESTATUS'
+  | 'ACTUALIZAR_MULTIPLE'
+  | 'INACTIVAR'
+  | 'REACTIVAR'
+  | 'SIN_CAMBIOS'
+  | 'ID_NO_ENCONTRADO'
+  | 'ID_INVALIDO'
+  | 'ID_IDENTIFICADOR_INCOMPATIBLE'
+  | 'IDENTIFICADOR_DUPLICADO_CSV'
+  | 'IDENTIFICADOR_DUPLICADO_BD'
+  | 'DUPLICADO_NOMBRE_CSV'
+  | 'POSIBLE_DUPLICADO_NOMBRE'
+  | 'RESPONSABLE_NO_ENCONTRADO'
+  | 'RESPONSABLE_INACTIVO'
+  | 'RESPONSABLE_AMBIGUO'
+  | 'RESPONSABLE_NO_AUTORIZADO'
+  | 'RESPONSABLE_OPERATIVO_REQUERIDO'
+  | 'CATEGORIA_INVALIDA'
+  | 'ESTATUS_INVALIDO'
+  | 'CAMPO_OBLIGATORIO_FALTANTE'
+  | 'INACTIVACION_CON_DEPENDENCIAS'
+  | 'ERROR';
+
+export interface TeacherImportValues {
+  identifier: string;
+  firstNames: string;
+  paternalLastName: string;
+  maternalLastName: string;
+  derivedName: string;
+  responsibleEmail: string;
+  responsibleName: string;
+  category: string;
+  phone: string;
+  location: string;
+  status: string;
+}
+
+export interface TeacherImportDependencies {
+  schedules: number;
+  incidences: number;
+  extras: number;
+  cycles: string[];
+}
+
+export interface TeacherImportPreviewRow {
+  rowNumber: number;
+  teacherId: string | null;
+  matchedBy: 'id' | 'identificador' | 'new' | null;
+  teacherName: string;
+  action: TeacherImportAction;
+  blocking: boolean;
+  warnings: string[];
+  errors: string[];
+  current: TeacherImportValues | null;
+  proposed: TeacherImportValues | null;
+  dependencies?: TeacherImportDependencies;
+  message: string;
+  changes: Array<'identifier' | 'name' | 'responsible' | 'category' | 'contact' | 'status'>;
+}
+
+export interface TeacherImportPreview {
+  fileName: string;
+  fileSha256: string;
+  teachersFingerprint: string;
+  responsibleUsersFingerprint: string;
+  totalRows: number;
+  summary: Partial<Record<TeacherImportAction, number>>;
+  hasBlockingErrors: boolean;
+  requiresSecondConfirmation: TeacherImportRiskAction[];
+  rows: TeacherImportPreviewRow[];
+}
+
+export interface TeacherImportApplyResult {
+  applied: true;
+  fileSha256: string;
+  totalRows: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  inactivated: number;
+  reactivated: number;
+  responsibleAssigned: number;
+  responsibleReassigned: number;
+  warnings: number;
 }
 
 export interface IncidenceSchedule {
@@ -1082,7 +1197,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     } catch {
       body = {};
     }
-    throw new Error(body.message || body.error || 'No fue posible completar la solicitud.');
+    throw new ApiRequestError(
+      body.message || body.error || 'No fue posible completar la solicitud.',
+      response.status,
+      body.code || body.error || 'ERROR'
+    );
   }
 
   return response.json() as Promise<T>;
@@ -1110,7 +1229,11 @@ async function downloadAuthenticatedFile(path: string, fallbackFileName: string,
     } catch {
       body = {};
     }
-    throw new Error(body.message || errorMessage);
+    throw new ApiRequestError(
+      body.message || errorMessage,
+      response.status,
+      body.code || body.error || 'ERROR'
+    );
   }
 
   const blob = await response.blob();
@@ -1323,6 +1446,38 @@ export async function applySubjectImport(payload: {
   confirmed: true;
 }): Promise<{ result: SubjectImportApplyResult; message: string }> {
   return request('/catalogs/subjects/import/apply', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function downloadTeacherImportTemplate(scope: TeacherImportTemplateScope): Promise<void> {
+  return downloadAuthenticatedFile(
+    `/teachers/import/template${queryString({ scope })}`,
+    `plantilla-importacion-docentes-${scope}.csv`,
+    'No fue posible descargar la plantilla de docentes.'
+  );
+}
+
+export async function previewTeacherImport(payload: {
+  fileName: string;
+  base64Data: string;
+}): Promise<{ preview: TeacherImportPreview }> {
+  return request('/teachers/import/preview', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function applyTeacherImport(payload: {
+  fileName: string;
+  base64Data: string;
+  fileSha256: string;
+  teachersFingerprint: string;
+  responsibleUsersFingerprint: string;
+  confirmedRiskActions: TeacherImportRiskAction[];
+}): Promise<{ result: TeacherImportApplyResult; message: string }> {
+  return request('/teachers/import/apply', {
     method: 'POST',
     body: JSON.stringify(payload)
   });

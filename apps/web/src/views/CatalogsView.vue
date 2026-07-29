@@ -11,6 +11,7 @@ import {
   Search,
   ShieldCheck,
   Tags,
+  UsersRound,
   X
 } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
@@ -28,9 +29,10 @@ import {
   type TabulatorPayload
 } from '../api';
 import SubjectImportModal from '../components/modals/SubjectImportModal.vue';
+import TeacherImportPanel from '../components/catalogs/TeacherImportPanel.vue';
 import { moneyLabel } from '../utils/format';
 
-type CatalogTab = 'subjects' | 'tabulators';
+type CatalogTab = 'subjects' | 'tabulators' | 'teacher-import';
 type StatusFilter = 'TODOS' | 'ACTIVO' | 'INACTIVO';
 
 const authStore = useAuthStore();
@@ -149,6 +151,12 @@ async function handleImportApplied(result: { inserted: number; updated: number; 
     'ok',
     `Importacion aplicada: ${result.inserted} nuevas, ${result.updated} actualizadas y ${result.unchanged} sin cambios.`
   );
+}
+
+async function handleTeacherImportApplied() {
+  await loadCatalogs();
+  activeTab.value = 'teacher-import';
+  setNotice('ok', 'La importación de docentes se aplicó correctamente.');
 }
 
 function newSubject() {
@@ -277,10 +285,10 @@ onUnmounted(() => window.clearTimeout(subjectSearchTimer));
     <section class="toolbar-card">
       <div>
         <p class="eyebrow">Catálogos administrativos</p>
-        <h3>Asignaturas y tabuladores</h3>
+        <h3>Asignaturas, tabuladores e importaciones</h3>
       </div>
       <div class="toolbar-actions">
-        <button class="secondary-action" type="button" @click="loadCatalogs">
+        <button v-if="activeTab !== 'teacher-import'" class="secondary-action" type="button" @click="loadCatalogs">
           <RefreshCw :size="17" :class="{ spin: pageBusy }" />
           Actualizar
         </button>
@@ -292,14 +300,14 @@ onUnmounted(() => window.clearTimeout(subjectSearchTimer));
           <FileUp :size="17" />
           Importar CSV
         </button>
-        <button v-else class="primary-inline" type="button" @click="newTabulator">
+        <button v-else-if="activeTab === 'tabulators'" class="primary-inline" type="button" @click="newTabulator">
           <Plus :size="17" />
           Nuevo tabulador
         </button>
       </div>
     </section>
 
-    <section class="metric-grid compact">
+    <section v-if="activeTab !== 'teacher-import'" class="metric-grid compact">
       <article class="metric-card mini">
         <p>Asignaturas</p>
         <strong>{{ summary.subjects.total }}</strong>
@@ -333,6 +341,15 @@ onUnmounted(() => window.clearTimeout(subjectSearchTimer));
             <Tags :size="15" />
             Tabuladores
           </button>
+          <button
+            v-if="authStore.isAdmin"
+            type="button"
+            :class="{ active: activeTab === 'teacher-import' }"
+            @click="activeTab = 'teacher-import'"
+          >
+            <UsersRound :size="15" />
+            Importación de docentes
+          </button>
         </div>
         <div class="catalog-note">
           <ShieldCheck :size="16" />
@@ -340,7 +357,7 @@ onUnmounted(() => window.clearTimeout(subjectSearchTimer));
         </div>
       </div>
 
-      <div class="filters-row catalogs">
+      <div v-if="activeTab !== 'teacher-import'" class="filters-row catalogs">
         <label class="search-box">
           <Search :size="17" />
           <input v-model="searchText" :placeholder="activeTab === 'subjects' ? 'Buscar asignatura sin importar acentos' : 'Buscar por nombre, estatus o uso'" />
@@ -395,7 +412,7 @@ onUnmounted(() => window.clearTimeout(subjectSearchTimer));
         </table>
       </div>
 
-      <div v-else class="table-shell">
+      <div v-else-if="activeTab === 'tabulators'" class="table-shell">
         <table>
           <thead>
             <tr>
@@ -449,6 +466,11 @@ onUnmounted(() => window.clearTimeout(subjectSearchTimer));
           Siguiente
         </button>
       </div>
+
+      <TeacherImportPanel
+        v-if="activeTab === 'teacher-import' && authStore.isAdmin"
+        @applied="handleTeacherImportApplied"
+      />
     </section>
 
     <SubjectImportModal
