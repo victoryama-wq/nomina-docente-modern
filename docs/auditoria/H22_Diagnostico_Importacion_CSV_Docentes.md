@@ -2,8 +2,8 @@
 
 Fecha: 2026-07-28
 
-Estado: diagnostico cerrado; H22-F2 backend implementado y validado en
-local/test, frontend y produccion pendientes
+Estado: diagnostico cerrado; H22-F3 backend/frontend implementados y validados
+en local/test, predeploy y produccion pendientes
 
 ## 1. Resumen ejecutivo
 
@@ -505,7 +505,6 @@ Integracion PostgreSQL:
 
 Pendientes restantes:
 
-- implementar frontend;
 - predeploy;
 - aplicar `014` en produccion solo con backup y aprobacion;
 - deploy posterior.
@@ -515,8 +514,8 @@ Pendientes restantes:
 H22 queda en:
 
 ```text
-H22-F1A y H22-F2 implementadas en local/test; backend de importacion
-implementado, frontend y despliegue pendientes.
+H22-F1A, H22-F2 y H22-F3 implementadas en local/test; backend y frontend de
+importacion implementados, predeploy y produccion pendientes.
 ```
 
 Confirmaciones:
@@ -524,6 +523,8 @@ Confirmaciones:
 - helper y rutas individuales protegidos localmente;
 - migracion `014` creada y aplicada solo en test;
 - endpoints de plantilla, Preview y Apply atomico implementados;
+- pestana Admin, descargas, Preview visual, filtros, before/after,
+  confirmaciones y Apply frontend implementados;
 - fingerprints de docentes/responsables y revalidacion transaccional de
   dependencias implementados;
 - pruebas API e integracion PostgreSQL agregadas;

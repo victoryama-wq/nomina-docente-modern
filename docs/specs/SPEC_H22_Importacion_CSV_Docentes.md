@@ -2,8 +2,8 @@
 
 Fecha: 2026-07-28
 
-Estado: H22-F2 backend implementado y validado en local/test; frontend,
-migracion productiva `014` y deploy pendientes
+Estado: H22-F3 backend/frontend implementados y validados en local/test;
+predeploy, migracion productiva `014` y deploy pendientes
 
 ## 1. Objetivo
 
@@ -664,8 +664,9 @@ separados y el backend deriva `full_name` y `normalized_name`.
 
 El backend del importador quedo implementado en H22-F2 con plantillas,
 Preview, Apply atomico, fingerprints, confirmaciones de riesgo, auditoria y
-pruebas PostgreSQL. Permanecen pendientes frontend, predeploy, aplicacion
-productiva aprobada de `014` y deploy.
+pruebas PostgreSQL. H22-F3 implemento la pestana Admin, descargas, Preview,
+filtros, before/after, bloqueos, confirmaciones y Apply tipado. Permanecen
+pendientes predeploy, aplicacion productiva aprobada de `014` y deploy.
 
 ## 17. Estado H22-F1A
 
@@ -691,5 +692,26 @@ productiva aprobada de `014` y deploy.
 - Las dependencias de inactivacion se recalculan dentro de Apply.
 - La auditoria excluye CSV, Base64 y cualquier dato fiscal.
 - La implementacion y sus pruebas usan solo `nomina_docente_test`.
-- No se implemento frontend, no se aplico `014` en produccion y no hubo
+- H22-F3 implemento el frontend; `014` no se aplico en produccion y no hubo
   deploy.
+
+## 19. Estado H22-F3
+
+- Se agrego `Catalogos -> Importacion de docentes`, visible solo para Admin.
+- El panel vive en
+  `apps/web/src/components/catalogs/TeacherImportPanel.vue`.
+- Se implementaron descargas `blank`, `active` y `all`; la descarga completa
+  exige confirmacion.
+- Preview muestra resumen, busqueda sin acentos, filtros, bloqueos,
+  advertencias y before/after operativo.
+- Los docentes legacy sin responsable se representan conforme al contrato
+  backend, sin edicion inline.
+- Apply exige confirmacion general y una confirmacion por cada riesgo presente.
+- El frontend reenvia archivo, SHA-256 y fingerprints; no envia acciones o
+  valores recalculados como autoridad.
+- Errores `403`, `409` y `500` se presentan sin informacion interna.
+- La interfaz es responsive y conserva tabla con scroll controlado.
+- Las pruebas frontend H22 cubren permisos, descargas, Preview, filtros,
+  confirmaciones, Apply, errores y seguridad visual.
+- No hubo acceso productivo, migracion productiva, deploy, cambios fiscales,
+  cambios H01 ni modificaciones de Nomina/snapshots.
