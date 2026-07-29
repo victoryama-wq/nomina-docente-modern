@@ -568,7 +568,7 @@ function errorText(error: unknown, fallback: string): string {
       </div>
 
       <div class="preview-filters">
-        <label>
+        <label class="preview-filter-field">
           <span>Resultado</span>
           <select v-model="activeFilter">
             <option value="TODOS">Todos</option>
@@ -579,7 +579,7 @@ function errorText(error: unknown, fallback: string): string {
             <option value="BLOQUEANTES">Bloqueantes</option>
           </select>
         </label>
-        <label>
+        <label class="preview-filter-field">
           <span>Acción</span>
           <select v-model="actionFilter">
             <option value="TODAS">Todas</option>
@@ -588,12 +588,16 @@ function errorText(error: unknown, fallback: string): string {
             </option>
           </select>
         </label>
-        <label class="search-box import-search">
-          <Search :size="17" />
-          <input
-            v-model="searchTerm"
-            placeholder="Buscar fila, docente, identificador o responsable"
-          />
+        <label class="preview-filter-field import-search">
+          <span>Buscar</span>
+          <span class="search-box preview-search-control">
+            <Search :size="17" aria-hidden="true" />
+            <input
+              v-model="searchTerm"
+              aria-label="Buscar fila, docente, identificador o responsable"
+              placeholder="Buscar docente, ID o responsable"
+            />
+          </span>
         </label>
       </div>
       <p class="result-count">Mostrando {{ filteredRows.length }} de {{ preview.rows.length }} filas</p>
@@ -888,15 +892,61 @@ function errorText(error: unknown, fallback: string): string {
   background: #fff4f2;
   border-color: #b42318;
 }
-.preview-filters label:not(.search-box) {
+.preview-filters {
   display: grid;
-  gap: 5px;
+  grid-template-columns: minmax(180px, 0.75fr) minmax(220px, 1fr) minmax(280px, 1.7fr);
+  align-items: end;
+  gap: 12px;
 }
-.preview-filters select {
-  min-width: 190px;
+.preview-filter-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+.preview-filter-field select,
+.preview-search-control input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.preview-filter-field select:hover,
+.preview-search-control input:hover {
+  border-color: #94a3b8;
+}
+.preview-filter-field select:focus-visible,
+.preview-search-control input:focus-visible {
+  outline: none;
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+}
+.preview-search-control {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.preview-search-control input {
+  padding-left: 38px;
+}
+.preview-search-control input::placeholder {
+  color: #64748b;
+  opacity: 1;
 }
 .import-search {
-  flex: 1 1 300px;
+  min-width: 0;
 }
 .result-count {
   margin: -8px 0 0;
@@ -967,6 +1017,14 @@ function errorText(error: unknown, fallback: string): string {
 .dependency-summary strong {
   flex-basis: 100%;
 }
+@media (max-width: 980px) {
+  .preview-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .import-search {
+    grid-column: 1 / -1;
+  }
+}
 @media (max-width: 720px) {
   .import-intro,
   .success-result {
@@ -990,11 +1048,16 @@ function errorText(error: unknown, fallback: string): string {
     grid-template-columns: 1fr;
   }
   .preview-filters {
+    grid-template-columns: 1fr;
     align-items: stretch;
   }
-  .preview-filters label,
-  .preview-filters select {
+  .preview-filter-field,
+  .preview-filter-field select,
+  .preview-search-control {
     width: 100%;
+  }
+  .import-search {
+    grid-column: auto;
   }
   .detail-modal {
     width: calc(100vw - 16px);

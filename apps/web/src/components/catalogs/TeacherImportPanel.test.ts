@@ -215,12 +215,18 @@ describe('TeacherImportPanel', () => {
     const wrapper = mount(TeacherImportPanel);
     await loadPreview(wrapper, previewFixture({ blocking: true, warning: true, riskActions: [] }));
 
+    const filterFields = wrapper.findAll('.preview-filter-field');
+    expect(filterFields).toHaveLength(3);
+    expect(filterFields.map((field) => field.find('span').text())).toEqual(['Resultado', 'Acción', 'Buscar']);
+    expect(wrapper.find('.preview-search-control input').exists()).toBe(true);
+
     expect(wrapper.text()).toContain('Errores bloqueantes');
     expect(wrapper.text()).toContain('este docente no tiene responsable operativo asignado');
     expect(wrapper.text()).toContain('Para modificar este docente debes asignar un responsable operativo válido');
     expect(wrapper.text()).toContain('José Álvarez');
 
-    const search = wrapper.find('input[placeholder*="Buscar fila"]');
+    const search = wrapper.find('.preview-search-control input');
+    expect(search.attributes('aria-label')).toBe('Buscar fila, docente, identificador o responsable');
     await search.setValue('jose alvarez');
     expect(wrapper.text()).toContain('Mostrando 1 de 3 filas');
 
