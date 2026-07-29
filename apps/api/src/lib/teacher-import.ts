@@ -635,6 +635,16 @@ export async function buildTeacherImportPreview(
     const status = existing && !row.status ? existing.status : row.status;
     const phone = existing && !row.phone ? existing.phone : normalizePhone(row.phone);
     const location = existing && !row.location ? existing.location : row.location;
+    const preservesLegacyUnsplitName = Boolean(
+      existing &&
+        existing.fullName &&
+        !row.firstNames &&
+        !row.paternalLastName &&
+        !row.maternalLastName &&
+        !existing.firstNames &&
+        !existing.paternalLastName &&
+        !existing.maternalLastName
+    );
 
     if (!existing && (!identifier || !firstNames || !paternalLastName || !row.responsibleEmail || !category || !status)) {
       previewRows.push(
@@ -642,7 +652,7 @@ export async function buildTeacherImportPreview(
       );
       continue;
     }
-    if (!firstNames || !paternalLastName) {
+    if ((!firstNames || !paternalLastName) && !preservesLegacyUnsplitName) {
       previewRows.push(blockingPreviewRow(row, 'CAMPO_OBLIGATORIO_FALTANTE', 'Nombres y apellido paterno son obligatorios.'));
       continue;
     }
@@ -663,8 +673,12 @@ export async function buildTeacherImportPreview(
       continue;
     }
 
-    const derivedName = buildTeacherFullName({ firstNames, paternalLastName, maternalLastName });
-    const normalizedName = normalizeTeacherComparableName(derivedName);
+    const derivedName = preservesLegacyUnsplitName
+      ? existing!.fullName
+      : buildTeacherFullName({ firstNames, paternalLastName, maternalLastName });
+    const normalizedName = preservesLegacyUnsplitName
+      ? existing!.normalizedName
+      : normalizeTeacherComparableName(derivedName);
     const responsibleMatches = row.responsibleEmail ? usersByEmail.get(row.responsibleEmail) || [] : [];
     if (row.responsibleEmail && responsibleMatches.length === 0) {
       previewRows.push(blockingPreviewRow(row, 'RESPONSABLE_NO_ENCONTRADO', 'No existe el responsable operativo.'));

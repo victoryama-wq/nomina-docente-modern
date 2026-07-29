@@ -27,6 +27,7 @@ async function seedTeacher(options: {
   firstNames: string;
   paternalLastName: string;
   maternalLastName?: string;
+  fullName?: string;
   category?: string;
   status?: 'ACTIVO' | 'INACTIVO';
   responsibleEmail?: string | null;
@@ -34,7 +35,7 @@ async function seedTeacher(options: {
   const db = await connectTestDb();
   try {
     const maternal = options.maternalLastName || '';
-    const fullName = [options.firstNames, options.paternalLastName, maternal].filter(Boolean).join(' ');
+    const fullName = options.fullName || [options.firstNames, options.paternalLastName, maternal].filter(Boolean).join(' ');
     const normalized = fullName
       .toUpperCase()
       .normalize('NFD')
@@ -213,6 +214,41 @@ describeIfDb('H22 teacher CSV import backend', () => {
     expect(all.body).toContain('H22-ACT-01');
     expect(all.body).toContain('H22-INACT-01');
     expect(all.body).toContain('H22-INACT-01,INACTIVO,PRUEBA,,,N,,Local,INACTIVO');
+  });
+
+  it('round-trips an existing legacy teacher whose name components are empty', async () => {
+    const legacyTeacherId = '41000000-0000-4000-8000-000000000022';
+    await seedTeacher({
+      id: legacyTeacherId,
+      identifier: 'H22-LEGACY-NAME',
+      firstNames: '',
+      paternalLastName: '',
+      fullName: 'DOCENTE LEGACY SIN COMPONENTES',
+      responsibleEmail: 'qa.coordinador.idiomas@tecplayacar.edu.mx'
+    });
+
+    const template = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: '/api/teachers/import/template?scope=active'
+    });
+    const response = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/teachers/import/preview',
+      payload: {
+        fileName: 'docentes-activos-para-edicion.csv',
+        base64Data: Buffer.from(template.body, 'utf8').toString('base64')
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    const previewData = response.json().preview;
+    const legacyRow = previewData.rows.find((row: { teacherId: string | null }) => row.teacherId === legacyTeacherId);
+    expect(legacyRow).toMatchObject({
+      action: 'SIN_CAMBIOS',
+      blocking: false,
+      teacherName: 'DOCENTE LEGACY SIN COMPONENTES'
+    });
+    expect(previewData.hasBlockingErrors).toBe(false);
   });
 
   it('parses BOM, LF, quoted commas and embedded newlines without writing or auditing', async () => {
