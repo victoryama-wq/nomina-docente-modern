@@ -2,7 +2,8 @@
 
 Fecha: 2026-07-28
 
-Estado: Diagnostico y diseno aprobable; no implementado
+Estado: H22-F2 backend implementado y validado en local/test; frontend,
+migracion productiva `014` y deploy pendientes
 
 ## 1. Objetivo
 
@@ -661,8 +662,10 @@ H22-F1A cierra:
 La decision nominal tambien esta cerrada: la plantilla usa componentes
 separados y el backend deriva `full_name` y `normalized_name`.
 
-Permanecen pendientes la implementacion backend del importador, frontend,
-pruebas completas, predeploy, aplicacion productiva aprobada de `014` y deploy.
+El backend del importador quedo implementado en H22-F2 con plantillas,
+Preview, Apply atomico, fingerprints, confirmaciones de riesgo, auditoria y
+pruebas PostgreSQL. Permanecen pendientes frontend, predeploy, aplicacion
+productiva aprobada de `014` y deploy.
 
 ## 17. Estado H22-F1A
 
@@ -675,3 +678,18 @@ pruebas completas, predeploy, aplicacion productiva aprobada de `014` y deploy.
 - No se cambiaron permisos.
 - No se modifico H01.
 - No se expusieron datos fiscales.
+
+## 18. Estado H22-F2
+
+- Se implementaron `/teachers/import/template`,
+  `/teachers/import/preview` y `/teachers/import/apply`.
+- Los endpoints son exclusivos de Admin mediante guarda explicita de rol.
+- La normalizacion nominal se centralizo y se comparte con Directorio.
+- Preview no escribe ni audita.
+- Apply vuelve a parsear, usa advisory lock, locks de filas, fingerprints y
+  una sola transaccion sin aplicacion parcial.
+- Las dependencias de inactivacion se recalculan dentro de Apply.
+- La auditoria excluye CSV, Base64 y cualquier dato fiscal.
+- La implementacion y sus pruebas usan solo `nomina_docente_test`.
+- No se implemento frontend, no se aplico `014` en produccion y no hubo
+  deploy.

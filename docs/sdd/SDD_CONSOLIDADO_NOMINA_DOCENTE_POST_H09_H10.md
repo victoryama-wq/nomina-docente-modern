@@ -48,7 +48,7 @@ Estado por H:
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
 | H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
-| H22 | F1A implementada en local/test: decisiones de responsable/inactivacion cerradas, produccion validada read-only sin identificadores duplicados e indice `014` aplicado solo en test. Importador y deploy pendientes. |
+| H22 | F2 backend implementada y validada en local/test: plantillas, Preview read-only, Apply atomico, fingerprints, dependencias, auditoria y guardas Admin. `014` sigue solo en test; frontend y deploy pendientes. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -388,7 +388,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
 | H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
-| H22 | F1A local/test | RH excluido como responsable H22; inactivacion con dependencias bloqueada; unicidad fisica `014` validada en test; importador/frontend/productivo pendientes. |
+| H22 | F2 backend local/test | RH excluido como responsable H22; plantillas/Preview/Apply atomico implementados; inactivacion con dependencias bloqueada y revalidada; `014` solo en test; frontend/productivo pendientes. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -425,8 +425,8 @@ Orden recomendado:
 5. H21 operacion futura:
    - aplicar un CSV institucional solo con archivo definitivo aprobado, preview sin bloqueantes, backup y autorizacion humana independiente.
 6. H22 Importacion de docentes:
-- implementar backend y frontend del importador sobre las decisiones cerradas
-  en F1A; aplicar `014` en produccion solo en una fase posterior con backup,
+- implementar y validar frontend sobre el backend F2; aplicar `014` en
+  produccion solo en una fase posterior con backup,
   H05 y aprobacion.
 7. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
