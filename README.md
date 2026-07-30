@@ -1,6 +1,6 @@
 # Nómina Docente Modern
 
-Última verificación documental e infraestructura: 2026-07-20.
+Última verificación documental e infraestructura: 2026-07-30.
 
 Nueva plataforma para Nómina Docente.
 
@@ -49,7 +49,8 @@ Estado productivo consolidado posterior a H21:
 - H01 precision monetaria: cerrado.
 - H02/H03 permisos/coordinacion: desplegado y validado.
 - H04 pruebas automatizadas: implementado hasta Fase 5; Playwright queda opcional.
-- H05 control formal de migraciones: 15 baseline y migracion 013 aplicada; 16 registros, sin pendientes ni checksum mismatch.
+- H05 control formal de migraciones: 15 baseline y migracion 013 aplicada; 16
+  registros, pendiente exacta 014 de H22 y cero checksum mismatch.
 - H09/H10 estados y cierre de ciclo: desplegado en produccion sin migracion 013.
 - H11 CSV UTF-8: desplegado y cerrado operativo con smoke autorizado.
 - H12 catalogos historicos: cerrado documental como politica operativa.
@@ -60,6 +61,8 @@ Estado productivo consolidado posterior a H21:
 - H19 Directorio: actualizacion controlada y altas minimas ejecutadas sin duplicados.
 - H20 Nomina compartida: cerrado operativo en `nomina-api-00051-9s5`; smoke autenticado Coordinador/Admin aprobado, sin migraciones ni cambios H01.
 - H21 Asignaturas: cerrado operativo en `nomina-api-00052-xtm`; migracion 013, conciliacion de cinco pares/8 horarios y smoke Catalogos/Horarios aprobados. El CSV institucional definitivo no fue aplicado.
+- H22 Importación de docentes: F4 cerrado con fixes legacy/visual, ensayo
+  temporal y smoke humano aprobados; migración 014 y deploy siguen pendientes.
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 
 Documentos de estado relevantes:
@@ -80,6 +83,8 @@ Documentos de estado relevantes:
 - `docs/auditoria/H16_Metadata_Favicon_WebApp.md`
 - `docs/auditoria/H06_H14_Cierre_AppsScript_Legacy.md`
 - `docs/auditoria/H21_Deploy_Productivo_Importacion_Asignaturas.md`
+- `docs/auditoria/H22_Fase4_Validacion_Integral_PreDeploy.md`
+- `docs/auditoria/H22_Ensayo_Productivo_Temporal_Importacion_Docentes.md`
 - `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`
 - `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`
 - `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md`

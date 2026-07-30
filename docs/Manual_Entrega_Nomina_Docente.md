@@ -232,6 +232,67 @@ Reglas clave:
 - Cambiar un tabulador no recalcula nóminas históricas.
 - Las acciones quedan registradas en auditoría.
 
+### 6.3.2 Importación CSV de docentes (H22)
+
+**Estado predeploy:** preparada para el siguiente despliegue productivo H22.
+La migración `014`, API/Hosting y el smoke productivo permanecen pendientes.
+
+H22 agrega la pestaña Admin
+`apps/web/src/components/catalogs/TeacherImportPanel.vue` y tres endpoints:
+
+```text
+GET  /api/teachers/import/template
+POST /api/teachers/import/preview
+POST /api/teachers/import/apply
+```
+
+Los tres usan guarda explícita Admin-only. La UI oculta la pestaña a
+Coordinador, Dirección y RH, pero el backend mantiene `403` como autoridad.
+
+Contrato técnico:
+
+- template `blank`, `active` o `all`, con diez columnas operativas exactas;
+- Preview parsea de nuevo, valida UUID/identificador/nombre, responsables,
+  dependencias, acciones y riesgos, sin escribir ni auditar;
+- Apply recibe archivo y fingerprints, pero no confía en acciones calculadas
+  por el cliente;
+- advisory lock serializa importaciones;
+- `SELECT ... FOR UPDATE` y fingerprints detectan concurrencia;
+- una sola transacción garantiza atomicidad;
+- PostgreSQL conserva autoridad final y `23505` se traduce a conflicto seguro;
+- auditoría registra resumen y cambios operativos, nunca CSV/Base64 ni fiscales.
+
+La migración:
+
+```text
+014_h22_teacher_external_identifier_unique.sql
+```
+
+crea el índice único parcial
+`teachers_external_identifier_unique_idx` sobre
+`upper(btrim(external_identifier))`, excluyendo vacíos. No contiene DML ni
+modifica filas.
+
+Nombres legacy:
+
+- si no hay cambio nominal, se conservan `full_name` y `normalized_name`;
+- un cambio operativo no reconstruye nombres con componentes vacíos;
+- un cambio nominal explícito usa los componentes efectivos y vuelve a validar
+  unicidad;
+- una fila `SIN_CAMBIOS` no ejecuta UPDATE ni genera auditoría por docente.
+
+Datos excluidos:
+
+- RFC;
+- banco, cuenta y CLABE;
+- correo o expediente fiscal;
+- tipo de pago;
+- constancias;
+- nómina, corridas y snapshots.
+
+Pruebas predeploy posteriores a los fixes: API 27/27, web 79/79, integración
+PostgreSQL 105/105, prueba focal del panel 11/11, typecheck y build OK.
+
 ### 6.4 Directorio Docente
 
 Administra la base maestra de docentes. Incluye:
@@ -776,6 +837,31 @@ Respuesta esperada:
 }
 ```
 
+### 12.5 Plan de despliegue H22
+
+H22-F5 debe ejecutarse como ventana controlada:
+
+1. Confirmar rama/SHA, árbol limpio, smoke humano F4 y suites verdes.
+2. Confirmar `npm audit` con cero vulnerabilidades críticas.
+3. Ejecutar H05 productivo read-only y validar pendiente exacta `014`.
+4. Crear backup on-demand y esperar `SUCCESSFUL`.
+5. Registrar conteos y fingerprints previos.
+6. Aplicar `014` únicamente mediante H05.
+7. Confirmar `pending=0` y `checksum mismatch=0`.
+8. Desplegar API y Firebase Hosting sin cambiar variables, secretos, CORS,
+   service account o permisos.
+9. Ejecutar healthchecks, revisar logs y realizar smoke Admin/no Admin.
+10. Descargar plantillas y ejecutar Preview; no ejecutar Apply institucional.
+11. Cambiar los manuales de “preparada” a “disponible en producción”.
+
+Rollback:
+
+- API: regresar tráfico a la revisión anterior.
+- Hosting: restaurar el release anterior.
+- Si solo falla UI/API, conservar el índice `014`.
+- No eliminar el índice improvisadamente.
+- Restaurar backup solo mediante procedimiento DBA aprobado.
+
 ---
 
 ## 13. Respaldos
@@ -801,6 +887,9 @@ $uri = "gs://nomina-docente-prod-sql-imports/backups/backup-$stamp.sql.gz"
 - Usar Secret Manager para credenciales.
 - Para migraciones, ejecutar primero `db:migrate:inspect`, revisar H05 y crear backup; nunca usar `apply` sin aprobación explícita.
 - Rollback API: devolver tráfico a la revisión anterior documentada. Rollback Hosting: restaurar el release anterior. H20 no tiene migración de BD que revertir.
+- Para H22, no ejecutar Apply institucional durante el smoke de deploy; la
+  migración `014` debe aplicarse por H05 y conservarse si el incidente es solo
+  de API/UI.
 
 ---
 

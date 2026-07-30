@@ -1,9 +1,11 @@
 # H22 - Diagnostico de Importacion CSV de Docentes
 
 Fecha: 2026-07-28
+Última actualización: 2026-07-30
 
-Estado: diagnostico cerrado; H22-F3 backend/frontend implementados y validados
-en local/test, predeploy y produccion pendientes
+Estado: diagnostico cerrado; H22-F4 y smoke autenticado humano aprobados.
+Implementación local/test completada; migración y despliegue productivos
+pendientes.
 
 ## 1. Resumen ejecutivo
 
@@ -514,8 +516,9 @@ Pendientes restantes:
 H22 queda en:
 
 ```text
-H22-F1A, H22-F2 y H22-F3 implementadas en local/test; backend y frontend de
-importacion implementados, predeploy y produccion pendientes.
+H22-F1A, H22-F2 y H22-F3 implementadas; H22-F4 tiene regresión completa,
+ensayo temporal y smoke autenticado humano aprobados. La migración productiva
+`014`, el deploy y cualquier Apply institucional permanecen pendientes.
 ```
 
 Confirmaciones:
@@ -534,3 +537,7 @@ Confirmaciones:
 - sin cambios de permisos;
 - sin H01;
 - sin exposicion fiscal.
+- fix legacy validado con 184 filas restauradas `SIN_CAMBIOS`, sin altas
+  accidentales;
+- hotfix visual validado técnicamente en 1440 x 900, 768 x 1024 y 390 x 844;
+- H22 no está cerrado operativo ni desplegado.

@@ -1,9 +1,11 @@
 # SPEC H22 - Importacion CSV de Docentes
 
 Fecha: 2026-07-28
+Última actualización: 2026-07-30
 
-Estado: H22-F3 backend/frontend implementados y validados en local/test;
-predeploy, migracion productiva `014` y deploy pendientes
+Estado: H22-F4 cerrado con validación técnica y smoke autenticado humano
+aprobados; listo para H22-F5. Migración `014`, deploy y Apply institucional
+pendientes.
 
 ## 1. Objetivo
 
@@ -665,8 +667,9 @@ separados y el backend deriva `full_name` y `normalized_name`.
 El backend del importador quedo implementado en H22-F2 con plantillas,
 Preview, Apply atomico, fingerprints, confirmaciones de riesgo, auditoria y
 pruebas PostgreSQL. H22-F3 implemento la pestana Admin, descargas, Preview,
-filtros, before/after, bloqueos, confirmaciones y Apply tipado. Permanecen
-pendientes predeploy, aplicacion productiva aprobada de `014` y deploy.
+filtros, before/after, bloqueos, confirmaciones y Apply tipado. H22-F4 cerró
+predeploy; permanecen pendientes la aplicacion productiva aprobada de `014` y
+el deploy.
 
 ## 17. Estado H22-F1A
 
@@ -715,3 +718,23 @@ pendientes predeploy, aplicacion productiva aprobada de `014` y deploy.
   confirmaciones, Apply, errores y seguridad visual.
 - No hubo acceso productivo, migracion productiva, deploy, cambios fiscales,
   cambios H01 ni modificaciones de Nomina/snapshots.
+
+## 20. Estado H22-F4
+
+- El commit `9d7ccbab818d9b95730c2462d8a8cc8205e6f983` corrige el Preview
+  de docentes legacy con componentes nominales vacíos sin reconstruir nombres
+  ni crear altas accidentales.
+- El commit `51d8814c935551124728421500ea2b2b9da244b3` alinea visualmente
+  los filtros del Preview sin cambiar lógica, API o permisos.
+- La regresión posterior a ambos commits pasó: API 27/27, web 79/79,
+  integración PostgreSQL 105/105, prueba focal 11/11, typecheck y build OK.
+- H05 local/test quedó con 17 registradas, 16 baseline, `014` aplicada,
+  `pending=0` y `checksum mismatch=0`.
+- El ensayo temporal confirmó que `014` crea solo un índice, no contiene DML y
+  conserva conteos y fingerprints.
+- El Preview sobre datos restaurados y código posterior al fix produjo 184
+  `SIN_CAMBIOS`, cero bloqueantes y cero altas accidentales.
+- El smoke autenticado y responsive fue aprobado por confirmación humana el
+  2026-07-30, complementando la validación técnica headless.
+- H22 está preparado para la siguiente ventana productiva, pero no está cerrado
+  operativo. `014`, deploy y Apply institucional no fueron ejecutados.

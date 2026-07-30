@@ -1,7 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-07-20
+Ultima actualizacion de estado productivo: 2026-07-30
 
 ## 1. Resumen ejecutivo
 
@@ -379,6 +379,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | H19 | H13 exige backup, preview `ROLLBACK` y validacion de duplicados para cargas de datos. |
 | H20 | H13 conserva revision, imagen, Hosting y smoke autenticado del alcance compartido. |
 | H21 | H13 registro backup, migracion `013`, conciliacion controlada, API/Hosting y smoke autenticado; cualquier Apply CSV futuro requiere nueva aprobacion. |
+| H22 | F4 y smoke humano aprobados; F5 exige backup on-demand, pendiente exacta `014`, H05 sin mismatch, deploy API/Hosting y prohibición de Apply institucional durante el smoke. |
 
 ## 16. Estado final H13
 

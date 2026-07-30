@@ -262,6 +262,72 @@ Permite administrar tabuladores de pago:
 
 Los cambios aplican a nuevas capturas. Las nóminas históricas conservan el monto calculado en el momento en que fueron guardadas.
 
+### 9.3 Importación de docentes (H22)
+
+**Estado predeploy:** Funcionalidad preparada para el siguiente despliegue
+productivo H22. Todavía no está disponible en producción. En H22-F5 este
+aviso deberá cambiarse a “disponible en producción”.
+
+Esta pestaña es exclusiva para Admin y permite preparar altas o cambios
+operativos de docentes mediante CSV. No reemplaza el `Directorio`: la edición
+individual y la consulta cotidiana continúan en ese módulo.
+
+Descargas disponibles:
+
+- `Plantilla vacía`: entrega encabezados y una fila vacía de trabajo.
+- `Docentes activos`: incluye los docentes activos actuales.
+- `Todos los docentes`: incluye activos e inactivos y exige confirmación antes
+  de descargar el catálogo completo.
+
+El CSV usa exactamente estas diez columnas, en este orden:
+
+1. `id`
+2. `identificador`
+3. `nombres`
+4. `apellido_paterno`
+5. `apellido_materno`
+6. `responsable_operativo_email`
+7. `categoria`
+8. `telefono`
+9. `ubicacion`
+10. `estatus`
+
+Reglas de llenado:
+
+1. Conservar `id` para actualizar al docente correcto.
+2. Dejar `id` vacío únicamente para proponer una alta.
+3. Una celda vacía conserva el dato actual; no limpia valores existentes.
+4. La ausencia de un docente en el archivo no lo inactiva.
+5. El responsable operativo puede ser Admin, Coordinador o Dirección.
+6. RH no puede asignarse como responsable operativo mediante H22.
+7. El CSV no contiene RFC, banco, cuenta, CLABE, tipo de pago, constancias ni
+   otros datos fiscales.
+
+Flujo:
+
+1. Descargar la plantilla adecuada.
+2. Editar solo las columnas operativas permitidas.
+3. Seleccionar el archivo; el sistema muestra nombre y tamaño.
+4. Pulsar `Generar vista previa`.
+5. Revisar el resumen, el conteo y cada fila.
+6. Usar `Resultado`, `Acción` y la búsqueda sin acentos para localizar casos.
+7. Abrir `Ver cambios` para revisar before/after.
+8. Resolver bloqueos y revisar advertencias.
+9. Marcar la confirmación general y cada confirmación de riesgo requerida.
+10. Revisar el modal final, que recuerda que el Apply es atómico.
+11. Ejecutar Apply solo en una operación autorizada.
+12. Revisar los conteos finales; archivo, Preview y confirmaciones se limpian.
+
+Casos especiales:
+
+- Un docente legacy sin responsable y sin cambios muestra advertencia.
+- Si ese docente se modifica, debe asignarse un responsable permitido.
+- Los nombres legacy no desglosados se conservan cuando no existe un cambio
+  nominal explícito.
+- Una inactivación con horarios u otras dependencias vigentes queda bloqueada.
+- `PREVIEW_OBSOLETO` significa que el archivo o los datos cambiaron después del
+  Preview. Se debe generar una nueva vista previa; nunca se debe forzar Apply.
+
 ## 10. Calendario Operativo
 
 Módulo exclusivo para Admin. Es una de las fuentes más importantes del sistema.
@@ -843,12 +909,15 @@ Reglas:
 
 ### 22.6 Catálogos Administrativos
 
-Administra listas que alimentan otros módulos. Actualmente contiene Asignaturas y Tabuladores.
+Administra listas que alimentan otros módulos. Contiene Asignaturas,
+Tabuladores y la Importación de docentes H22 preparada para el siguiente
+despliegue productivo.
 
 | Control | Qué hace |
 |---|---|
 | Pestaña `Asignaturas` | Muestra y administra materias disponibles para horarios |
 | Pestaña `Tabuladores` | Muestra y administra claves de pago y montos |
+| Pestaña `Importación de docentes` | Admin prepara un CSV, genera Preview y aplica cambios operativos autorizados |
 | Búsqueda `Buscar por nombre, estatus o uso` | Filtra asignaturas o tabuladores |
 | Estado `Todos` | Muestra activos e inactivos |
 | Estado `Activos` | Muestra elementos disponibles para captura |
@@ -870,6 +939,8 @@ Reglas:
 - Asignaturas inactivas no deben usarse en nuevos horarios.
 - Tabuladores inactivos no deben usarse en nuevas capturas.
 - Cambiar un monto de tabulador afecta capturas futuras; las nóminas guardadas conservan el cálculo histórico con el monto usado al guardar.
+- H22 no admite datos fiscales y no interpreta la ausencia de una fila como
+  baja. Consultar la sección 9.3 antes de usar el importador.
 
 ### 22.7 Calendario Operativo
 
@@ -1346,7 +1417,8 @@ Finanzas consulta nóminas guardadas, pagos, pendientes, reportes por coordinaci
 
 ![Catálogos Administrativos](screenshots/10-catalogos.png)
 
-Catálogos permite administrar asignaturas y tabuladores de pago.
+Catálogos permite administrar asignaturas, tabuladores de pago y, después del
+despliegue H22, la importación operativa de docentes exclusiva para Admin.
 
 ### 23.11 Auditoría y Bitácora
 
