@@ -1,7 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-07-30
+Ultima actualizacion de estado productivo: 2026-07-31
 
 ## 1. Resumen ejecutivo
 
@@ -32,16 +32,16 @@ Alcance de H13:
 | Cloud Run API | Servicio `nomina-api` |
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
-| Revision Cloud Run vigente documentada | `nomina-api-00052-xtm` |
-| Revision anterior / rollback inmediato | `nomina-api-00051-9s5` |
-| Imagen API vigente H21 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h21-prod-1b449a1` |
-| Digest API vigente H21 | `sha256:b087fd5b77771df23367dc630c06e7f59132e8c803f5809e1ed628e026bf839c` |
+| Revision Cloud Run vigente documentada | `nomina-api-00053-cjg` |
+| Revision anterior / rollback inmediato | `nomina-api-00052-xtm` |
+| Imagen API vigente H22 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h22-prod-030ae69` |
+| Digest API vigente H22 | `sha256:8e184919579d73fcfc1ecc3b1884edd5da40bc83891d5407d4cc7be95d215028` |
 | CPU / memoria | `1` / `512Mi` |
 | Concurrencia / timeout | `80` / `300 s` |
 | Instancias min / max | `0` / `3` |
 | Imagen API H11 documentada | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h11-prod-4e0c214` |
-| Firebase Hosting release vigente | `1784583329978000` |
-| Firebase Hosting version vigente | `79673723ffe4f297` |
+| Firebase Hosting release vigente | `1785457082597000` |
+| Firebase Hosting version vigente | `466c8eb59d99c2dd` |
 | Instancia Cloud SQL | `nomina-docente-web` |
 | Base productiva | `nomina_docente` |
 | Usuario DB aplicativo | `app_nomina` |
@@ -361,6 +361,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | 2026-07-09 | `c1e858b` | `nomina-api-00049-2hn` | `nomina-api-00050-zdm` | Sin deploy Hosting | No requerido; sin escritura BD | No | OK | Hotfix snapshot OK | `H18_Hotfix_Reportes_Snapshot_LineKey.md` |
 | 2026-07-16 | `56553f4` | `nomina-api-00050-zdm` | `nomina-api-00051-9s5` | `1784228039752000` / `41bf160c7c3595b6` | No requerido; sin escritura BD | No | OK | H20 Coordinador/Admin OK | `H20_Deploy_Productivo_Alcance_Compartido_Nomina.md` |
 | 2026-07-20 | `1b449a1` | `nomina-api-00051-9s5` | `nomina-api-00052-xtm` | `1784583329978000` / `79673723ffe4f297` | `1784582556252` | `013` | OK | H21 Catalogos/Horarios OK; sin Apply CSV | `H21_Deploy_Productivo_Importacion_Asignaturas.md` |
+| 2026-07-31 | `030ae69` | `nomina-api-00052-xtm` | `nomina-api-00053-cjg` | `1785457082597000` / `466c8eb59d99c2dd` | `1785456525085` | `014` | OK | H22 Admin/no Admin y responsive OK; sin Apply CSV | `H22_Deploy_Productivo_Importacion_Docentes.md` |
 
 ## 15. Relacion con fases cerradas
 
@@ -379,7 +380,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | H19 | H13 exige backup, preview `ROLLBACK` y validacion de duplicados para cargas de datos. |
 | H20 | H13 conserva revision, imagen, Hosting y smoke autenticado del alcance compartido. |
 | H21 | H13 registro backup, migracion `013`, conciliacion controlada, API/Hosting y smoke autenticado; cualquier Apply CSV futuro requiere nueva aprobacion. |
-| H22 | F4 y smoke humano aprobados; F5 exige backup on-demand, pendiente exacta `014`, H05 sin mismatch, deploy API/Hosting y prohibición de Apply institucional durante el smoke. |
+| H22 | Cerrado operativo con backup, `014`, H05 sin pendientes, API/Hosting y smoke autenticado aprobados; cualquier Apply CSV futuro requiere una nueva ventana autorizada. |
 
 ## 16. Estado final H13
 

@@ -1,11 +1,10 @@
 # SPEC H22 - Importacion CSV de Docentes
 
 Fecha: 2026-07-28
-Última actualización: 2026-07-30
+Última actualización: 2026-07-31
 
-Estado: H22-F4 cerrado con validación técnica y smoke autenticado humano
-aprobados; listo para H22-F5. Migración `014`, deploy y Apply institucional
-pendientes.
+Estado: **H22 cerrado operativo**. Migración `014`, API, Hosting y smoke
+autenticado aprobados. Ningún CSV institucional fue aplicado.
 
 ## 1. Objetivo
 
@@ -668,8 +667,8 @@ El backend del importador quedo implementado en H22-F2 con plantillas,
 Preview, Apply atomico, fingerprints, confirmaciones de riesgo, auditoria y
 pruebas PostgreSQL. H22-F3 implemento la pestana Admin, descargas, Preview,
 filtros, before/after, bloqueos, confirmaciones y Apply tipado. H22-F4 cerró
-predeploy; permanecen pendientes la aplicacion productiva aprobada de `014` y
-el deploy.
+predeploy y H22-F5 aplicó `014`, desplegó API/Hosting y aprobó el smoke sin
+ejecutar Apply institucional.
 
 ## 17. Estado H22-F1A
 
@@ -736,5 +735,28 @@ el deploy.
   `SIN_CAMBIOS`, cero bloqueantes y cero altas accidentales.
 - El smoke autenticado y responsive fue aprobado por confirmación humana el
   2026-07-30, complementando la validación técnica headless.
-- H22 está preparado para la siguiente ventana productiva, pero no está cerrado
-  operativo. `014`, deploy y Apply institucional no fueron ejecutados.
+- Al cierre de H22-F4, H22 estaba preparado para la siguiente ventana
+  productiva, pero todavía no estaba cerrado operativo. En esa fase no se
+  ejecutaron `014`, deploy ni Apply institucional.
+
+## 21. Estado H22-F5
+
+- Backup productivo `1785456525085`, estado `SUCCESSFUL`.
+- `014_h22_teacher_external_identifier_unique.sql` aplicada exclusivamente por
+  H05, sin DML ni cambios de filas.
+- H05 final: 17 registradas, 15 baseline, `013` y `014` aplicadas,
+  `pending=0` y `checksum mismatch=0`.
+- API desplegada en `nomina-api-00053-cjg`, con 100% del tráfico.
+- Firebase Hosting live: release `1785457082597000`, version
+  `466c8eb59d99c2dd`.
+- Healthchecks HTTP 200 y rutas sin sesión HTTP 401 esperado.
+- Smoke autenticado Admin y validación de ocultamiento/403 para Coordinador,
+  Dirección y RH aprobados por el usuario.
+- Responsive aprobado en 1440 x 900, 768 x 1024 y 390 x 844.
+- Plantillas y Preview aprobados; no se ejecutó Apply ni se aplicó un CSV
+  institucional.
+- H01, datos fiscales, Nómina, corridas y snapshots permanecieron intactos.
+
+H22 queda cerrado operativo. Cualquier Apply futuro constituye una operación
+de datos independiente y requiere archivo, Preview, backup y autorización
+humana específicos.

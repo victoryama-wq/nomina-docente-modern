@@ -1,7 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-07-30
+Ultima actualizacion: 2026-07-31
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -14,19 +14,19 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00052-xtm` |
-| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00051-9s5` |
-| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h21-prod-1b449a1` |
-| Digest API vigente | `sha256:b087fd5b77771df23367dc630c06e7f59132e8c803f5809e1ed628e026bf839c` |
+| Revision Cloud Run vigente documentada | `nomina-api-00053-cjg` |
+| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00052-xtm` |
+| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h22-prod-030ae69` |
+| Digest API vigente | `sha256:8e184919579d73fcfc1ecc3b1884edd5da40bc83891d5407d4cc7be95d215028` |
 | Recursos Cloud Run | CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, min `0`, max `3` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
-| Firebase Hosting release vigente | `1784583329978000` |
-| Firebase Hosting version vigente | `79673723ffe4f297` |
+| Firebase Hosting release vigente | `1785457082597000` |
+| Firebase Hosting version vigente | `466c8eb59d99c2dd` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true`, en monitoreo |
-| Control H05 productivo | 16 registradas: 15 baseline y `013` aplicada; `014` creada/aplicada solo en test y pendiente de futura aprobacion productiva; 0 checksum mismatch |
+| Control H05 productivo | 17 registradas: 15 baseline, `013` y `014` aplicadas; `pending=0`; `checksum mismatch=0` |
 
 Estado por H:
 
@@ -36,7 +36,7 @@ Estado por H:
 | H02 | Cerrado operativo; `user_coordinations` existe, pero el fallback legacy sigue activo en monitoreo. |
 | H03 | Cerrado operativo; permisos fiscales, documentales, financieros, workflow y preview separados. |
 | H04 | Implementado hasta Fase 5; H04-F6 Playwright queda opcional posterior. |
-| H05 | Cerrado con tablas de control; produccion conserva 15 baseline y `013` aplicada. `014` H22 esta validada solo en test y pendiente de una fase productiva aprobada. |
+| H05 | Cerrado con tablas de control; produccion conserva 15 baseline y migraciones `013`/`014` aplicadas, sin pendientes ni checksum mismatch. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
@@ -48,7 +48,7 @@ Estado por H:
 | H19 | Ejecutado de forma controlada; 36 docentes existentes actualizaron `created_by` y se registraron 3 altas minimas, con backup, preview y validacion sin duplicados. |
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
 | H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
-| H22 | F4 cerrado: fixes legacy/visual, regresión 27/79/105, ensayo temporal, manuales y smoke autenticado humano aprobados. Listo para F5; `014`, deploy y Apply institucional no ejecutados. |
+| H22 | Cerrado operativo; migracion `014`, API `nomina-api-00053-cjg`, Hosting live y smoke autenticado aprobados. Ningun CSV institucional fue aplicado. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -68,6 +68,10 @@ Ultimos hitos productivos relevantes:
 - H19 Directorio Docentes: backup `1783642001652`, preview exacto en `ROLLBACK`, 36 UPDATE de `teachers.created_by` y 3 INSERT minimos; 7 de los 10 sin match nominal ya existian, 3 fueron nuevas altas y no se crearon duplicados.
 - H20 Nomina compartida: deploy productivo ejecutado el 2026-07-16; API revision `nomina-api-00051-9s5`, Hosting release `1784228039752000`; smoke autenticado Coordinador/Admin aprobado, sin migracion, escritura de Nomina ni cambio H01.
 - H21 Asignaturas: backup `1784582556252`, migracion `013` aplicada con H05, ocho horarios conciliados sin tocar snapshots y deploy `nomina-api-00052-xtm` / Hosting `1784583329978000`; smoke autenticado Catalogos/Horarios aprobado.
+- H22 Importacion de docentes: backup `1785456525085`, migracion `014`
+  aplicada por H05, deploy `nomina-api-00053-cjg` / Hosting
+  `1785457082597000`, smoke autenticado Admin/no Admin y responsive aprobado;
+  sin Apply ni CSV institucional aplicado.
 
 ## 2. Arquitectura vigente
 
@@ -348,12 +352,13 @@ Codex debe leer primero este SDD, la matriz y los documentos especificos de la f
 | CSV/codificacion | `docs/auditoria/H11_Cierre_CSV_UTF8_PostDeploy.md` | H11 Fase 1, Fase 2, Fase 3A, Fase 3B, Fase 4, deploy H11-F5 y cierre postdeploy | Cerrado operativo; exportables criticos estandarizados y validados en Excel institucional |
 | Catalogos historicos | `docs/auditoria/H12_Cierre_Documental_Catalogos_Historicos.md` | SPEC H12 | Cerrado documental; politica operativa sin implementacion tecnica |
 | Importacion de Asignaturas | `docs/auditoria/H21_Deploy_Productivo_Importacion_Asignaturas.md` y `docs/specs/SPEC_H21_Importacion_CSV_Asignaturas.md` | Diagnostico, plan y ensayo de conciliacion H21; H12/H05 | Cerrado operativo; `013`, conciliacion, deploy y smoke aprobados; CSV institucional definitivo no aplicado |
+| Importacion de Docentes | `docs/auditoria/H22_Deploy_Productivo_Importacion_Docentes.md` y `docs/specs/SPEC_H22_Importacion_CSV_Docentes.md` | Diagnostico, F1A-F4, ensayo temporal, H05/H13 y manuales | Cerrado operativo; `014`, API/Hosting y smoke aprobados; ningun CSV institucional aplicado |
 | Checklist productivo | `docs/auditoria/H13_Checklist_Productivo_Permanente.md` | Deploy H02/H03, H09/H10, H11 y H05 | Cerrado documental; usar antes de cada deploy productivo |
 | Sesion/inactividad | `docs/auditoria/H15_Deploy_Productivo_Resultado.md` | H15 predeploy, H13, auth frontend | Desplegado productivamente; observar ciclo real completo si operacion lo requiere |
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
 | Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`, `docs/auditoria/H18_Deploy_Productivo_Reportes_Operativos.md`, `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md`, `docs/auditoria/H18_Hotfix_Reportes_Snapshot_LineKey.md` y `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | Cerrado operativo; H18-F1/F2/F5/F6 y hotfix snapshot desplegados; CSV/XLSX validados en Excel institucional |
 | Nomina compartida Coordinador | `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`, `docs/auditoria/H20_Alcance_Compartido_Nomina_Coordinadores.md` y `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md` | H02/H03 Fase 4/5, ajuste docentes compartidos y H04 Fase 4/5 | Cerrado operativo; revision `nomina-api-00051-9s5` y Hosting H20 activos, smoke autenticado satisfactorio |
-| Manuales | `docs/Manual_Entrega_Nomina_Docente.md` y `docs/Manual_Uso_Nomina_Docente.md` | DOCX generados desde ambas fuentes Markdown | Vigentes post-H20; Markdown es la fuente editable |
+| Manuales | `docs/Manual_Entrega_Nomina_Docente.md` y `docs/Manual_Uso_Nomina_Docente.md` | DOCX generados desde ambas fuentes Markdown | Vigentes post-H22; Markdown es la fuente editable |
 | Alineacion post-H20 | `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md` | README, H13, manuales y documentos historicos clasificados | Evidencia read-only de Git, Cloud Run, Hosting, Cloud SQL y H05 |
 
 ## 6. Documentos historicos / no usar como fuente primaria
@@ -388,7 +393,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H18 | Cerrado operativo | Mantener pruebas y documentar cualquier cambio futuro de permisos/exportables; CSV H11 sigue como respaldo y XLSX server-side usa `exceljs`. |
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
 | H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
-| H22 | F4 cerrado; listo para F5 | Admin exclusivo; fix legacy, hotfix visual, ensayo temporal sin DML y smoke humano aprobados; `014` solo en test. Migración productiva y deploy pendientes. |
+| H22 | Cerrado operativo | Admin exclusivo; `014`, API/Hosting, plantillas, Preview, permisos y responsive aprobados. Mantener Apply como operación futura separada con backup y autorización. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -425,8 +430,8 @@ Orden recomendado:
 5. H21 operacion futura:
    - aplicar un CSV institucional solo con archivo definitivo aprobado, preview sin bloqueantes, backup y autorizacion humana independiente.
 6. H22 Importacion de docentes:
-   - ejecutar H22-F5 con backup, H05, pendiente exacta `014`, deploy controlado
-     y sin Apply institucional; F4 y su smoke autenticado ya están aprobados.
+   - cerrado operativo; cualquier Apply institucional futuro requiere CSV
+     aprobado, Preview sin bloqueantes, backup y autorizacion humana separada.
 7. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 

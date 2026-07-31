@@ -5,7 +5,7 @@
 
 **Fecha original:** 8 de mayo de 2026
 
-**Última actualización:** 18 de julio de 2026
+**Última actualización:** 31 de julio de 2026
 **Ambiente:** Producción Google Cloud / Firebase  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
 **Administrador general protegido:** `victor.yama@tecplayacar.edu.mx`
@@ -84,7 +84,11 @@ Estas funciones pueden agregarse posteriormente sin rehacer la arquitectura prin
 | Contenedores | Artifact Registry | Imagen Docker del API |
 | Secretos | Secret Manager | Contraseña de base de datos |
 
-Estado productivo verificado el 2026-07-18: revisión Cloud Run `nomina-api-00051-9s5`, imagen `h20-prod-56553f4`, Firebase Hosting release `1784228039752000` y version `41bf160c7c3595b6`.
+Estado productivo verificado el 2026-07-31: revisión Cloud Run
+`nomina-api-00053-cjg`, imagen `h22-prod-030ae69`, digest
+`sha256:8e184919579d73fcfc1ecc3b1884edd5da40bc83891d5407d4cc7be95d215028`,
+Firebase Hosting release `1785457082597000` y version
+`466c8eb59d99c2dd`.
 
 ### 3.2 URLs de producción
 
@@ -234,8 +238,9 @@ Reglas clave:
 
 ### 6.3.2 Importación CSV de docentes (H22)
 
-**Estado predeploy:** preparada para el siguiente despliegue productivo H22.
-La migración `014`, API/Hosting y el smoke productivo permanecen pendientes.
+**Estado productivo:** H22 cerrado operativo. La migración `014`, API/Hosting
+y el smoke autenticado fueron aprobados. No se ejecutó Apply ni se aplicó un
+CSV institucional durante el deploy.
 
 H22 agrega la pestaña Admin
 `apps/web/src/components/catalogs/TeacherImportPanel.vue` y tres endpoints:
@@ -837,22 +842,20 @@ Respuesta esperada:
 }
 ```
 
-### 12.5 Plan de despliegue H22
+### 12.5 Resultado del despliegue H22
 
-H22-F5 debe ejecutarse como ventana controlada:
+H22-F5 se ejecutó como ventana controlada:
 
-1. Confirmar rama/SHA, árbol limpio, smoke humano F4 y suites verdes.
-2. Confirmar `npm audit` con cero vulnerabilidades críticas.
-3. Ejecutar H05 productivo read-only y validar pendiente exacta `014`.
-4. Crear backup on-demand y esperar `SUCCESSFUL`.
-5. Registrar conteos y fingerprints previos.
-6. Aplicar `014` únicamente mediante H05.
-7. Confirmar `pending=0` y `checksum mismatch=0`.
-8. Desplegar API y Firebase Hosting sin cambiar variables, secretos, CORS,
-   service account o permisos.
-9. Ejecutar healthchecks, revisar logs y realizar smoke Admin/no Admin.
-10. Descargar plantillas y ejecutar Preview; no ejecutar Apply institucional.
-11. Cambiar los manuales de “preparada” a “disponible en producción”.
+1. Backup `1785456525085`, estado `SUCCESSFUL`.
+2. `014` aplicada exclusivamente mediante H05.
+3. H05 final: 17 registradas, 15 baseline, `013`/`014` aplicadas,
+   `pending=0` y `checksum mismatch=0`.
+4. API desplegada en `nomina-api-00053-cjg`, 100% del tráfico.
+5. Hosting live release `1785457082597000`, version
+   `466c8eb59d99c2dd`.
+6. Healthchecks HTTP 200 y rutas protegidas sin sesión HTTP 401 esperado.
+7. Smoke Admin/no Admin y responsive aprobado por el usuario.
+8. Plantillas y Preview validados; no se ejecutó Apply institucional.
 
 Rollback:
 
@@ -887,9 +890,10 @@ $uri = "gs://nomina-docente-prod-sql-imports/backups/backup-$stamp.sql.gz"
 - Usar Secret Manager para credenciales.
 - Para migraciones, ejecutar primero `db:migrate:inspect`, revisar H05 y crear backup; nunca usar `apply` sin aprobación explícita.
 - Rollback API: devolver tráfico a la revisión anterior documentada. Rollback Hosting: restaurar el release anterior. H20 no tiene migración de BD que revertir.
-- Para H22, no ejecutar Apply institucional durante el smoke de deploy; la
-  migración `014` debe aplicarse por H05 y conservarse si el incidente es solo
-  de API/UI.
+- Para H22, cualquier Apply institucional futuro requiere CSV aprobado,
+  Preview sin bloqueantes, backup y autorización humana independiente. La
+  migración `014` ya fue aplicada por H05 y debe conservarse si un incidente es
+  solo de API/UI.
 
 ---
 

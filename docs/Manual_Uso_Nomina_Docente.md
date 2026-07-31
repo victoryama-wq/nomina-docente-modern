@@ -7,7 +7,7 @@
 **Versión:** 1.1 post-H20
 
 **Fecha original:** 9 de mayo de 2026
-**Última actualización:** 18 de julio de 2026
+**Última actualización:** 31 de julio de 2026
 
 ---
 
@@ -264,9 +264,9 @@ Los cambios aplican a nuevas capturas. Las nóminas históricas conservan el mon
 
 ### 9.3 Importación de docentes (H22)
 
-**Estado predeploy:** Funcionalidad preparada para el siguiente despliegue
-productivo H22. Todavía no está disponible en producción. En H22-F5 este
-aviso deberá cambiarse a “disponible en producción”.
+**Disponible en producción:** H22 está cerrado operativo. La pestaña, las
+plantillas y el Preview fueron validados en producción. El deploy no aplicó
+ningún CSV institucional ni modificó docentes.
 
 Esta pestaña es exclusiva para Admin y permite preparar altas o cambios
 operativos de docentes mediante CSV. No reemplaza el `Directorio`: la edición
@@ -910,8 +910,7 @@ Reglas:
 ### 22.6 Catálogos Administrativos
 
 Administra listas que alimentan otros módulos. Contiene Asignaturas,
-Tabuladores y la Importación de docentes H22 preparada para el siguiente
-despliegue productivo.
+Tabuladores y la Importación de docentes H22 disponible en producción.
 
 | Control | Qué hace |
 |---|---|
@@ -1417,8 +1416,8 @@ Finanzas consulta nóminas guardadas, pagos, pendientes, reportes por coordinaci
 
 ![Catálogos Administrativos](screenshots/10-catalogos.png)
 
-Catálogos permite administrar asignaturas, tabuladores de pago y, después del
-despliegue H22, la importación operativa de docentes exclusiva para Admin.
+Catálogos permite administrar asignaturas, tabuladores de pago y, con H22, la
+importación operativa de docentes exclusiva para Admin.
 
 ### 23.11 Auditoría y Bitácora
 

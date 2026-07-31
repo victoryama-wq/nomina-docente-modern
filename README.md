@@ -36,21 +36,21 @@ API via Hosting: https://nomina-docente-prod.web.app/api/health
 
 Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
-Estado productivo consolidado posterior a H21:
+Estado productivo consolidado posterior a H22:
 
-- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00052-xtm`.
-- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h21-prod-1b449a1`.
-- Digest vigente: `sha256:b087fd5b77771df23367dc630c06e7f59132e8c803f5809e1ed628e026bf839c`.
+- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00053-cjg`.
+- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h22-prod-030ae69`.
+- Digest vigente: `sha256:8e184919579d73fcfc1ecc3b1884edd5da40bc83891d5407d4cc7be95d215028`.
 - Configuración Cloud Run verificada: CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, mínimo `0` y máximo `3` instancias.
-- Firebase Hosting live: release `1784583329978000`, version `79673723ffe4f297`.
+- Firebase Hosting live: release `1785457082597000`, version `466c8eb59d99c2dd`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.
 - H01 precision monetaria: cerrado.
 - H02/H03 permisos/coordinacion: desplegado y validado.
 - H04 pruebas automatizadas: implementado hasta Fase 5; Playwright queda opcional.
-- H05 control formal de migraciones: 15 baseline y migracion 013 aplicada; 16
-  registros, pendiente exacta 014 de H22 y cero checksum mismatch.
+- H05 control formal de migraciones: 17 registros, 15 baseline y migraciones
+  013/014 aplicadas; `pending=0` y `checksum mismatch=0`.
 - H09/H10 estados y cierre de ciclo: desplegado en produccion sin migracion 013.
 - H11 CSV UTF-8: desplegado y cerrado operativo con smoke autorizado.
 - H12 catalogos historicos: cerrado documental como politica operativa.
@@ -61,8 +61,9 @@ Estado productivo consolidado posterior a H21:
 - H19 Directorio: actualizacion controlada y altas minimas ejecutadas sin duplicados.
 - H20 Nomina compartida: cerrado operativo en `nomina-api-00051-9s5`; smoke autenticado Coordinador/Admin aprobado, sin migraciones ni cambios H01.
 - H21 Asignaturas: cerrado operativo en `nomina-api-00052-xtm`; migracion 013, conciliacion de cinco pares/8 horarios y smoke Catalogos/Horarios aprobados. El CSV institucional definitivo no fue aplicado.
-- H22 Importación de docentes: F4 cerrado con fixes legacy/visual, ensayo
-  temporal y smoke humano aprobados; migración 014 y deploy siguen pendientes.
+- H22 Importación de docentes: cerrado operativo en `nomina-api-00053-cjg`;
+  migración 014, API/Hosting y smoke autenticado Admin/no Admin aprobados. No se
+  ejecutó Apply ni se aplicó un CSV institucional.
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 
 Documentos de estado relevantes:
@@ -85,6 +86,7 @@ Documentos de estado relevantes:
 - `docs/auditoria/H21_Deploy_Productivo_Importacion_Asignaturas.md`
 - `docs/auditoria/H22_Fase4_Validacion_Integral_PreDeploy.md`
 - `docs/auditoria/H22_Ensayo_Productivo_Temporal_Importacion_Docentes.md`
+- `docs/auditoria/H22_Deploy_Productivo_Importacion_Docentes.md`
 - `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`
 - `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`
 - `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md`
