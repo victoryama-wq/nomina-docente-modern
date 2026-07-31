@@ -274,7 +274,7 @@ individual y la consulta cotidiana continúan en ese módulo.
 
 Descargas disponibles:
 
-- `Plantilla vacía`: entrega encabezados y una fila vacía de trabajo.
+- `Plantilla vacía`: entrega únicamente los encabezados aprobados.
 - `Docentes activos`: incluye los docentes activos actuales.
 - `Todos los docentes`: incluye activos e inactivos y exige confirmación antes
   de descargar el catálogo completo.
