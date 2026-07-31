@@ -60,6 +60,7 @@ interface TeacherRow {
   updatedAt: string;
   createdById: string | null;
   createdByEmail: string;
+  createdByName: string;
   updatedByEmail: string;
   documentId: string | null;
   documentName: string;
@@ -530,6 +531,7 @@ function teacherSelectSql(whereClause = ''): string {
       t.updated_at AS "updatedAt",
       t.created_by AS "createdById",
       COALESCE(created.email, '') AS "createdByEmail",
+      COALESCE(created.display_name, created.email, '') AS "createdByName",
       COALESCE(updated.email, '') AS "updatedByEmail",
       d.id AS "documentId",
       COALESCE(d.original_file_name, '') AS "documentName",

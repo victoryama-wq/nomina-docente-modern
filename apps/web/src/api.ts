@@ -111,6 +111,7 @@ export interface Teacher {
   updatedAt: string;
   createdById: string | null;
   createdByEmail: string;
+  createdByName: string;
   updatedByEmail: string;
   documentId: string | null;
   documentName: string;

@@ -515,16 +515,26 @@ describeIfDb('H22 teacher CSV import backend', () => {
     await db.end();
     const protectedBefore = await protectedDataFingerprints();
     const rows = [
-      ',H22-NEW,JOSÉ,ÁLVAREZ,ÑERI,qa.coordinador.idiomas@tecplayacar.edu.mx,V,+529841234567,Centro,ACTIVO',
+      ',H22-NEW-COORD,JOSÉ,ÁLVAREZ,ÑERI,qa.coordinador.idiomas@tecplayacar.edu.mx,V,+529841234567,Centro,ACTIVO',
+      ',H22-NEW-ADMIN,ALTA,ADMIN,NUEVA,qa.admin@tecplayacar.edu.mx,N,,,ACTIVO',
+      ',H22-NEW-DIR,ALTA,DIRECCION,NUEVA,qa.direccion@tecplayacar.edu.mx,M,,,ACTIVO',
       '41000000-0000-4000-8000-000000000060,H22-UPD,DOCENTE,ACTUALIZABLE,,qa.direccion@tecplayacar.edu.mx,N,+529849876543,Norte,ACTIVO'
     ];
     const checked = await preview(app!, rows);
     const data = checked.json().preview;
     expect(data.hasBlockingErrors).toBe(false);
-    expect(data.summary).toMatchObject({ NUEVO: 1, ACTUALIZAR_MULTIPLE: 1 });
+    expect(data.summary).toMatchObject({ NUEVO: 3, ACTUALIZAR_MULTIPLE: 1 });
+    expect(data.rows.slice(0, 3).map((row: { proposed: { responsibleEmail: string; responsibleName: string } }) => row.proposed)).toEqual([
+      expect.objectContaining({
+        responsibleEmail: 'qa.coordinador.idiomas@tecplayacar.edu.mx',
+        responsibleName: 'QA Coordinador Idiomas'
+      }),
+      expect.objectContaining({ responsibleEmail: 'qa.admin@tecplayacar.edu.mx', responsibleName: 'QA Admin' }),
+      expect.objectContaining({ responsibleEmail: 'qa.direccion@tecplayacar.edu.mx', responsibleName: 'QA Direccion' })
+    ]);
     const applied = await applyPreview(app!, rows, data, ['ACTUALIZAR_MULTIPLE']);
     expect(applied.statusCode).toBe(200);
-    expect(applied.json().result).toMatchObject({ created: 1, updated: 1 });
+    expect(applied.json().result).toMatchObject({ created: 3, updated: 1 });
 
     const verify = await connectTestDb();
     try {
@@ -549,9 +559,80 @@ describeIfDb('H22 teacher CSV import backend', () => {
         bank_detail: 'BANCO PROTEGIDO',
         created_by_email: 'qa.direccion@tecplayacar.edu.mx'
       });
-      const audit = await verify.query<{ action: string; payload: string }>(
+      const created = await verify.query<{
+        external_identifier: string;
+        created_by_email: string;
+        created_by_name: string;
+        updated_by_email: string;
+        coordination_id: string | null;
+      }>(
         `
-          SELECT action, COALESCE(before_data::text, '') || COALESCE(after_data::text, '') AS payload
+          SELECT
+            t.external_identifier,
+            creator.email AS created_by_email,
+            creator.display_name AS created_by_name,
+            updater.email AS updated_by_email,
+            t.coordination_id
+          FROM teachers t
+          LEFT JOIN app_users creator ON creator.id = t.created_by
+          LEFT JOIN app_users updater ON updater.id = t.updated_by
+          WHERE t.external_identifier = ANY($1::text[])
+          ORDER BY t.external_identifier
+        `,
+        [['H22-NEW-ADMIN', 'H22-NEW-COORD', 'H22-NEW-DIR']]
+      );
+      expect(created.rows).toEqual([
+        {
+          external_identifier: 'H22-NEW-ADMIN',
+          created_by_email: 'qa.admin@tecplayacar.edu.mx',
+          created_by_name: 'QA Admin',
+          updated_by_email: 'qa.admin@tecplayacar.edu.mx',
+          coordination_id: null
+        },
+        {
+          external_identifier: 'H22-NEW-COORD',
+          created_by_email: 'qa.coordinador.idiomas@tecplayacar.edu.mx',
+          created_by_name: 'QA Coordinador Idiomas',
+          updated_by_email: 'qa.admin@tecplayacar.edu.mx',
+          coordination_id: null
+        },
+        {
+          external_identifier: 'H22-NEW-DIR',
+          created_by_email: 'qa.direccion@tecplayacar.edu.mx',
+          created_by_name: 'QA Direccion',
+          updated_by_email: 'qa.admin@tecplayacar.edu.mx',
+          coordination_id: null
+        }
+      ]);
+
+      const directory = await injectAs(app!, adminActor(), { method: 'GET', url: '/api/teachers' });
+      expect(directory.statusCode).toBe(200);
+      const importedDirectoryRows = directory
+        .json()
+        .teachers.filter((teacher: { externalIdentifier: string }) => teacher.externalIdentifier.startsWith('H22-NEW-'));
+      expect(importedDirectoryRows).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            externalIdentifier: 'H22-NEW-ADMIN',
+            createdByEmail: 'qa.admin@tecplayacar.edu.mx',
+            createdByName: 'QA Admin'
+          }),
+          expect.objectContaining({
+            externalIdentifier: 'H22-NEW-COORD',
+            createdByEmail: 'qa.coordinador.idiomas@tecplayacar.edu.mx',
+            createdByName: 'QA Coordinador Idiomas'
+          }),
+          expect.objectContaining({
+            externalIdentifier: 'H22-NEW-DIR',
+            createdByEmail: 'qa.direccion@tecplayacar.edu.mx',
+            createdByName: 'QA Direccion'
+          })
+        ])
+      );
+
+      const audit = await verify.query<{ action: string; actor_email: string; payload: string }>(
+        `
+          SELECT action, actor_email, COALESCE(before_data::text, '') || COALESCE(after_data::text, '') AS payload
           FROM audit_log
           WHERE action LIKE 'TEACHER_%'
           ORDER BY created_at
@@ -560,6 +641,12 @@ describeIfDb('H22 teacher CSV import backend', () => {
       expect(audit.rows.map((row) => row.action)).toEqual(
         expect.arrayContaining(['TEACHER_CREATED', 'TEACHER_UPDATED', 'TEACHER_RESPONSIBLE_REASSIGNED', 'TEACHER_IMPORT_APPLIED'])
       );
+      expect(audit.rows.filter((row) => row.action === 'TEACHER_CREATED')).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ actor_email: 'qa.admin@tecplayacar.edu.mx' })
+        ])
+      );
+      expect(audit.rows.map((row) => row.payload).join(' ')).toMatch(/qa\.coordinador\.idiomas@tecplayacar\.edu\.mx/i);
       expect(audit.rows.map((row) => row.payload).join(' ')).not.toMatch(/AAA010101AAA|BANCO PROTEGIDO|paymentType|bankDetail/i);
     } finally {
       await verify.end();

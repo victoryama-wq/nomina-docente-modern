@@ -20,6 +20,7 @@ import {
 } from '../api';
 import TeacherModal from '../components/modals/TeacherModal.vue';
 import ConfirmModal from '../components/modals/ConfirmModal.vue';
+import { teacherResponsibleLabel } from '../utils/teacherResponsible';
 
 const authStore = useAuthStore();
 
@@ -96,6 +97,8 @@ const filteredTeachers = computed(() => {
       teacher.externalIdentifier,
       canViewTeacherFiscal.value ? teacher.bankDetail : '',
       teacher.coordinationName,
+      teacher.createdByName,
+      teacher.createdByEmail,
       teacher.documentName
     ]
       .join(' ')
@@ -434,7 +437,7 @@ onMounted(() => {
               <tr v-for="teacher in filteredTeachers" :key="teacher.id">
                 <td>
                   <strong>{{ teacher.fullName }}</strong>
-                  <span><Building2 :size="13" /> {{ teacher.coordinationName || 'Sin responsable' }}</span>
+                  <span><Building2 :size="13" /> {{ teacherResponsibleLabel(teacher) }}</span>
                   <span v-if="canViewTeacherFiscal"><Mail :size="13" /> {{ teacher.email || 'Sin correo' }}</span>
                 </td>
                 <td v-if="canViewTeacherFiscal">
@@ -524,7 +527,7 @@ onMounted(() => {
         <div class="teacher-detail-grid">
           <article class="teacher-detail-card">
             <span>Responsable operativo</span>
-            <strong>{{ selectedTeacherDetail.coordinationName || 'Sin responsable' }}</strong>
+            <strong>{{ teacherResponsibleLabel(selectedTeacherDetail) }}</strong>
           </article>
           <article class="teacher-detail-card">
             <span>Estatus</span>
