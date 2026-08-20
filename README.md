@@ -1,6 +1,6 @@
 # Nómina Docente Modern
 
-Última verificación documental e infraestructura: 2026-07-30.
+Última verificación documental e infraestructura: 2026-08-20.
 
 Nueva plataforma para Nómina Docente.
 
@@ -38,11 +38,11 @@ Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` 
 
 Estado productivo consolidado posterior a H22:
 
-- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00053-cjg`.
-- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h22-prod-030ae69`.
-- Digest vigente: `sha256:8e184919579d73fcfc1ecc3b1884edd5da40bc83891d5407d4cc7be95d215028`.
+- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00054-2ld`.
+- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h22-hf1-081532d`.
+- Digest vigente: `sha256:24ea3e66d89ed6f581bbb0ad464decc8531a6738ed9cfaf0094007633b6e471b`.
 - Configuración Cloud Run verificada: CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, mínimo `0` y máximo `3` instancias.
-- Firebase Hosting live: release `1785457082597000`, version `466c8eb59d99c2dd`.
+- Firebase Hosting live: release `1785536172540000`, version `91ba12f3159468b8`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.
@@ -61,9 +61,11 @@ Estado productivo consolidado posterior a H22:
 - H19 Directorio: actualizacion controlada y altas minimas ejecutadas sin duplicados.
 - H20 Nomina compartida: cerrado operativo en `nomina-api-00051-9s5`; smoke autenticado Coordinador/Admin aprobado, sin migraciones ni cambios H01.
 - H21 Asignaturas: cerrado operativo en `nomina-api-00052-xtm`; migracion 013, conciliacion de cinco pares/8 horarios y smoke Catalogos/Horarios aprobados. El CSV institucional definitivo no fue aplicado.
-- H22 Importación de docentes: cerrado operativo en `nomina-api-00053-cjg`;
-  migración 014, API/Hosting y smoke autenticado Admin/no Admin aprobados. No se
-  ejecutó Apply ni se aplicó un CSV institucional.
+- H22 Importacion de docentes: cerrado operativo en `nomina-api-00054-2ld`;
+  migracion 014, API/Hosting y smoke autenticado Admin/no Admin aprobados. HF1B
+  muestra el responsable real desde `teachers.created_by`, sin correccion de
+  BD. El deploy original no ejecuto Apply; una ejecucion autorizada posterior
+  creo 14 docentes y no fue repetida durante el hotfix.
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 
 Documentos de estado relevantes:
@@ -87,6 +89,7 @@ Documentos de estado relevantes:
 - `docs/auditoria/H22_Fase4_Validacion_Integral_PreDeploy.md`
 - `docs/auditoria/H22_Ensayo_Productivo_Temporal_Importacion_Docentes.md`
 - `docs/auditoria/H22_Deploy_Productivo_Importacion_Docentes.md`
+- `docs/auditoria/H22_Hotfix_Responsable_Operativo_Deploy_Productivo.md`
 - `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`
 - `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`
 - `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md`

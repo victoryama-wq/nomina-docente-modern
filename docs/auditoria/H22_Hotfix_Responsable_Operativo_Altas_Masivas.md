@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-31
 
-Estado: correccion local/test validada; deploy pendiente
+Estado: cerrado operativo; deploy y smoke autenticado aprobados
 
 Clasificacion: `READ_PROJECTION_DEFECT`
 
@@ -137,8 +137,8 @@ auditorias nuevas.
 
 ## 8. Plantilla vacia
 
-El backend devuelve cero filas de datos para `scope=blank`; el CSV contiene
-solo los diez encabezados aprobados. Se corrigio el Manual de Uso, que indicaba
+El backend devuelve cero filas de datos para `scope=blank`; la plantilla vacia
+contiene unicamente encabezados. Se corrigio el Manual de Uso, que indicaba
 erroneamente una fila vacia de trabajo. La SPEC ya describia el contrato
 correcto y no requirio cambios.
 
@@ -168,7 +168,13 @@ de Directorio, ausencia de datos fiscales y helper visual de fallback.
 ## 10. Estado y confirmaciones
 
 - Produccion conserva los 14 `created_by` correctos.
-- La correccion de codigo esta validada localmente y todavia no fue desplegada.
+- La correccion fue desplegada en `nomina-api-00054-2ld` y Hosting release
+  `1785536172540000`.
+- El smoke autenticado confirmo nombre/correo del responsable real, ausencia de
+  UUID tecnicos y fallback `Sin responsable` solo para legacy con
+  `created_by IS NULL`.
+- La evidencia productiva posterior esta en
+  `docs/auditoria/H22_Hotfix_Responsable_Operativo_Deploy_Productivo.md`.
 - No se repitio Apply.
 - No se ejecutaron migraciones.
 - No se modifico Cloud SQL.

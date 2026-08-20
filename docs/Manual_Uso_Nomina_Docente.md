@@ -266,7 +266,9 @@ Los cambios aplican a nuevas capturas. Las nóminas históricas conservan el mon
 
 **Disponible en producción:** H22 está cerrado operativo. La pestaña, las
 plantillas y el Preview fueron validados en producción. El deploy no aplicó
-ningún CSV institucional ni modificó docentes.
+ningún CSV institucional ni modificó docentes. Una ejecución autorizada
+posterior creó 14 docentes; el hotfix de responsable no repitió Apply ni
+modificó esas filas.
 
 Esta pestaña es exclusiva para Admin y permite preparar altas o cambios
 operativos de docentes mediante CSV. No reemplaza el `Directorio`: la edición
@@ -274,7 +276,7 @@ individual y la consulta cotidiana continúan en ese módulo.
 
 Descargas disponibles:
 
-- `Plantilla vacía`: entrega únicamente los encabezados aprobados.
+- `Plantilla vacía`: contiene únicamente encabezados.
 - `Docentes activos`: incluye los docentes activos actuales.
 - `Todos los docentes`: incluye activos e inactivos y exige confirmación antes
   de descargar el catálogo completo.
@@ -302,6 +304,11 @@ Reglas de llenado:
 6. RH no puede asignarse como responsable operativo mediante H22.
 7. El CSV no contiene RFC, banco, cuenta, CLABE, tipo de pago, constancias ni
    otros datos fiscales.
+
+En Directorio, `Responsable operativo` se obtiene del usuario real asociado a
+`teachers.created_by` y muestra su nombre o correo. La coordinación no sustituye
+al responsable. `Sin responsable` se reserva para registros legacy cuyo
+`created_by` no resuelve a un usuario.
 
 Flujo:
 

@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-07-31
+Actualizacion: 2026-08-20
 
 ## 1. Contexto
 
@@ -27,7 +27,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H19 ejecutado de forma controlada: backup exitoso, preview en ROLLBACK, 36 actualizaciones de `teachers.created_by`, 3 altas minimas y validacion posterior sin duplicados.
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
 - H21 cerrado operativo: migracion `013`, conciliacion de cinco pares/8 horarios, deploy `nomina-api-00052-xtm` y smoke autenticado Catalogos/Horarios aprobados; CSV institucional definitivo no aplicado.
-- H22 cerrado operativo: migración `014`, API `nomina-api-00053-cjg`, Hosting y smoke autenticado aprobados; ningún CSV institucional fue aplicado.
+- H22 cerrado operativo: migracion `014`, API `nomina-api-00054-2ld`, Hosting y smoke autenticado aprobados; una ejecucion autorizada creo 14 docentes y HF1B corrigio el `READ_PROJECTION_DEFECT` sin BD ni Apply repetido.
 - Alineacion documental post-H20 verificada contra Cloud Run, Firebase Hosting y H05 en modo read-only; no cambia el estado ni la prioridad de los riesgos.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
@@ -70,7 +70,7 @@ Arquitectura vigente:
 | H19 | Actualizacion controlada de Directorio desde CSV | Directorio / Datos productivos / Permisos operativos | Ejecutado y documentado: 36 `created_by` actualizados y 3 altas minimas, con backup y preview exacto | Bajo; riesgo residual solo ante futuras cargas manuales sin el mismo control | P1 cerrado / monitoreo | Repetir backup, matching nominal, preview y guardas de duplicidad para futuras cargas | Cumplido con validacion posterior, 0 discrepancias y 0 duplicados | Solo para futuras cargas o excepciones |
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
 | H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Cerrado operativo; `013`, conciliacion, deploy y smoke autenticado aprobados | Bajo: riesgo residual por regresion o por aplicar en el futuro un CSV institucional sin control | P1 cerrado operativo | Mantener pruebas, H05/H13 y preview sin bloqueantes antes de cualquier Apply futuro | Cumplido con backup `1784582556252`, 277/277 sin cambios, cero bloqueantes y revision `nomina-api-00052-xtm` | Solo para Apply de un CSV institucional futuro |
-| H22 | Importacion masiva de docentes operativos por CSV | Directorio / Permisos / Datos operativos / Seguridad | Cerrado operativo; `014`, API/Hosting y smoke autenticado aprobados; sin Apply institucional | Bajo: riesgo residual ante una futura carga real o regresion de permisos/atomicidad | P1 cerrado operativo | Mantener Admin exclusivo, Preview, fingerprints, backup y autorizacion independiente para cada Apply futuro | Cumplido con backup `1785456525085`, H05 sin pendientes, revision `nomina-api-00053-cjg`, Hosting y smoke por rol | Solo para un Apply institucional futuro o cambios funcionales |
+| H22 | Importacion masiva de docentes operativos por CSV | Directorio / Permisos / Datos operativos / Seguridad | Cerrado operativo; `014`, API/Hosting, ejecucion autorizada de 14 altas, smoke y HF1B aprobados | Bajo: riesgo residual ante una futura carga real o regresion de permisos, atomicidad o proyeccion del responsable | P1 cerrado operativo | Mantener Admin exclusivo, Preview, fingerprints, backup, autorizacion independiente y proyeccion desde `teachers.created_by` | Cumplido con backup `1785456525085`, H05 sin pendientes, revision `nomina-api-00054-2ld`, Hosting y smoke por rol/responsable, sin Apply repetido | Solo para un Apply institucional futuro o cambios funcionales |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -192,10 +192,10 @@ Pendientes reales despues de H02/H03:
 - H21 no tiene pendientes de implementacion o deploy. El CSV institucional
   definitivo no fue aplicado y conserva una decision humana independiente;
   SEC-H21 mantiene `websocket-driver@0.7.5` y cero vulnerabilidades criticas.
-- H22 cerro el tratamiento nominal y F1A cerro RH, inactivaciones,
-  concurrencia/unicidad y validacion productiva read-only. F2/F3 implementaron
-  backend/frontend y pruebas local/test. F4 cerró regresión, ensayo temporal y
-  smoke humano; permanecen migración productiva aprobada y deploy.
+- H22 cerro el tratamiento nominal, migracion `014`, backend/frontend, deploy y
+  smoke. HF1B corrigio el `READ_PROJECTION_DEFECT`: Directorio muestra el
+  responsable desde `teachers.created_by`, sin correccion de BD, permisos
+  nuevos, Apply repetido ni exposicion fiscal.
 
 ## 7. Recomendacion final
 

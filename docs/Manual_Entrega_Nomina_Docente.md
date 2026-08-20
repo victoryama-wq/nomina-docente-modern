@@ -5,7 +5,7 @@
 
 **Fecha original:** 8 de mayo de 2026
 
-**Última actualización:** 31 de julio de 2026
+**Última actualización:** 20 de agosto de 2026
 **Ambiente:** Producción Google Cloud / Firebase  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
 **Administrador general protegido:** `victor.yama@tecplayacar.edu.mx`
@@ -84,11 +84,11 @@ Estas funciones pueden agregarse posteriormente sin rehacer la arquitectura prin
 | Contenedores | Artifact Registry | Imagen Docker del API |
 | Secretos | Secret Manager | Contraseña de base de datos |
 
-Estado productivo verificado el 2026-07-31: revisión Cloud Run
-`nomina-api-00053-cjg`, imagen `h22-prod-030ae69`, digest
-`sha256:8e184919579d73fcfc1ecc3b1884edd5da40bc83891d5407d4cc7be95d215028`,
-Firebase Hosting release `1785457082597000` y version
-`466c8eb59d99c2dd`.
+Estado productivo verificado el 2026-08-20: revisión Cloud Run
+`nomina-api-00054-2ld`, imagen `h22-hf1-081532d`, digest
+`sha256:24ea3e66d89ed6f581bbb0ad464decc8531a6738ed9cfaf0094007633b6e471b`,
+Firebase Hosting release `1785536172540000` y version
+`91ba12f3159468b8`.
 
 ### 3.2 URLs de producción
 
@@ -240,7 +240,9 @@ Reglas clave:
 
 **Estado productivo:** H22 cerrado operativo. La migración `014`, API/Hosting
 y el smoke autenticado fueron aprobados. No se ejecutó Apply ni se aplicó un
-CSV institucional durante el deploy.
+CSV institucional durante el deploy original. Una ejecución autorizada
+posterior creó 14 docentes; H22-HF1B corrigió solo su proyección de lectura y
+no repitió Apply.
 
 H22 agrega la pestaña Admin
 `apps/web/src/components/catalogs/TeacherImportPanel.vue` y tres endpoints:
@@ -277,6 +279,12 @@ crea el índice único parcial
 `teachers_external_identifier_unique_idx` sobre
 `upper(btrim(external_identifier))`, excluyendo vacíos. No contiene DML ni
 modifica filas.
+
+El hotfix H22-HF1B corrigió exclusivamente la proyección de lectura de
+Directorio: `Responsable operativo` muestra nombre/correo del usuario asociado
+a `teachers.created_by`. No usa `coordinationName` como sustituto, no muestra
+UUID técnicos y conserva `Sin responsable` para legacy con `created_by IS
+NULL`. No requirió corrección de BD, Apply ni migración.
 
 Nombres legacy:
 
@@ -856,6 +864,10 @@ H22-F5 se ejecutó como ventana controlada:
 6. Healthchecks HTTP 200 y rutas protegidas sin sesión HTTP 401 esperado.
 7. Smoke Admin/no Admin y responsive aprobado por el usuario.
 8. Plantillas y Preview validados; no se ejecutó Apply institucional.
+
+H22-HF1B se desplegó posteriormente en `nomina-api-00054-2ld`, Hosting release
+`1785536172540000`. El smoke autenticado confirmó los 14 responsables reales,
+sin ampliar permisos de edición ni exponer datos fiscales.
 
 Rollback:
 
