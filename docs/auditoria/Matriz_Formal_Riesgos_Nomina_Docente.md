@@ -28,6 +28,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
 - H21 cerrado operativo: migracion `013`, conciliacion de cinco pares/8 horarios, deploy `nomina-api-00052-xtm` y smoke autenticado Catalogos/Horarios aprobados; CSV institucional definitivo no aplicado.
 - H22 cerrado operativo: migracion `014`, API `nomina-api-00054-2ld`, Hosting y smoke autenticado aprobados; una ejecucion autorizada creo 14 docentes y HF1B corrigio el `READ_PROJECTION_DEFECT` sin BD ni Apply repetido.
+- H23-F0 diagnosticado: el motor de Nomina cuenta L-V por toda la quincena porque no existe una vigencia general pagable para Horarios; la solucion propuesta permanece pendiente de aprobacion e implementacion.
 - Alineacion documental post-H20 verificada contra Cloud Run, Firebase Hosting y H05 en modo read-only; no cambia el estado ni la prioridad de los riesgos.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
@@ -71,6 +72,7 @@ Arquitectura vigente:
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
 | H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Cerrado operativo; `013`, conciliacion, deploy y smoke autenticado aprobados | Bajo: riesgo residual por regresion o por aplicar en el futuro un CSV institucional sin control | P1 cerrado operativo | Mantener pruebas, H05/H13 y preview sin bloqueantes antes de cualquier Apply futuro | Cumplido con backup `1784582556252`, 277/277 sin cambios, cero bloqueantes y revision `nomina-api-00052-xtm` | Solo para Apply de un CSV institucional futuro |
 | H22 | Importacion masiva de docentes operativos por CSV | Directorio / Permisos / Datos operativos / Seguridad | Cerrado operativo; `014`, API/Hosting, ejecucion autorizada de 14 altas, smoke y HF1B aprobados | Bajo: riesgo residual ante una futura carga real o regresion de permisos, atomicidad o proyeccion del responsable | P1 cerrado operativo | Mantener Admin exclusivo, Preview, fingerprints, backup, autorizacion independiente y proyeccion desde `teachers.created_by` | Cumplido con backup `1785456525085`, H05 sin pendientes, revision `nomina-api-00054-2ld`, Hosting y smoke por rol/responsable, sin Apply repetido | Solo para un Apply institucional futuro o cambios funcionales |
+| H23 | Horarios sin vigencia temporal general en calculo de Nomina | Nomina / Calendario / Incidencias / Extras / Reportes | Diagnosticado en F0; sin implementacion | Alto: una quincena anterior/posterior a clases puede generar horas base y descuentos/pagos de incidencia indebidos | P0 operativo antes de guardar el periodo afectado | Aprobar SPEC de vigencia base a nivel ciclo; implementar elegibilidad antes de H01 y paridad con Reportes vivos | Pruebas de fronteras, Preview=Guardar, H20=Admin, snapshots intactos y smoke aprobados | Si: fechas de `27-1`, modelo y regla de incidencias |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -161,16 +163,17 @@ Cerrado/desplegado:
 
 Orden recomendado:
 
-1. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
-2. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
-3. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
-4. **H15 operativo.** Mantener smoke de sesion/inactividad si se ajusta la politica de tiempo o UX del modal.
-5. **H17 monitoreo.** Validar acceso real de coordinadoras y resolver remanentes solo con nuevo mapping aprobado.
-6. **H18 Reportes Operativos.** Cerrado operativo. Mantener pruebas/regresion, guardas por rol y monitoreo de exportables CSV/XLSX.
-7. **H19 Directorio.** Cerrado controlado; monitorear Directorio y repetir el procedimiento solo ante una nueva carga aprobada.
-8. **H20 Nomina compartida.** Cerrado operativo; mantener pruebas y monitoreo de alcance, totales y seguridad fiscal.
-9. **H21 Asignaturas.** Cerrado operativo; cualquier CSV institucional futuro requiere preview, backup y autorizacion independiente.
-10. **H22 Docentes.** Cerrado operativo; cualquier Apply institucional futuro
+1. **H23 vigencia temporal.** Aprobar el modelo/fechas antes de guardar la quincena especial y ejecutar implementacion controlada sin tocar H01 ni historicos.
+2. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
+3. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
+4. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
+5. **H15 operativo.** Mantener smoke de sesion/inactividad si se ajusta la politica de tiempo o UX del modal.
+6. **H17 monitoreo.** Validar acceso real de coordinadoras y resolver remanentes solo con nuevo mapping aprobado.
+7. **H18 Reportes Operativos.** Cerrado operativo. Mantener pruebas/regresion, guardas por rol y monitoreo de exportables CSV/XLSX.
+8. **H19 Directorio.** Cerrado controlado; monitorear Directorio y repetir el procedimiento solo ante una nueva carga aprobada.
+9. **H20 Nomina compartida.** Cerrado operativo; mantener pruebas y monitoreo de alcance, totales y seguridad fiscal.
+10. **H21 Asignaturas.** Cerrado operativo; cualquier CSV institucional futuro requiere preview, backup y autorizacion independiente.
+11. **H22 Docentes.** Cerrado operativo; cualquier Apply institucional futuro
     exige CSV aprobado, Preview sin bloqueantes, backup y autorizacion humana
     independiente.
 
@@ -196,6 +199,9 @@ Pendientes reales despues de H02/H03:
   smoke. HF1B corrigio el `READ_PROJECTION_DEFECT`: Directorio muestra el
   responsable desde `teachers.created_by`, sin correccion de BD, permisos
   nuevos, Apply repetido ni exposicion fiscal.
+- H23 requiere aprobar una fuente de vigencia base a nivel ciclo, las fechas
+  concretas de `27-1`, la regla de incidencias agregadas en periodos parciales
+  y el ajuste coordinado de Reportes Operativos vivos.
 
 ## 7. Recomendacion final
 

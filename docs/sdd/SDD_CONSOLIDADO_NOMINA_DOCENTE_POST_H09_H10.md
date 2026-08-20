@@ -49,6 +49,7 @@ Estado por H:
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
 | H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
 | H22 | Cerrado operativo; migracion `014`, API `nomina-api-00054-2ld`, Hosting live y smoke autenticado aprobados. Una ejecucion autorizada creo 14 docentes; HF1B muestra su responsable real desde `teachers.created_by` sin repetir Apply. |
+| H23 | Diagnosticado en F0; Nomina no tiene una vigencia general pagable para Horarios y actualmente cuenta L-V por toda la quincena. SPEC propuesta pendiente de aprobacion; sin implementacion ni migracion. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -320,7 +321,7 @@ Documentos vigentes:
 | Horarios | Permitidos en ciclos `ACTIVO` y `PLANEACION`; bloqueados en `CERRADO`; coordinadores operan segun capturador/alcance; Admin global. | H02/H03 Fase 3, H09/H10 Fase 2, H09/H10 Fase 4. |
 | Incidencias | Permitidas solo en ciclo operativo activo y ventana abierta; bloqueadas en `PLANEACION` y `CERRADO`; validacion por horario/coordinacion. | H02/H03 Fase 3, H09/H10 Fase 2. |
 | Extras | Listado segun rol; edicion por propiedad/captured_by donde aplique; Direccion/Subdireccion solo modifica propios; bloqueados en `PLANEACION` y `CERRADO`. | H02/H03 Fase 3, H04 Fase 5, H09/H10 Fase 2. |
-| Nomina | Preview con `payroll.preview`; guardar con `payroll.finalize`; H01 intocable; bloqueada en `PLANEACION` y `CERRADO`; `PAGADA` terminal. H20 permite al Coordinador consultar el calculo completo de docentes propios o con horario en sus coordinaciones, sin ampliar edicion, fiscal ni finalizacion. | H01, H03 Fase 4, H09/H10 Fase 1, SPEC y auditoria H20. |
+| Nomina | Preview con `payroll.preview`; guardar con `payroll.finalize`; H01 intocable; bloqueada en `PLANEACION` y `CERRADO`; `PAGADA` terminal. H20 permite al Coordinador consultar el calculo completo de docentes propios o con horario en sus coordinaciones, sin ampliar edicion, fiscal ni finalizacion. H23-F0 diagnostico que L-V se cuenta actualmente por toda la quincena sin vigencia academica general; no guardar periodos especiales con base incorrecta hasta aprobar e implementar H23. | H01, H03 Fase 4, H09/H10 Fase 1, SPEC/auditoria H20 y diagnostico/SPEC propuesta H23. |
 | Finanzas | `finance.view` consulta; `finance.export` exporta; `finance.workflow` cambia estados; no cancelar `PAGADA`; no usar `BORRADOR`/`CERRADA` como acciones. | H03 Fase 4, H09/H10 Fase 1. |
 | Expediente fiscal | Ver/editar/constancias separados por permisos fiscales y documentales; Coordinador/Direccion/Contador no gestionan fiscal. | H03 Fase 4, H02/H03 Fase 5. |
 | Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. | H09/H10 Fase 3, Fase 4, deploy H09/H10. |
@@ -362,6 +363,7 @@ Codex debe leer primero este SDD, la matriz y los documentos especificos de la f
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
 | Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`, `docs/auditoria/H18_Deploy_Productivo_Reportes_Operativos.md`, `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md`, `docs/auditoria/H18_Hotfix_Reportes_Snapshot_LineKey.md` y `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | Cerrado operativo; H18-F1/F2/F5/F6 y hotfix snapshot desplegados; CSV/XLSX validados en Excel institucional |
 | Nomina compartida Coordinador | `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`, `docs/auditoria/H20_Alcance_Compartido_Nomina_Coordinadores.md` y `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md` | H02/H03 Fase 4/5, ajuste docentes compartidos y H04 Fase 4/5 | Cerrado operativo; revision `nomina-api-00051-9s5` y Hosting H20 activos, smoke autenticado satisfactorio |
+| Vigencia temporal de Horarios en Nomina | `docs/auditoria/H23_Diagnostico_Vigencia_Temporal_Nomina.md` y `docs/specs/SPEC_H23_Vigencia_Temporal_Horarios_Nomina.md` | H01, H09/H10, H20, esquema y motor vigente | H23-F0 diagnosticado; propuesta de vigencia base a nivel ciclo pendiente de aprobacion, sin implementacion |
 | Manuales | `docs/Manual_Entrega_Nomina_Docente.md` y `docs/Manual_Uso_Nomina_Docente.md` | DOCX generados desde ambas fuentes Markdown | Vigentes post-H22; Markdown es la fuente editable |
 | Alineacion post-H20 | `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md` | README, H13, manuales y documentos historicos clasificados | Evidencia read-only de Git, Cloud Run, Hosting, Cloud SQL y H05 |
 
@@ -398,6 +400,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
 | H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
 | H22 | Cerrado operativo | Admin exclusivo; `014`, API/Hosting, plantillas, Preview, permisos, responsive y responsable real desde `teachers.created_by` aprobados. Mantener Apply como operacion futura separada con backup y autorizacion. |
+| H23 | Diagnosticado / bloqueante antes de guardar la quincena especial | Aprobar fuente de vigencia base, fechas de `27-1`, manejo de incidencias y alcance de reportes; despues implementar con H05 y pruebas sin tocar H01. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -423,20 +426,23 @@ Para cualquier fase posterior:
 
 Orden recomendado:
 
-1. H07 Google Provider `hd`:
+1. H23 vigencia temporal de Horarios en Nomina:
+   - revisar y aprobar la SPEC propuesta;
+   - no guardar la quincena 2026-08-10 a 2026-08-22 con horas base regulares mientras no exista correccion validada.
+2. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
-2. H08 refactor gradual:
+3. H08 refactor gradual:
    - solo despues de cubrir con pruebas y sin cambiar reglas.
-3. CSV injection:
+4. CSV injection:
    - evaluar sanitizacion por exportable solo con decision tecnica/funcional, porque puede transformar texto exportado.
-4. H13 operativo continuo:
+5. H13 operativo continuo:
    - usar el checklist productivo permanente antes de cada despliegue y mantenerlo actualizado ante cambios reales de infraestructura.
-5. H21 operacion futura:
+6. H21 operacion futura:
    - aplicar un CSV institucional solo con archivo definitivo aprobado, preview sin bloqueantes, backup y autorizacion humana independiente.
-6. H22 Importacion de docentes:
+7. H22 Importacion de docentes:
    - cerrado operativo; cualquier Apply institucional futuro requiere CSV
      aprobado, Preview sin bloqueantes, backup y autorizacion humana separada.
-7. Cierre global de matriz:
+8. Cierre global de matriz:
    - usar `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva del estado final de riesgos principales.
 
 ## 10. Confirmacion de alcance de esta consolidacion
