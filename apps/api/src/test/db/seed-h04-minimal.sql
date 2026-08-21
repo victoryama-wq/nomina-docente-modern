@@ -336,6 +336,68 @@ SET module1_start = EXCLUDED.module1_start,
     module2_end = EXCLUDED.module2_end,
     status = EXCLUDED.status;
 
+UPDATE academic_cycles
+SET base_hours_start_date = module1_start,
+    base_hours_end_date = module2_end
+WHERE id IN (
+  '30000000-0000-4000-8000-000000000003',
+  '30000000-0000-4000-8000-000000000013',
+  '30000000-0000-4000-8000-000000000021',
+  '30000000-0000-4000-8000-000000000024',
+  '30000000-0000-4000-8000-000000000025',
+  '30000000-0000-4000-8000-000000000026',
+  '30000000-0000-4000-8000-000000000028',
+  '30000000-0000-4000-8000-000000000030'
+);
+
+INSERT INTO academic_cycles (
+  id,
+  period_label,
+  quarter_code,
+  base_hours_start_date,
+  base_hours_end_date,
+  module1_start,
+  module1_end,
+  module2_start,
+  module2_end,
+  status,
+  created_by
+) VALUES
+  (
+    '30000000-0000-4000-8000-000000000032',
+    'Septiembre - Diciembre 2026',
+    '27-1',
+    '2026-08-31',
+    '2026-12-12',
+    '2026-08-31',
+    '2026-09-17',
+    '2026-10-24',
+    '2026-12-05',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  ),
+  (
+    '30000000-0000-4000-8000-000000000033',
+    'H23 QA Legacy sin vigencia',
+    'H23LEGACY',
+    NULL,
+    NULL,
+    '2027-01-01',
+    '2027-02-28',
+    '2027-03-01',
+    '2027-04-30',
+    'PLANEACION',
+    (SELECT id FROM app_users WHERE email = 'qa.admin@tecplayacar.edu.mx')
+  )
+ON CONFLICT (period_label, quarter_code) DO UPDATE
+SET base_hours_start_date = EXCLUDED.base_hours_start_date,
+    base_hours_end_date = EXCLUDED.base_hours_end_date,
+    module1_start = EXCLUDED.module1_start,
+    module1_end = EXCLUDED.module1_end,
+    module2_start = EXCLUDED.module2_start,
+    module2_end = EXCLUDED.module2_end,
+    status = EXCLUDED.status;
+
 INSERT INTO payroll_calendar_config (
   id,
   cycle_id,

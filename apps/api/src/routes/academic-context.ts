@@ -9,6 +9,8 @@ export interface CycleRow {
   id: string;
   periodLabel: string;
   quarterCode: string;
+  baseHoursStartDate: string | null;
+  baseHoursEndDate: string | null;
   module1Start: string;
   module1End: string;
   module2Start: string;
@@ -49,10 +51,12 @@ export function cycleSelectSql(whereClause = ''): string {
       ac.id,
       ac.period_label AS "periodLabel",
       ac.quarter_code AS "quarterCode",
-      ac.module1_start AS "module1Start",
-      ac.module1_end AS "module1End",
-      ac.module2_start AS "module2Start",
-      ac.module2_end AS "module2End",
+      ac.base_hours_start_date::text AS "baseHoursStartDate",
+      ac.base_hours_end_date::text AS "baseHoursEndDate",
+      ac.module1_start::text AS "module1Start",
+      ac.module1_end::text AS "module1End",
+      ac.module2_start::text AS "module2Start",
+      ac.module2_end::text AS "module2End",
       ac.status,
       (
         SELECT count(*)::int
@@ -125,19 +129,19 @@ export async function ensureWorkingCycle(
         status,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVO', $7)
+      VALUES ($1, $2, $3, $4, $5, $6, 'PLANEACION', $7)
       ON CONFLICT (period_label, quarter_code) DO UPDATE
-      SET status = 'ACTIVO',
-          closed_at = NULL,
-          closed_by = NULL
+      SET status = academic_cycles.status
       RETURNING
         id,
         period_label AS "periodLabel",
         quarter_code AS "quarterCode",
-        module1_start AS "module1Start",
-        module1_end AS "module1End",
-        module2_start AS "module2Start",
-        module2_end AS "module2End",
+        base_hours_start_date::text AS "baseHoursStartDate",
+        base_hours_end_date::text AS "baseHoursEndDate",
+        module1_start::text AS "module1Start",
+        module1_end::text AS "module1End",
+        module2_start::text AS "module2Start",
+        module2_end::text AS "module2End",
         status
     `,
     ['CICLO INICIAL', 'ACTUAL', `${year}-01-01`, `${year}-06-30`, `${year}-07-01`, `${year}-12-31`, actor.id]

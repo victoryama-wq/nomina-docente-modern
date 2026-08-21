@@ -819,6 +819,8 @@ function editSchedule(schedule: Schedule) {
     id: schedule.cycleId,
     periodLabel: schedule.periodLabel,
     quarterCode: schedule.quarterCode,
+    baseHoursStartDate: null,
+    baseHoursEndDate: null,
     module1Start: '',
     module1End: '',
     module2Start: '',

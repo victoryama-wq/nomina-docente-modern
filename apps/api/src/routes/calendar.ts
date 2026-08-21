@@ -92,6 +92,71 @@ const accessStartSchema = z.preprocess((value) => {
   return trimmed || undefined;
 }, z.string().datetime({ offset: true }).optional());
 
+type CycleDateValidationCode =
+  | 'BASE_HOURS_DATES_INCOMPLETE'
+  | 'BASE_HOURS_DATES_INVALID'
+  | 'MODULE1_OUTSIDE_BASE_HOURS_PERIOD'
+  | 'MODULE2_OUTSIDE_BASE_HOURS_PERIOD';
+
+interface CycleDateFields {
+  baseHoursStartDate?: string | null;
+  baseHoursEndDate?: string | null;
+  module1Start: string;
+  module1End: string;
+  module2Start: string;
+  module2End: string;
+}
+
+interface CycleDateValidationError {
+  code: CycleDateValidationCode;
+  message: string;
+}
+
+function validateCycleDates(body: CycleDateFields): CycleDateValidationError | null {
+  const hasStart = typeof body.baseHoursStartDate === 'string';
+  const hasEnd = typeof body.baseHoursEndDate === 'string';
+
+  if (hasStart !== hasEnd) {
+    return {
+      code: 'BASE_HOURS_DATES_INCOMPLETE',
+      message: 'Captura inicio y fin de horas base, o deja ambos campos vacíos.'
+    };
+  }
+  if (!hasStart || !hasEnd) return null;
+
+  const baseStart = body.baseHoursStartDate!;
+  const baseEnd = body.baseHoursEndDate!;
+  if (baseStart > baseEnd) {
+    return {
+      code: 'BASE_HOURS_DATES_INVALID',
+      message: 'El inicio de horas base debe ser menor o igual al fin.'
+    };
+  }
+  if (body.module1Start < baseStart || body.module1End > baseEnd) {
+    return {
+      code: 'MODULE1_OUTSIDE_BASE_HOURS_PERIOD',
+      message: 'El módulo 1 debe quedar completamente dentro de la vigencia pagable de horas base.'
+    };
+  }
+  if (body.module2Start < baseStart || body.module2End > baseEnd) {
+    return {
+      code: 'MODULE2_OUTSIDE_BASE_HOURS_PERIOD',
+      message: 'El módulo 2 debe quedar completamente dentro de la vigencia pagable de horas base.'
+    };
+  }
+  return null;
+}
+
+function addCycleDateIssue(body: CycleDateFields, ctx: z.RefinementCtx): void {
+  const error = validateCycleDates(body);
+  if (!error) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: error.message,
+    params: { errorCode: error.code }
+  });
+}
+
 const calendarPeriodBodySchema = z
   .object({
     cycleId: z.string().uuid().optional(),
@@ -140,6 +205,8 @@ type CalendarPeriodBody = z.infer<typeof calendarPeriodBodySchema>;
 
 const cycleModuleDatesBodySchema = z
   .object({
+    baseHoursStartDate: z.string().date().nullable().optional(),
+    baseHoursEndDate: z.string().date().nullable().optional(),
     module1Start: z.string().date(),
     module1End: z.string().date(),
     module2Start: z.string().date(),
@@ -155,6 +222,7 @@ const cycleModuleDatesBodySchema = z
     if (body.module1End > body.module2End) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El cierre de módulo 1 no puede ser posterior al cierre de módulo 2.' });
     }
+    addCycleDateIssue(body, ctx);
   });
 
 type CycleModuleDatesBody = z.infer<typeof cycleModuleDatesBodySchema>;
@@ -181,16 +249,57 @@ const closeCycleBodySchema = z.object({
 type CloseCycleBody = z.infer<typeof closeCycleBodySchema>;
 
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
+  const issue = error.issues[0] as z.ZodIssue & { params?: { errorCode?: string } };
   void reply.code(400).send({
-    error: 'VALIDATION_ERROR',
-    message: error.issues[0]?.message || 'Datos inválidos.'
+    error: issue?.params?.errorCode || 'VALIDATION_ERROR',
+    message: issue?.message || 'Datos inválidos.'
   });
 }
 
-function requestError(message: string, statusCode = 400): Error & { statusCode: number } {
-  const error = new Error(message) as Error & { statusCode: number };
+type CalendarRequestError = Error & { statusCode: number; calendarErrorCode?: string };
+
+function requestError(message: string, statusCode = 400, calendarErrorCode?: string): CalendarRequestError {
+  const error = new Error(message) as CalendarRequestError;
   error.statusCode = statusCode;
+  error.calendarErrorCode = calendarErrorCode;
   return error;
+}
+
+function isCalendarRequestError(error: unknown): error is CalendarRequestError {
+  return error instanceof Error && 'statusCode' in error && 'calendarErrorCode' in error;
+}
+
+async function sendCalendarRequestError(reply: FastifyReply, error: CalendarRequestError): Promise<void> {
+  await reply.code(error.statusCode).send({
+    error: error.calendarErrorCode || 'REQUEST_ERROR',
+    message: error.message
+  });
+}
+
+function throwIfCycleDatesInvalid(body: CycleDateFields): void {
+  const error = validateCycleDates(body);
+  if (error) throw requestError(error.message, 400, error.code);
+}
+
+function assertCycleCanActivate(cycle: CycleRow): void {
+  if (cycle.baseHoursStartDate && cycle.baseHoursEndDate) return;
+  throw requestError(
+    'Configura inicio y fin de horas base antes de activar el ciclo.',
+    400,
+    'BASE_HOURS_DATES_INCOMPLETE'
+  );
+}
+
+function resolveCycleDateFields(before: CycleRow, body: CycleModuleDatesBody): CycleDateFields {
+  const baseDatesProvided = body.baseHoursStartDate !== undefined || body.baseHoursEndDate !== undefined;
+  return {
+    module1Start: body.module1Start,
+    module1End: body.module1End,
+    module2Start: body.module2Start,
+    module2End: body.module2End,
+    baseHoursStartDate: baseDatesProvided ? body.baseHoursStartDate ?? null : before.baseHoursStartDate,
+    baseHoursEndDate: baseDatesProvided ? body.baseHoursEndDate ?? null : before.baseHoursEndDate
+  };
 }
 
 function assertCycleClosureAdmin(actor: SessionUser): void {
@@ -432,27 +541,41 @@ async function updateCycleModuleDates(
   const before = await loadCycleById(client, cycleId);
   if (!before) throw new Error('El ciclo seleccionado no existe.');
   if (before.status === 'CERRADO') throw new Error('No se pueden modificar fechas modulares de un ciclo cerrado.');
+  const dates = resolveCycleDateFields(before, body);
+  throwIfCycleDatesInvalid(dates);
 
   const updated = await client.query<CycleRow>(
     `
       UPDATE academic_cycles
       SET
-        module1_start = $1,
-        module1_end = $2,
-        module2_start = $3,
-        module2_end = $4
-      WHERE id = $5
+        base_hours_start_date = $1,
+        base_hours_end_date = $2,
+        module1_start = $3,
+        module1_end = $4,
+        module2_start = $5,
+        module2_end = $6
+      WHERE id = $7
       RETURNING
         id,
         period_label AS "periodLabel",
         quarter_code AS "quarterCode",
+        base_hours_start_date::text AS "baseHoursStartDate",
+        base_hours_end_date::text AS "baseHoursEndDate",
         module1_start::text AS "module1Start",
         module1_end::text AS "module1End",
         module2_start::text AS "module2Start",
         module2_end::text AS "module2End",
         status
     `,
-    [body.module1Start, body.module1End, body.module2Start, body.module2End, cycleId]
+    [
+      dates.baseHoursStartDate,
+      dates.baseHoursEndDate,
+      dates.module1Start,
+      dates.module1End,
+      dates.module2Start,
+      dates.module2End,
+      cycleId
+    ]
   );
 
   const cycle = updated.rows[0];
@@ -469,7 +592,7 @@ async function updateCycleModuleDates(
         updated_at = now()
       WHERE cycle_id = $5
     `,
-    [body.module1Start, body.module1End, body.module2Start, body.module2End, cycleId]
+    [dates.module1Start, dates.module1End, dates.module2Start, dates.module2End, cycleId]
   );
 
   await client.query(
@@ -498,6 +621,8 @@ async function createAcademicCycle(
       INSERT INTO academic_cycles (
         period_label,
         quarter_code,
+        base_hours_start_date,
+        base_hours_end_date,
         module1_start,
         module1_end,
         module2_start,
@@ -505,12 +630,14 @@ async function createAcademicCycle(
         status,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, 'PLANEACION', $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PLANEACION', $9)
       RETURNING id
     `,
     [
       body.periodLabel,
       body.quarterCode,
+      body.baseHoursStartDate ?? null,
+      body.baseHoursEndDate ?? null,
       body.module1Start,
       body.module1End,
       body.module2Start,
@@ -543,6 +670,8 @@ async function updateAcademicCycle(
   const before = await loadCycleById(client, cycleId);
   if (!before) throw new Error('El ciclo seleccionado no existe.');
   if (before.status === 'CERRADO') throw new Error('No se puede editar un ciclo cerrado.');
+  const dates = resolveCycleDateFields(before, body);
+  throwIfCycleDatesInvalid(dates);
 
   const updated = await client.query<{ id: string }>(
     `
@@ -550,20 +679,24 @@ async function updateAcademicCycle(
       SET
         period_label = $1,
         quarter_code = $2,
-        module1_start = $3,
-        module1_end = $4,
-        module2_start = $5,
-        module2_end = $6
-      WHERE id = $7
+        base_hours_start_date = $3,
+        base_hours_end_date = $4,
+        module1_start = $5,
+        module1_end = $6,
+        module2_start = $7,
+        module2_end = $8
+      WHERE id = $9
       RETURNING id
     `,
     [
       body.periodLabel,
       body.quarterCode,
-      body.module1Start,
-      body.module1End,
-      body.module2Start,
-      body.module2End,
+      dates.baseHoursStartDate,
+      dates.baseHoursEndDate,
+      dates.module1Start,
+      dates.module1End,
+      dates.module2Start,
+      dates.module2End,
       cycleId
     ]
   );
@@ -580,7 +713,7 @@ async function updateAcademicCycle(
         updated_at = now()
       WHERE cycle_id = $5
     `,
-    [body.module1Start, body.module1End, body.module2Start, body.module2End, cycleId]
+    [dates.module1Start, dates.module1End, dates.module2Start, dates.module2End, cycleId]
   );
 
   const cycle = await loadCycleById(client, cycleId);
@@ -606,6 +739,7 @@ async function activateAcademicCycle(
   const before = await loadCycleById(client, cycleId);
   if (!before) throw new Error('El ciclo seleccionado no existe.');
   if (before.status === 'CERRADO') throw new Error('No se puede activar un ciclo cerrado.');
+  assertCycleCanActivate(before);
 
   const activeBefore = await client.query<CycleRow>(
     `
@@ -805,6 +939,7 @@ async function closeAcademicCycle(
   if (nextCycle.status !== 'PLANEACION') {
     throw requestError('El ciclo siguiente debe estar en PLANEACION.');
   }
+  assertCycleCanActivate(nextCycle);
 
   const scheduleCountNextCycle = await countSchedulesForCycle(client, nextCycle.id);
   if (scheduleCountNextCycle <= 0) {
@@ -986,6 +1121,10 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
         });
         return;
       }
+      if (isCalendarRequestError(error)) {
+        await sendCalendarRequestError(reply, error);
+        return;
+      }
       throw error;
     }
   });
@@ -1015,6 +1154,10 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
         });
         return;
       }
+      if (isCalendarRequestError(error)) {
+        await sendCalendarRequestError(reply, error);
+        return;
+      }
       throw error;
     }
   });
@@ -1026,9 +1169,18 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
       return;
     }
 
-    const cycle = await withTransaction((client) =>
-      activateAcademicCycle(client, request.user!.id, request.user!.email, params.data.id)
-    );
+    let cycle: CycleRow;
+    try {
+      cycle = await withTransaction((client) =>
+        activateAcademicCycle(client, request.user!.id, request.user!.email, params.data.id)
+      );
+    } catch (error) {
+      if (isCalendarRequestError(error)) {
+        await sendCalendarRequestError(reply, error);
+        return;
+      }
+      throw error;
+    }
 
     return {
       activeCycle: cycle,
@@ -1048,7 +1200,15 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
       return;
     }
 
-    return withTransaction((client) => closeAcademicCycle(client, request.user!, params.data.id, parsed.data));
+    try {
+      return await withTransaction((client) => closeAcademicCycle(client, request.user!, params.data.id, parsed.data));
+    } catch (error) {
+      if (isCalendarRequestError(error)) {
+        await sendCalendarRequestError(reply, error);
+        return;
+      }
+      throw error;
+    }
   });
 
   app.patch('/calendar/cycles/:id/modules', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {
@@ -1063,11 +1223,20 @@ export async function registerCalendarRoutes(app: FastifyInstance): Promise<void
       return;
     }
 
-    const cycle = await withTransaction((client) =>
-      updateCycleModuleDates(client, request.user!.id, request.user!.email, params.data.id, parsed.data)
-    );
+    let cycle: CycleRow;
+    try {
+      cycle = await withTransaction((client) =>
+        updateCycleModuleDates(client, request.user!.id, request.user!.email, params.data.id, parsed.data)
+      );
+    } catch (error) {
+      if (isCalendarRequestError(error)) {
+        await sendCalendarRequestError(reply, error);
+        return;
+      }
+      throw error;
+    }
 
-    return { activeCycle: cycle, message: 'Fechas modulares actualizadas correctamente.' };
+    return { activeCycle: cycle, message: 'Vigencia pagable y fechas modulares actualizadas correctamente.' };
   });
 
   app.post('/calendar/periods', { preHandler: requirePermission('calendar.manage') }, async (request, reply) => {

@@ -86,6 +86,8 @@ function cycleDefaultsFromCode(code: string) {
   if (quarter === 1) {
     return {
       periodLabel: `Septiembre - Diciembre ${calendarYear}`,
+      baseHoursStartDate: '',
+      baseHoursEndDate: '',
       module1Start: `${calendarYear}-09-01`,
       module1End: `${calendarYear}-10-31`,
       module2Start: `${calendarYear}-11-01`,
@@ -95,6 +97,8 @@ function cycleDefaultsFromCode(code: string) {
   if (quarter === 2) {
     return {
       periodLabel: `Enero - Abril ${calendarYear}`,
+      baseHoursStartDate: '',
+      baseHoursEndDate: '',
       module1Start: `${calendarYear}-01-01`,
       module1End: `${calendarYear}-02-28`,
       module2Start: `${calendarYear}-03-01`,
@@ -103,6 +107,8 @@ function cycleDefaultsFromCode(code: string) {
   }
   return {
     periodLabel: `Mayo - Agosto ${calendarYear}`,
+    baseHoursStartDate: '',
+    baseHoursEndDate: '',
     module1Start: `${calendarYear}-05-01`,
     module1End: `${calendarYear}-06-30`,
     module2Start: `${calendarYear}-07-01`,
@@ -152,6 +158,8 @@ function blankForm(): CalendarPeriodPayload {
 
 const form = ref<CalendarPeriodPayload>(blankForm());
 const moduleForm = ref<CycleModuleDatesPayload>({
+  baseHoursStartDate: '',
+  baseHoursEndDate: '',
   module1Start: '',
   module1End: '',
   module2Start: '',
@@ -207,6 +215,8 @@ function refreshPeriodLabel() {
 
 function syncModuleForm(cycle: CycleOption | null) {
   moduleForm.value = {
+    baseHoursStartDate: dateOnly(cycle?.baseHoursStartDate),
+    baseHoursEndDate: dateOnly(cycle?.baseHoursEndDate),
     module1Start: dateOnly(cycle?.module1Start),
     module1End: dateOnly(cycle?.module1End),
     module2Start: dateOnly(cycle?.module2Start),
@@ -248,6 +258,8 @@ function editCycle(cycle: CycleOption) {
   cycleForm.value = {
     periodLabel: cycle.periodLabel,
     quarterCode: cycle.quarterCode,
+    baseHoursStartDate: dateOnly(cycle.baseHoursStartDate),
+    baseHoursEndDate: dateOnly(cycle.baseHoursEndDate),
     module1Start: dateOnly(cycle.module1Start),
     module1End: dateOnly(cycle.module1End),
     module2Start: dateOnly(cycle.module2Start),
@@ -257,17 +269,33 @@ function editCycle(cycle: CycleOption) {
   clearNotice();
 }
 
-function validateCycleForm() {
-  const cycle = cycleForm.value;
-  if (!cycle.periodLabel.trim()) return 'Captura el periodo del ciclo.';
-  if (!cycle.quarterCode.trim()) return 'Captura el código del ciclo.';
+function validateCycleDates(cycle: CycleModuleDatesPayload) {
+  if (!cycle.baseHoursStartDate || !cycle.baseHoursEndDate) {
+    return 'Captura inicio y fin de horas base.';
+  }
+  if (cycle.baseHoursStartDate > cycle.baseHoursEndDate) {
+    return 'El inicio de horas base debe ser menor o igual al fin.';
+  }
   if (!cycle.module1Start || !cycle.module1End || !cycle.module2Start || !cycle.module2End) {
     return 'Captura inicio y cierre de ambos módulos.';
   }
   if (cycle.module1Start > cycle.module1End) return 'El módulo 1 tiene fechas invertidas.';
   if (cycle.module2Start > cycle.module2End) return 'El módulo 2 tiene fechas invertidas.';
   if (cycle.module1End > cycle.module2End) return 'El cierre de módulo 1 no puede ser posterior al cierre de módulo 2.';
+  if (cycle.module1Start < cycle.baseHoursStartDate || cycle.module1End > cycle.baseHoursEndDate) {
+    return 'El módulo 1 debe quedar completamente dentro de la vigencia pagable de horas base.';
+  }
+  if (cycle.module2Start < cycle.baseHoursStartDate || cycle.module2End > cycle.baseHoursEndDate) {
+    return 'El módulo 2 debe quedar completamente dentro de la vigencia pagable de horas base.';
+  }
   return '';
+}
+
+function validateCycleForm() {
+  const cycle = cycleForm.value;
+  if (!cycle.periodLabel.trim()) return 'Captura el periodo del ciclo.';
+  if (!cycle.quarterCode.trim()) return 'Captura el código del ciclo.';
+  return validateCycleDates(cycle);
 }
 
 async function saveCycle() {
@@ -479,14 +507,7 @@ function validateForm() {
 }
 
 function validateModuleForm() {
-  const modules = moduleForm.value;
-  if (!modules.module1Start || !modules.module1End || !modules.module2Start || !modules.module2End) {
-    return 'Captura inicio y cierre de ambos módulos.';
-  }
-  if (modules.module1Start > modules.module1End) return 'El módulo 1 tiene fechas invertidas.';
-  if (modules.module2Start > modules.module2End) return 'El módulo 2 tiene fechas invertidas.';
-  if (modules.module1End > modules.module2End) return 'El cierre de módulo 1 no puede ser posterior al cierre de módulo 2.';
-  return '';
+  return validateCycleDates(moduleForm.value);
 }
 
 async function saveModuleDates() {
@@ -497,6 +518,8 @@ async function saveModuleDates() {
   clearNotice();
   try {
     const response = await updateCycleModuleDates(activeCycle.value.id, {
+      baseHoursStartDate: dateOnly(moduleForm.value.baseHoursStartDate),
+      baseHoursEndDate: dateOnly(moduleForm.value.baseHoursEndDate),
       module1Start: dateOnly(moduleForm.value.module1Start),
       module1End: dateOnly(moduleForm.value.module1End),
       module2Start: dateOnly(moduleForm.value.module2Start),
@@ -635,6 +658,32 @@ onMounted(() => {
             <span>Código</span>
             <input v-model="cycleForm.quarterCode" placeholder="27-1" />
           </label>
+        </div>
+
+        <div class="calendar-form-section base-hours-section" data-testid="cycle-base-hours-section">
+          <div class="calendar-section-heading">
+            <strong>Vigencia pagable de horas base</strong>
+            <span>Define el periodo inclusivo en el que los Horarios regulares generan horas pagables. No modifica las fechas de Módulo 1 y Módulo 2.</span>
+            <span>M1 y M2 deben quedar dentro de esta vigencia.</span>
+          </div>
+          <div class="form-grid">
+            <label>
+              <span>Inicio de horas base</span>
+              <input v-model="cycleForm.baseHoursStartDate" data-testid="cycle-base-hours-start" type="date" />
+            </label>
+            <label>
+              <span>Fin de horas base</span>
+              <input v-model="cycleForm.baseHoursEndDate" data-testid="cycle-base-hours-end" type="date" />
+            </label>
+          </div>
+        </div>
+
+        <div class="calendar-form-section">
+          <div class="calendar-section-heading">
+            <strong>Fechas modulares</strong>
+            <span>Módulo 1 y Módulo 2 conservan su función actual para S1 y S2.</span>
+          </div>
+          <div class="form-grid">
           <label>
             <span>Inicio módulo 1</span>
             <input v-model="cycleForm.module1Start" type="date" />
@@ -651,6 +700,7 @@ onMounted(() => {
             <span>Cierre módulo 2</span>
             <input v-model="cycleForm.module2End" type="date" />
           </label>
+          </div>
         </div>
 
         <div class="module-period-note editable">
@@ -698,7 +748,8 @@ onMounted(() => {
                   <span class="badge" :class="cycleStatusClass(cycle.status)">{{ cycleStatusLabel(cycle.status) }}</span>
                 </td>
                 <td>
-                  <strong>M1 {{ formatDate(cycle.module1Start) }} - {{ formatDate(cycle.module1End) }}</strong>
+                  <strong>Base {{ formatDate(cycle.baseHoursStartDate) }} - {{ formatDate(cycle.baseHoursEndDate) }}</strong>
+                  <span>M1 {{ formatDate(cycle.module1Start) }} - {{ formatDate(cycle.module1End) }}</span>
                   <span>M2 {{ formatDate(cycle.module2Start) }} - {{ formatDate(cycle.module2End) }}</span>
                 </td>
                 <td>
@@ -787,7 +838,30 @@ onMounted(() => {
         <CalendarDays :size="22" />
       </div>
 
-      <div class="form-grid">
+      <div class="calendar-form-section base-hours-section" data-testid="active-cycle-base-hours-section">
+        <div class="calendar-section-heading">
+          <strong>Vigencia pagable de horas base</strong>
+          <span>Define el periodo inclusivo en el que los Horarios regulares generan horas pagables. No modifica las fechas de Módulo 1 y Módulo 2.</span>
+          <span>M1 y M2 deben quedar dentro de esta vigencia.</span>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Inicio de horas base</span>
+            <input v-model="moduleForm.baseHoursStartDate" data-testid="module-base-hours-start" type="date" />
+          </label>
+          <label>
+            <span>Fin de horas base</span>
+            <input v-model="moduleForm.baseHoursEndDate" data-testid="module-base-hours-end" type="date" />
+          </label>
+        </div>
+      </div>
+
+      <div class="calendar-form-section">
+        <div class="calendar-section-heading">
+          <strong>Fechas modulares</strong>
+          <span>Módulo 1 y Módulo 2 conservan su función actual para S1 y S2.</span>
+        </div>
+        <div class="form-grid">
         <label>
           <span>Inicio módulo 1</span>
           <input v-model="moduleForm.module1Start" type="date" />
@@ -804,6 +878,7 @@ onMounted(() => {
           <span>Cierre módulo 2</span>
           <input v-model="moduleForm.module2End" type="date" />
         </label>
+        </div>
       </div>
 
       <div class="module-period-note editable">
@@ -882,6 +957,11 @@ onMounted(() => {
               <input v-model.number="form.extrasAccessDays" type="number" min="0" max="31" />
             </label>
           </div>
+        </div>
+
+        <div class="module-period-note">
+          <strong>Vigencia pagable de horas base</strong>
+          <span>{{ formatDate(activeCycle?.baseHoursStartDate) }} - {{ formatDate(activeCycle?.baseHoursEndDate) }}</span>
         </div>
 
         <div class="module-period-note">

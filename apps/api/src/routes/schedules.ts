@@ -19,6 +19,8 @@ interface CycleRow {
   id: string;
   periodLabel: string;
   quarterCode: string;
+  baseHoursStartDate: string | null;
+  baseHoursEndDate: string | null;
   module1Start: string;
   module1End: string;
   module2Start: string;
@@ -265,10 +267,12 @@ function cycleSelectSql(whereClause = ''): string {
       id,
       period_label AS "periodLabel",
       quarter_code AS "quarterCode",
-      module1_start AS "module1Start",
-      module1_end AS "module1End",
-      module2_start AS "module2Start",
-      module2_end AS "module2End",
+      base_hours_start_date::text AS "baseHoursStartDate",
+      base_hours_end_date::text AS "baseHoursEndDate",
+      module1_start::text AS "module1Start",
+      module1_end::text AS "module1End",
+      module2_start::text AS "module2Start",
+      module2_end::text AS "module2End",
       status
     FROM academic_cycles
     ${whereClause}
@@ -373,19 +377,19 @@ async function ensureWorkingCycle(client: PoolClient, actor: SessionUser, prefer
         status,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVO', $7)
+      VALUES ($1, $2, $3, $4, $5, $6, 'PLANEACION', $7)
       ON CONFLICT (period_label, quarter_code) DO UPDATE
-      SET status = 'ACTIVO',
-          closed_at = NULL,
-          closed_by = NULL
+      SET status = academic_cycles.status
       RETURNING
         id,
         period_label AS "periodLabel",
         quarter_code AS "quarterCode",
-        module1_start AS "module1Start",
-        module1_end AS "module1End",
-        module2_start AS "module2Start",
-        module2_end AS "module2End",
+        base_hours_start_date::text AS "baseHoursStartDate",
+        base_hours_end_date::text AS "baseHoursEndDate",
+        module1_start::text AS "module1Start",
+        module1_end::text AS "module1End",
+        module2_start::text AS "module2Start",
+        module2_end::text AS "module2End",
         status
     `,
     [

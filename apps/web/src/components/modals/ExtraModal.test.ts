@@ -7,6 +7,8 @@ const activeCycle: CycleOption = {
   id: 'cycle-qa',
   periodLabel: 'H02H03 QA',
   quarterCode: 'QA',
+  baseHoursStartDate: '2026-05-01',
+  baseHoursEndDate: '2026-06-30',
   module1Start: '2026-05-01',
   module1End: '2026-05-31',
   module2Start: '2026-06-01',

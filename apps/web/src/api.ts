@@ -149,6 +149,8 @@ export interface CycleOption {
   id: string;
   periodLabel: string;
   quarterCode: string;
+  baseHoursStartDate: string | null;
+  baseHoursEndDate: string | null;
   module1Start: string;
   module1End: string;
   module2Start: string;
@@ -802,6 +804,8 @@ export interface CalendarPeriodPayload {
 }
 
 export interface CycleModuleDatesPayload {
+  baseHoursStartDate: string;
+  baseHoursEndDate: string;
   module1Start: string;
   module1End: string;
   module2Start: string;
