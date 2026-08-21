@@ -1,8 +1,8 @@
 # SPEC H23 - Vigencia temporal de Horarios en Nomina
 
-Estado: **Propuesta; pendiente de aprobacion humana.**
+Estado: **Diseno aprobado para implementacion. H23-F1 implementado en local/test.**
 
-Fecha: 2026-08-20
+Fecha: 2026-08-21
 
 ## 1. Objetivo
 
@@ -18,16 +18,16 @@ M1/M2 solo delimitan sabados S1/S2. No son una fuente semantica segura para limi
 
 Evidencia completa: `docs/auditoria/H23_Diagnostico_Vigencia_Temporal_Nomina.md`.
 
-## 3. Modelo propuesto
+## 3. Modelo aprobado
 
-Agregar a `academic_cycles`, en una migracion futura gestionada por H05:
+Agregar a `academic_cycles` mediante `database/015_h23_cycle_base_hours_dates.sql`, gestionada por H05:
 
 ```text
 base_hours_start_date date
 base_hours_end_date date
 ```
 
-Los nombres son propuestos. Reglas:
+Los nombres y el nivel ciclo estan aprobados. Reglas:
 
 - limites inclusivos;
 - `base_hours_start_date <= base_hours_end_date`;
@@ -35,6 +35,17 @@ Los nombres son propuestos. Reglas:
 - ciclos cerrados y snapshots historicos no se recalculan;
 - no inferir fechas desde M1/M2;
 - no usar `created_at` del horario como vigencia.
+
+M1 y M2 deben quedar completamente contenidos dentro de la vigencia base:
+
+```text
+base_hours_start_date <= module1_start
+module1_end <= base_hours_end_date
+base_hours_start_date <= module2_start
+module2_end <= base_hours_end_date
+```
+
+La migracion permite que ambos campos permanezcan `NULL` en ciclos legacy. No permite una sola fecha ni un rango invertido. No contiene backfill ni modifica ciclos historicos.
 
 ## 4. Regla de elegibilidad
 
@@ -66,7 +77,16 @@ Para la quincena 2026-08-10 a 2026-08-22:
 - faltas/retardos/extras de incidencia = 0/no elegibles;
 - Extras independientes fechados dentro de la quincena = elegibles segun las reglas operativas existentes.
 
-31/08/2026 es candidato informado para inicio de horas base de `27-1`. El fin pagable no se deduce de M2 y permanece pendiente de aprobacion.
+Configuracion aprobada para `27-1`:
+
+```text
+base_hours_start_date = 2026-08-31
+base_hours_end_date   = 2026-12-12
+module1               = 2026-08-31 .. 2026-09-17
+module2               = 2026-10-24 .. 2026-12-05
+```
+
+Estas fechas son configurables por Admin desde Calendario y no se infieren ni quedan codificadas como regla del sistema.
 
 ## 6. H01
 
@@ -107,6 +127,8 @@ Cuando un horario tenga cero ocurrencias elegibles en la quincena:
 
 Para quincenas parciales, el modelo agregado actual no identifica la fecha de cada falta/retardo. La primera implementacion puede conservar el agregado solo para ocurrencias elegibles y documentar la disciplina de captura. Una futura incidencia fechada requiere otra SPEC.
 
+Decision H23 v1: si existe al menos una ocurrencia base elegible, operacion puede continuar con el modelo agregado actual y debe capturar solo incidencias de clases realmente elegibles. H23-F1 no cambia aun la captura; el bloqueo UI/backend y la defensa del calculo corresponden a fases posteriores.
+
 ## 9. Extras independientes
 
 Los Extras propedeuticos permanecen desacoplados de la vigencia base. Se consideran por:
@@ -124,17 +146,16 @@ La vista viva de `Horas base y extras` debe usar la misma regla temporal que Pre
 
 Los reportes desde snapshot conservan historia. `Horas base por categoria` sigue midiendo carga asignada del ciclo y no cambia por esta regla de ocurrencias pagables.
 
-## 11. Compatibilidad y despliegue propuesto
+La paridad de la vista viva con Preview se implementara despues de integrar el helper en el motor. H23-F1 no modifica `operational-reports.ts`.
 
-1. Aprobar esta SPEC y las fechas de `27-1`.
-2. Crear migracion H05, previsiblemente `015`.
-3. Añadir campos y `CHECK` sin recalcular historicos.
-4. Cargar valores aprobados del ciclo activo con backup/control productivo.
-5. Centralizar conteo temporal en backend.
-6. Aplicar paridad en Reportes Operativos vivos.
-7. Añadir pruebas H23.
-8. Validar local/test.
-9. Predeploy y deploy controlados.
+## 11. Plan aprobado y estado
+
+1. H23-F1: migracion `015`, campos, constraints, configuracion Calendario, validaciones y helper puro. Implementado en local/test.
+2. H23-F2: integrar el helper en `calculatePayroll()`, incidencias y Reportes Operativos vivos, manteniendo Preview=Guardar.
+3. Validar fronteras, H20=Admin, historicos y regresion H01.
+4. Preparar H05/H13 con backup antes de aplicar `015` en produccion.
+5. Configurar las fechas aprobadas de `27-1` mediante Calendario.
+6. Ejecutar deploy y smoke controlados.
 
 No debe existir fallback silencioso para un ciclo `ACTIVO` sin vigencia base una vez habilitada la nueva regla.
 
@@ -154,12 +175,15 @@ No debe existir fallback silencioso para un ciclo `ACTIVO` sin vigencia base una
 
 ## 13. Decisiones pendientes
 
-- [ ] Aprobar modelo a nivel ciclo.
-- [ ] Aprobar nombres de columnas.
-- [ ] Aprobar inicio y fin pagable de `27-1`.
-- [ ] Confirmar relacion obligatoria entre vigencia base y M1/M2.
-- [ ] Aprobar manejo de incidencias en periodos parciales.
-- [ ] Aprobar inclusion de Reportes Operativos vivos en la implementacion.
-- [ ] Autorizar migracion futura mediante H05.
+Las decisiones funcionales de modelo, columnas, fechas `27-1`, contencion M1/M2, incidencias agregadas, Extras independientes y paridad del reporte vivo estan cerradas.
 
-No hay implementacion, SQL, migracion ni deploy asociados a esta SPEC en H23-F0.
+Pendientes exclusivamente tecnicos/operativos:
+
+- [ ] Integrar elegibilidad en el nucleo comun `calculatePayroll()` durante H23-F2.
+- [ ] Aplicar defensa en profundidad para incidencias sin ocurrencias elegibles.
+- [ ] Aplicar paridad en Reportes Operativos vivos sin tocar snapshots.
+- [ ] Ejecutar predeploy completo, backup y autorizacion manual.
+- [ ] Aplicar migracion `015` en produccion mediante H05.
+- [ ] Configurar `27-1` y validar smoke antes de guardar la quincena especial.
+
+H23-F1 no tiene deploy ni migracion productiva. La matematica de Nomina permanece sin sustituir hasta H23-F2.
