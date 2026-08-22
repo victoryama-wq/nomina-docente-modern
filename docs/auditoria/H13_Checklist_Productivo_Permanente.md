@@ -1,7 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-08-20
+Ultima actualizacion de estado productivo: 2026-08-22
 
 ## 1. Resumen ejecutivo
 
@@ -50,7 +50,7 @@ Alcance de H13:
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true` en monitoreo |
 
-La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues del cierre operativo H21.
+La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues de H22 y del predeploy H23-F3.
 
 ## 3. Variables no secretas Cloud Run
 
@@ -174,8 +174,8 @@ Estado H05 productivo:
   - `schema_migrations`;
   - `schema_migration_runs`.
 - Control productivo:
-  - 16 migraciones registradas: 15 baseline y `013` aplicada;
-  - `pending = 0`;
+  - 17 migraciones registradas: 15 baseline y `013`/`014` aplicadas;
+  - filesystem con 18 migraciones y pendiente exacta `015_h23_cycle_base_hours_dates.sql` para una ventana H23-F4 aun no ejecutada;
   - `checksum mismatch = 0`.
 - Migraciones historicas `001` a `012` no deben reaplicarse.
 - Desde `013` queda prohibido repetir prefijos numericos.
@@ -199,6 +199,15 @@ Checklist H05 antes de cualquier deploy:
 - [ ] Si hay migracion futura, aplicar solo con backup y aprobacion explicita.
 
 H13 no ejecuta H05 contra produccion.
+
+Predeploy H23-F3 validado el 2026-08-22:
+
+- backup de ensayo `1787413358689`, estado `SUCCESSFUL`;
+- restauracion temporal aislada y posteriormente eliminada;
+- `015` ensayada mediante H05 solo en temporal;
+- produccion con 17 registradas, pendiente exacta `015` y mismatch 0;
+- para H23-F4 respetar el orden `015` -> configurar `27-1` -> deploy -> smoke;
+- no desplegar codigo H23 mientras el ciclo `ACTIVO` conserve fechas base `NULL`.
 
 ## 8. Cloud Storage
 
@@ -382,6 +391,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | H20 | H13 conserva revision, imagen, Hosting y smoke autenticado del alcance compartido. |
 | H21 | H13 registro backup, migracion `013`, conciliacion controlada, API/Hosting y smoke autenticado; cualquier Apply CSV futuro requiere nueva aprobacion. |
 | H22 | Cerrado operativo con backup, `014`, H05 sin pendientes, API/Hosting y smoke autenticado aprobados; HF1B muestra el responsable desde `teachers.created_by` sin BD; cualquier Apply CSV futuro requiere una nueva ventana autorizada. |
+| H23 | F3 predeploy aprobado con backup/restauracion temporal; `015`, configuracion `27-1`, deploy y smoke productivos siguen pendientes y requieren ventana autorizada. |
 
 ## 16. Estado final H13
 
