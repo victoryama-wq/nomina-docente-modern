@@ -1030,4 +1030,168 @@ SET status = EXCLUDED.status,
     status_updated_at = EXCLUDED.status_updated_at,
     status_updated_by = EXCLUDED.status_updated_by;
 
+INSERT INTO payroll_calendar_config (
+  id,
+  cycle_id,
+  period_label,
+  payroll_start,
+  payroll_end,
+  module1_start,
+  module1_end,
+  module2_start,
+  module2_end,
+  incidences_access_start_at,
+  incidences_access_days,
+  extras_access_start_at,
+  extras_access_days
+)
+SELECT
+  fixture.id,
+  ac.id,
+  fixture.period_label,
+  fixture.payroll_start,
+  fixture.payroll_end,
+  ac.module1_start,
+  ac.module1_end,
+  ac.module2_start,
+  ac.module2_end,
+  now() - interval '1 day',
+  15,
+  now() - interval '1 day',
+  15
+FROM academic_cycles ac
+CROSS JOIN (
+  VALUES
+    ('30000000-0000-4000-8000-000000000034'::uuid, 'H23 Propedeutico Ago 10-22', '2026-08-10'::date, '2026-08-22'::date),
+    ('30000000-0000-4000-8000-000000000035'::uuid, 'H23 Cruce Inicio Ago 24-Sep 4', '2026-08-24'::date, '2026-09-04'::date),
+    ('30000000-0000-4000-8000-000000000036'::uuid, 'H23 Dentro Sep 7-18', '2026-09-07'::date, '2026-09-18'::date),
+    ('30000000-0000-4000-8000-000000000037'::uuid, 'H23 Cruce M1 M2 Sep 10-Nov 2', '2026-09-10'::date, '2026-11-02'::date)
+) AS fixture(id, period_label, payroll_start, payroll_end)
+WHERE ac.id = '30000000-0000-4000-8000-000000000032'
+ON CONFLICT (id) DO UPDATE
+SET period_label = EXCLUDED.period_label,
+    payroll_start = EXCLUDED.payroll_start,
+    payroll_end = EXCLUDED.payroll_end,
+    incidences_access_start_at = EXCLUDED.incidences_access_start_at,
+    incidences_access_days = EXCLUDED.incidences_access_days,
+    extras_access_start_at = EXCLUDED.extras_access_start_at,
+    extras_access_days = EXCLUDED.extras_access_days,
+    updated_at = now();
+
+INSERT INTO calendar_blackout_dates (config_id, blackout_date, reason)
+VALUES ('30000000-0000-4000-8000-000000000036', '2026-09-07', 'H23 QA inhábil elegible')
+ON CONFLICT (config_id, blackout_date) DO UPDATE
+SET reason = EXCLUDED.reason;
+
+INSERT INTO schedules (
+  id,
+  cycle_id,
+  coordination_id,
+  teacher_id,
+  subject_id,
+  subject_name,
+  group_code,
+  tabulator_id,
+  tabulator_name,
+  tabulator_amount,
+  hours_l,
+  hours_m,
+  hours_x,
+  hours_j,
+  hours_v,
+  hours_s1,
+  hours_s2,
+  created_by,
+  updated_by
+)
+VALUES (
+  '50000000-0000-4000-8000-000000000032',
+  '30000000-0000-4000-8000-000000000032',
+  (SELECT id FROM coordinations WHERE name = 'Idiomas'),
+  '40000000-0000-4000-8000-000000000001',
+  '30000000-0000-4000-8000-000000000001',
+  'H23 QA Vigencia Temporal',
+  'H23-27-1',
+  '30000000-0000-4000-8000-000000000002',
+  'H04 QA Tabulador 100',
+  100.00,
+  2,
+  1,
+  0,
+  0,
+  0,
+  3,
+  4,
+  (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx'),
+  (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
+)
+ON CONFLICT (id) DO UPDATE
+SET hours_l = EXCLUDED.hours_l,
+    hours_m = EXCLUDED.hours_m,
+    hours_x = EXCLUDED.hours_x,
+    hours_j = EXCLUDED.hours_j,
+    hours_v = EXCLUDED.hours_v,
+    hours_s1 = EXCLUDED.hours_s1,
+    hours_s2 = EXCLUDED.hours_s2,
+    updated_at = now();
+
+INSERT INTO schedule_incidences (
+  schedule_id,
+  calendar_config_id,
+  absences,
+  delays,
+  extra_hours_in_schedule,
+  updated_by
+)
+VALUES (
+  '50000000-0000-4000-8000-000000000032',
+  '30000000-0000-4000-8000-000000000034',
+  1,
+  2,
+  3,
+  (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
+)
+ON CONFLICT (schedule_id, calendar_config_id) DO UPDATE
+SET absences = EXCLUDED.absences,
+    delays = EXCLUDED.delays,
+    extra_hours_in_schedule = EXCLUDED.extra_hours_in_schedule,
+    updated_at = now(),
+    updated_by = EXCLUDED.updated_by;
+
+INSERT INTO extra_hours (
+  id,
+  cycle_id,
+  coordination_id,
+  teacher_id,
+  hours,
+  tabulator_amount,
+  reason,
+  activity_date,
+  reference,
+  observations,
+  captured_by,
+  updated_by
+)
+VALUES (
+  '60000000-0000-4000-8000-000000000032',
+  '30000000-0000-4000-8000-000000000032',
+  (SELECT id FROM coordinations WHERE name = 'Idiomas'),
+  '40000000-0000-4000-8000-000000000001',
+  2,
+  100.00,
+  'H23 extra propedeutico independiente',
+  '2026-08-15',
+  'H23-PROPEDEUTICO',
+  'Debe permanecer elegible fuera de la vigencia base',
+  (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx'),
+  (SELECT id FROM app_users WHERE email = 'qa.coordinador.idiomas@tecplayacar.edu.mx')
+)
+ON CONFLICT (id) DO UPDATE
+SET hours = EXCLUDED.hours,
+    tabulator_amount = EXCLUDED.tabulator_amount,
+    reason = EXCLUDED.reason,
+    activity_date = EXCLUDED.activity_date,
+    updated_at = now(),
+    updated_by = EXCLUDED.updated_by;
+
 COMMIT;

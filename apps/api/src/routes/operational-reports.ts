@@ -14,6 +14,9 @@ type ExportFormat = 'csv' | 'xlsx';
 interface CycleLookupRow {
   id: string;
   label: string;
+  status: string;
+  baseHoursStartDate: string | null;
+  baseHoursEndDate: string | null;
 }
 
 interface OperationalCycleFilterRow {
@@ -237,7 +240,12 @@ async function resolveCycle(cycleId?: string): Promise<CycleLookupRow | null> {
   if (cycleId) {
     const rows = await query<CycleLookupRow>(
       `
-        SELECT id, period_label AS label
+        SELECT
+          id,
+          period_label AS label,
+          status::text AS status,
+          base_hours_start_date::text AS "baseHoursStartDate",
+          base_hours_end_date::text AS "baseHoursEndDate"
         FROM academic_cycles
         WHERE id = $1
         LIMIT 1
@@ -249,7 +257,12 @@ async function resolveCycle(cycleId?: string): Promise<CycleLookupRow | null> {
 
   const rows = await query<CycleLookupRow>(
     `
-      SELECT id, period_label AS label
+      SELECT
+        id,
+        period_label AS label,
+        status::text AS status,
+        base_hours_start_date::text AS "baseHoursStartDate",
+        base_hours_end_date::text AS "baseHoursEndDate"
       FROM academic_cycles
       WHERE status = 'ACTIVO'
       ORDER BY created_at DESC
@@ -305,18 +318,35 @@ async function listBaseExtraLiveRows(
     `
       WITH calendar_counts AS (
         SELECT
-          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 1 AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS monday_count,
-          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 2 AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS tuesday_count,
-          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 3 AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS wednesday_count,
-          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 4 AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS thursday_count,
-          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 5 AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS friday_count,
-          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 6 AND day_value::date BETWEEN ac.module1_start AND ac.module1_end AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS module1_saturday_count,
-          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 6 AND day_value::date BETWEEN ac.module2_start AND ac.module2_end AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS module2_saturday_count
+          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 1 AND day_value::date BETWEEN ac.base_hours_start_date AND ac.base_hours_end_date AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS monday_count,
+          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 2 AND day_value::date BETWEEN ac.base_hours_start_date AND ac.base_hours_end_date AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS tuesday_count,
+          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 3 AND day_value::date BETWEEN ac.base_hours_start_date AND ac.base_hours_end_date AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS wednesday_count,
+          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 4 AND day_value::date BETWEEN ac.base_hours_start_date AND ac.base_hours_end_date AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS thursday_count,
+          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 5 AND day_value::date BETWEEN ac.base_hours_start_date AND ac.base_hours_end_date AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS friday_count,
+          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 6 AND day_value::date BETWEEN ac.base_hours_start_date AND ac.base_hours_end_date AND day_value::date BETWEEN ac.module1_start AND ac.module1_end AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS module1_saturday_count,
+          COALESCE(SUM(CASE WHEN EXTRACT(ISODOW FROM day_value)::int = 6 AND day_value::date BETWEEN ac.base_hours_start_date AND ac.base_hours_end_date AND day_value::date BETWEEN ac.module2_start AND ac.module2_end AND cbd.blackout_date IS NULL THEN 1 ELSE 0 END), 0)::numeric AS module2_saturday_count
         FROM payroll_calendar_config pcc
         JOIN academic_cycles ac ON ac.id = pcc.cycle_id
         LEFT JOIN LATERAL generate_series(pcc.payroll_start, pcc.payroll_end, interval '1 day') AS generated(day_value) ON true
         LEFT JOIN calendar_blackout_dates cbd ON cbd.config_id = pcc.id AND cbd.blackout_date = generated.day_value::date
         WHERE pcc.id = $2::uuid
+      ),
+      schedule_eligibility AS (
+        SELECT
+          s.id AS schedule_id,
+          (
+            $2::uuid IS NULL OR
+            s.hours_l * cc.monday_count +
+            s.hours_m * cc.tuesday_count +
+            s.hours_x * cc.wednesday_count +
+            s.hours_j * cc.thursday_count +
+            s.hours_v * cc.friday_count +
+            s.hours_s1 * cc.module1_saturday_count +
+            s.hours_s2 * cc.module2_saturday_count > 0
+          ) AS has_eligible_occurrences
+        FROM schedules s
+        CROSS JOIN calendar_counts cc
+        WHERE s.cycle_id = $1::uuid
       ),
       schedule_base AS (
         SELECT
@@ -354,6 +384,7 @@ async function listBaseExtraLiveRows(
           string_agg(DISTINCT updater.display_name, '; ' ORDER BY updater.display_name) FILTER (WHERE updater.display_name IS NOT NULL) AS incidence_updated_by_name
         FROM schedule_incidences si
         JOIN schedules s ON s.id = si.schedule_id
+        JOIN schedule_eligibility se ON se.schedule_id = s.id AND se.has_eligible_occurrences
         JOIN teachers t ON t.id = s.teacher_id
         LEFT JOIN app_users updater ON updater.id = si.updated_by
         WHERE s.cycle_id = $1::uuid
@@ -560,6 +591,23 @@ async function loadBaseExtraReport(filters: z.infer<typeof baseExtraQuerySchema>
   const snapshotRun = calendar ? await findSnapshotRun(cycle.id, calendar.id) : null;
   const resolvedSource: ReportSource =
     filters.source === 'snapshot' || (filters.source === 'auto' && snapshotRun) ? 'snapshot' : 'live';
+
+  if (
+    resolvedSource === 'live' &&
+    calendar &&
+    cycle.status === 'ACTIVO' &&
+    (!cycle.baseHoursStartDate || !cycle.baseHoursEndDate)
+  ) {
+    return {
+      error: {
+        status: 400,
+        body: {
+          error: 'BASE_HOURS_DATES_INCOMPLETE',
+          message: 'Configura inicio y fin de horas base en Calendario antes de consultar la vista viva.'
+        }
+      }
+    };
+  }
 
   if (filters.source === 'snapshot' && !snapshotRun) {
     return {

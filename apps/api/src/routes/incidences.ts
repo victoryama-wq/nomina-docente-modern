@@ -5,6 +5,10 @@ import { loadActorScope, selectCompatibleActorCoordination } from '../actor-scop
 import { requirePermission } from '../auth.js';
 import { query, withTransaction } from '../db.js';
 import { addHours, hoursToApi, moneyToApi, toHoursDecimal } from '../lib/decimal.js';
+import {
+  getBaseHoursOccurrenceCounts,
+  hasEligibleScheduleOccurrences
+} from '../lib/base-hours-eligibility.js';
 import type { ActorScope, SessionUser } from '../types.js';
 import {
   ensureWorkingCycle,
@@ -46,7 +50,28 @@ interface IncidenceScheduleRow {
   extraHoursInSchedule: DecimalString;
   incidenceUpdatedAt: string | null;
   incidenceUpdatedByEmail: string;
+  hasEligibleOccurrences: boolean;
+  eligibilityMessage: string | null;
   canEdit: boolean;
+}
+
+interface IncidenceScheduleQueryRow extends Omit<IncidenceScheduleRow, 'hasEligibleOccurrences' | 'eligibilityMessage' | 'canEdit'> {
+  payrollStart: string;
+  payrollEnd: string;
+  baseHoursStartDate: string | null;
+  baseHoursEndDate: string | null;
+  module1Start: string;
+  module1End: string;
+  module2Start: string;
+  module2End: string;
+  hoursL: string;
+  hoursM: string;
+  hoursX: string;
+  hoursJ: string;
+  hoursV: string;
+  hoursS1: string;
+  hoursS2: string;
+  blackoutDates: string[];
 }
 
 interface IncidenceCalendarPeriodRow {
@@ -124,6 +149,16 @@ const incidenceBatchSchema = z.object({
 
 type IncidencePayload = z.infer<typeof incidencePayloadSchema>;
 
+type IncidenceEligibilityError = Error & { statusCode: number; incidenceErrorCode: string };
+
+function isIncidenceEligibilityError(error: unknown): error is IncidenceEligibilityError {
+  return error instanceof Error && 'incidenceErrorCode' in error;
+}
+
+async function sendIncidenceEligibilityError(reply: FastifyReply, error: IncidenceEligibilityError): Promise<void> {
+  await reply.code(error.statusCode).send({ error: error.incidenceErrorCode, message: error.message });
+}
+
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
     error: 'VALIDATION_ERROR',
@@ -145,6 +180,20 @@ function incidenceSelectSql(whereClause = ''): string {
       ac.status AS "cycleStatus",
       pcc.id AS "calendarConfigId",
       pcc.period_label AS "calendarPeriodLabel",
+      pcc.payroll_start::text AS "payrollStart",
+      pcc.payroll_end::text AS "payrollEnd",
+      ac.base_hours_start_date::text AS "baseHoursStartDate",
+      ac.base_hours_end_date::text AS "baseHoursEndDate",
+      ac.module1_start::text AS "module1Start",
+      ac.module1_end::text AS "module1End",
+      ac.module2_start::text AS "module2Start",
+      ac.module2_end::text AS "module2End",
+      ARRAY(
+        SELECT cbd.blackout_date::text
+        FROM calendar_blackout_dates cbd
+        WHERE cbd.config_id = pcc.id
+        ORDER BY cbd.blackout_date
+      ) AS "blackoutDates",
       EXISTS (
         SELECT 1
         FROM payroll_runs pr
@@ -173,6 +222,13 @@ function incidenceSelectSql(whereClause = ''): string {
       s.group_code AS "groupCode",
       s.tabulator_name AS "tabulatorName",
       s.tabulator_amount::text AS "tabulatorAmount",
+      s.hours_l::text AS "hoursL",
+      s.hours_m::text AS "hoursM",
+      s.hours_x::text AS "hoursX",
+      s.hours_j::text AS "hoursJ",
+      s.hours_v::text AS "hoursV",
+      s.hours_s1::text AS "hoursS1",
+      s.hours_s2::text AS "hoursS2",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v)::float8 AS "weekHours",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s1)::float8 AS "mod1Hours",
       (s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s1 + s.hours_s2)::float8 AS "baseHours",
@@ -194,24 +250,68 @@ function incidenceSelectSql(whereClause = ''): string {
 }
 
 function applyEditability(
-  rows: Omit<IncidenceScheduleRow, 'canEdit'>[],
+  rows: IncidenceScheduleQueryRow[],
   actor: SessionUser,
   scope: ActorScope
 ): IncidenceScheduleRow[] {
-  return rows.map((row) => ({
-    ...row,
-    tabulatorAmount: moneyToApi(row.tabulatorAmount),
-    absences: hoursToApi(row.absences),
-    delays: hoursToApi(row.delays),
-    extraHoursInSchedule: hoursToApi(row.extraHoursInSchedule),
-    canEdit:
-      !row.payrollLocked &&
-      row.accessOpen &&
-      row.cycleStatus === 'ACTIVO' &&
-      (isSystemAdmin(actor) ||
-        row.scheduleCreatedById === actor.id ||
-        (actor.role === 'direccion' && row.scheduleCreatedById === actor.id))
-  }));
+  return rows.map((row) => {
+    const {
+      payrollStart,
+      payrollEnd,
+      baseHoursStartDate,
+      baseHoursEndDate,
+      module1Start,
+      module1End,
+      module2Start,
+      module2End,
+      hoursL,
+      hoursM,
+      hoursX,
+      hoursJ,
+      hoursV,
+      hoursS1,
+      hoursS2,
+      blackoutDates,
+      ...publicRow
+    } = row;
+    const counts = baseHoursStartDate && baseHoursEndDate
+      ? getBaseHoursOccurrenceCounts({
+          payrollStart,
+          payrollEnd,
+          baseHoursStart: baseHoursStartDate,
+          baseHoursEnd: baseHoursEndDate,
+          module1Start,
+          module1End,
+          module2Start,
+          module2End,
+          blackoutDates
+        })
+      : null;
+    const hasEligibleOccurrences = counts
+      ? hasEligibleScheduleOccurrences({ hoursL, hoursM, hoursX, hoursJ, hoursV, hoursS1, hoursS2 }, counts)
+      : false;
+    const eligibilityMessage = hasEligibleOccurrences
+      ? null
+      : 'Este horario no tiene clases pagables dentro de la quincena seleccionada.';
+
+    return {
+      ...publicRow,
+      tabulatorAmount: moneyToApi(row.tabulatorAmount),
+      absences: hoursToApi(row.absences),
+      delays: hoursToApi(row.delays),
+      extraHoursInSchedule: hoursToApi(row.extraHoursInSchedule),
+      hasEligibleOccurrences,
+      eligibilityMessage,
+      canEdit:
+        hasEligibleOccurrences &&
+        !row.payrollLocked &&
+        row.accessOpen &&
+        row.cycleStatus === 'ACTIVO' &&
+        (isSystemAdmin(actor) ||
+          row.scheduleCreatedById === actor.id ||
+          (actor.role === 'direccion' && row.scheduleCreatedById === actor.id))
+    };
+  });
 }
 
 async function listIncidenceCalendarPeriods(cycleId: string): Promise<IncidenceCalendarPeriodRow[]> {
@@ -273,7 +373,7 @@ async function listIncidenceSchedules(
     }
   }
 
-  const rows = await query<Omit<IncidenceScheduleRow, 'canEdit'>>(
+  const rows = await query<IncidenceScheduleQueryRow>(
     `
       ${incidenceSelectSql(`WHERE s.cycle_id = $1 ${visibility}`)}
       ORDER BY t.full_name ASC, c.name ASC, s.subject_name ASC, s.group_code ASC
@@ -290,7 +390,7 @@ async function loadIncidenceScheduleById(
   actor: SessionUser,
   scope: ActorScope
 ): Promise<IncidenceScheduleRow | null> {
-  const result = await client.query<Omit<IncidenceScheduleRow, 'canEdit'>>(
+  const result = await client.query<IncidenceScheduleQueryRow>(
     `${incidenceSelectSql('WHERE s.id = $1')} LIMIT 1`,
     [scheduleId, calendarConfigId]
   );
@@ -345,6 +445,12 @@ async function saveIncidenceRow(
   if (before.cycleStatus === 'CERRADO') throw new Error('No se pueden modificar incidencias de un ciclo cerrado.');
   if (before.cycleStatus !== 'ACTIVO') throw new Error('Las incidencias solo pueden capturarse cuando el ciclo esta activo.');
   if (before.payrollLocked) throw new Error('Esta quincena ya tiene nómina guardada. Las incidencias quedaron cerradas.');
+  if (!before.hasEligibleOccurrences) {
+    throw Object.assign(new Error(before.eligibilityMessage || 'El horario no tiene clases pagables en esta quincena.'), {
+      statusCode: 400,
+      incidenceErrorCode: 'SCHEDULE_OUTSIDE_BASE_HOURS_PERIOD'
+    });
+  }
   if (!before.accessOpen) {
     if (before.accessStatus === 'PENDIENTE') {
       throw new Error(`La ventana de captura de incidencias abre el ${new Date(before.accessStartAt).toLocaleString('es-MX')}.`);
@@ -466,12 +572,20 @@ export async function registerIncidenceRoutes(app: FastifyInstance): Promise<voi
       }
 
       const actor = request.user!;
-      const schedule = await withTransaction(async (client) => {
-        const scope = await loadActorScope(client, actor, { module: 'incidences.patchOne' });
-        return saveIncidenceRow(client, actor, scope, params.data.scheduleId, parsed.data);
-      });
+      try {
+        const schedule = await withTransaction(async (client) => {
+          const scope = await loadActorScope(client, actor, { module: 'incidences.patchOne' });
+          return saveIncidenceRow(client, actor, scope, params.data.scheduleId, parsed.data);
+        });
 
-      return { schedule, message: 'Incidencia guardada correctamente.' };
+        return { schedule, message: 'Incidencia guardada correctamente.' };
+      } catch (error) {
+        if (isIncidenceEligibilityError(error)) {
+          await sendIncidenceEligibilityError(reply, error);
+          return;
+        }
+        throw error;
+      }
     }
   );
 
@@ -483,18 +597,26 @@ export async function registerIncidenceRoutes(app: FastifyInstance): Promise<voi
     }
 
     const actor = request.user!;
-    const schedules = await withTransaction(async (client) => {
-      const scope = await loadActorScope(client, actor, { module: 'incidences.patchBatch' });
-      const updated: IncidenceScheduleRow[] = [];
-      for (const row of parsed.data.rows) {
-        updated.push(await saveIncidenceRow(client, actor, scope, row.scheduleId, row));
-      }
-      return updated;
-    });
+    try {
+      const schedules = await withTransaction(async (client) => {
+        const scope = await loadActorScope(client, actor, { module: 'incidences.patchBatch' });
+        const updated: IncidenceScheduleRow[] = [];
+        for (const row of parsed.data.rows) {
+          updated.push(await saveIncidenceRow(client, actor, scope, row.scheduleId, row));
+        }
+        return updated;
+      });
 
-    return {
-      schedules,
-      message: `Se guardaron ${schedules.length} fila${schedules.length === 1 ? '' : 's'} de incidencias.`
-    };
+      return {
+        schedules,
+        message: `Se guardaron ${schedules.length} fila${schedules.length === 1 ? '' : 's'} de incidencias.`
+      };
+    } catch (error) {
+      if (isIncidenceEligibilityError(error)) {
+        await sendIncidenceEligibilityError(reply, error);
+        return;
+      }
+      throw error;
+    }
   });
 }

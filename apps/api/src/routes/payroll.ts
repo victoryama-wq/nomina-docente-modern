@@ -16,6 +16,10 @@ import {
   toMoneyDecimal
 } from '../lib/decimal.js';
 import { buildCsv as serializeCsv, csvAttachmentHeaders } from '../lib/csv.js';
+import {
+  getBaseHoursOccurrenceCounts,
+  hasEligibleScheduleOccurrences
+} from '../lib/base-hours-eligibility.js';
 import type { ActorScope, SessionUser } from '../types.js';
 import {
   ensureWorkingCycle,
@@ -61,6 +65,8 @@ interface PayrollCalendarDefaults {
   module1End: string;
   module2Start: string;
   module2End: string;
+  baseHoursStartDate: string;
+  baseHoursEndDate: string;
 }
 
 interface PayrollRunRow {
@@ -148,6 +154,8 @@ interface PayrollInput {
   module1End: string;
   module2Start: string;
   module2End: string;
+  baseHoursStartDate: string;
+  baseHoursEndDate: string;
 }
 
 interface PayrollSummary {
@@ -299,6 +307,8 @@ interface PayrollCalendarConfigRow {
   module1End: string | null;
   module2Start: string | null;
   module2End: string | null;
+  baseHoursStartDate: string | null;
+  baseHoursEndDate: string | null;
   incidencesAccessDays: number;
   extrasAccessDays: number;
   createdAt: string;
@@ -375,7 +385,23 @@ type ResolvedPayrollBody = PayrollBody & {
   module1End: string;
   module2Start: string;
   module2End: string;
+  baseHoursStartDate: string;
+  baseHoursEndDate: string;
 };
+
+type PayrollEligibilityError = Error & { statusCode: number; eligibilityCode: string };
+
+function payrollEligibilityError(message: string, eligibilityCode: string): PayrollEligibilityError {
+  return Object.assign(new Error(message), { statusCode: 400, eligibilityCode });
+}
+
+function isPayrollEligibilityError(error: unknown): error is PayrollEligibilityError {
+  return error instanceof Error && 'eligibilityCode' in error;
+}
+
+async function sendPayrollEligibilityError(reply: FastifyReply, error: PayrollEligibilityError): Promise<void> {
+  await reply.code(error.statusCode).send({ error: error.eligibilityCode, message: error.message });
+}
 
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
   void reply.code(400).send({
@@ -409,52 +435,22 @@ function compareDateStrings(left: string, right: string): number {
   return parseDateKey(left).getTime() - parseDateKey(right).getTime();
 }
 
-function countWeekday(start: string, end: string, weekday: number, blackoutDates = new Set<string>()): number {
-  let total = 0;
-  for (let cursor = parseDateKey(start); cursor.getTime() <= parseDateKey(end).getTime(); cursor = addDays(cursor, 1)) {
-    const currentKey = dateKey(cursor);
-    if (cursor.getUTCDay() === weekday && !blackoutDates.has(currentKey)) total += 1;
-  }
-  return total;
-}
-
-function countSaturdaysInIntersection(
-  payrollStart: string,
-  payrollEnd: string,
-  moduleStart: string,
-  moduleEnd: string,
-  blackoutDates = new Set<string>()
-): number {
-  const start = dateKey(new Date(Math.max(parseDateKey(payrollStart).getTime(), parseDateKey(moduleStart).getTime())));
-  const end = dateKey(new Date(Math.min(parseDateKey(payrollEnd).getTime(), parseDateKey(moduleEnd).getTime())));
-  if (compareDateStrings(start, end) > 0) return 0;
-  return countWeekday(start, end, 6, blackoutDates);
-}
-
 function buildPayrollCalendar(body: ResolvedPayrollBody, blackoutDatesList: string[]): PayrollCalendar {
-  const blackoutDates = new Set(blackoutDatesList);
+  const counts = getBaseHoursOccurrenceCounts({
+    payrollStart: body.payrollStart,
+    payrollEnd: body.payrollEnd,
+    baseHoursStart: body.baseHoursStartDate,
+    baseHoursEnd: body.baseHoursEndDate,
+    module1Start: body.module1Start,
+    module1End: body.module1End,
+    module2Start: body.module2Start,
+    module2End: body.module2End,
+    blackoutDates: blackoutDatesList
+  });
   return {
-    dayCounts: {
-      L: countWeekday(body.payrollStart, body.payrollEnd, 1, blackoutDates),
-      M: countWeekday(body.payrollStart, body.payrollEnd, 2, blackoutDates),
-      X: countWeekday(body.payrollStart, body.payrollEnd, 3, blackoutDates),
-      J: countWeekday(body.payrollStart, body.payrollEnd, 4, blackoutDates),
-      V: countWeekday(body.payrollStart, body.payrollEnd, 5, blackoutDates)
-    },
-    module1Saturdays: countSaturdaysInIntersection(
-      body.payrollStart,
-      body.payrollEnd,
-      body.module1Start,
-      body.module1End,
-      blackoutDates
-    ),
-    module2Saturdays: countSaturdaysInIntersection(
-      body.payrollStart,
-      body.payrollEnd,
-      body.module2Start,
-      body.module2End,
-      blackoutDates
-    ),
+    dayCounts: counts.weekdays,
+    module1Saturdays: counts.module1Saturdays,
+    module2Saturdays: counts.module2Saturdays,
     blackoutDates: blackoutDatesList
   };
 }
@@ -477,7 +473,9 @@ function currentFortnightDefaults(cycle: CycleRow): PayrollCalendarDefaults {
     module1Start: cycle.module1Start,
     module1End: cycle.module1End,
     module2Start: cycle.module2Start,
-    module2End: cycle.module2End
+    module2End: cycle.module2End,
+    baseHoursStartDate: cycle.baseHoursStartDate || '',
+    baseHoursEndDate: cycle.baseHoursEndDate || ''
   };
 }
 
@@ -492,7 +490,9 @@ function normalizePayrollInput(body: ResolvedPayrollBody, cycle: CycleRow): Payr
     module1Start: body.module1Start,
     module1End: body.module1End,
     module2Start: body.module2Start,
-    module2End: body.module2End
+    module2End: body.module2End,
+    baseHoursStartDate: body.baseHoursStartDate,
+    baseHoursEndDate: body.baseHoursEndDate
   };
 }
 
@@ -889,6 +889,8 @@ async function listCalendarConfigs(client: PoolClient, cycleId: string): Promise
         ac.module1_end::text AS "module1End",
         ac.module2_start::text AS "module2Start",
         ac.module2_end::text AS "module2End",
+        ac.base_hours_start_date::text AS "baseHoursStartDate",
+        ac.base_hours_end_date::text AS "baseHoursEndDate",
         pcc.incidences_access_days AS "incidencesAccessDays",
         pcc.extras_access_days AS "extrasAccessDays",
         pcc.created_at AS "createdAt",
@@ -940,6 +942,8 @@ async function loadCalendarConfig(client: PoolClient, id: string): Promise<Payro
         ac.module1_end::text AS "module1End",
         ac.module2_start::text AS "module2Start",
         ac.module2_end::text AS "module2End",
+        ac.base_hours_start_date::text AS "baseHoursStartDate",
+        ac.base_hours_end_date::text AS "baseHoursEndDate",
         pcc.incidences_access_days AS "incidencesAccessDays",
         pcc.extras_access_days AS "extrasAccessDays",
         pcc.created_at AS "createdAt",
@@ -974,7 +978,22 @@ async function resolvePayrollBody(client: PoolClient, cycle: CycleRow, body: Pay
   body: ResolvedPayrollBody;
   blackoutDates: string[];
 }> {
-  if (!body.calendarConfigId) return { body: ensureResolvedBody(body), blackoutDates: [] };
+  if (!cycle.baseHoursStartDate || !cycle.baseHoursEndDate) {
+    throw payrollEligibilityError(
+      'Configura inicio y fin de horas base en Calendario antes de calcular la nómina.',
+      'BASE_HOURS_DATES_INCOMPLETE'
+    );
+  }
+  if (!body.calendarConfigId) {
+    return {
+      body: {
+        ...ensureResolvedBody(body),
+        baseHoursStartDate: dateOnly(cycle.baseHoursStartDate),
+        baseHoursEndDate: dateOnly(cycle.baseHoursEndDate)
+      },
+      blackoutDates: []
+    };
+  }
 
   const config = await loadCalendarConfig(client, body.calendarConfigId);
   if (!config) throw new Error('La quincena de calendario seleccionada no existe.');
@@ -990,7 +1009,9 @@ async function resolvePayrollBody(client: PoolClient, cycle: CycleRow, body: Pay
       module1Start: dateOnly(cycle.module1Start),
       module1End: dateOnly(cycle.module1End),
       module2Start: dateOnly(cycle.module2Start),
-      module2End: dateOnly(cycle.module2End)
+      module2End: dateOnly(cycle.module2End),
+      baseHoursStartDate: dateOnly(cycle.baseHoursStartDate),
+      baseHoursEndDate: dateOnly(cycle.baseHoursEndDate)
     },
     blackoutDates: config.blackoutDates.map((value) => dateOnly(value))
   };
@@ -1001,6 +1022,17 @@ function calculateSchedule(
   calendar: PayrollCalendar,
   line: InternalPayrollLine
 ): PayrollScheduleDetail {
+  const hasEligibleOccurrences = hasEligibleScheduleOccurrences(row, {
+    weekdays: calendar.dayCounts,
+    module1Saturdays: calendar.module1Saturdays,
+    module2Saturdays: calendar.module2Saturdays,
+    hasEligibleDates: Object.values(calendar.dayCounts).some((count) => count > 0) ||
+      calendar.module1Saturdays > 0 ||
+      calendar.module2Saturdays > 0
+  });
+  const absences = hasEligibleOccurrences ? row.absences : '0';
+  const delays = hasEligibleOccurrences ? row.delays : '0';
+  const extraHoursInSchedule = hasEligibleOccurrences ? row.extraHoursInSchedule : '0';
   const weekdayHours = addHours(
     multiplyHours(row.hoursL, calendar.dayCounts.L),
     multiplyHours(row.hoursM, calendar.dayCounts.M),
@@ -1012,21 +1044,21 @@ function calculateSchedule(
   const module2Hours = multiplyHours(row.hoursS2, calendar.module2Saturdays);
   const baseHours = addHours(weekdayHours, module1Hours, module2Hours);
   const grossBaseAmount = multiplyMoney(baseHours, row.tabulatorAmount);
-  const delayDiscountHours = multiplyHours(row.delays, '0.5');
-  const absenceDiscountAmount = multiplyMoney(row.absences, row.tabulatorAmount);
+  const delayDiscountHours = multiplyHours(delays, '0.5');
+  const absenceDiscountAmount = multiplyMoney(absences, row.tabulatorAmount);
   const delayDiscountAmount = multiplyMoney(delayDiscountHours, row.tabulatorAmount);
   const baseNetAmount = toMoneyDecimal(grossBaseAmount).minus(absenceDiscountAmount).minus(delayDiscountAmount);
-  const scheduleExtraAmount = multiplyMoney(row.extraHoursInSchedule, row.tabulatorAmount);
+  const scheduleExtraAmount = multiplyMoney(extraHoursInSchedule, row.tabulatorAmount);
 
   line.baseHours = apiHours(addHours(line.baseHours, baseHours));
-  line.absences = apiHours(addHours(line.absences, row.absences));
-  line.delays = apiHours(addHours(line.delays, row.delays));
+  line.absences = apiHours(addHours(line.absences, absences));
+  line.delays = apiHours(addHours(line.delays, delays));
   line.delayDiscountHours = apiHours(addHours(line.delayDiscountHours, delayDiscountHours));
   line.grossBaseAmount = apiMoney(addMoney(line.grossBaseAmount, grossBaseAmount));
   line.absenceDiscountAmount = apiMoney(addMoney(line.absenceDiscountAmount, absenceDiscountAmount));
   line.delayDiscountAmount = apiMoney(addMoney(line.delayDiscountAmount, delayDiscountAmount));
   line.baseNetAmount = apiMoney(addMoney(line.baseNetAmount, baseNetAmount));
-  line.scheduleExtraHours = apiHours(addHours(line.scheduleExtraHours, row.extraHoursInSchedule));
+  line.scheduleExtraHours = apiHours(addHours(line.scheduleExtraHours, extraHoursInSchedule));
   line.scheduleExtraAmount = apiMoney(addMoney(line.scheduleExtraAmount, scheduleExtraAmount));
   line.scheduleCount += 1;
 
@@ -1046,12 +1078,12 @@ function calculateSchedule(
     module2Hours: apiHours(module2Hours),
     baseHours: apiHours(baseHours),
     grossBaseAmount: apiMoney(grossBaseAmount),
-    absences: apiHours(row.absences),
-    delays: apiHours(row.delays),
+    absences: apiHours(absences),
+    delays: apiHours(delays),
     delayDiscountHours: apiHours(delayDiscountHours),
     absenceDiscountAmount: apiMoney(absenceDiscountAmount),
     delayDiscountAmount: apiMoney(delayDiscountAmount),
-    scheduleExtraHours: apiHours(row.extraHoursInSchedule),
+    scheduleExtraHours: apiHours(extraHoursInSchedule),
     scheduleExtraAmount: apiMoney(scheduleExtraAmount),
     baseNetAmount: apiMoney(baseNetAmount)
   };
@@ -1254,7 +1286,9 @@ async function latestPayrollDefaults(client: PoolClient, cycle: CycleRow): Promi
     module1Start: dateOnly(cycle.module1Start),
     module1End: dateOnly(cycle.module1End),
     module2Start: dateOnly(cycle.module2Start),
-    module2End: dateOnly(cycle.module2End)
+    module2End: dateOnly(cycle.module2End),
+    baseHoursStartDate: dateOnly(cycle.baseHoursStartDate),
+    baseHoursEndDate: dateOnly(cycle.baseHoursEndDate)
   };
 }
 
@@ -1693,6 +1727,8 @@ function weightsForRun(calculation: PayrollCalculation) {
     module1End: calculation.input.module1End,
     module2Start: calculation.input.module2Start,
     module2End: calculation.input.module2End,
+    baseHoursStartDate: calculation.input.baseHoursStartDate,
+    baseHoursEndDate: calculation.input.baseHoursEndDate,
     dayCounts: calculation.calendar.dayCounts,
     module1Saturdays: calculation.calendar.module1Saturdays,
     module2Saturdays: calculation.calendar.module2Saturdays,
@@ -1971,8 +2007,16 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
       return;
     }
 
-    const calculation = await withTransaction((client) => calculatePayroll(client, request.user!, parsed.data));
-    return publicCalculation(calculation, request.user!);
+    try {
+      const calculation = await withTransaction((client) => calculatePayroll(client, request.user!, parsed.data));
+      return publicCalculation(calculation, request.user!);
+    } catch (error) {
+      if (isPayrollEligibilityError(error)) {
+        await sendPayrollEligibilityError(reply, error);
+        return;
+      }
+      throw error;
+    }
   });
 
   app.post('/payroll/runs', { preHandler: requirePermissionOrProtectedSuperAdmin('payroll.finalize') }, async (request, reply) => {
@@ -1995,6 +2039,10 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
         message: 'Nómina guardada correctamente.'
       });
     } catch (error) {
+      if (isPayrollEligibilityError(error)) {
+        await sendPayrollEligibilityError(reply, error);
+        return;
+      }
       if (isUniqueViolation(error)) {
         await reply.code(409).send({
           error: 'PAYROLL_RUN_EXISTS',
@@ -2043,7 +2091,9 @@ export async function registerPayrollRoutes(app: FastifyInstance): Promise<void>
         module1Start: String(weights.module1Start || ''),
         module1End: String(weights.module1End || ''),
         module2Start: String(weights.module2Start || ''),
-        module2End: String(weights.module2End || '')
+        module2End: String(weights.module2End || ''),
+        baseHoursStartDate: String(weights.baseHoursStartDate || ''),
+        baseHoursEndDate: String(weights.baseHoursEndDate || '')
       },
       calendar: {
         dayCounts: (weights.dayCounts || { L: 0, M: 0, X: 0, J: 0, V: 0 }) as PayrollDayCounts,

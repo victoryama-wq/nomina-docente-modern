@@ -293,6 +293,7 @@ function rowBadge(schedule: IncidenceSchedule) {
   if (accessStatus.value === 'PLANEACION') return { label: 'Planeacion', className: 'warning' };
   if (accessStatus.value === 'CICLO_CERRADO') return { label: 'Ciclo cerrado', className: 'muted' };
   if (schedule.payrollLocked) return { label: 'Nómina guardada', className: 'muted' };
+  if (!schedule.hasEligibleOccurrences) return { label: 'Fuera de vigencia', className: 'muted' };
   if (accessStatus.value === 'PENDIENTE') return { label: 'Por abrir', className: 'warning' };
   if (accessStatus.value === 'CERRADO') return { label: 'Acceso cerrado', className: 'muted' };
   if (!canEditSchedule(schedule)) return { label: 'Bloqueado', className: 'muted' };
@@ -651,6 +652,9 @@ onUnmounted(() => {
                 </td>
                 <td>
                   <span class="badge" :class="rowBadge(schedule).className">{{ rowBadge(schedule).label }}</span>
+                  <small v-if="schedule.eligibilityMessage" class="eligibility-message">
+                    {{ schedule.eligibilityMessage }}
+                  </small>
                   <small v-if="schedule.incidenceUpdatedByEmail">{{ schedule.incidenceUpdatedByEmail }}</small>
                 </td>
                 <td class="row-actions">

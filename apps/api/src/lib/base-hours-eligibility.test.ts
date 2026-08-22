@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getBaseHoursOccurrenceCounts,
   getEffectiveModulePayrollDateRange,
   getEffectivePayrollBaseDateRange,
+  hasEligibleScheduleOccurrences,
   isDateWithinBaseHoursPeriod
 } from './base-hours-eligibility.js';
 
@@ -81,5 +83,65 @@ describe('H23 base hours eligibility date ranges', () => {
         ...basePeriod
       })
     ).toThrow('Rango de fechas invalido');
+  });
+
+  it('counts only eligible weekdays and modular Saturdays after blackouts', () => {
+    const counts = getBaseHoursOccurrenceCounts({
+      payrollStart: '2026-09-07',
+      payrollEnd: '2026-09-18',
+      ...basePeriod,
+      module1Start: '2026-08-31',
+      module1End: '2026-09-17',
+      module2Start: '2026-10-24',
+      module2End: '2026-12-05',
+      blackoutDates: ['2026-09-07']
+    });
+
+    expect(counts).toEqual({
+      weekdays: { L: 1, M: 2, X: 2, J: 2, V: 2 },
+      module1Saturdays: 1,
+      module2Saturdays: 0,
+      hasEligibleDates: true
+    });
+  });
+
+  it('keeps M1 and M2 independent when both intersect the payroll period', () => {
+    const counts = getBaseHoursOccurrenceCounts({
+      payrollStart: '2026-09-10',
+      payrollEnd: '2026-11-02',
+      ...basePeriod,
+      module1Start: '2026-08-31',
+      module1End: '2026-09-17',
+      module2Start: '2026-10-24',
+      module2End: '2026-12-05'
+    });
+
+    expect(counts.module1Saturdays).toBe(1);
+    expect(counts.module2Saturdays).toBe(2);
+  });
+
+  it('detects schedule-level eligibility instead of relying only on a non-empty date intersection', () => {
+    const counts = getBaseHoursOccurrenceCounts({
+      payrollStart: '2026-08-31',
+      payrollEnd: '2026-08-31',
+      ...basePeriod,
+      module1Start: '2026-08-31',
+      module1End: '2026-09-17',
+      module2Start: '2026-10-24',
+      module2End: '2026-12-05'
+    });
+
+    expect(
+      hasEligibleScheduleOccurrences(
+        { hoursL: 0, hoursM: 1, hoursX: 0, hoursJ: 0, hoursV: 0, hoursS1: 0, hoursS2: 0 },
+        counts
+      )
+    ).toBe(false);
+    expect(
+      hasEligibleScheduleOccurrences(
+        { hoursL: 1, hoursM: 0, hoursX: 0, hoursJ: 0, hoursV: 0, hoursS1: 0, hoursS2: 0 },
+        counts
+      )
+    ).toBe(true);
   });
 });

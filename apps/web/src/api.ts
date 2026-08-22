@@ -507,6 +507,8 @@ export interface IncidenceSchedule {
   extraHoursInSchedule: number;
   incidenceUpdatedAt: string | null;
   incidenceUpdatedByEmail: string;
+  hasEligibleOccurrences: boolean;
+  eligibilityMessage: string | null;
   canEdit: boolean;
 }
 
