@@ -28,7 +28,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
 - H21 cerrado operativo: migracion `013`, conciliacion de cinco pares/8 horarios, deploy `nomina-api-00052-xtm` y smoke autenticado Catalogos/Horarios aprobados; CSV institucional definitivo no aplicado.
 - H22 cerrado operativo: migracion `014`, API `nomina-api-00054-2ld`, Hosting y smoke autenticado aprobados; una ejecucion autorizada creo 14 docentes y HF1B corrigio el `READ_PROJECTION_DEFECT` sin BD ni Apply repetido.
-- H23-F1 implementado en local/test: modelo de vigencia pagable por ciclo, migracion `015`, configuracion Calendario, validaciones y helper temporal listos; el motor y el reporte vivo quedan pendientes de H23-F2.
+- H23-F1/F2 implementados y validados en local/test: modelo, migracion `015`, Calendario, motor comun, Incidencias y reporte vivo respetan la vigencia temporal; produccion y el apply de `015` siguen pendientes.
 - Alineacion documental post-H20 verificada contra Cloud Run, Firebase Hosting y H05 en modo read-only; no cambia el estado ni la prioridad de los riesgos.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
@@ -72,7 +72,7 @@ Arquitectura vigente:
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
 | H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Cerrado operativo; `013`, conciliacion, deploy y smoke autenticado aprobados | Bajo: riesgo residual por regresion o por aplicar en el futuro un CSV institucional sin control | P1 cerrado operativo | Mantener pruebas, H05/H13 y preview sin bloqueantes antes de cualquier Apply futuro | Cumplido con backup `1784582556252`, 277/277 sin cambios, cero bloqueantes y revision `nomina-api-00052-xtm` | Solo para Apply de un CSV institucional futuro |
 | H22 | Importacion masiva de docentes operativos por CSV | Directorio / Permisos / Datos operativos / Seguridad | Cerrado operativo; `014`, API/Hosting, ejecucion autorizada de 14 altas, smoke y HF1B aprobados | Bajo: riesgo residual ante una futura carga real o regresion de permisos, atomicidad o proyeccion del responsable | P1 cerrado operativo | Mantener Admin exclusivo, Preview, fingerprints, backup, autorizacion independiente y proyeccion desde `teachers.created_by` | Cumplido con backup `1785456525085`, H05 sin pendientes, revision `nomina-api-00054-2ld`, Hosting y smoke por rol/responsable, sin Apply repetido | Solo para un Apply institucional futuro o cambios funcionales |
-| H23 | Horarios sin vigencia temporal general en calculo de Nomina | Nomina / Calendario / Incidencias / Extras / Reportes | F1 implementado en local/test; modelo/configuracion/helper listos, sin deploy | Alto hasta F2/deploy: el motor vigente aun puede contar horas fuera de la vigencia aprobada | P0 operativo antes de guardar el periodo afectado | Integrar helper en `calculatePayroll()`, incidencias y Reportes vivos sin tocar H01 ni snapshots; aplicar `015` solo con H05/H13 | Pruebas de fronteras, Preview=Guardar, H20=Admin, snapshots intactos y smoke aprobados | Solo para apply/deploy productivo y operacion de la quincena especial |
+| H23 | Horarios sin vigencia temporal general en calculo de Nomina | Nomina / Calendario / Incidencias / Extras / Reportes | F1/F2 implementados y validados en local/test; sin deploy | Medio hasta apply/deploy: el codigo esta cubierto, pero produccion aun no tiene `015`, configuracion ni version H23 | P0 operativo antes de guardar el periodo afectado | Ejecutar H13, backup, H05 `015`, configurar `27-1`, desplegar y validar smoke; mantener H01, Extras independientes y snapshots intactos | Apply productivo controlado, `pending=0`, smoke de fronteras/Preview/Incidencias/Reportes aprobado | Si para apply/deploy productivo y operacion de la quincena especial |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -163,7 +163,7 @@ Cerrado/desplegado:
 
 Orden recomendado:
 
-1. **H23 vigencia temporal.** Completar H23-F2, predeploy, H05 `015` y configuracion productiva antes de guardar la quincena especial, sin tocar H01 ni historicos.
+1. **H23 vigencia temporal.** F1/F2 estan validados en local/test; ejecutar predeploy, H05 `015`, configuracion productiva y smoke antes de guardar la quincena especial, sin tocar H01 ni historicos.
 2. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
 3. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
 4. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
@@ -213,6 +213,6 @@ El foco tecnico inmediato debe pasar a:
 - mantener H11 cerrado con helper CSV central y pruebas de regresion;
 - conservar H04/H05 como barreras obligatorias antes de cambios;
 - usar H13 como checklist permanente antes de despliegues productivos;
-- completar H23-F2 y su validacion antes de guardar la quincena especial;
+- completar el predeploy, apply `015`, configuracion y smoke H23 antes de guardar la quincena especial;
 - consultar el cierre global `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva de estado de matriz;
 - usar el SDD consolidado post H09/H10 como primera fuente documental.

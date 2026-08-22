@@ -1,8 +1,8 @@
 # SPEC H23 - Vigencia temporal de Horarios en Nomina
 
-Estado: **Diseno aprobado para implementacion. H23-F1 implementado en local/test.**
+Estado: **Diseno aprobado. H23-F1 y H23-F2 implementados y validados en local/test.**
 
-Fecha: 2026-08-21
+Fecha: 2026-08-22
 
 ## 1. Objetivo
 
@@ -127,7 +127,7 @@ Cuando un horario tenga cero ocurrencias elegibles en la quincena:
 
 Para quincenas parciales, el modelo agregado actual no identifica la fecha de cada falta/retardo. La primera implementacion puede conservar el agregado solo para ocurrencias elegibles y documentar la disciplina de captura. Una futura incidencia fechada requiere otra SPEC.
 
-Decision H23 v1: si existe al menos una ocurrencia base elegible, operacion puede continuar con el modelo agregado actual y debe capturar solo incidencias de clases realmente elegibles. H23-F1 no cambia aun la captura; el bloqueo UI/backend y la defensa del calculo corresponden a fases posteriores.
+Decision H23 v1: si existe al menos una ocurrencia base elegible, operacion puede continuar con el modelo agregado actual y debe capturar solo incidencias de clases realmente elegibles. H23-F2 implementa el bloqueo UI/backend cuando no existe ninguna ocurrencia y la defensa en profundidad del calculo.
 
 ## 9. Extras independientes
 
@@ -146,13 +146,13 @@ La vista viva de `Horas base y extras` debe usar la misma regla temporal que Pre
 
 Los reportes desde snapshot conservan historia. `Horas base por categoria` sigue midiendo carga asignada del ciclo y no cambia por esta regla de ocurrencias pagables.
 
-La paridad de la vista viva con Preview se implementara despues de integrar el helper en el motor. H23-F1 no modifica `operational-reports.ts`.
+H23-F2 implementa la paridad temporal de la vista viva con Preview. Los reportes desde snapshot y el reporte de carga por categoria permanecen sin cambios.
 
 ## 11. Plan aprobado y estado
 
 1. H23-F1: migracion `015`, campos, constraints, configuracion Calendario, validaciones y helper puro. Implementado en local/test.
-2. H23-F2: integrar el helper en `calculatePayroll()`, incidencias y Reportes Operativos vivos, manteniendo Preview=Guardar.
-3. Validar fronteras, H20=Admin, historicos y regresion H01.
+2. H23-F2: integrar el helper en `calculatePayroll()`, incidencias y Reportes Operativos vivos, manteniendo Preview=Guardar. Implementado en local/test.
+3. Validar fronteras, H20=Admin, historicos y regresion H01. Completado en local/test.
 4. Preparar H05/H13 con backup antes de aplicar `015` en produccion.
 5. Configurar las fechas aprobadas de `27-1` mediante Calendario.
 6. Ejecutar deploy y smoke controlados.
@@ -179,11 +179,11 @@ Las decisiones funcionales de modelo, columnas, fechas `27-1`, contencion M1/M2,
 
 Pendientes exclusivamente tecnicos/operativos:
 
-- [ ] Integrar elegibilidad en el nucleo comun `calculatePayroll()` durante H23-F2.
-- [ ] Aplicar defensa en profundidad para incidencias sin ocurrencias elegibles.
-- [ ] Aplicar paridad en Reportes Operativos vivos sin tocar snapshots.
+- [x] Integrar elegibilidad en el nucleo comun `calculatePayroll()` durante H23-F2.
+- [x] Aplicar defensa en profundidad para incidencias sin ocurrencias elegibles.
+- [x] Aplicar paridad en Reportes Operativos vivos sin tocar snapshots.
 - [ ] Ejecutar predeploy completo, backup y autorizacion manual.
 - [ ] Aplicar migracion `015` en produccion mediante H05.
 - [ ] Configurar `27-1` y validar smoke antes de guardar la quincena especial.
 
-H23-F1 no tiene deploy ni migracion productiva. La matematica de Nomina permanece sin sustituir hasta H23-F2.
+H23-F1/F2 no tienen deploy ni migracion productiva. H23-F2 limita las ocurrencias temporales antes de H01; no sustituye ni modifica la matematica monetaria.
