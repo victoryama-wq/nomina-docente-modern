@@ -477,6 +477,7 @@ h3 {
 .content {
   padding: 24px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 22px;
   align-content: start;
   min-width: 0;
@@ -485,7 +486,13 @@ h3 {
 
 .view-stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
+  min-width: 0;
+}
+
+.view-stack > * {
+  min-width: 0;
 }
 
 .topbar,
@@ -708,6 +715,8 @@ h3 {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .toolbar-actions select {
@@ -1010,6 +1019,10 @@ h3 {
   grid-template-columns: minmax(0, 1fr) 160px;
   gap: 10px;
   margin-bottom: 14px;
+}
+
+.filters-row > * {
+  min-width: 0;
 }
 
 .filters-row.with-actions {
@@ -3414,7 +3427,7 @@ td span {
     .calendar-access-row,
     .module-period-note,
     .form-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .toolbar-card {
@@ -3469,6 +3482,14 @@ td span {
     width: 100%;
   }
 
+  .toolbar-actions select {
+    min-width: 0;
+  }
+
+  .subtle-pill {
+    white-space: normal;
+  }
+
   .audit-subtoolbar,
   .audit-pagination {
     align-items: stretch;
@@ -3501,5 +3522,20 @@ td span {
 
   h1 {
     font-size: 32px;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 900px) {
+  .filters-row.incidences {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filters-row.incidences .search-box,
+  .filters-row.incidences .subtle-pill {
+    grid-column: 1 / -1;
+  }
+
+  .filters-row.incidences .subtle-pill {
+    white-space: normal;
   }
 }
