@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-08-22
+Actualizacion: 2026-09-01
 
 ## 1. Contexto
 
@@ -28,7 +28,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
 - H21 cerrado operativo: migracion `013`, conciliacion de cinco pares/8 horarios, deploy `nomina-api-00052-xtm` y smoke autenticado Catalogos/Horarios aprobados; CSV institucional definitivo no aplicado.
 - H22 cerrado operativo: migracion `014`, API `nomina-api-00054-2ld`, Hosting y smoke autenticado aprobados; una ejecucion autorizada creo 14 docentes y HF1B corrigio el `READ_PROJECTION_DEFECT` sin BD ni Apply repetido.
-- H23-F1/F2 implementados y H23-F3 aprobado con backup/restauracion productiva temporal: migracion `015`, Calendario, motor comun, Incidencias y reporte vivo respetan la vigencia temporal; produccion y el apply de `015` siguen pendientes.
+- H23 cerrado operativo: migracion `015` aplicada por H05, ciclo `27-1` configurado, revision `nomina-api-00055-8wn`, Hosting y smoke productivo aprobados sin cambios H01 ni historicos.
 - Alineacion documental post-H20 verificada contra Cloud Run, Firebase Hosting y H05 en modo read-only; no cambia el estado ni la prioridad de los riesgos.
 - Cierre global de matriz de riesgos documentado el 2026-06-03, con pendientes clasificados como monitoreo, mejora futura u opcionales.
 
@@ -72,7 +72,7 @@ Arquitectura vigente:
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
 | H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Cerrado operativo; `013`, conciliacion, deploy y smoke autenticado aprobados | Bajo: riesgo residual por regresion o por aplicar en el futuro un CSV institucional sin control | P1 cerrado operativo | Mantener pruebas, H05/H13 y preview sin bloqueantes antes de cualquier Apply futuro | Cumplido con backup `1784582556252`, 277/277 sin cambios, cero bloqueantes y revision `nomina-api-00052-xtm` | Solo para Apply de un CSV institucional futuro |
 | H22 | Importacion masiva de docentes operativos por CSV | Directorio / Permisos / Datos operativos / Seguridad | Cerrado operativo; `014`, API/Hosting, ejecucion autorizada de 14 altas, smoke y HF1B aprobados | Bajo: riesgo residual ante una futura carga real o regresion de permisos, atomicidad o proyeccion del responsable | P1 cerrado operativo | Mantener Admin exclusivo, Preview, fingerprints, backup, autorizacion independiente y proyeccion desde `teachers.created_by` | Cumplido con backup `1785456525085`, H05 sin pendientes, revision `nomina-api-00054-2ld`, Hosting y smoke por rol/responsable, sin Apply repetido | Solo para un Apply institucional futuro o cambios funcionales |
-| H23 | Horarios sin vigencia temporal general en calculo de Nomina | Nomina / Calendario / Incidencias / Extras / Reportes | F1/F2 implementados; F3 predeploy y ensayo temporal aprobados; sin deploy | Medio hasta apply/deploy: la implementacion y los datos restaurados estan cubiertos, pero produccion aun no tiene `015`, configuracion ni version H23 | P0 operativo antes de guardar el periodo afectado | Ejecutar H23-F4 en orden `015` -> configurar `27-1` -> deploy -> smoke; mantener H01, Extras independientes y snapshots intactos | Apply productivo controlado, `pending=0`, smoke de Preview/Incidencias/Reportes aprobado | Si para apply/deploy productivo y operacion de la quincena especial |
+| H23 | Horarios sin vigencia temporal general en calculo de Nomina | Nomina / Calendario / Incidencias / Extras / Reportes | Cerrado operativo; `015`, configuracion `27-1`, API/Hosting y smoke productivo aprobados | Bajo: riesgo residual solo por regresion futura o configuracion incorrecta de un ciclo nuevo | P0 cerrado / monitoreo | Mantener vigencia base por ciclo, M1/M2 contenidos y pruebas de paridad Preview/Guardar/Reporte vivo; no cambiar H01 ni historicos | Cumplido con backup `1787418742938`, H05 `pending=0`, revision `nomina-api-00055-8wn` y smoke aprobado | Solo para configurar ciclos futuros o abrir ventanas operativas posteriores |
 
 ## 4. Riesgos que ya no deben tratarse como pendientes
 
@@ -163,7 +163,7 @@ Cerrado/desplegado:
 
 Orden recomendado:
 
-1. **H23 vigencia temporal.** F1/F2 y el predeploy F3 estan aprobados; ejecutar H23-F4 con H05 `015`, configuracion productiva, deploy y smoke antes de guardar la quincena especial, sin tocar H01 ni historicos.
+1. **H23 monitoreo.** Cerrado operativo; mantener regresion temporal, H01, Extras independientes y snapshots, y abrir Extras propedeuticos solo mediante una accion Admin posterior aprobada.
 2. **H07/H08 - mejoras opcionales.** Google `hd` como UX y refactor gradual protegido por pruebas.
 3. **CSV injection.** Decidir sanitizacion por exportable si se requiere como mejora futura.
 4. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
@@ -199,10 +199,10 @@ Pendientes reales despues de H02/H03:
   smoke. HF1B corrigio el `READ_PROJECTION_DEFECT`: Directorio muestra el
   responsable desde `teachers.created_by`, sin correccion de BD, permisos
   nuevos, Apply repetido ni exposicion fiscal.
-- H23 tiene aprobados y ensayados el modelo a nivel ciclo, columnas, fechas `27-1`,
-  contencion M1/M2, regla v1 de incidencias agregadas, Extras independientes y
-  paridad futura del reporte vivo. Solo quedan autorizaciones operativas para
-  aplicar `015`, configurar produccion y desplegar en una ventana H23-F4 autorizada.
+- H23 no tiene decisiones de implementacion o deploy pendientes. La vigencia
+  `27-1`, migracion `015`, API/Hosting y smoke quedaron aprobados. La apertura
+  de la ventana de Extras propedeuticos es una accion Admin posterior e
+  independiente, no una deuda tecnica H23.
 
 ## 7. Recomendacion final
 
@@ -213,6 +213,6 @@ El foco tecnico inmediato debe pasar a:
 - mantener H11 cerrado con helper CSV central y pruebas de regresion;
 - conservar H04/H05 como barreras obligatorias antes de cambios;
 - usar H13 como checklist permanente antes de despliegues productivos;
-- ejecutar H23-F4 con apply `015`, configuracion, deploy y smoke antes de guardar la quincena especial;
+- mantener H23 cerrado con pruebas de regresion y no alterar H01, Extras independientes o snapshots;
 - consultar el cierre global `docs/auditoria/CIERRE_GLOBAL_MATRIZ_RIESGOS_NOMINA_DOCENTE_20260603.md` como evidencia ejecutiva de estado de matriz;
 - usar el SDD consolidado post H09/H10 como primera fuente documental.

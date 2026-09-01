@@ -4,10 +4,10 @@
 **Ambiente:** Producción  
 **URL:** `https://nomina-docente-prod.web.app`  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
-**Versión:** 1.1 post-H20
+**Versión:** 1.2 post-H23
 
 **Fecha original:** 9 de mayo de 2026
-**Última actualización:** 31 de julio de 2026
+**Última actualización:** 1 de septiembre de 2026
 
 ---
 
@@ -343,6 +343,7 @@ Módulo exclusivo para Admin. Es una de las fuentes más importantes del sistema
 
 - Ciclos escolares.
 - Ciclo activo.
+- Vigencia pagable inclusiva de horas base del ciclo.
 - Fechas modulares del cuatrimestre.
 - Quincenas oficiales.
 - Días inhábiles por quincena.
@@ -402,7 +403,17 @@ Ejemplo:
 
 Durante ese periodo, Incidencias y Extras muestran cuenta regresiva y permiten capturar. Fuera de ese periodo quedan en modo consulta.
 
-### 10.6 Días inhábiles
+### 10.6 Vigencia pagable de horas base
+
+Admin configura `Inicio de horas base` y `Fin de horas base` en el ciclo. Este rango inclusivo define cuando los Horarios regulares generan horas pagables:
+
+- Módulo 1 y Módulo 2 deben quedar completamente dentro del rango.
+- Una quincena fuera del rango genera cero horas L-V, S1 y S2.
+- Las Incidencias de horarios sin ocurrencias elegibles quedan fuera de vigencia y no son editables.
+- Los Extras independientes conservan su propia regla por fecha, quincena y ventana; la vigencia base no los elimina.
+- La apertura de las ventanas de Incidencias o Extras sigue siendo manual y no cambia automaticamente al editar la vigencia.
+
+### 10.7 Días inhábiles
 
 Los días inhábiles se descuentan del cálculo de nómina cuando caen dentro de la quincena.
 
@@ -413,7 +424,7 @@ Para agregar uno:
 3. Dar clic en `Agregar`.
 4. Guardar la quincena.
 
-### 10.7 Eliminación de quincena
+### 10.8 Eliminación de quincena
 
 Una quincena con nómina guardada no debe eliminarse. Si se elimina una quincena operativa, dejará de estar disponible como fuente para nómina.
 
@@ -546,6 +557,7 @@ El cálculo utiliza:
 
 - Horarios del ciclo activo.
 - Quincena seleccionada en Calendario.
+- Vigencia pagable de horas base del ciclo.
 - Fechas modulares del ciclo.
 - Días inhábiles.
 - Incidencias de la quincena.
@@ -554,12 +566,13 @@ El cálculo utiliza:
 
 ### 14.2 Cálculo de días
 
-Para la quincena seleccionada:
+Para la quincena seleccionada, primero se intersecta el periodo con la vigencia pagable del ciclo:
 
-- Se cuentan los días lunes a viernes que caen dentro del rango.
+- Se cuentan los días lunes a viernes que caen dentro de esa interseccion.
 - Se restan días inhábiles configurados.
-- Se suman sábados modulares cuando Módulo 1 o Módulo 2 caen dentro de la quincena.
+- Se suman sábados modulares cuando Módulo 1 o Módulo 2 caen dentro de la quincena y de la vigencia base.
 - Pueden traslaparse Módulo 1 y Módulo 2 si ambos aplican dentro del rango.
+- Si no hay ocurrencias base elegibles, faltas, retardos y extras de incidencia aportan cero; los Extras independientes siguen evaluandose por su regla propia.
 
 ### 14.3 Vista previa viva
 
@@ -955,6 +968,7 @@ Calendario es el módulo que controla ciclos, quincenas, fechas modulares, días
 | Sección | Qué administra |
 |---|---|
 | Ciclo operativo | Periodo cuatrimestral y código de ciclo |
+| Vigencia pagable de horas base | Inicio y fin inclusivos en que Horarios regulares generan horas pagables |
 | Fechas modulares | Inicio y cierre de Módulo 1 y Módulo 2 para el ciclo |
 | Nueva quincena | Periodo de cálculo de nómina |
 | Ventanas de captura | Fecha y hora desde la que se permite capturar incidencias y extras |
@@ -979,6 +993,15 @@ Controles de fechas modulares:
 | Inicio/Cierre Módulo 2 | Define sábados aplicables a Módulo 2 dentro del ciclo |
 | `Descartar` | Restaura valores del ciclo cargado |
 | `Guardar módulos` | Guarda fechas modulares para todo el cuatrimestre |
+
+Controles de vigencia pagable:
+
+| Campo | Qué hace |
+|---|---|
+| Inicio de horas base | Primer día inclusivo en que Horarios regulares generan horas pagables |
+| Fin de horas base | Último día inclusivo en que Horarios regulares generan horas pagables |
+
+M1 y M2 deben quedar completamente dentro de esta vigencia. Estas fechas no abren ni prolongan las ventanas de Incidencias o Extras.
 
 Controles de quincena:
 
@@ -1006,6 +1029,7 @@ Reglas:
 - Incidencias y Extras se capturan sobre la quincena aperturada.
 - La cuenta regresiva visible en Incidencias y Extras se calcula desde la fecha/hora de apertura más los días de acceso configurados.
 - Las fechas modulares aplican al ciclo completo, no a una sola quincena.
+- La vigencia pagable aplica al ciclo completo y limita L-V/S1/S2 antes del cálculo monetario.
 - Cerrar un ciclo debe conservar sus horarios como historial y limpiar la captura operativa para el nuevo ciclo.
 
 ### 22.8 Capturar Horarios
@@ -1166,6 +1190,7 @@ Nómina calcula la vista previa viva y permite guardar la corrida definitiva de 
 | Selector de quincena | Selecciona la fuente de cálculo configurada en Calendario |
 | Etiqueta | Muestra o permite identificar el periodo |
 | Inicio/Cierre quincena | Fechas del cálculo |
+| Inicio/Fin de horas base | Vigencia inclusiva configurada en Calendario |
 | Inicio/Cierre Módulo 1 | Fechas modulares del ciclo |
 | Inicio/Cierre Módulo 2 | Fechas modulares del ciclo |
 | Búsqueda `Buscar docente, coordinación o alerta` | Filtra líneas de cálculo |
@@ -1187,14 +1212,17 @@ Nómina calcula la vista previa viva y permite guardar la corrida definitiva de 
 
 Cálculo de nómina:
 
-- Cuenta los días L a V dentro de la quincena.
+- Intersecta la quincena con la vigencia pagable de horas base del ciclo.
+- Cuenta los días L a V dentro de la interseccion.
 - Excluye días inhábiles capturados en Calendario.
-- Suma sábados de Módulo 1 si caen dentro de la quincena y dentro del periodo modular.
-- Suma sábados de Módulo 2 si caen dentro de la quincena y dentro del periodo modular.
+- Suma sábados de Módulo 1 si caen dentro de la quincena, la vigencia base y el periodo modular.
+- Suma sábados de Módulo 2 si caen dentro de la quincena, la vigencia base y el periodo modular.
 - Puede haber traslape válido entre L a V, Módulo 1 y Módulo 2.
 - Descuenta faltas y retardos.
 - Suma extras de Incidencias y del módulo Extras.
 - Usa el tabulador asignado al horario o extra.
+- Cuando un horario no tiene ocurrencias elegibles, sus faltas, retardos y extras de incidencia aportan cero.
+- Los Extras independientes no se limitan por la vigencia base y conservan su validación por fecha, quincena y ventana.
 
 Reglas:
 

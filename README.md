@@ -1,6 +1,6 @@
 # Nómina Docente Modern
 
-Última verificación documental e infraestructura: 2026-08-20.
+Última verificación documental e infraestructura: 2026-09-01.
 
 Nueva plataforma para Nómina Docente.
 
@@ -36,21 +36,21 @@ API via Hosting: https://nomina-docente-prod.web.app/api/health
 
 Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
-Estado productivo consolidado posterior a H22:
+Estado productivo consolidado posterior a H23:
 
-- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00054-2ld`.
-- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h22-hf1-081532d`.
-- Digest vigente: `sha256:24ea3e66d89ed6f581bbb0ad464decc8531a6738ed9cfaf0094007633b6e471b`.
+- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00055-8wn`.
+- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h23-prod-9268d42`.
+- Digest vigente: `sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92`.
 - Configuración Cloud Run verificada: CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, mínimo `0` y máximo `3` instancias.
-- Firebase Hosting live: release `1785536172540000`, version `91ba12f3159468b8`.
+- Firebase Hosting live: release `1787419305880000`, version `07924eeeb7713f30`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.
 - H01 precision monetaria: cerrado.
 - H02/H03 permisos/coordinacion: desplegado y validado.
 - H04 pruebas automatizadas: implementado hasta Fase 5; Playwright queda opcional.
-- H05 control formal de migraciones: 17 registros, 15 baseline y migraciones
-  013/014 aplicadas; `pending=0` y `checksum mismatch=0`.
+- H05 control formal de migraciones: 18 registros, 15 baseline y migraciones
+  013/014/015 aplicadas; `pending=0` y `checksum mismatch=0`.
 - H09/H10 estados y cierre de ciclo: desplegado en produccion sin migracion 013.
 - H11 CSV UTF-8: desplegado y cerrado operativo con smoke autorizado.
 - H12 catalogos historicos: cerrado documental como politica operativa.
@@ -66,6 +66,11 @@ Estado productivo consolidado posterior a H22:
   muestra el responsable real desde `teachers.created_by`, sin correccion de
   BD. El deploy original no ejecuto Apply; una ejecucion autorizada posterior
   creo 14 docentes y no fue repetida durante el hotfix.
+- H23 vigencia temporal de Nomina: cerrado operativo en
+  `nomina-api-00055-8wn`; migracion `015`, ciclo `27-1` con vigencia
+  `2026-08-31` a `2026-12-12`, Hosting y smoke aprobados. La quincena
+  `2026-08-10` a `2026-08-22` produce base e incidencias en cero; H01,
+  Extras independientes y snapshots permanecen intactos.
 - Nomina `2026-05-15 a 2026-05-28`: guardada correctamente por `$517,510.00`.
 
 Documentos de estado relevantes:
@@ -90,6 +95,8 @@ Documentos de estado relevantes:
 - `docs/auditoria/H22_Ensayo_Productivo_Temporal_Importacion_Docentes.md`
 - `docs/auditoria/H22_Deploy_Productivo_Importacion_Docentes.md`
 - `docs/auditoria/H22_Hotfix_Responsable_Operativo_Deploy_Productivo.md`
+- `docs/auditoria/H23_Deploy_Productivo_Vigencia_Temporal_Nomina.md`
+- `docs/specs/SPEC_H23_Vigencia_Temporal_Horarios_Nomina.md`
 - `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`
 - `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`
 - `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md`

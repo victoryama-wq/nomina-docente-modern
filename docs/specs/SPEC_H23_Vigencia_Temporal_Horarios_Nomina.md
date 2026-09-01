@@ -1,6 +1,6 @@
 # SPEC H23 - Vigencia temporal de Horarios en Nomina
 
-Estado: **H23-F1/F2 implementados. H23-F3 validado integralmente con ensayo temporal; produccion pendiente.**
+Estado: **H23 cerrado operativo. Migracion 015, configuracion 27-1, API/Hosting y smoke productivo aprobados.**
 
 Fecha: 2026-08-22
 
@@ -16,7 +16,7 @@ El motor vigente cuenta L-V en todo `payroll_start..payroll_end`, menos dias inh
 
 M1/M2 solo delimitan sabados S1/S2. No son una fuente semantica segura para limitar L-V, especialmente por el hueco entre modulos.
 
-Evidencia completa: `docs/auditoria/H23_Diagnostico_Vigencia_Temporal_Nomina.md`. La validacion integral y el ensayo sobre restauracion productiva aislada se documentan en `docs/auditoria/H23_Fase3_Validacion_Integral_PreDeploy.md` y `docs/auditoria/H23_Ensayo_Productivo_Temporal_Vigencia_Nomina.md`.
+Evidencia completa: `docs/auditoria/H23_Diagnostico_Vigencia_Temporal_Nomina.md`. La validacion integral y el ensayo sobre restauracion productiva aislada se documentan en `docs/auditoria/H23_Fase3_Validacion_Integral_PreDeploy.md` y `docs/auditoria/H23_Ensayo_Productivo_Temporal_Vigencia_Nomina.md`. El cierre productivo esta en `docs/auditoria/H23_Deploy_Productivo_Vigencia_Temporal_Nomina.md`.
 
 ## 3. Modelo aprobado
 
@@ -153,9 +153,7 @@ H23-F2 implementa la paridad temporal de la vista viva con Preview. Los reportes
 1. H23-F1: migracion `015`, campos, constraints, configuracion Calendario, validaciones y helper puro. Implementado en local/test.
 2. H23-F2: integrar el helper en `calculatePayroll()`, incidencias y Reportes Operativos vivos, manteniendo Preview=Guardar. Implementado en local/test.
 3. H23-F3: validar fronteras, H20=Admin, historicos, UX y regresion H01 sobre restauracion productiva temporal. Completado y aprobado.
-4. Ejecutar la ventana H05/H13 productiva autorizada antes de aplicar `015` en produccion.
-5. Configurar las fechas aprobadas de `27-1` mediante Calendario.
-6. Ejecutar deploy y smoke controlados.
+4. H23-F4: aplicar `015` mediante H05, configurar `27-1`, desplegar API/Hosting y ejecutar smoke productivo sin guardar Nomina. Completado y aprobado.
 
 No debe existir fallback silencioso para un ciclo `ACTIVO` sin vigencia base una vez habilitada la nueva regla.
 
@@ -183,8 +181,8 @@ Pendientes exclusivamente tecnicos/operativos:
 - [x] Aplicar defensa en profundidad para incidencias sin ocurrencias elegibles.
 - [x] Aplicar paridad en Reportes Operativos vivos sin tocar snapshots.
 - [x] Ejecutar predeploy completo y ensayo con backup/restauracion temporal.
-- [ ] Obtener autorizacion manual de la ventana productiva H23-F4.
-- [ ] Aplicar migracion `015` en produccion mediante H05.
-- [ ] Configurar `27-1` y validar smoke antes de guardar la quincena especial.
+- [x] Obtener autorizacion manual de la ventana productiva H23-F4.
+- [x] Aplicar migracion `015` en produccion mediante H05.
+- [x] Configurar `27-1` y validar smoke antes de guardar la quincena especial.
 
-H23-F1/F2/F3 no tienen deploy ni migracion productiva. H23-F2 limita las ocurrencias temporales antes de H01; H23-F3 confirma el comportamiento sobre una restauracion productiva aislada y no sustituye ni modifica la matematica monetaria.
+H23-F4 desplego la implementacion y cerro el smoke productivo. El ciclo `27-1` usa vigencia inclusiva `2026-08-31` a `2026-12-12`; la quincena `2026-08-10` a `2026-08-22` devuelve base e incidencias en cero. H23 limita ocurrencias antes de H01 y no sustituye ni modifica la matematica monetaria, Extras independientes o snapshots historicos.

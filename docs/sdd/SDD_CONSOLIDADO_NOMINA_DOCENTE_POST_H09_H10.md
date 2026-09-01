@@ -1,7 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-08-22
+Ultima actualizacion: 2026-09-01
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -14,19 +14,19 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00054-2ld` |
-| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00053-cjg` |
-| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h22-hf1-081532d` |
-| Digest API vigente | `sha256:24ea3e66d89ed6f581bbb0ad464decc8531a6738ed9cfaf0094007633b6e471b` |
+| Revision Cloud Run vigente documentada | `nomina-api-00055-8wn` |
+| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00054-2ld` |
+| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h23-prod-9268d42` |
+| Digest API vigente | `sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92` |
 | Recursos Cloud Run | CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, min `0`, max `3` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
-| Firebase Hosting release vigente | `1785536172540000` |
-| Firebase Hosting version vigente | `91ba12f3159468b8` |
+| Firebase Hosting release vigente | `1787419305880000` |
+| Firebase Hosting version vigente | `07924eeeb7713f30` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true`, en monitoreo |
-| Control H05 productivo | 17 registradas: 15 baseline, `013` y `014` aplicadas; filesystem 18; pendiente exacta `015`; `checksum mismatch=0` |
+| Control H05 productivo | 18 registradas: 15 baseline y `013`/`014`/`015` aplicadas; `pending=0`; `checksum mismatch=0` |
 
 Estado por H:
 
@@ -36,7 +36,7 @@ Estado por H:
 | H02 | Cerrado operativo; `user_coordinations` existe, pero el fallback legacy sigue activo en monitoreo. |
 | H03 | Cerrado operativo; permisos fiscales, documentales, financieros, workflow y preview separados. |
 | H04 | Implementado hasta Fase 5; H04-F6 Playwright queda opcional posterior. |
-| H05 | Cerrado con tablas de control; produccion conserva 15 baseline y migraciones `013`/`014` aplicadas. `015` es la unica pendiente aprobada para H23-F4 y no tiene checksum mismatch. |
+| H05 | Cerrado con tablas de control; produccion conserva 15 baseline y migraciones `013`/`014`/`015` aplicadas, `pending=0` y `checksum mismatch=0`. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
@@ -49,7 +49,7 @@ Estado por H:
 | H20 | Cerrado operativo; preview read-only de Coordinador resuelve docentes por `teachers.created_by` o carga en `actorCoordinations[]`, calcula su carga completa entre coordinaciones y fue validado productivamente. |
 | H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
 | H22 | Cerrado operativo; migracion `014`, API `nomina-api-00054-2ld`, Hosting live y smoke autenticado aprobados. Una ejecucion autorizada creo 14 docentes; HF1B muestra su responsable real desde `teachers.created_by` sin repetir Apply. |
-| H23 | F1/F2 implementados y F3 validado integralmente con backup/restauracion temporal: modelo, `015`, Calendario, motor comun, Incidencias y Reportes vivos respetan la vigencia base. H01, Extras independientes y snapshots permanecen intactos; sin deploy ni migracion productiva. |
+| H23 | Cerrado operativo; `015` aplicada mediante H05, ciclo `27-1` configurado `2026-08-31` a `2026-12-12`, API/Hosting desplegados y smoke productivo aprobado. H01, Extras independientes, snapshots e historicos permanecen intactos. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -77,6 +77,11 @@ Ultimos hitos productivos relevantes:
   `1785536172540000`; smoke autenticado confirmo los 14 responsables reales
   desde `teachers.created_by`, sin correcciones de BD, Apply, migracion ni
   exposicion fiscal.
+- H23 vigencia temporal: backup `1787418742938`, migracion `015` aplicada por
+  H05, ciclo `27-1` configurado `2026-08-31` a `2026-12-12`, deploy
+  `nomina-api-00055-8wn` / Hosting `1787419305880000`; smoke de Calendario,
+  Preview, Incidencias, Reporte vivo, H20 y responsive aprobado sin guardar
+  Nomina ni capturar propedeuticos.
 
 ## 2. Arquitectura vigente
 
@@ -321,10 +326,10 @@ Documentos vigentes:
 | Horarios | Permitidos en ciclos `ACTIVO` y `PLANEACION`; bloqueados en `CERRADO`; coordinadores operan segun capturador/alcance; Admin global. | H02/H03 Fase 3, H09/H10 Fase 2, H09/H10 Fase 4. |
 | Incidencias | Permitidas solo en ciclo operativo activo y ventana abierta; bloqueadas en `PLANEACION` y `CERRADO`; validacion por horario/coordinacion. | H02/H03 Fase 3, H09/H10 Fase 2. |
 | Extras | Listado segun rol; edicion por propiedad/captured_by donde aplique; Direccion/Subdireccion solo modifica propios; bloqueados en `PLANEACION` y `CERRADO`. | H02/H03 Fase 3, H04 Fase 5, H09/H10 Fase 2. |
-| Nomina | Preview con `payroll.preview`; guardar con `payroll.finalize`; H01 intocable; bloqueada en `PLANEACION` y `CERRADO`; `PAGADA` terminal. H20 permite al Coordinador consultar el calculo completo de docentes propios o con horario en sus coordinaciones, sin ampliar edicion, fiscal ni finalizacion. H23-F2 aplica en local/test la interseccion temporal inclusiva a L-V/S1/S2 y anula incidencias de horarios sin ocurrencias; Extras independientes, H01 e historicos permanecen intactos. Produccion conserva la version anterior hasta el deploy controlado. | H01, H03 Fase 4, H09/H10 Fase 1, SPEC/auditoria H20 y H23 F1/F2. |
+| Nomina | Preview con `payroll.preview`; guardar con `payroll.finalize`; H01 intocable; bloqueada en `PLANEACION` y `CERRADO`; `PAGADA` terminal. H20 permite al Coordinador consultar el calculo completo de docentes propios o con horario en sus coordinaciones, sin ampliar edicion, fiscal ni finalizacion. H23 aplica en produccion la interseccion temporal inclusiva de quincena, vigencia base y M1/M2 antes de H01; anula incidencias de horarios sin ocurrencias. Extras independientes, H01 e historicos permanecen intactos. | H01, H03 Fase 4, H09/H10 Fase 1, SPEC/auditoria H20 y cierre productivo H23. |
 | Finanzas | `finance.view` consulta; `finance.export` exporta; `finance.workflow` cambia estados; no cancelar `PAGADA`; no usar `BORRADOR`/`CERRADA` como acciones. | H03 Fase 4, H09/H10 Fase 1. |
 | Expediente fiscal | Ver/editar/constancias separados por permisos fiscales y documentales; Coordinador/Direccion/Contador no gestionan fiscal. | H03 Fase 4, H02/H03 Fase 5. |
-| Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. H23-F1 agrega en local/test configuracion explicita de vigencia pagable inclusiva y exige M1/M2 contenidos; produccion permanece sin `015` hasta su fase controlada. | H09/H10 Fase 3/Fase 4/deploy y H23-F1. |
+| Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. H23 agrega configuracion Admin de vigencia pagable inclusiva y exige M1/M2 contenidos; `27-1` opera con `2026-08-31` a `2026-12-12`. | H09/H10 Fase 3/Fase 4/deploy y cierre productivo H23. |
 | Accesos | Roles y usuarios gestionados por Admin; no mostrar checkboxes manuales de coordinaciones como fuente operativa final; subdireccion usa `direccion`. | H02/H03 Fase 5, H04 Fase 5. |
 | Auditoria | Export CSV y eventos; evidencia de cierre H10 via `audit_log`; no registrar secretos ni datos fiscales completos innecesarios. | H03 Fase 4, H09/H10 Fase 3, H11 inventario. |
 | Catalogos | H12 mantiene la politica de inactivar y conservar historia. H21 agrega importacion CSV atomica y busqueda sin acentos; la plantilla usa activos por defecto y no permite altas por colision normalizada. Cinco duplicados legacy quedaron inactivos y sus ocho horarios apuntan a los canonicos. | SPEC/cierre H12, SPEC y acta productiva H21. |
@@ -363,8 +368,8 @@ Codex debe leer primero este SDD, la matriz y los documentos especificos de la f
 | Directorio capturador | `docs/auditoria/H17_Normalizacion_CreatedBy_Directorio_Resultado.md` | Diagnostico H17, plan H17 y validacion CSV H17 | Normalizacion ejecutada para 197 docentes; 12 remanentes documentados |
 | Reportes operativos | `docs/specs/SPEC_H18_Reportes_Operativos.md`, `docs/auditoria/H18_Fase1_Backend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase2_Frontend_Reportes_Operativos.md`, `docs/auditoria/H18_Fase3_Validacion_UI_Exportables_Reportes_Operativos.md`, `docs/auditoria/H18_Deploy_Productivo_Reportes_Operativos.md`, `docs/auditoria/H18_Fase6_UX_Filtros_Reportes_Operativos.md`, `docs/auditoria/H18_Hotfix_Reportes_Snapshot_LineKey.md` y `docs/auditoria/H18_Cierre_Operativo_Reportes_Operativos.md` | SDD consolidado, matriz, H11, H17 y rutas operativas | Cerrado operativo; H18-F1/F2/F5/F6 y hotfix snapshot desplegados; CSV/XLSX validados en Excel institucional |
 | Nomina compartida Coordinador | `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`, `docs/auditoria/H20_Alcance_Compartido_Nomina_Coordinadores.md` y `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md` | H02/H03 Fase 4/5, ajuste docentes compartidos y H04 Fase 4/5 | Cerrado operativo; revision `nomina-api-00051-9s5` y Hosting H20 activos, smoke autenticado satisfactorio |
-| Vigencia temporal de Horarios en Nomina | `docs/auditoria/H23_Diagnostico_Vigencia_Temporal_Nomina.md`, `docs/auditoria/H23_Fase1_Modelo_Vigencia_Base_Calendario.md`, `docs/auditoria/H23_Fase2_Elegibilidad_Temporal_Nomina.md`, `docs/auditoria/H23_Fase3_Validacion_Integral_PreDeploy.md`, `docs/auditoria/H23_Ensayo_Productivo_Temporal_Vigencia_Nomina.md` y `docs/specs/SPEC_H23_Vigencia_Temporal_Horarios_Nomina.md` | H01, H09/H10, H20, H05, esquema y motor vigente | H23-F1/F2 implementados y H23-F3 aprobado con restauracion productiva temporal; integracion de Nomina, Incidencias y reporte vivo completa, sin escritura/deploy productivo |
-| Manuales | `docs/Manual_Entrega_Nomina_Docente.md` y `docs/Manual_Uso_Nomina_Docente.md` | DOCX generados desde ambas fuentes Markdown | Vigentes post-H22; Markdown es la fuente editable |
+| Vigencia temporal de Horarios en Nomina | `docs/auditoria/H23_Deploy_Productivo_Vigencia_Temporal_Nomina.md`, `docs/auditoria/H23_Diagnostico_Vigencia_Temporal_Nomina.md`, `docs/auditoria/H23_Fase1_Modelo_Vigencia_Base_Calendario.md`, `docs/auditoria/H23_Fase2_Elegibilidad_Temporal_Nomina.md`, `docs/auditoria/H23_Fase3_Validacion_Integral_PreDeploy.md`, `docs/auditoria/H23_Ensayo_Productivo_Temporal_Vigencia_Nomina.md` y `docs/specs/SPEC_H23_Vigencia_Temporal_Horarios_Nomina.md` | H01, H09/H10, H20, H05, esquema y motor vigente | Cerrado operativo; `015`, configuracion `27-1`, API/Hosting y smoke productivo aprobados sin cambios H01 ni historicos |
+| Manuales | `docs/Manual_Entrega_Nomina_Docente.md` y `docs/Manual_Uso_Nomina_Docente.md` | DOCX generados desde ambas fuentes Markdown | Vigentes post-H23; Markdown es la fuente editable |
 | Alineacion post-H20 | `docs/auditoria/ALINEACION_DOCUMENTAL_POST_H20.md` | README, H13, manuales y documentos historicos clasificados | Evidencia read-only de Git, Cloud Run, Hosting, Cloud SQL y H05 |
 
 ## 6. Documentos historicos / no usar como fuente primaria
@@ -400,7 +405,7 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 | H20 | Cerrado operativo | Mantener pruebas de regresion y confirmar en futuros cambios docente unico, desglose por coordinacion, totales sin duplicacion y ausencia fiscal. |
 | H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
 | H22 | Cerrado operativo | Admin exclusivo; `014`, API/Hosting, plantillas, Preview, permisos, responsive y responsable real desde `teachers.created_by` aprobados. Mantener Apply como operacion futura separada con backup y autorizacion. |
-| H23 | F1/F2 implementados y F3 predeploy aprobado / sigue bloqueante hasta aplicar y desplegar en produccion | Ejecutar H23-F4: autorizacion, H05 `015`, configurar `27-1`, deploy y smoke antes de guardar la quincena especial. |
+| H23 | Cerrado operativo | Mantener pruebas de regresion, vigencia base por ciclo y paridad Preview/Guardar/Reporte vivo; la apertura de Extras propedeuticos sigue siendo una accion Admin separada. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
@@ -426,10 +431,10 @@ Para cualquier fase posterior:
 
 Orden recomendado:
 
-1. H23 vigencia temporal de Horarios en Nomina:
-   - H23-F3 quedo aprobado con backup `1787413358689` y restauracion temporal eliminada;
-   - ejecutar H23-F4 controlado con autorizacion, H05 `015`, configuracion `27-1`, deploy y smoke, sin tocar H01 ni historicos;
-   - no guardar la quincena 2026-08-10 a 2026-08-22 con horas base regulares mientras no exista correccion completa desplegada y validada.
+1. H23 operacion continua:
+   - cerrado productivamente en `nomina-api-00055-8wn` con `015` y vigencia `27-1` activa;
+   - mantener regresion de la quincena especial y no cambiar H01, Extras independientes o historicos;
+   - abrir la ventana de Extras propedeuticos solo como accion Admin posterior, si operacion la requiere.
 2. H07 Google Provider `hd`:
    - mejora UX opcional, no control principal.
 3. H08 refactor gradual:

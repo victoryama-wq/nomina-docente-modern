@@ -1,11 +1,11 @@
 # Manual de entrega - Nómina Docente
 
 **Proyecto:** Nómina Docente  
-**Versión de entrega:** 1.1 post-H20
+**Versión de entrega:** 1.2 post-H23
 
 **Fecha original:** 8 de mayo de 2026
 
-**Última actualización:** 20 de agosto de 2026
+**Última actualización:** 1 de septiembre de 2026
 **Ambiente:** Producción Google Cloud / Firebase  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
 **Administrador general protegido:** `victor.yama@tecplayacar.edu.mx`
@@ -84,11 +84,11 @@ Estas funciones pueden agregarse posteriormente sin rehacer la arquitectura prin
 | Contenedores | Artifact Registry | Imagen Docker del API |
 | Secretos | Secret Manager | Contraseña de base de datos |
 
-Estado productivo verificado el 2026-08-20: revisión Cloud Run
-`nomina-api-00054-2ld`, imagen `h22-hf1-081532d`, digest
-`sha256:24ea3e66d89ed6f581bbb0ad464decc8531a6738ed9cfaf0094007633b6e471b`,
-Firebase Hosting release `1785536172540000` y version
-`91ba12f3159468b8`.
+Estado productivo verificado el 2026-09-01: revisión Cloud Run
+`nomina-api-00055-8wn`, imagen `h23-prod-9268d42`, digest
+`sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92`,
+Firebase Hosting release `1787419305880000` y version
+`07924eeeb7713f30`.
 
 ### 3.2 URLs de producción
 
@@ -350,6 +350,7 @@ Los coordinadores solo pueden actualizar expedientes de docentes de su coordinac
 Es la fuente oficial para el cálculo de nómina. Administra:
 
 - Ciclos escolares.
+- Vigencia pagable inclusiva de horas base por ciclo.
 - Fechas modulares por ciclo.
 - Quincenas.
 - Días inhábiles dentro de cada quincena.
@@ -358,10 +359,13 @@ Es la fuente oficial para el cálculo de nómina. Administra:
 
 Reglas clave:
 
+- La vigencia base define el intervalo inclusivo en que Horarios regulares generan L-V/S1/S2 pagables.
+- Módulo 1 y Módulo 2 deben quedar completamente contenidos dentro de la vigencia base.
 - Las fechas modulares pertenecen al ciclo, no a cada quincena.
 - Las quincenas pertenecen a un ciclo.
 - Los días inhábiles afectan el cálculo de horas base.
 - La apertura de incidencias y extras debe caer dentro del rango de la quincena.
+- La vigencia base no abre ventanas ni limita Extras independientes; sus ventanas siguen bajo control manual de Admin.
 - Una quincena con nómina guardada no debe eliminarse.
 
 ### 6.7 Apertura y cierre de ciclos
@@ -491,6 +495,7 @@ Calcula la nómina quincenal con base en:
 
 - Ciclo activo.
 - Quincena seleccionada.
+- Vigencia pagable inclusiva de horas base del ciclo.
 - Días hábiles L-V dentro del rango.
 - Días inhábiles configurados.
 - Fechas modulares del ciclo.
@@ -502,13 +507,16 @@ Calcula la nómina quincenal con base en:
 
 Reglas de cálculo:
 
-- L-V se multiplica por las veces que cada día aparece en la quincena.
-- Módulo 1 y módulo 2 cuentan sábados recurrentes dentro del rango modular y dentro de la quincena.
+- La quincena se intersecta primero con la vigencia pagable del ciclo.
+- L-V se multiplica por las veces que cada día aparece en esa interseccion.
+- Módulo 1 y módulo 2 cuentan sábados recurrentes dentro del rango modular, la vigencia base y la quincena.
 - Puede haber quincenas con traslape operativo entre L-V, M1 y M2.
 - Faltas descuentan horas.
 - Retardos descuentan 0.5 horas.
 - Extras de incidencia suman al tabulador del horario.
 - Extras externos suman al tabulador asignado al extra.
+- Sin ocurrencias base elegibles, faltas, retardos y extras de incidencia aportan cero.
+- Extras independientes conservan su elegibilidad por fecha, quincena y ventana administrativa.
 
 Alcance por rol:
 
@@ -876,6 +884,28 @@ Rollback:
 - Si solo falla UI/API, conservar el índice `014`.
 - No eliminar el índice improvisadamente.
 - Restaurar backup solo mediante procedimiento DBA aprobado.
+
+### 12.6 Resultado del despliegue H23
+
+H23-F4 se ejecuto como ventana controlada:
+
+1. Backup `1787418742938`, estado `SUCCESSFUL`.
+2. Migracion `015_h23_cycle_base_hours_dates.sql` aplicada exclusivamente mediante H05.
+3. H05 final: 18 registradas, 15 baseline, `013`/`014`/`015` aplicadas, `pending=0` y `checksum mismatch=0`.
+4. Ciclo `27-1` configurado con vigencia pagable `2026-08-31` a `2026-12-12`; M1/M2 permanecieron sin cambios y contenidos.
+5. API desplegada en `nomina-api-00055-8wn`, 100% del trafico.
+6. Hosting live release `1787419305880000`, version `07924eeeb7713f30`.
+7. Healthchecks HTTP 200, rutas protegidas sin sesion HTTP 401 y cero logs severos atribuibles a H23.
+8. Smoke de Calendario, Preview, Incidencias, Reporte vivo, H20 y responsive aprobado.
+9. La quincena `2026-08-10` a `2026-08-22` produce L-V, M1, M2, base e incidencias en cero.
+10. No se guardo ni cancelo Nomina, no se abrio la ventana de Extras y no se capturaron propedeuticos.
+
+Rollback H23:
+
+- API: regresar trafico a `nomina-api-00054-2ld`.
+- Hosting: restaurar release `1785536172540000`, version `91ba12f3159468b8`.
+- Las columnas y fechas H23 pueden permanecer porque el codigo anterior las ignora.
+- No eliminar constraints ni ejecutar SQL inverso improvisado.
 
 ---
 

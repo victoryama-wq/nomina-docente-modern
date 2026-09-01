@@ -1,7 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-08-22
+Ultima actualizacion de estado productivo: 2026-09-01
 
 ## 1. Resumen ejecutivo
 
@@ -32,16 +32,16 @@ Alcance de H13:
 | Cloud Run API | Servicio `nomina-api` |
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
-| Revision Cloud Run vigente documentada | `nomina-api-00054-2ld` |
-| Revision anterior / rollback inmediato | `nomina-api-00053-cjg` |
-| Imagen API vigente H22 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h22-hf1-081532d` |
-| Digest API vigente H22 | `sha256:24ea3e66d89ed6f581bbb0ad464decc8531a6738ed9cfaf0094007633b6e471b` |
+| Revision Cloud Run vigente documentada | `nomina-api-00055-8wn` |
+| Revision anterior / rollback inmediato | `nomina-api-00054-2ld` |
+| Imagen API vigente H23 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h23-prod-9268d42` |
+| Digest API vigente H23 | `sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92` |
 | CPU / memoria | `1` / `512Mi` |
 | Concurrencia / timeout | `80` / `300 s` |
 | Instancias min / max | `0` / `3` |
 | Imagen API H11 documentada | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h11-prod-4e0c214` |
-| Firebase Hosting release vigente | `1785536172540000` |
-| Firebase Hosting version vigente | `91ba12f3159468b8` |
+| Firebase Hosting release vigente | `1787419305880000` |
+| Firebase Hosting version vigente | `07924eeeb7713f30` |
 | Instancia Cloud SQL | `nomina-docente-web` |
 | Base productiva | `nomina_docente` |
 | Usuario DB aplicativo | `app_nomina` |
@@ -50,7 +50,7 @@ Alcance de H13:
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true` en monitoreo |
 
-La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues de H22 y del predeploy H23-F3.
+La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues del cierre productivo H23.
 
 ## 3. Variables no secretas Cloud Run
 
@@ -174,8 +174,8 @@ Estado H05 productivo:
   - `schema_migrations`;
   - `schema_migration_runs`.
 - Control productivo:
-  - 17 migraciones registradas: 15 baseline y `013`/`014` aplicadas;
-  - filesystem con 18 migraciones y pendiente exacta `015_h23_cycle_base_hours_dates.sql` para una ventana H23-F4 aun no ejecutada;
+  - 18 migraciones registradas: 15 baseline y `013`/`014`/`015` aplicadas;
+  - `pending = 0`;
   - `checksum mismatch = 0`.
 - Migraciones historicas `001` a `012` no deben reaplicarse.
 - Desde `013` queda prohibido repetir prefijos numericos.
@@ -200,14 +200,16 @@ Checklist H05 antes de cualquier deploy:
 
 H13 no ejecuta H05 contra produccion.
 
-Predeploy H23-F3 validado el 2026-08-22:
+H23-F4 productivo cerrado:
 
 - backup de ensayo `1787413358689`, estado `SUCCESSFUL`;
 - restauracion temporal aislada y posteriormente eliminada;
 - `015` ensayada mediante H05 solo en temporal;
-- produccion con 17 registradas, pendiente exacta `015` y mismatch 0;
-- para H23-F4 respetar el orden `015` -> configurar `27-1` -> deploy -> smoke;
-- no desplegar codigo H23 mientras el ciclo `ACTIVO` conserve fechas base `NULL`.
+- backup productivo `1787418742938`, estado `SUCCESSFUL`;
+- `015` aplicada mediante H05; 18 registradas, `pending=0`, mismatch 0;
+- `27-1` configurado `2026-08-31` a `2026-12-12` antes del deploy;
+- revision `nomina-api-00055-8wn` y Hosting release `1787419305880000` vigentes;
+- smoke productivo aprobado sin Guardar Nomina ni captura de propedeuticos.
 
 ## 8. Cloud Storage
 
@@ -372,6 +374,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | 2026-07-20 | `1b449a1` | `nomina-api-00051-9s5` | `nomina-api-00052-xtm` | `1784583329978000` / `79673723ffe4f297` | `1784582556252` | `013` | OK | H21 Catalogos/Horarios OK; sin Apply CSV | `H21_Deploy_Productivo_Importacion_Asignaturas.md` |
 | 2026-07-31 | `030ae69` | `nomina-api-00052-xtm` | `nomina-api-00053-cjg` | `1785457082597000` / `466c8eb59d99c2dd` | `1785456525085` | `014` | OK | H22 Admin/no Admin y responsive OK; sin Apply CSV | `H22_Deploy_Productivo_Importacion_Docentes.md` |
 | 2026-07-31 | `081532d` | `nomina-api-00053-cjg` | `nomina-api-00054-2ld` | `1785536172540000` / `91ba12f3159468b8` | No requerido; cero escrituras | No | OK | H22-HF1B responsable real OK; sin BD ni Apply | `H22_Hotfix_Responsable_Operativo_Deploy_Productivo.md` |
+| 2026-08-22 | `9268d42` | `nomina-api-00054-2ld` | `nomina-api-00055-8wn` | `1787419305880000` / `07924eeeb7713f30` | `1787418742938` | `015` | OK | H23 Calendario/Preview/Incidencias/Reporte/H20/responsive OK; sin Guardar Nomina ni propedeuticos | `H23_Deploy_Productivo_Vigencia_Temporal_Nomina.md` |
 
 ## 15. Relacion con fases cerradas
 
@@ -391,7 +394,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | H20 | H13 conserva revision, imagen, Hosting y smoke autenticado del alcance compartido. |
 | H21 | H13 registro backup, migracion `013`, conciliacion controlada, API/Hosting y smoke autenticado; cualquier Apply CSV futuro requiere nueva aprobacion. |
 | H22 | Cerrado operativo con backup, `014`, H05 sin pendientes, API/Hosting y smoke autenticado aprobados; HF1B muestra el responsable desde `teachers.created_by` sin BD; cualquier Apply CSV futuro requiere una nueva ventana autorizada. |
-| H23 | F3 predeploy aprobado con backup/restauracion temporal; `015`, configuracion `27-1`, deploy y smoke productivos siguen pendientes y requieren ventana autorizada. |
+| H23 | Cerrado operativo con backup `1787418742938`, `015`, configuracion `27-1`, revision `nomina-api-00055-8wn`, Hosting y smoke aprobados; apertura de Extras propedeuticos queda como accion Admin posterior. |
 
 ## 16. Estado final H13
 
