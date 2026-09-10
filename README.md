@@ -38,8 +38,8 @@ Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` 
 
 Estado productivo consolidado posterior a H23:
 
-- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00055-8wn`.
-- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h23-prod-9268d42`.
+- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00056-mll`.
+- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h18-posth23-85c3e34`.
 - Digest vigente: `sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92`.
 - Configuración Cloud Run verificada: CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, mínimo `0` y máximo `3` instancias.
 - Firebase Hosting live: release `1787419305880000`, version `07924eeeb7713f30`.
@@ -57,7 +57,7 @@ Estado productivo consolidado posterior a H23:
 - H13 checklist productivo permanente: cerrado documental; usar antes de cada deploy.
 - H15 sesion por inactividad: desplegado en Firebase Hosting live; `browserSessionPersistence`, timeout 60 minutos y modal de advertencia vigentes.
 - H17 Directorio: normalizacion productiva ejecutada y documentada bajo control de `teachers.created_by`.
-- H18 Reportes Operativos: cerrado operativo con filtros amigables y hotfix snapshot desplegado.
+- H18 Reportes Operativos: ajuste post-H23 desplegado en `nomina-api-00056-mll` y Hosting live; smoke tecnico aprobado, con smoke autenticado por rol y Excel pendiente.
 - H19 Directorio: actualizacion controlada y altas minimas ejecutadas sin duplicados.
 - H20 Nomina compartida: cerrado operativo en `nomina-api-00051-9s5`; smoke autenticado Coordinador/Admin aprobado, sin migraciones ni cambios H01.
 - H21 Asignaturas: cerrado operativo en `nomina-api-00052-xtm`; migracion 013, conciliacion de cinco pares/8 horarios y smoke Catalogos/Horarios aprobados. El CSV institucional definitivo no fue aplicado.
@@ -96,6 +96,7 @@ Documentos de estado relevantes:
 - `docs/auditoria/H22_Deploy_Productivo_Importacion_Docentes.md`
 - `docs/auditoria/H22_Hotfix_Responsable_Operativo_Deploy_Productivo.md`
 - `docs/auditoria/H23_Deploy_Productivo_Vigencia_Temporal_Nomina.md`
+- `docs/auditoria/H18_Deploy_PostH23_Reportes_Operativos.md`
 - `docs/specs/SPEC_H23_Vigencia_Temporal_Horarios_Nomina.md`
 - `docs/specs/SPEC_H20_Alcance_Compartido_Nomina_Coordinadores.md`
 - `docs/auditoria/H20_Deploy_Productivo_Alcance_Compartido_Nomina.md`

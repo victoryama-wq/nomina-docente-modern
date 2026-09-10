@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: H18 cerrado operativo en su version productiva previa. Ajuste post-H23 de semantica quincenal, carga consolidada y permisos implementado en local/test; pendiente de predeploy y deploy controlado.
+Estado: ajuste post-H23 desplegado en produccion el 2026-09-10, revision `nomina-api-00056-mll` y Hosting live. Smoke tecnico aprobado; smoke autenticado por rol y Excel pendiente.
 
 ## 1. Resumen ejecutivo
 

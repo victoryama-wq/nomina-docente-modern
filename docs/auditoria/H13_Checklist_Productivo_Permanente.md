@@ -1,7 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-09-01
+Ultima actualizacion de estado productivo: 2026-09-10
 
 ## 1. Resumen ejecutivo
 
@@ -32,9 +32,9 @@ Alcance de H13:
 | Cloud Run API | Servicio `nomina-api` |
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
-| Revision Cloud Run vigente documentada | `nomina-api-00055-8wn` |
-| Revision anterior / rollback inmediato | `nomina-api-00054-2ld` |
-| Imagen API vigente H23 | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h23-prod-9268d42` |
+| Revision Cloud Run vigente documentada | `nomina-api-00056-mll` |
+| Revision anterior / rollback inmediato | `nomina-api-00055-8wn` |
+| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h18-posth23-85c3e34` |
 | Digest API vigente H23 | `sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92` |
 | CPU / memoria | `1` / `512Mi` |
 | Concurrencia / timeout | `80` / `300 s` |
@@ -375,6 +375,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | 2026-07-31 | `030ae69` | `nomina-api-00052-xtm` | `nomina-api-00053-cjg` | `1785457082597000` / `466c8eb59d99c2dd` | `1785456525085` | `014` | OK | H22 Admin/no Admin y responsive OK; sin Apply CSV | `H22_Deploy_Productivo_Importacion_Docentes.md` |
 | 2026-07-31 | `081532d` | `nomina-api-00053-cjg` | `nomina-api-00054-2ld` | `1785536172540000` / `91ba12f3159468b8` | No requerido; cero escrituras | No | OK | H22-HF1B responsable real OK; sin BD ni Apply | `H22_Hotfix_Responsable_Operativo_Deploy_Productivo.md` |
 | 2026-08-22 | `9268d42` | `nomina-api-00054-2ld` | `nomina-api-00055-8wn` | `1787419305880000` / `07924eeeb7713f30` | `1787418742938` | `015` | OK | H23 Calendario/Preview/Incidencias/Reporte/H20/responsive OK; sin Guardar Nomina ni propedeuticos | `H23_Deploy_Productivo_Vigencia_Temporal_Nomina.md` |
+| 2026-09-10 | `85c3e34` | `nomina-api-00055-8wn` | `nomina-api-00056-mll` | `1789068812732000` / `c29c9b5b84133c9a` | `1789068493579` | No | OK tecnico | H18 post-H23 desplegado; smoke autenticado y Excel pendientes | `H18_Deploy_PostH23_Reportes_Operativos.md` |
 
 ## 15. Relacion con fases cerradas
 
@@ -389,7 +390,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | H11 | H13 conserva evidencia de deploy y smoke CSV. |
 | H12 | H13 respeta politica de no intervencion sobre catalogos historicos. |
 | H15 | H13 exige backup, healthcheck y smoke de sesion para cambios de autenticacion frontend. |
-| H18 | H13 conserva la cronologia de deploy inicial, UX F6 y hotfix snapshot. |
+| H18 | H13 conserva la cronologia de deploy inicial, UX F6, hotfix snapshot y ajuste post-H23 en `nomina-api-00056-mll`; queda pendiente smoke autenticado y Excel. |
 | H19 | H13 exige backup, preview `ROLLBACK` y validacion de duplicados para cargas de datos. |
 | H20 | H13 conserva revision, imagen, Hosting y smoke autenticado del alcance compartido. |
 | H21 | H13 registro backup, migracion `013`, conciliacion controlada, API/Hosting y smoke autenticado; cualquier Apply CSV futuro requiere nueva aprobacion. |

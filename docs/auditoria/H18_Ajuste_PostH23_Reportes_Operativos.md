@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-10
 
-Estado: implementado y validado en local/test; pendiente de validacion manual predeploy y despliegue controlado.
+Estado: desplegado en produccion el 2026-09-10; smoke tecnico aprobado y validacion autenticada/Excel pendiente.
 
 ## 1. Contexto
 
@@ -106,12 +106,12 @@ CSV y XLSX reciben exactamente los filtros aplicados en pantalla. No incluyen UU
 
 La evidencia cubre quincena obligatoria, listado de periodos sin corrida, calculo vivo H23, descuentos de faltas/retardos, sobrecarga, snapshot, consolidacion global por docente, exclusion de inactivos y permisos por rol.
 
-## 9. Pendientes antes de deploy
+## 9. Pendientes postdeploy
 
 - Ejecutar validacion manual de la UI con sesiones Admin, Direccion y Coordinador.
+- Confirmar denegacion para RH y roles financieros.
 - Abrir CSV/XLSX de ambas pestanas en Excel institucional.
-- Ejecutar checklist predeploy.
-- Desplegar API y Hosting solo mediante una fase productiva autorizada.
+- Registrar el cierre operativo solo con evidencia del smoke autenticado.
 
 ## 10. Confirmaciones
 
