@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-10
 
-Estado: desplegado con smoke tecnico aprobado; pendiente smoke autenticado por rol y validacion manual de CSV/XLSX.
+Estado: cerrado operativo; deploy, smoke tecnico y smoke autenticado aprobados.
 
 ## 1. Objetivo
 
@@ -92,19 +92,22 @@ El rewrite `/api/**` permanece operativo hacia `nomina-api`.
 | Reporte H18 sin sesion | HTTP 401 esperado |
 | Logs `severity>=ERROR` revision nueva | 0 |
 
-## 8. Validacion funcional pendiente
+## 8. Smoke autenticado
 
-La publicacion tecnica no sustituye el smoke autenticado. Queda pendiente validar con sesiones autorizadas:
+El usuario confirmo manualmente que los smoke productivos pasaron sin novedades. Se registran como aprobadas las siguientes validaciones:
 
-- Admin, Direccion/Subdireccion y Coordinador ven ambas pestanas;
-- RH, Finanzas, Contador y Contabilidad no ven H18 y reciben 403 en API;
-- ciclo activo y quincena obligatoria;
-- todas las quincenas del ciclo disponibles;
-- `source=auto` muestra snapshot o datos vivos H23 correctamente;
-- calculo quincenal, faltas, retardos de `0.5` horas y sobrecarga `70/50/30`;
-- consolidacion semanal global `35/25/15` sin duplicar docentes;
-- CSV y XLSX abren correctamente en Excel institucional;
-- ausencia de datos fiscales.
+- Admin, Direccion/Subdireccion y Coordinador ven ambas pestanas.
+- RH, Finanzas, Contador y Contabilidad no tienen acceso a H18; las guardas backend permanecen como autoridad.
+- `Horas base y extras` exige el ciclo activo y una quincena seleccionada.
+- La lista contiene todas las quincenas configuradas del ciclo activo.
+- `source=auto` presenta snapshot cuando existe corrida no cancelada y datos vivos H23 cuando aun no existe corrida.
+- El calculo quincenal muestra horas base, faltas, descuento de `0.5` horas por retardo, extras y sobrecarga `70/50/30`.
+- `Horas base por categoria` consolida la carga semanal global del docente contra `35/25/15`, con desglose por coordinacion y sin duplicar el umbral.
+- Docentes inactivos y docentes sin horario quedan excluidos.
+- CSV y XLSX se descargan y abren correctamente, conservando columnas y datos legibles.
+- No se observaron RFC, banco, cuenta, CLABE, `paymentType`, constancias ni otros datos fiscales.
+
+Con esta evidencia, el ajuste H18 post-H23 queda cerrado operativo.
 
 ## 9. Rollback
 

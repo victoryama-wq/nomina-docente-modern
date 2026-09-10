@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: ajuste post-H23 desplegado en produccion el 2026-09-10, revision `nomina-api-00056-mll` y Hosting live. Smoke tecnico aprobado; smoke autenticado por rol y Excel pendiente.
+Estado: H18 cerrado operativo. Ajuste post-H23 desplegado en produccion el 2026-09-10, revision `nomina-api-00056-mll` y Hosting live; smoke tecnico, autenticado por rol y exportables aprobados.
 
 ## 1. Resumen ejecutivo
 

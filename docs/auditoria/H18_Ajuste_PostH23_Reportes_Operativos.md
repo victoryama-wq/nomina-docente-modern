@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-10
 
-Estado: desplegado en produccion el 2026-09-10; smoke tecnico aprobado y validacion autenticada/Excel pendiente.
+Estado: cerrado operativo; desplegado en produccion el 2026-09-10 con smoke tecnico y autenticado aprobados.
 
 ## 1. Contexto
 
@@ -106,12 +106,13 @@ CSV y XLSX reciben exactamente los filtros aplicados en pantalla. No incluyen UU
 
 La evidencia cubre quincena obligatoria, listado de periodos sin corrida, calculo vivo H23, descuentos de faltas/retardos, sobrecarga, snapshot, consolidacion global por docente, exclusion de inactivos y permisos por rol.
 
-## 9. Pendientes postdeploy
+## 9. Resultado postdeploy
 
-- Ejecutar validacion manual de la UI con sesiones Admin, Direccion y Coordinador.
-- Confirmar denegacion para RH y roles financieros.
-- Abrir CSV/XLSX de ambas pestanas en Excel institucional.
-- Registrar el cierre operativo solo con evidencia del smoke autenticado.
+- Smoke autenticado de Admin, Direccion/Subdireccion y Coordinador: aprobado.
+- Exclusiones de RH y roles financieros: aprobadas.
+- Flujo de ambas pestanas y calculos: aprobado.
+- Descarga y apertura de CSV/XLSX: aprobada.
+- Resultado final: H18 post-H23 cerrado operativo.
 
 ## 10. Confirmaciones
 

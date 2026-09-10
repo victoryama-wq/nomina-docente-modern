@@ -57,7 +57,7 @@ Estado productivo consolidado posterior a H23:
 - H13 checklist productivo permanente: cerrado documental; usar antes de cada deploy.
 - H15 sesion por inactividad: desplegado en Firebase Hosting live; `browserSessionPersistence`, timeout 60 minutos y modal de advertencia vigentes.
 - H17 Directorio: normalizacion productiva ejecutada y documentada bajo control de `teachers.created_by`.
-- H18 Reportes Operativos: ajuste post-H23 desplegado en `nomina-api-00056-mll` y Hosting live; smoke tecnico aprobado, con smoke autenticado por rol y Excel pendiente.
+- H18 Reportes Operativos: ajuste post-H23 cerrado operativo en `nomina-api-00056-mll` y Hosting live; smoke tecnico, autenticado por rol y exportables aprobados.
 - H19 Directorio: actualizacion controlada y altas minimas ejecutadas sin duplicados.
 - H20 Nomina compartida: cerrado operativo en `nomina-api-00051-9s5`; smoke autenticado Coordinador/Admin aprobado, sin migraciones ni cambios H01.
 - H21 Asignaturas: cerrado operativo en `nomina-api-00052-xtm`; migracion 013, conciliacion de cinco pares/8 horarios y smoke Catalogos/Horarios aprobados. El CSV institucional definitivo no fue aplicado.
