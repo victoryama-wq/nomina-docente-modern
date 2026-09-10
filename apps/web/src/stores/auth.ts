@@ -55,14 +55,13 @@ export const useAuthStore = defineStore('auth', () => {
     hasPermission('finance.global_view')
   );
   const canViewOperationalBaseExtraReports = computed(
-    () => isAdmin.value || session.value?.role === 'direccion'
+    () => isAdmin.value || session.value?.role === 'direccion' || session.value?.role === 'coordinador'
   );
   const canViewOperationalCategoryHoursReports = computed(
     () =>
       isAdmin.value ||
       session.value?.role === 'direccion' ||
-      session.value?.role === 'coordinador' ||
-      session.value?.role === 'rh'
+      session.value?.role === 'coordinador'
   );
   const canViewReportsModule = computed(
     () => canViewOperationalBaseExtraReports.value || canViewOperationalCategoryHoursReports.value

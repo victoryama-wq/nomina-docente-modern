@@ -119,9 +119,9 @@ export function financeWorkflowVisibilityForRun(session: SessionUser, status: Pa
 }
 
 export function operationalReportsVisibility(session: SessionUser) {
-  const canViewBaseExtra = session.role === 'admin' || session.isProtectedSuperAdmin || session.role === 'direccion';
-  const canViewCategoryHours =
-    canViewBaseExtra || session.role === 'coordinador' || session.role === 'rh';
+  const canViewBaseExtra =
+    session.role === 'admin' || session.isProtectedSuperAdmin || session.role === 'direccion' || session.role === 'coordinador';
+  const canViewCategoryHours = canViewBaseExtra;
 
   return {
     canOpenModule: canViewBaseExtra || canViewCategoryHours,

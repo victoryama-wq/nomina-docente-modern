@@ -128,7 +128,20 @@ async function seedCategoryHourScenarios(): Promise<void> {
           'H18-V-COMPLETO',
           'H04 QA Tabulador 100',
           100.00,
-          7, 7, 7, 7, 7, 0, 0,
+          4, 4, 4, 4, 4, 0, 0,
+          '${TEST_USER_IDS.admin}',
+          '${TEST_USER_IDS.admin}'
+        ),
+        (
+          '50000000-0000-4000-8000-000000000184',
+          '${TEST_IDS.cycle}',
+          '${TEST_COORDINATIONS.adetur.id}',
+          '40000000-0000-4000-8000-000000000181',
+          'H18 QA Reporte compartido',
+          'H18-V-COMPARTIDO',
+          'H04 QA Tabulador 100',
+          100.00,
+          3, 3, 3, 3, 3, 0, 0,
           '${TEST_USER_IDS.admin}',
           '${TEST_USER_IDS.admin}'
         ),
@@ -235,6 +248,48 @@ async function seedBaseExtraSnapshotScenario(): Promise<void> {
           total_extra_hours = EXCLUDED.total_extra_hours,
           total_amount = EXCLUDED.total_amount;
 
+      INSERT INTO payroll_schedule_details (
+        id,
+        payroll_run_id,
+        schedule_id,
+        teacher_id,
+        coordination_id,
+        teacher_name_snapshot,
+        coordination_name_snapshot,
+        subject_name_snapshot,
+        group_code_snapshot,
+        tabulator_name_snapshot,
+        tabulator_amount,
+        weekday_hours,
+        module1_hours,
+        module2_hours,
+        base_hours,
+        gross_base_amount,
+        source_payload
+      ) VALUES (
+        '73000000-0000-4000-8000-000000000181',
+        '${TEST_IDS.payrollRun}',
+        '${TEST_IDS.scheduleIdiomas}',
+        '${TEST_IDS.teacherIdiomas}',
+        '${TEST_COORDINATIONS.idiomas.id}',
+        'Docente QA Idiomas Uno',
+        'Idiomas',
+        'H18 QA Snapshot',
+        'H18-SNAPSHOT',
+        'H04 QA Tabulador 100',
+        100.00,
+        12.00,
+        0,
+        0,
+        12.00,
+        1200.00,
+        '{"source":"h18-test"}'::jsonb
+      )
+      ON CONFLICT (id) DO UPDATE
+      SET schedule_id = EXCLUDED.schedule_id,
+          base_hours = EXCLUDED.base_hours,
+          gross_base_amount = EXCLUDED.gross_base_amount;
+
       INSERT INTO payroll_extra_details (
         id,
         payroll_run_id,
@@ -288,8 +343,8 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
     app = null;
   });
 
-  it('enforces base-extra report access only for admin and direccion', async () => {
-    for (const actor of [adminActor(), directionActor()]) {
+  it('enforces base-extra report access for admin, direccion and coordinador', async () => {
+    for (const actor of [adminActor(), directionActor(), coordinatorActor()]) {
       const response = await injectAs(app!, actor, {
         method: 'GET',
         url: `/api/reports/operational/base-extra?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&source=live`
@@ -297,7 +352,7 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
       expect(response.statusCode).toBe(200);
     }
 
-    for (const actor of [coordinatorActor(), rhActor(), financeActor(), accountantActor(), accountingActor()]) {
+    for (const actor of [rhActor(), financeActor(), accountantActor(), accountingActor()]) {
       const response = await injectAs(app!, actor, {
         method: 'GET',
         url: `/api/reports/operational/base-extra?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&source=live`
@@ -328,6 +383,45 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
     });
     expect(deniedCycles.statusCode).toBe(403);
 
+    const client = await connectTestDb();
+    try {
+      await client.query(`
+        INSERT INTO payroll_calendar_config (
+          id,
+          cycle_id,
+          period_label,
+          payroll_start,
+          payroll_end,
+          module1_start,
+          module1_end,
+          module2_start,
+          module2_end,
+          incidences_access_start_at,
+          incidences_access_days,
+          extras_access_start_at,
+          extras_access_days
+        )
+        SELECT
+          '30000000-0000-4000-8000-000000000184',
+          ac.id,
+          'H18 QA Quincena sin corrida',
+          '2026-05-29',
+          '2026-06-12',
+          ac.module1_start,
+          ac.module1_end,
+          ac.module2_start,
+          ac.module2_end,
+          now() - interval '1 day',
+          15,
+          now() - interval '1 day',
+          15
+        FROM academic_cycles ac
+        WHERE ac.id = '${TEST_IDS.cycle}'
+      `);
+    } finally {
+      await client.end();
+    }
+
     const periods = await injectAs(app!, adminActor(), {
       method: 'GET',
       url: `/api/reports/operational/filters/payroll-periods?cycleId=${TEST_IDS.cycle}`
@@ -338,19 +432,24 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
         expect.objectContaining({
           calendarConfigId: TEST_IDS.calendarConfig,
           label: expect.stringContaining('H04 QA Mayo 15-28 2026')
+        }),
+        expect.objectContaining({
+          calendarConfigId: '30000000-0000-4000-8000-000000000184',
+          payrollRunId: null,
+          label: expect.stringContaining('Sin corrida')
         })
       ])
     );
 
-    const deniedPeriods = await injectAs(app!, coordinatorActor(), {
+    const coordinatorPeriods = await injectAs(app!, coordinatorActor(), {
       method: 'GET',
       url: `/api/reports/operational/filters/payroll-periods?cycleId=${TEST_IDS.cycle}`
     });
-    expect(deniedPeriods.statusCode).toBe(403);
+    expect(coordinatorPeriods.statusCode).toBe(200);
   });
 
-  it('enforces category-hours report access and coordinator operational scope', async () => {
-    for (const actor of [adminActor(), directionActor(), coordinatorActor(), rhActor()]) {
+  it('enforces category-hours access and gives coordinators the approved global read-only scope', async () => {
+    for (const actor of [adminActor(), directionActor(), coordinatorActor()]) {
       const response = await injectAs(app!, actor, {
         method: 'GET',
         url: `/api/reports/operational/category-hours?cycleId=${TEST_IDS.cycle}`
@@ -358,7 +457,7 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
       expect(response.statusCode).toBe(200);
     }
 
-    for (const actor of [financeActor(), accountantActor(), accountingActor()]) {
+    for (const actor of [rhActor(), financeActor(), accountantActor(), accountingActor()]) {
       const response = await injectAs(app!, actor, {
         method: 'GET',
         url: `/api/reports/operational/category-hours?cycleId=${TEST_IDS.cycle}`
@@ -366,11 +465,17 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
       expect(response.statusCode).toBe(403);
     }
 
-    const outOfScope = await injectAs(app!, coordinatorActor(), {
+    const globalRows = await injectAs(app!, coordinatorActor(), {
       method: 'GET',
-      url: `/api/reports/operational/category-hours?cycleId=${TEST_IDS.cycle}&coordinationId=${TEST_COORDINATIONS.adetur.id}`
+      url: `/api/reports/operational/category-hours?cycleId=${TEST_IDS.cycle}`
     });
-    expect(outOfScope.statusCode).toBe(403);
+    expect(globalRows.statusCode).toBe(200);
+    expect(globalRows.json().rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ teacherName: 'Docente H18 VIP Completo' }),
+        expect.objectContaining({ teacherName: 'Docente H18 Medio Excedido' })
+      ])
+    );
   });
 
   it('calculates category hours with official V/M/N thresholds and GREATEST assignment', async () => {
@@ -387,8 +492,11 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
       expectedHours: '35.00',
       assignedHours: '35.00',
       remainingHours: '0.00',
-      status: 'completo'
+      status: 'completo',
+      coordinationBreakdown: expect.stringContaining('ADETUR: 15.00 h')
     });
+    expect(rows.filter((row) => row.teacherName === 'Docente H18 VIP Completo')).toHaveLength(1);
+    expect(byTeacher.get('Docente H18 VIP Completo')?.coordinationBreakdown).toContain('Idiomas: 20.00 h');
     expect(byTeacher.get('Docente H18 Medio Excedido')).toMatchObject({
       expectedHours: '25.00',
       assignedHours: '30.00',
@@ -437,6 +545,14 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it('requires cycleId and calendarConfigId for base-extra', async () => {
+    const response = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/base-extra?cycleId=${TEST_IDS.cycle}`
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
   it('returns base-extra live rows without fiscal fields and with approved capturers', async () => {
     const response = await injectAs(app!, adminActor(), {
       method: 'GET',
@@ -450,15 +566,62 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
     const idiomas = rows.find((row) => row.teacherName === 'Docente QA Idiomas Uno');
     expect(idiomas).toMatchObject({
       source: 'live',
+      absences: '1.00',
+      delays: '2.00',
+      delayDiscountHours: '1.00',
       incidenceExtraHours: '1.00',
       externalExtraHours: '3.00',
-      totalExtraHours: '4.00'
+      totalExtraHours: '4.00',
+      fortnightLimit: '30.00'
     });
     expect(idiomas?.externalExtraCapturedByEmail).toContain('qa.coordinador');
     expect(idiomas?.incidenceUpdatedByEmail).toContain('qa.coordinador.idiomas@tecplayacar.edu.mx');
 
     const serialized = JSON.stringify(body);
     expect(serialized).not.toMatch(/rfc|bank|paymentType|constancia/i);
+  });
+
+  it('marks quincenal overload with category limit after H01 absence and delay deductions', async () => {
+    const client = await connectTestDb();
+    try {
+      await client.query(`UPDATE extra_hours SET hours = 40 WHERE id = $1::uuid`, [TEST_IDS.extraOwn]);
+    } finally {
+      await client.end();
+    }
+
+    const response = await injectAs(app!, coordinatorActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/base-extra?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&source=live`
+    });
+    expect(response.statusCode).toBe(200);
+    const row = (response.json().rows as Array<Record<string, string>>)
+      .find((candidate) => candidate.teacherName === 'Docente QA Idiomas Uno');
+    expect(row).toMatchObject({
+      absences: '1.00',
+      delays: '2.00',
+      delayDiscountHours: '1.00',
+      fortnightLimit: '30.00',
+      overloadStatus: 'sobrecarga'
+    });
+    expect(Number(row?.teacherFortnightHours)).toBeGreaterThan(30);
+  });
+
+  it('excludes inactive teachers even when they retain schedules in the active cycle', async () => {
+    const client = await connectTestDb();
+    try {
+      await client.query(`UPDATE teachers SET status = 'INACTIVO' WHERE id = $1::uuid`, [TEST_IDS.teacherIdiomas]);
+    } finally {
+      await client.end();
+    }
+
+    const response = await injectAs(app!, adminActor(), {
+      method: 'GET',
+      url: `/api/reports/operational/base-extra?cycleId=${TEST_IDS.cycle}&calendarConfigId=${TEST_IDS.calendarConfig}&source=live`
+    });
+    expect(response.statusCode).toBe(200);
+    expect((response.json().rows as Array<Record<string, string>>).some(
+      (row) => row.teacherName === 'Docente QA Idiomas Uno'
+    )).toBe(false);
   });
 
   it('returns base-extra snapshot rows for saved payroll periods without referencing nonexistent line_key columns', async () => {
@@ -485,9 +648,15 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
         coordinationId: TEST_COORDINATIONS.idiomas.id,
         coordinationName: 'Idiomas',
         baseHours: '12.00',
+        absences: '0.00',
+        delays: '0.00',
+        netBaseHours: '12.00',
         incidenceExtraHours: '1.00',
         externalExtraHours: '3.00',
         totalExtraHours: '4.00',
+        teacherFortnightHours: '16.00',
+        fortnightLimit: '30.00',
+        overloadStatus: 'normal',
         reason: 'Snapshot H18 extra validado',
         activityDate: '2026-05-20'
       })
@@ -525,7 +694,10 @@ describeIfDb('H18 operational reports backend integration coverage', () => {
     const worksheet = workbook.getWorksheet('Horas base y extras');
     expect(worksheet).toBeDefined();
     expect(worksheet!.getCell('A2').value).toBe('snapshot');
-    expect(worksheet!.getCell('M2').value).toBe('Snapshot H18 extra validado');
+    const headers = worksheet!.getRow(1).values as unknown[];
+    const reasonColumn = headers.indexOf('Motivo');
+    expect(reasonColumn).toBeGreaterThan(0);
+    expect(worksheet!.getCell(2, reasonColumn).value).toBe('Snapshot H18 extra validado');
   });
 
   it('filters base-extra by friendly search q across teacher, coordination and capturer text', async () => {

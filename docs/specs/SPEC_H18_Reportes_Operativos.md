@@ -2,7 +2,7 @@
 
 Fecha: 2026-07-08
 
-Estado: H18 cerrado operativo. H18-F1 backend, H18-F2 frontend, H18-F5 deploy productivo, H18-F6 UX de filtros y hotfix snapshot `ped.line_key` quedaron implementados/desplegados; validacion post-hotfix con sesion real y Excel institucional documentada.
+Estado: H18 cerrado operativo en su version productiva previa. Ajuste post-H23 de semantica quincenal, carga consolidada y permisos implementado en local/test; pendiente de predeploy y deploy controlado.
 
 ## 1. Resumen ejecutivo
 
@@ -62,14 +62,14 @@ Consultar docentes con horas base y horas extra relacionadas con un ciclo, perio
 
 ### Usuarios permitidos
 
-Regla aprobada para diseno:
+Regla aprobada post-H23:
 
 - Permitido: Direccion/Subdireccion.
 - Permitido: Admin como soporte global.
+- Permitido: Coordinador con consulta global de solo lectura.
 
 Denegados:
 
-- Coordinador.
 - RH.
 - Finanzas.
 - Contador.
@@ -78,7 +78,7 @@ Denegados:
 
 Backend debe validar la regla. Ocultar la pestana en frontend no es suficiente.
 
-Decision funcional cerrada: Admin y Direccion/Subdireccion pueden consultar `Horas base y extras`; Coordinador, RH, Finanzas, Contador y Contabilidad no deben verla.
+Decision funcional cerrada: Admin, Direccion/Subdireccion y Coordinador pueden consultar globalmente `Horas base y extras`. RH, Finanzas, Contador y Contabilidad no deben verla. El acceso de Coordinador es informativo y no agrega edicion ni altera permisos operativos de otros modulos.
 
 ### Columnas propuestas
 
@@ -89,14 +89,20 @@ Decision funcional cerrada: Admin y Direccion/Subdireccion pueden consultar `Hor
 | Docente | `teachers.full_name` o snapshot | Para historico cerrado, preferir snapshot. |
 | Categoria | `teachers.category` o `payroll_lines.category_snapshot` | Valores tecnicos: `V`, `M`, `N`. |
 | Coordinacion | `coordinations.name` o snapshot | No usar nombres reservados como coordinacion operativa. |
-| Horas base | `schedules` para vivo, `payroll_lines.base_hours` o `payroll_schedule_details.base_hours` para historico | No cambiar formula H01. |
+| Responsable del horario | `schedules.created_by` -> `app_users` | Identifica al usuario que registro el horario; en snapshot se resuelve por `payroll_schedule_details.schedule_id` contra el horario vigente. |
+| Horas base de la quincena | `schedules` + calendario H23 para vivo, `payroll_lines.base_hours` para snapshot | Calculo real del periodo seleccionado; no es carga semanal nominal. |
+| Faltas | `schedule_incidences.absences` o `payroll_lines.absences` | Horas descontables segun H01. |
+| Retardos | `schedule_incidences.delays` o `payroll_lines.delays` | Cada retardo descuenta `0.5` horas segun H01. |
+| Horas base netas | Derivada | `MAX(horas_base - faltas - retardos * 0.5, 0)`. |
 | Extras de incidencia | `schedule_incidences.extra_hours_in_schedule` o snapshot `schedule_extra_hours` | No tiene capturador original dedicado. |
 | Extras externos | `extra_hours.hours` o snapshot `payroll_extra_details.hours` | Captura operativa de extras. |
 | Capturador extra externo | `extra_hours.captured_by` -> `app_users.email/display_name` | No usar `updated_by` como capturador original. |
 | Motivo extra | `extra_hours.reason` o `payroll_extra_details.reason_snapshot` | Puede estar vacio en snapshot si no se guardo. |
 | Fecha actividad | `extra_hours.activity_date` o snapshot | Rango de fechas opcional. |
 | Observaciones/referencia | `extra_hours.observations`, `extra_hours.reference` | Solo para extras externos vivos. |
-| Totales | Sumas derivadas | Usar helpers decimales existentes al implementar. |
+| Total real quincenal | Derivada por docente | Horas base netas + extras de incidencia + extras externos. |
+| Limite quincenal | Categoria del docente | `V=70`, `M=50`, `N=30`. |
+| Indicador | Derivado | `sobrecarga` cuando el total real quincenal supera el limite. |
 
 ### Filtros aprobados H18-F6
 
@@ -104,8 +110,8 @@ La UI no debe mostrar IDs tecnicos como filtros principales.
 
 Filtros visibles:
 
-- `Ciclo / cuatrimestre`: lista desplegable con nombre, codigo y estado.
-- `Quincena guardada`: lista dependiente del ciclo, solo para corridas no canceladas; si queda vacia se consulta dato vivo del ciclo cuando aplica.
+- `Ciclo / cuatrimestre`: lista desplegable del ciclo `ACTIVO`.
+- `Quincena de nomina`: lista obligatoria con todas las quincenas configuradas del ciclo activo, tengan o no corrida guardada.
 - `Busqueda general`: busca por docente, coordinacion, capturador de extra externo y responsable de incidencia.
 - `Categoria`: `Todas`, `VIP`, `Medio tiempo`, `Nuevo ingreso`.
 - `Tipo`: `Todos`, `Con extras`, `Sin extras`.
@@ -119,7 +125,7 @@ No mostrar como filtros visibles:
 - `Hasta`.
 - `Origen`.
 
-El backend resuelve `source=auto`; la tabla puede mostrar etiqueta informativa `Datos vivos` o `Nomina guardada`.
+No existe la opcion ambigua `Consulta viva del ciclo`. El backend resuelve `source=auto`: usa snapshot si la quincena seleccionada tiene corrida no cancelada y datos vivos H23 si todavia no existe corrida. La tabla muestra `Datos vivos` o `Nomina guardada`.
 
 ### Filtros tecnicos soportados por API
 
@@ -163,8 +169,11 @@ Decision aprobada:
 
 - No cambiar H01.
 - No recalcular montos financieros.
-- Horas base por periodo deben seguir la misma logica ya usada por Nomina si se selecciona quincena.
-- Horas base semanales pueden mostrarse como metrica operativa separada si se requiere.
+- La quincena es obligatoria y las horas base siguen la misma elegibilidad H23 usada por Preview/Guardar Nomina.
+- Las faltas se descuentan como horas y cada retardo descuenta `0.5` horas, sin cambiar H01.
+- El total real quincenal por docente es `MAX(base - faltas - retardos * 0.5, 0) + extras incidencia + extras externos`.
+- Los limites informativos quincenales son `V=70`, `M=50` y `N=30`; al superarlos se muestra `sobrecarga`.
+- Docentes inactivos o sin horario en el ciclo quedan excluidos.
 - Horas extra externas vienen de `extra_hours`.
 - Horas extra de incidencia vienen de `schedule_incidences.extra_hours_in_schedule`.
 - No mezclar horas extra externas con horas base.
@@ -205,14 +214,14 @@ Permitidos:
 - Admin.
 - Direccion/Subdireccion.
 - Coordinador.
-- RH.
-- Otros roles operativos no financieros si existieran y se aprueban.
 
 Denegados:
 
 - Finanzas.
 - Contador.
 - Contabilidad.
+- RH.
+- Otros roles no autorizados.
 
 Backend debe validar esta exclusion.
 
@@ -220,13 +229,13 @@ Backend debe validar esta exclusion.
 
 | Columna | Fuente propuesta | Observacion |
 |---|---|---|
-| Docente | `teachers.full_name` | Consultar global o por alcance segun decision H18-F1. |
+| Docente | `teachers.full_name` | Consulta global de solo lectura para los tres roles aprobados. |
 | Categoria | `teachers.category` | `V`, `M`, `N`. |
 | Categoria legible | Mapeo UI | `V=VIP`, `M=Medio tiempo`, `N=Nuevo ingreso`. |
 | Horas base esperadas | Regla oficial H18 | `V=35`, `M=25`, `N=15`. |
 | Horas base asignadas | Suma viva de `schedules` por docente/ciclo | Ver formula aprobada abajo. |
 | Horas restantes | Esperadas - asignadas | Si negativo, estado `excedido`. |
-| Coordinacion | `coordinations.name` | Segun registro o capturador. |
+| Coordinaciones | `schedules.coordination_id` -> `coordinations.name` | Desglose informativo; el umbral no se repite por coordinacion. |
 | Ciclo | `academic_cycles` | Filtro requerido. |
 | Periodo/quincena | `payroll_calendar_config`, si aplica | Si se requiere por periodo. |
 | Estado | Derivado | `completo`, `faltante`, `excedido`. |
@@ -239,7 +248,7 @@ Filtros visibles:
 - `Busqueda general`: busca por docente o coordinacion.
 - `Categoria`: `Todas`, `VIP`, `Medio tiempo`, `Nuevo ingreso`.
 - `Estado`: `Todos`, `Completo`, `Faltante`, `Excedido`.
-- `Estatus docente`: `Todos`, `Activo`, `Inactivo`.
+- Solo se incluyen docentes `ACTIVO` que tengan al menos un horario en el ciclo.
 
 No debe pedir quincena. La pestana 2 se calcula por ciclo/cuatrimestre con datos vivos de Horarios.
 
@@ -259,7 +268,7 @@ No mostrar como filtros visibles:
   - completo;
   - faltante;
   - excedido;
-- docente activo/inactivo.
+- docentes inactivos y docentes sin horario quedan excluidos.
 
 ### Regla oficial de horas esperadas por categoria
 
@@ -296,7 +305,7 @@ La pestana `Horas base por categoria` se calcula por cuatrimestre/ciclo academic
 
 Si se actualiza un horario en Horarios, el reporte debe reflejarlo porque no usa snapshot para esta pestana.
 
-Para cada docente y ciclo:
+Para cada docente y ciclo, primero se consolidan todos sus horarios entre coordinaciones y despues se compara una sola vez contra su categoria:
 
 ```sql
 horas_l_v = SUM(hours_l + hours_m + hours_x + hours_j + hours_v)
@@ -315,6 +324,8 @@ Estados:
 - `excedido`: `horas_base_asignadas > horas_esperadas_categoria`.
 
 El reporte puede mostrar tambien, como columnas de apoyo, `horas_l_v`, `horas_modulo_1` y `horas_modulo_2` para explicar el estado.
+
+Cada docente aparece una sola vez. Las coordinaciones se conservan como desglose (`Coordinacion: horas`) sin repetir el limite completo en cada una. Admin, Direccion/Subdireccion y Coordinador ven la carga completa global, incluso cuando el horario fue capturado por otro usuario.
 
 No se calcula por una sola quincena y no debe usar calendario de nomina para esta comparacion.
 
@@ -352,12 +363,12 @@ Si se decide crear permisos formales como `operational.reports.base_extra` y `op
 |---|---|---|---|
 | Admin | Permitido | Permitido | Soporte global aprobado para H18. |
 | Direccion/Subdireccion (`direccion`) | Permitido | Permitido | Rol tecnico vigente para Subdireccion. |
-| Coordinador | Denegado | Permitido | Mantener alcance operativo si se decide filtrar por actor. |
-| RH | Denegado | Permitido | No debe obtener datos financieros extra por este modulo. |
+| Coordinador | Permitido | Permitido | Consulta global e informativa; no agrega edicion. |
+| RH | Denegado | Denegado | Fuera del alcance aprobado post-H23. |
 | Finanzas | Denegado | Denegado | Exclusion explicita de Tab 2. |
 | Contador | Denegado | Denegado | Exclusion explicita de Tab 2. |
 | Contabilidad | Denegado | Denegado | Equivalente a Contador. |
-| Otros | Denegado por defecto | Pendiente | Definir si aparecen roles nuevos. |
+| Otros | Denegado por defecto | Denegado por defecto | Requiere nueva decision humana. |
 
 Seguridad requerida:
 
@@ -409,8 +420,8 @@ Ubicacion tecnica sugerida:
 
 Guardas propuestas:
 
-- `requireOperationalBaseExtraReport`: roles `admin` y `direccion`.
-- `requireOperationalCategoryHoursReport`: roles permitidos menos `finanzas`, `contador`, `contabilidad`.
+- `requireOperationalBaseExtraReport`: roles `admin`, `direccion` y `coordinador`.
+- `requireOperationalCategoryHoursReport`: roles `admin`, `direccion` y `coordinador`.
 
 ## 8. Frontend propuesto
 
@@ -498,7 +509,7 @@ Recomendacion tecnica:
 | Calculo incorrecto de horas base | Alto | Reusar logica actual de Horarios/Nomina y cubrir con pruebas H04. |
 | Confundir horas base con horas extra | Alto | Columnas separadas y definicion clara de fuentes. |
 | Usar capturador incorrecto | Alto | Usar `extra_hours.captured_by` para extras externos y `schedule_incidences.updated_by` para responsable operativo de incidencia. |
-| Exponer Tab 1 fuera de Direccion/Subdireccion | Alto | Guard backend por rol. |
+| Exponer reportes fuera de Admin/Direccion/Coordinador | Alto | Guard backend por rol. |
 | Exponer Tab 2 a Finanzas/Contador/Contabilidad | Alto | Guard backend por rol y pruebas. |
 | Usar `finance.view` o `reports.view` indebidamente | Alto | No reutilizar permisos amplios sin validar exclusiones. |
 | Mezclar datos vivos con snapshots | Medio | Priorizar snapshots si existe nomina guardada; indicar origen. |
@@ -510,10 +521,15 @@ Recomendacion tecnica:
 
 ### Decisiones funcionales aprobadas
 
-- Admin puede ver `Horas base y extras` como soporte global.
-- Direccion/Subdireccion puede ver `Horas base y extras`.
-- Coordinador, RH, Finanzas, Contador y Contabilidad no ven `Horas base y extras`.
-- `Horas base por categoria` esta disponible para Admin, Direccion/Subdireccion, Coordinador y RH.
+- Admin, Direccion/Subdireccion y Coordinador ven ambas pestanas con alcance global informativo.
+- RH, Finanzas, Contador y Contabilidad no ven el modulo Reportes.
+- `Horas base y extras` requiere ciclo activo y quincena seleccionada.
+- Se listan todas las quincenas configuradas del ciclo activo, no solo las que tienen corrida.
+- `source=auto` usa snapshot si existe corrida no cancelada y datos vivos H23 en caso contrario.
+- Horas base de la quincena descuenta faltas y `0.5` horas por retardo para obtener la base neta.
+- El total real agrega base neta, extras de incidencia y extras externos; marca sobrecarga contra `70/50/30` segun categoria.
+- `Horas base por categoria` consolida primero toda la carga semanal del docente entre coordinaciones y compara una sola vez contra `35/25/15`.
+- Docentes inactivos o sin horario quedan excluidos.
 - `Horas base por categoria` excluye Finanzas, Contador y Contabilidad.
 - Horas oficiales por categoria:
   - VIP: 35.

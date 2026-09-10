@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { Decimal } from 'decimal.js';
 import { z } from 'zod';
 import { authenticate } from '../auth.js';
 import { query } from '../db.js';
@@ -59,10 +60,19 @@ interface BaseExtraRow {
   categoryLabel: string;
   coordinationId: string | null;
   coordinationName: string | null;
+  scheduleResponsibleEmail: string | null;
+  scheduleResponsibleName: string | null;
   baseHours: string;
+  absences: string;
+  delays: string;
+  delayDiscountHours: string;
+  netBaseHours: string;
   incidenceExtraHours: string;
   externalExtraHours: string;
   totalExtraHours: string;
+  teacherFortnightHours: string;
+  fortnightLimit: string;
+  overloadStatus: 'normal' | 'sobrecarga';
   externalExtraCapturedByEmail: string | null;
   externalExtraCapturedByName: string | null;
   incidenceUpdatedByEmail: string | null;
@@ -87,13 +97,14 @@ interface CategoryHoursRow {
   hoursModule2: string;
   coordinationId: string | null;
   coordinationName: string | null;
+  coordinationBreakdown: string;
 }
 
 const uuidField = z.string().uuid();
 
 const baseExtraQuerySchema = z.object({
-  cycleId: uuidField.optional(),
-  calendarConfigId: uuidField.optional(),
+  cycleId: uuidField,
+  calendarConfigId: uuidField,
   teacherId: uuidField.optional(),
   coordinationId: uuidField.optional(),
   category: z.string().trim().min(1).optional(),
@@ -141,7 +152,7 @@ function requireOperationalBaseExtraReport() {
     await authenticate(request, reply);
     if (reply.sent) return;
 
-    if (!hasAllowedRole(request.user, ['direccion'])) {
+    if (!hasAllowedRole(request.user, ['direccion', 'coordinador'])) {
       await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para consultar este reporte operativo.' });
     }
   };
@@ -152,7 +163,7 @@ function requireOperationalCategoryHoursReport() {
     await authenticate(request, reply);
     if (reply.sent) return;
 
-    if (!hasAllowedRole(request.user, ['direccion', 'coordinador', 'rh'])) {
+    if (!hasAllowedRole(request.user, ['direccion', 'coordinador'])) {
       await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para consultar este reporte operativo.' });
     }
   };
@@ -163,7 +174,7 @@ function requireOperationalReportsModule() {
     await authenticate(request, reply);
     if (reply.sent) return;
 
-    if (!hasAllowedRole(request.user, ['direccion', 'coordinador', 'rh'])) {
+    if (!hasAllowedRole(request.user, ['direccion', 'coordinador'])) {
       await reply.code(403).send({ error: 'FORBIDDEN', message: 'No tienes permiso para consultar reportes operativos.' });
     }
   };
@@ -201,20 +212,27 @@ async function listOperationalCycleFilters(): Promise<OperationalCycleFilterRow[
 async function listOperationalPayrollPeriodFilters(cycleId: string): Promise<OperationalPayrollPeriodFilterRow[]> {
   return query<OperationalPayrollPeriodFilterRow>(
     `
-      SELECT DISTINCT ON (pcc.id)
+      SELECT
         pcc.id::text AS "calendarConfigId",
         pr.id::text AS "payrollRunId",
-        pcc.period_label || ' / ' || pcc.payroll_start::text || ' a ' || pcc.payroll_end::text || ' - ' || pr.status AS label,
+        pcc.period_label || ' / ' || pcc.payroll_start::text || ' a ' || pcc.payroll_end::text ||
+          CASE WHEN pr.status IS NULL THEN ' - Sin corrida' ELSE ' - ' || pr.status END AS label,
         pcc.payroll_start::text AS "payrollStart",
         pcc.payroll_end::text AS "payrollEnd",
         pr.status::text
       FROM payroll_calendar_config pcc
-      JOIN payroll_runs pr
-        ON pr.cycle_id = pcc.cycle_id
-       AND pr.weights->>'calendarConfigId' = pcc.id::text
-       AND pr.status <> 'CANCELADA'
+      JOIN academic_cycles ac ON ac.id = pcc.cycle_id AND ac.status = 'ACTIVO'
+      LEFT JOIN LATERAL (
+        SELECT candidate.id, candidate.status
+        FROM payroll_runs candidate
+        WHERE candidate.cycle_id = pcc.cycle_id
+          AND candidate.weights->>'calendarConfigId' = pcc.id::text
+          AND candidate.status <> 'CANCELADA'
+        ORDER BY candidate.calculated_at DESC NULLS LAST, candidate.created_at DESC
+        LIMIT 1
+      ) pr ON true
       WHERE pcc.cycle_id = $1::uuid
-      ORDER BY pcc.id, pr.calculated_at DESC NULLS LAST, pr.created_at DESC
+      ORDER BY pcc.payroll_start ASC, pcc.created_at ASC
     `,
     [cycleId]
   );
@@ -224,6 +242,62 @@ function expectedCategoryHours(category: string): string {
   if (category === 'V') return '35.00';
   if (category === 'M') return '25.00';
   return '15.00';
+}
+
+function hoursText(value: Decimal.Value): string {
+  return new Decimal(value).toDecimalPlaces(2).toFixed(2);
+}
+
+function enrichBaseExtraRows(rows: BaseExtraRow[]): BaseExtraRow[] {
+  const totalsByTeacher = new Map<string, {
+    baseHours: Decimal;
+    absences: Decimal;
+    delays: Decimal;
+    incidenceExtras: Decimal;
+    externalExtras: Decimal;
+    category: string;
+  }>();
+
+  for (const row of rows) {
+    const current = totalsByTeacher.get(row.teacherId) ?? {
+      baseHours: new Decimal(0),
+      absences: new Decimal(0),
+      delays: new Decimal(0),
+      incidenceExtras: new Decimal(0),
+      externalExtras: new Decimal(0),
+      category: row.category
+    };
+    current.baseHours = current.baseHours.plus(row.baseHours || 0);
+    current.absences = current.absences.plus(row.absences || 0);
+    current.delays = current.delays.plus(row.delays || 0);
+    current.incidenceExtras = current.incidenceExtras.plus(row.incidenceExtraHours || 0);
+    current.externalExtras = current.externalExtras.plus(row.externalExtraHours || 0);
+    totalsByTeacher.set(row.teacherId, current);
+  }
+
+  return rows.map((row) => {
+    const totals = totalsByTeacher.get(row.teacherId)!;
+    const delayDiscount = totals.delays.times(0.5);
+    const netBase = Decimal.max(totals.baseHours.minus(totals.absences).minus(delayDiscount), 0);
+    const realHours = netBase.plus(totals.incidenceExtras).plus(totals.externalExtras);
+    const fortnightLimit = new Decimal(expectedCategoryHours(totals.category)).times(2);
+
+    return {
+      ...row,
+      delayDiscountHours: hoursText(new Decimal(row.delays || 0).times(0.5)),
+      netBaseHours: hoursText(
+        Decimal.max(
+          new Decimal(row.baseHours || 0)
+            .minus(row.absences || 0)
+            .minus(new Decimal(row.delays || 0).times(0.5)),
+          0
+        )
+      ),
+      teacherFortnightHours: hoursText(realHours),
+      fortnightLimit: hoursText(fortnightLimit),
+      overloadStatus: realHours.gt(fortnightLimit) ? 'sobrecarga' : 'normal'
+    };
+  });
 }
 
 function slugify(value: string | null | undefined, fallback: string): string {
@@ -304,11 +378,6 @@ async function findSnapshotRun(cycleId: string, calendarConfigId: string): Promi
   return rows[0] ?? null;
 }
 
-function coordinatorScopeIds(user: SessionUser | undefined): string[] {
-  if (user?.role !== 'coordinador') return [];
-  return user.actorCoordinations.map((coordination) => coordination.id);
-}
-
 async function listBaseExtraLiveRows(
   cycle: CycleLookupRow,
   calendar: CalendarLookupRow | null,
@@ -365,11 +434,17 @@ async function listBaseExtraLiveRows(
               ELSE
                 s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v + s.hours_s1 + s.hours_s2
             END
-          )::numeric(12, 2) AS base_hours
+          )::numeric(12, 2) AS base_hours,
+          string_agg(DISTINCT responsible.email, '; ' ORDER BY responsible.email)
+            FILTER (WHERE responsible.email IS NOT NULL) AS schedule_responsible_email,
+          string_agg(DISTINCT responsible.display_name, '; ' ORDER BY responsible.display_name)
+            FILTER (WHERE responsible.display_name IS NOT NULL) AS schedule_responsible_name
         FROM schedules s
         CROSS JOIN calendar_counts cc
         JOIN teachers t ON t.id = s.teacher_id
+        LEFT JOIN app_users responsible ON responsible.id = s.created_by
         WHERE s.cycle_id = $1::uuid
+          AND t.status = 'ACTIVO'
           AND ($3::uuid IS NULL OR s.teacher_id = $3::uuid)
           AND ($4::uuid IS NULL OR s.coordination_id = $4::uuid)
           AND ($5::text IS NULL OR t.category = $5::text)
@@ -379,6 +454,8 @@ async function listBaseExtraLiveRows(
         SELECT
           s.teacher_id,
           s.coordination_id,
+          SUM(si.absences)::numeric(12, 2) AS absences,
+          SUM(si.delays)::numeric(12, 2) AS delays,
           SUM(si.extra_hours_in_schedule)::numeric(12, 2) AS incidence_extra_hours,
           string_agg(DISTINCT updater.email, '; ' ORDER BY updater.email) FILTER (WHERE updater.email IS NOT NULL) AS incidence_updated_by_email,
           string_agg(DISTINCT updater.display_name, '; ' ORDER BY updater.display_name) FILTER (WHERE updater.display_name IS NOT NULL) AS incidence_updated_by_name
@@ -413,19 +490,13 @@ async function listBaseExtraLiveRows(
           AND ($4::uuid IS NULL OR eh.coordination_id = $4::uuid)
           AND ($5::text IS NULL OR t.category = $5::text)
           AND ($6::uuid IS NULL OR eh.captured_by = $6::uuid)
-          AND (
-            $2::uuid IS NULL OR eh.activity_date IS NULL OR eh.activity_date BETWEEN pcc.payroll_start AND pcc.payroll_end
-          )
+          AND ($2::uuid IS NULL OR COALESCE(eh.activity_date, eh.captured_at::date) BETWEEN pcc.payroll_start AND pcc.payroll_end)
           AND ($7::date IS NULL OR COALESCE(eh.activity_date, eh.captured_at::date) >= $7::date)
           AND ($8::date IS NULL OR COALESCE(eh.activity_date, eh.captured_at::date) <= $8::date)
         GROUP BY eh.teacher_id, eh.coordination_id
       ),
       report_keys AS (
-        SELECT teacher_id, coordination_id FROM schedule_base WHERE $6::uuid IS NULL
-        UNION
-        SELECT teacher_id, coordination_id FROM incidence_extra
-        UNION
-        SELECT teacher_id, coordination_id FROM external_extra
+        SELECT teacher_id, coordination_id FROM schedule_base
       )
       SELECT
         'live'::text AS source,
@@ -444,7 +515,13 @@ async function listBaseExtraLiveRows(
         END AS "categoryLabel",
         c.id::text AS "coordinationId",
         c.name AS "coordinationName",
+        sb.schedule_responsible_email AS "scheduleResponsibleEmail",
+        sb.schedule_responsible_name AS "scheduleResponsibleName",
         COALESCE(sb.base_hours, 0)::numeric(12, 2)::text AS "baseHours",
+        COALESCE(ie.absences, 0)::numeric(12, 2)::text AS absences,
+        COALESCE(ie.delays, 0)::numeric(12, 2)::text AS delays,
+        (COALESCE(ie.delays, 0) * 0.5)::numeric(12, 2)::text AS "delayDiscountHours",
+        GREATEST(COALESCE(sb.base_hours, 0) - COALESCE(ie.absences, 0) - (COALESCE(ie.delays, 0) * 0.5), 0)::numeric(12, 2)::text AS "netBaseHours",
         COALESCE(ie.incidence_extra_hours, 0)::numeric(12, 2)::text AS "incidenceExtraHours",
         COALESCE(ee.external_extra_hours, 0)::numeric(12, 2)::text AS "externalExtraHours",
         (COALESCE(ie.incidence_extra_hours, 0) + COALESCE(ee.external_extra_hours, 0))::numeric(12, 2)::text AS "totalExtraHours",
@@ -453,14 +530,18 @@ async function listBaseExtraLiveRows(
         ie.incidence_updated_by_email AS "incidenceUpdatedByEmail",
         ie.incidence_updated_by_name AS "incidenceUpdatedByName",
         ee.reason,
-        ee.activity_date AS "activityDate"
+        ee.activity_date AS "activityDate",
+        '0.00'::text AS "teacherFortnightHours",
+        '0.00'::text AS "fortnightLimit",
+        'normal'::text AS "overloadStatus"
       FROM report_keys rk
       JOIN teachers t ON t.id = rk.teacher_id
       LEFT JOIN coordinations c ON c.id = rk.coordination_id
       LEFT JOIN schedule_base sb ON sb.teacher_id = rk.teacher_id AND sb.coordination_id = rk.coordination_id
       LEFT JOIN incidence_extra ie ON ie.teacher_id = rk.teacher_id AND ie.coordination_id = rk.coordination_id
       LEFT JOIN external_extra ee ON ee.teacher_id = rk.teacher_id AND ee.coordination_id = rk.coordination_id
-      WHERE (
+      WHERE t.status = 'ACTIVO'
+        AND (
         $9::text = 'all'
         OR ($9::text = 'withExtras' AND (COALESCE(ie.incidence_extra_hours, 0) + COALESCE(ee.external_extra_hours, 0)) > 0)
         OR ($9::text = 'withoutExtras' AND (COALESCE(ie.incidence_extra_hours, 0) + COALESCE(ee.external_extra_hours, 0)) = 0)
@@ -469,6 +550,8 @@ async function listBaseExtraLiveRows(
           $12::text IS NULL
           OR t.full_name ILIKE '%' || $12::text || '%'
           OR COALESCE(c.name, '') ILIKE '%' || $12::text || '%'
+          OR COALESCE(sb.schedule_responsible_email, '') ILIKE '%' || $12::text || '%'
+          OR COALESCE(sb.schedule_responsible_name, '') ILIKE '%' || $12::text || '%'
           OR COALESCE(ee.external_extra_captured_by_email, '') ILIKE '%' || $12::text || '%'
           OR COALESCE(ee.external_extra_captured_by_name, '') ILIKE '%' || $12::text || '%'
           OR COALESCE(ie.incidence_updated_by_email, '') ILIKE '%' || $12::text || '%'
@@ -512,6 +595,20 @@ async function listBaseExtraSnapshotRows(
         FROM payroll_extra_details ped
         WHERE ped.payroll_run_id = $1::uuid
         GROUP BY ped.teacher_id, ped.coordination_id
+      ),
+      schedule_owner AS (
+        SELECT
+          psd.teacher_id,
+          psd.coordination_id,
+          string_agg(DISTINCT responsible.email, '; ' ORDER BY responsible.email)
+            FILTER (WHERE responsible.email IS NOT NULL) AS responsible_email,
+          string_agg(DISTINCT responsible.display_name, '; ' ORDER BY responsible.display_name)
+            FILTER (WHERE responsible.display_name IS NOT NULL) AS responsible_name
+        FROM payroll_schedule_details psd
+        LEFT JOIN schedules s ON s.id = psd.schedule_id
+        LEFT JOIN app_users responsible ON responsible.id = s.created_by
+        WHERE psd.payroll_run_id = $1::uuid
+        GROUP BY psd.teacher_id, psd.coordination_id
       )
       SELECT
         'snapshot'::text AS source,
@@ -530,7 +627,13 @@ async function listBaseExtraSnapshotRows(
         END AS "categoryLabel",
         pl.coordination_id::text AS "coordinationId",
         pl.coordination_name_snapshot AS "coordinationName",
+        so.responsible_email AS "scheduleResponsibleEmail",
+        so.responsible_name AS "scheduleResponsibleName",
         pl.base_hours::numeric(12, 2)::text AS "baseHours",
+        pl.absences::numeric(12, 2)::text AS absences,
+        pl.delays::numeric(12, 2)::text AS delays,
+        (pl.delays * 0.5)::numeric(12, 2)::text AS "delayDiscountHours",
+        GREATEST(pl.base_hours - pl.absences - (pl.delays * 0.5), 0)::numeric(12, 2)::text AS "netBaseHours",
         pl.schedule_extra_hours::numeric(12, 2)::text AS "incidenceExtraHours",
         pl.logged_extra_hours::numeric(12, 2)::text AS "externalExtraHours",
         pl.total_extra_hours::numeric(12, 2)::text AS "totalExtraHours",
@@ -539,12 +642,19 @@ async function listBaseExtraSnapshotRows(
         NULL::text AS "incidenceUpdatedByEmail",
         NULL::text AS "incidenceUpdatedByName",
         ed.reason,
-        ed.activity_date AS "activityDate"
+        ed.activity_date AS "activityDate",
+        '0.00'::text AS "teacherFortnightHours",
+        '0.00'::text AS "fortnightLimit",
+        'normal'::text AS "overloadStatus"
       FROM payroll_lines pl
       JOIN payroll_runs pr ON pr.id = pl.payroll_run_id
+      JOIN teachers active_teacher ON active_teacher.id = pl.teacher_id AND active_teacher.status = 'ACTIVO'
       LEFT JOIN extra_detail ed
         ON ed.teacher_id IS NOT DISTINCT FROM pl.teacher_id
        AND ed.coordination_id IS NOT DISTINCT FROM pl.coordination_id
+      JOIN schedule_owner so
+        ON so.teacher_id IS NOT DISTINCT FROM pl.teacher_id
+       AND so.coordination_id IS NOT DISTINCT FROM pl.coordination_id
       WHERE pl.payroll_run_id = $1::uuid
         AND ($5::uuid IS NULL OR pl.teacher_id = $5::uuid)
         AND ($6::uuid IS NULL OR pl.coordination_id = $6::uuid)
@@ -558,6 +668,8 @@ async function listBaseExtraSnapshotRows(
           $9::text IS NULL
           OR pl.teacher_name_snapshot ILIKE '%' || $9::text || '%'
           OR COALESCE(pl.coordination_name_snapshot, '') ILIKE '%' || $9::text || '%'
+          OR COALESCE(so.responsible_email, '') ILIKE '%' || $9::text || '%'
+          OR COALESCE(so.responsible_name, '') ILIKE '%' || $9::text || '%'
           OR COALESCE(ed.reason, '') ILIKE '%' || $9::text || '%'
         )
       ORDER BY pl.coordination_name_snapshot, pl.teacher_name_snapshot
@@ -581,6 +693,15 @@ async function loadBaseExtraReport(filters: z.infer<typeof baseExtraQuerySchema>
   const cycle = await resolveCycle(filters.cycleId);
   if (!cycle) {
     return { error: { status: 404, body: { error: 'NOT_FOUND', message: 'No se encontró ciclo para el reporte.' } } };
+  }
+
+  if (cycle.status !== 'ACTIVO') {
+    return {
+      error: {
+        status: 400,
+        body: { error: 'ACTIVE_CYCLE_REQUIRED', message: 'Horas base y extras solo puede consultarse para el ciclo activo.' }
+      }
+    };
   }
 
   const calendar = await loadCalendarConfig(filters.calendarConfigId, cycle.id);
@@ -629,7 +750,7 @@ async function loadBaseExtraReport(filters: z.infer<typeof baseExtraQuerySchema>
       : await listBaseExtraLiveRows(cycle, calendar, filters);
 
   return {
-    rows,
+    rows: enrichBaseExtraRows(rows),
     meta: {
       source: resolvedSource,
       cycleId: cycle.id,
@@ -642,34 +763,40 @@ async function loadBaseExtraReport(filters: z.infer<typeof baseExtraQuerySchema>
 }
 
 async function listCategoryHoursRows(
-  user: SessionUser | undefined,
   filters: z.infer<typeof categoryHoursQuerySchema>
 ): Promise<CategoryHoursRow[]> {
-  const scopeIds = coordinatorScopeIds(user);
-  if (user?.role === 'coordinador') {
-    if (scopeIds.length === 0) return [];
-    if (filters.coordinationId && !scopeIds.includes(filters.coordinationId)) {
-      const error = new Error('COORDINATION_OUT_OF_SCOPE');
-      error.name = 'COORDINATION_OUT_OF_SCOPE';
-      throw error;
-    }
-  }
-
   const rows = await query<CategoryHoursRow>(
     `
-      WITH schedule_totals AS (
+      WITH coordination_totals AS (
         SELECT
           s.teacher_id,
           s.coordination_id,
+          c.name AS coordination_name,
           SUM(s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v)::numeric(12, 2) AS hours_lv,
-          (SUM(s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v) + SUM(s.hours_s1))::numeric(12, 2) AS hours_module_1,
-          (SUM(s.hours_l + s.hours_m + s.hours_x + s.hours_j + s.hours_v) + SUM(s.hours_s2))::numeric(12, 2) AS hours_module_2
+          SUM(s.hours_s1)::numeric(12, 2) AS hours_s1,
+          SUM(s.hours_s2)::numeric(12, 2) AS hours_s2
         FROM schedules s
+        JOIN teachers active_teacher ON active_teacher.id = s.teacher_id AND active_teacher.status = 'ACTIVO'
+        JOIN coordinations c ON c.id = s.coordination_id
         WHERE s.cycle_id = $1::uuid
           AND ($2::uuid IS NULL OR s.coordination_id = $2::uuid)
           AND ($3::uuid IS NULL OR s.teacher_id = $3::uuid)
-          AND ($7::text[] IS NULL OR s.coordination_id::text = ANY($7::text[]))
-        GROUP BY s.teacher_id, s.coordination_id
+        GROUP BY s.teacher_id, s.coordination_id, c.name
+      ),
+      teacher_totals AS (
+        SELECT
+          teacher_id,
+          SUM(hours_lv)::numeric(12, 2) AS hours_lv,
+          (SUM(hours_lv) + SUM(hours_s1))::numeric(12, 2) AS hours_module_1,
+          (SUM(hours_lv) + SUM(hours_s2))::numeric(12, 2) AS hours_module_2,
+          string_agg(coordination_name, '; ' ORDER BY coordination_name) AS coordination_names,
+          string_agg(
+            coordination_name || ': ' ||
+              GREATEST(hours_lv, hours_lv + hours_s1, hours_lv + hours_s2)::numeric(12, 2)::text || ' h',
+            '; ' ORDER BY coordination_name
+          ) AS coordination_breakdown
+        FROM coordination_totals
+        GROUP BY teacher_id
       ),
       report_rows AS (
         SELECT
@@ -689,28 +816,22 @@ async function listCategoryHoursRows(
             WHEN t.category = 'M' THEN 25
             ELSE 15
           END::numeric(12, 2) AS expected_hours,
-          GREATEST(
-            COALESCE(st.hours_lv, 0),
-            COALESCE(st.hours_module_1, 0),
-            COALESCE(st.hours_module_2, 0)
-          )::numeric(12, 2) AS assigned_hours,
-          COALESCE(st.hours_lv, 0)::numeric(12, 2) AS hours_lv,
-          COALESCE(st.hours_module_1, 0)::numeric(12, 2) AS hours_module_1,
-          COALESCE(st.hours_module_2, 0)::numeric(12, 2) AS hours_module_2,
-          c.id::text AS "coordinationId",
-          c.name AS "coordinationName"
-        FROM teachers t
+          GREATEST(tt.hours_lv, tt.hours_module_1, tt.hours_module_2)::numeric(12, 2) AS assigned_hours,
+          tt.hours_lv,
+          tt.hours_module_1,
+          tt.hours_module_2,
+          NULL::text AS "coordinationId",
+          tt.coordination_names AS "coordinationName",
+          tt.coordination_breakdown AS "coordinationBreakdown"
+        FROM teacher_totals tt
+        JOIN teachers t ON t.id = tt.teacher_id AND t.status = 'ACTIVO'
         JOIN academic_cycles ac ON ac.id = $1::uuid
-        LEFT JOIN schedule_totals st ON st.teacher_id = t.id
-        LEFT JOIN coordinations c ON c.id = st.coordination_id
-        WHERE ($3::uuid IS NULL OR t.id = $3::uuid)
-          AND ($4::text IS NULL OR t.category = $4::text)
+        WHERE ($4::text IS NULL OR t.category = $4::text)
           AND ($5::text IS NULL OR t.status::text = $5::text)
-          AND ($7::text[] IS NULL OR st.coordination_id IS NOT NULL)
           AND (
-            $8::text IS NULL
-            OR t.full_name ILIKE '%' || $8::text || '%'
-            OR COALESCE(c.name, '') ILIKE '%' || $8::text || '%'
+            $7::text IS NULL
+            OR t.full_name ILIKE '%' || $7::text || '%'
+            OR tt.coordination_names ILIKE '%' || $7::text || '%'
           )
       ),
       status_rows AS (
@@ -733,13 +854,14 @@ async function listCategoryHoursRows(
           hours_module_1::text AS "hoursModule1",
           hours_module_2::text AS "hoursModule2",
           "coordinationId",
-          "coordinationName"
+          "coordinationName",
+          "coordinationBreakdown"
         FROM report_rows
       )
       SELECT *
       FROM status_rows
       WHERE ($6::text = 'all' OR status = $6::text)
-      ORDER BY "coordinationName" NULLS LAST, "teacherName"
+      ORDER BY "teacherName"
     `,
     [
       filters.cycleId,
@@ -748,7 +870,6 @@ async function listCategoryHoursRows(
       filters.category ?? null,
       filters.teacherStatus ?? null,
       filters.status,
-      user?.role === 'coordinador' ? scopeIds : null,
       filters.q ?? null
     ]
   );
@@ -763,10 +884,18 @@ const baseExtraCsvHeaders = [
   'Docente',
   'Categoria',
   'Coordinacion',
-  'Horas base',
+  'Responsable del horario',
+  'Horas base de la quincena',
+  'Faltas',
+  'Retardos',
+  'Descuento por retardos (horas)',
+  'Horas base netas',
   'Extras incidencia',
   'Extras externos',
   'Total extras',
+  'Total real quincenal del docente',
+  'Limite quincenal',
+  'Indicador de carga',
   'Capturador extra externo',
   'Responsable incidencia',
   'Motivo',
@@ -780,10 +909,18 @@ const baseExtraXlsxColumns: XlsxColumn[] = [
   { header: 'Docente', key: 'teacherName', width: 34 },
   { header: 'Categoria', key: 'categoryLabel', width: 18 },
   { header: 'Coordinacion', key: 'coordinationName', width: 24 },
-  { header: 'Horas base', key: 'baseHours', width: 14 },
+  { header: 'Responsable del horario', key: 'scheduleResponsibleName', width: 28 },
+  { header: 'Horas base de la quincena', key: 'baseHours', width: 24 },
+  { header: 'Faltas', key: 'absences', width: 12 },
+  { header: 'Retardos', key: 'delays', width: 12 },
+  { header: 'Descuento por retardos (horas)', key: 'delayDiscountHours', width: 28 },
+  { header: 'Horas base netas', key: 'netBaseHours', width: 18 },
   { header: 'Extras incidencia', key: 'incidenceExtraHours', width: 18 },
   { header: 'Extras externos', key: 'externalExtraHours', width: 16 },
   { header: 'Total extras', key: 'totalExtraHours', width: 14 },
+  { header: 'Total real quincenal del docente', key: 'teacherFortnightHours', width: 30 },
+  { header: 'Limite quincenal', key: 'fortnightLimit', width: 18 },
+  { header: 'Indicador de carga', key: 'overloadStatus', width: 20 },
   { header: 'Capturador extra externo', key: 'externalExtraCapturedByName', width: 28 },
   { header: 'Responsable incidencia', key: 'incidenceUpdatedByName', width: 28 },
   { header: 'Motivo', key: 'reason', width: 32 },
@@ -794,7 +931,7 @@ const categoryHoursCsvHeaders = [
   'Ciclo',
   'Docente',
   'Categoria',
-  'Coordinacion',
+  'Desglose por coordinacion',
   'Horas esperadas',
   'Horas asignadas',
   'Horas restantes',
@@ -808,7 +945,7 @@ const categoryHoursXlsxColumns: XlsxColumn[] = [
   { header: 'Ciclo', key: 'cycleLabel', width: 26 },
   { header: 'Docente', key: 'teacherName', width: 34 },
   { header: 'Categoria', key: 'categoryLabel', width: 18 },
-  { header: 'Coordinacion', key: 'coordinationName', width: 24 },
+  { header: 'Desglose por coordinacion', key: 'coordinationBreakdown', width: 42 },
   { header: 'Horas esperadas', key: 'expectedHours', width: 18 },
   { header: 'Horas asignadas', key: 'assignedHours', width: 18 },
   { header: 'Horas restantes', key: 'remainingHours', width: 18 },
@@ -826,10 +963,18 @@ function baseExtraCsvRows(rows: BaseExtraRow[]): unknown[][] {
     row.teacherName,
     row.categoryLabel,
     row.coordinationName ?? '',
+    row.scheduleResponsibleName ?? row.scheduleResponsibleEmail ?? '',
     row.baseHours,
+    row.absences,
+    row.delays,
+    row.delayDiscountHours,
+    row.netBaseHours,
     row.incidenceExtraHours,
     row.externalExtraHours,
     row.totalExtraHours,
+    row.teacherFortnightHours,
+    row.fortnightLimit,
+    row.overloadStatus,
     row.externalExtraCapturedByName ?? row.externalExtraCapturedByEmail ?? '',
     row.incidenceUpdatedByName ?? row.incidenceUpdatedByEmail ?? '',
     row.reason ?? '',
@@ -842,7 +987,7 @@ function categoryHoursCsvRows(rows: CategoryHoursRow[]): unknown[][] {
     row.cycleLabel,
     row.teacherName,
     row.categoryLabel,
-    row.coordinationName ?? '',
+    row.coordinationBreakdown,
     row.expectedHours,
     row.assignedHours,
     row.remainingHours,
@@ -945,21 +1090,14 @@ export async function registerOperationalReportRoutes(app: FastifyInstance): Pro
       return reply.code(400).send({ error: 'BAD_REQUEST', message: 'Parámetros inválidos.', details: parsed.error.flatten() });
     }
 
-    try {
-      const rows = await listCategoryHoursRows(request.user, parsed.data);
-      return {
-        meta: {
-          cycleId: parsed.data.cycleId,
-          coordinatorScope: request.user?.role === 'coordinador' ? coordinatorScopeIds(request.user) : null
-        },
-        rows
-      };
-    } catch (error) {
-      if (error instanceof Error && error.name === 'COORDINATION_OUT_OF_SCOPE') {
-        return reply.code(403).send({ error: 'FORBIDDEN', message: 'La coordinación solicitada está fuera de tu alcance operativo.' });
-      }
-      throw error;
-    }
+    const rows = await listCategoryHoursRows(parsed.data);
+    return {
+      meta: {
+        cycleId: parsed.data.cycleId,
+        coordinatorScope: null
+      },
+      rows
+    };
   });
 
   app.get('/reports/operational/category-hours/export', { preHandler: requireOperationalCategoryHoursReport() }, async (request, reply) => {
@@ -968,33 +1106,26 @@ export async function registerOperationalReportRoutes(app: FastifyInstance): Pro
       return reply.code(400).send({ error: 'BAD_REQUEST', message: 'Parámetros inválidos.', details: parsed.error.flatten() });
     }
 
-    try {
-      const { format, ...filters } = parsed.data;
-      const rows = await listCategoryHoursRows(request.user, filters);
-      const cycleLabel = rows[0]?.cycleLabel ?? parsed.data.cycleId;
-      const cycleSlug = slugify(cycleLabel, 'ciclo');
+    const { format, ...filters } = parsed.data;
+    const rows = await listCategoryHoursRows(filters);
+    const cycleLabel = rows[0]?.cycleLabel ?? parsed.data.cycleId;
+    const cycleSlug = slugify(cycleLabel, 'ciclo');
 
-      if (format === 'xlsx') {
-        return sendXlsx(
-          reply,
-          `reporte-horas-base-categoria-${cycleSlug}.xlsx`,
-          'Horas base por categoria',
-          categoryHoursXlsxColumns,
-          toXlsxRows(rows)
-        );
-      }
-
-      return sendCsv(
+    if (format === 'xlsx') {
+      return sendXlsx(
         reply,
-        `reporte-horas-base-categoria-${cycleSlug}.csv`,
-        categoryHoursCsvHeaders,
-        categoryHoursCsvRows(rows)
+        `reporte-horas-base-categoria-${cycleSlug}.xlsx`,
+        'Horas base por categoria',
+        categoryHoursXlsxColumns,
+        toXlsxRows(rows)
       );
-    } catch (error) {
-      if (error instanceof Error && error.name === 'COORDINATION_OUT_OF_SCOPE') {
-        return reply.code(403).send({ error: 'FORBIDDEN', message: 'La coordinación solicitada está fuera de tu alcance operativo.' });
-      }
-      throw error;
     }
+
+    return sendCsv(
+      reply,
+      `reporte-horas-base-categoria-${cycleSlug}.csv`,
+      categoryHoursCsvHeaders,
+      categoryHoursCsvRows(rows)
+    );
   });
 }

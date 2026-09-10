@@ -99,15 +99,13 @@ describe('ReportsView H18 frontend permissions and interactions', () => {
     expect(direction.find('[data-testid="tab-category-hours"]').exists()).toBe(true);
   });
 
-  it('shows only category-hours to Coordinador and RH', () => {
+  it('shows both tabs to Coordinador and blocks RH', () => {
     const coordinator = mountReports(coordinatorSession());
-    expect(coordinator.find('[data-testid="tab-base-extra"]').exists()).toBe(false);
+    expect(coordinator.find('[data-testid="tab-base-extra"]').exists()).toBe(true);
     expect(coordinator.find('[data-testid="tab-category-hours"]').exists()).toBe(true);
-    expect(coordinator.find('[data-testid="category-hours-panel"]').exists()).toBe(true);
 
     const rh = mountReports(rhSession());
-    expect(rh.find('[data-testid="tab-base-extra"]').exists()).toBe(false);
-    expect(rh.find('[data-testid="tab-category-hours"]').exists()).toBe(true);
+    expect(rh.find('[data-testid="reports-denied"]').exists()).toBe(true);
   });
 
   it('blocks Finanzas, Contador and Contabilidad from the operational reports module', () => {
@@ -138,10 +136,19 @@ describe('ReportsView H18 frontend permissions and interactions', () => {
           categoryLabel: 'Nuevo ingreso',
           coordinationId: 'coord-1',
           coordinationName: 'Idiomas',
+          scheduleResponsibleEmail: 'responsable@tecplayacar.edu.mx',
+          scheduleResponsibleName: 'Responsable QA',
           baseHours: '15.00',
+          absences: '1.00',
+          delays: '2.00',
+          delayDiscountHours: '1.00',
+          netBaseHours: '13.00',
           incidenceExtraHours: '1.00',
           externalExtraHours: '2.00',
           totalExtraHours: '3.00',
+          teacherFortnightHours: '16.00',
+          fortnightLimit: '30.00',
+          overloadStatus: 'normal',
           externalExtraCapturedByEmail: 'captura@tecplayacar.edu.mx',
           externalExtraCapturedByName: 'Captura QA',
           incidenceUpdatedByEmail: 'incidencia@tecplayacar.edu.mx',
@@ -154,18 +161,33 @@ describe('ReportsView H18 frontend permissions and interactions', () => {
     const wrapper = mountReports(adminSession());
     await flushPromises();
 
+    await wrapper.find('[data-testid="base-extra-period-select"]').setValue('calendar-1');
     await wrapper.find('[data-testid="base-extra-query"]').trigger('click');
     await flushPromises();
 
-    expect(fetchOperationalBaseExtraReport).toHaveBeenCalledWith(expect.objectContaining({ cycleId: 'cycle-1', source: 'auto' }));
+    expect(fetchOperationalBaseExtraReport).toHaveBeenCalledWith(expect.objectContaining({
+      cycleId: 'cycle-1',
+      calendarConfigId: 'calendar-1',
+      source: 'auto'
+    }));
     expect(wrapper.text()).toContain('Docente Alvarez');
     expect(wrapper.text()).toContain('Actividad QA');
+    expect(wrapper.text()).toContain('Responsable QA');
+    expect(wrapper.text()).toContain('Horas base de la quincena');
 
     await wrapper.find('[data-testid="base-extra-export-csv"]').trigger('click');
     await wrapper.find('[data-testid="base-extra-export-xlsx"]').trigger('click');
 
-    expect(downloadOperationalBaseExtraReport).toHaveBeenCalledWith(expect.objectContaining({ cycleId: 'cycle-1', source: 'auto' }), 'csv');
-    expect(downloadOperationalBaseExtraReport).toHaveBeenCalledWith(expect.objectContaining({ cycleId: 'cycle-1', source: 'auto' }), 'xlsx');
+    expect(downloadOperationalBaseExtraReport).toHaveBeenCalledWith(expect.objectContaining({
+      cycleId: 'cycle-1',
+      calendarConfigId: 'calendar-1',
+      source: 'auto'
+    }), 'csv');
+    expect(downloadOperationalBaseExtraReport).toHaveBeenCalledWith(expect.objectContaining({
+      cycleId: 'cycle-1',
+      calendarConfigId: 'calendar-1',
+      source: 'auto'
+    }), 'xlsx');
   });
 
   it('renders friendly filters instead of technical ID fields', async () => {
@@ -173,7 +195,7 @@ describe('ReportsView H18 frontend permissions and interactions', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('Ciclo / cuatrimestre');
-    expect(wrapper.text()).toContain('Quincena guardada');
+    expect(wrapper.text()).toContain('Quincena de nomina');
     expect(wrapper.text()).toContain('Busqueda general');
     expect(wrapper.text()).toContain('Mayo - Agosto 2026 / ACTIVO');
     const filterLabels = wrapper.findAll('.filter-grid label').map((label) => label.text()).join(' ');
@@ -184,12 +206,26 @@ describe('ReportsView H18 frontend permissions and interactions', () => {
     expect(filterLabels).not.toContain('Origen');
     expect(filterLabels).not.toContain('Desde');
     expect(filterLabels).not.toContain('Hasta');
+    expect(wrapper.text()).not.toContain('Consulta viva del ciclo');
+  });
+
+  it('requires a payroll period for base-extra queries and exports', async () => {
+    const wrapper = mountReports(adminSession());
+    await flushPromises();
+
+    await wrapper.find('[data-testid="base-extra-query"]').trigger('click');
+    expect(wrapper.text()).toContain('Selecciona la quincena');
+    expect(fetchOperationalBaseExtraReport).not.toHaveBeenCalled();
+
+    await wrapper.find('[data-testid="base-extra-export-csv"]').trigger('click');
+    expect(downloadOperationalBaseExtraReport).not.toHaveBeenCalled();
   });
 
   it('applies general search to base-extra query and exports', async () => {
     const wrapper = mountReports(adminSession());
     await flushPromises();
 
+    await wrapper.find('[data-testid="base-extra-period-select"]').setValue('calendar-1');
     await wrapper.find('[data-testid="base-extra-search"]').setValue('Idiomas');
     await wrapper.find('[data-testid="base-extra-query"]').trigger('click');
     await flushPromises();
@@ -218,12 +254,14 @@ describe('ReportsView H18 frontend permissions and interactions', () => {
           hoursModule1: '30.00',
           hoursModule2: '25.00',
           coordinationId: 'coord-1',
-          coordinationName: 'Idiomas'
+          coordinationName: 'Idiomas; Sistemas',
+          coordinationBreakdown: 'Idiomas: 20.00 h; Sistemas: 10.00 h'
         }
       ]
     });
     const wrapper = mountReports(coordinatorSession());
     await flushPromises();
+    await wrapper.find('[data-testid="tab-category-hours"]').trigger('click');
     await wrapper.find('[data-testid="category-cycle-select"]').setValue('');
 
     await wrapper.find('[data-testid="category-hours-query"]').trigger('click');

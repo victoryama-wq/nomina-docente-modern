@@ -187,14 +187,14 @@ describe('frontend permission visibility helpers', () => {
 
     expect(operationalReportsVisibility(coordinatorSession())).toMatchObject({
       canOpenModule: true,
-      showBaseExtraTab: false,
+      showBaseExtraTab: true,
       showCategoryHoursTab: true
     });
 
     expect(operationalReportsVisibility(rhSession())).toMatchObject({
-      canOpenModule: true,
+      canOpenModule: false,
       showBaseExtraTab: false,
-      showCategoryHoursTab: true
+      showCategoryHoursTab: false
     });
 
     expect(operationalReportsVisibility(financeSession()).canOpenModule).toBe(false);

@@ -1100,10 +1100,19 @@ export interface BaseExtraReportRow {
   categoryLabel: string;
   coordinationId?: string | null;
   coordinationName?: string | null;
+  scheduleResponsibleEmail?: string | null;
+  scheduleResponsibleName?: string | null;
   baseHours: string;
+  absences: string;
+  delays: string;
+  delayDiscountHours: string;
+  netBaseHours: string;
   incidenceExtraHours: string;
   externalExtraHours: string;
   totalExtraHours: string;
+  teacherFortnightHours: string;
+  fortnightLimit: string;
+  overloadStatus: 'normal' | 'sobrecarga';
   externalExtraCapturedByEmail?: string | null;
   externalExtraCapturedByName?: string | null;
   incidenceUpdatedByEmail?: string | null;
@@ -1149,6 +1158,7 @@ export interface CategoryHoursReportRow {
   hoursModule2: string;
   coordinationId?: string | null;
   coordinationName?: string | null;
+  coordinationBreakdown: string;
 }
 
 export interface CategoryHoursReportResponse {

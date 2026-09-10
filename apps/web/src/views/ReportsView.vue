@@ -44,7 +44,6 @@ interface CategoryHoursForm {
   cycleId: string;
   category: string;
   status: CategoryHoursStatusFilter;
-  teacherStatus: string;
   q: string;
 }
 
@@ -75,13 +74,13 @@ const categoryHoursFilters = reactive<CategoryHoursForm>({
   cycleId: '',
   category: '',
   status: 'all',
-  teacherStatus: '',
   q: ''
 });
 
 const canViewBaseExtra = computed(() => authStore.canViewOperationalBaseExtraReports);
 const canViewCategoryHours = computed(() => authStore.canViewOperationalCategoryHoursReports);
 const canViewAnyReport = computed(() => canViewBaseExtra.value || canViewCategoryHours.value);
+const activeCycleOptions = computed(() => cycleOptions.value.filter((cycle) => cycle.status === 'ACTIVO'));
 
 const availableTabs = computed(() => {
   const tabs: Array<{ id: ReportTab; label: string; description: string }> = [];
@@ -116,13 +115,18 @@ const baseExtraSummary = computed(() => {
   const teacherIds = new Set(baseExtraRows.value.map((row) => row.teacherId));
   const incidenceExtras = sumHours(baseExtraRows.value.map((row) => row.incidenceExtraHours));
   const externalExtras = sumHours(baseExtraRows.value.map((row) => row.externalExtraHours));
+  const overloadedTeachers = new Set(
+    baseExtraRows.value.filter((row) => row.overloadStatus === 'sobrecarga').map((row) => row.teacherId)
+  );
   return {
     records: baseExtraRows.value.length,
     teachers: teacherIds.size,
     baseHours: sumHours(baseExtraRows.value.map((row) => row.baseHours)),
+    netBaseHours: sumHours(baseExtraRows.value.map((row) => row.netBaseHours)),
     incidenceExtras,
     externalExtras,
-    totalExtras: incidenceExtras + externalExtras
+    totalExtras: incidenceExtras + externalExtras,
+    overloadedTeachers: overloadedTeachers.size
   };
 });
 
@@ -191,6 +195,10 @@ function resetMessages() {
 
 async function loadBaseExtraReport() {
   resetMessages();
+  if (!baseExtraFilters.cycleId.trim() || !baseExtraFilters.calendarConfigId.trim()) {
+    errorMessage.value = 'Selecciona la quincena que se esta capturando para consultar el reporte.';
+    return;
+  }
   loadingBaseExtra.value = true;
   try {
     const result = await fetchOperationalBaseExtraReport(baseExtraPayload());
@@ -223,6 +231,10 @@ async function loadCategoryHoursReport() {
 
 async function exportBaseExtra(format: ExportFormat) {
   resetMessages();
+  if (!baseExtraFilters.cycleId.trim() || !baseExtraFilters.calendarConfigId.trim()) {
+    errorMessage.value = 'Selecciona una quincena antes de exportar.';
+    return;
+  }
   exporting.value = `base-extra-${format}`;
   try {
     await downloadOperationalBaseExtraReport(baseExtraPayload(), format);
@@ -251,13 +263,12 @@ async function exportCategoryHours(format: ExportFormat) {
 
 function clearBaseExtraFilters() {
   Object.assign(baseExtraFilters, {
-    cycleId: '',
+    cycleId: activeCycleOptions.value[0]?.id || '',
     calendarConfigId: '',
     category: '',
     type: 'all',
     q: ''
   });
-  payrollPeriodOptions.value = [];
   baseExtraRows.value = [];
   resetMessages();
 }
@@ -267,7 +278,6 @@ function clearCategoryHoursFilters() {
     cycleId: '',
     category: '',
     status: 'all',
-    teacherStatus: '',
     q: ''
   });
   categoryHoursRows.value = [];
@@ -284,7 +294,7 @@ async function loadPayrollPeriodsForCycle(cycleId: string) {
     payrollPeriodOptions.value = result.periods;
   } catch (error) {
     payrollPeriodOptions.value = [];
-    errorMessage.value = error instanceof Error ? error.message : 'No fue posible cargar quincenas guardadas.';
+    errorMessage.value = error instanceof Error ? error.message : 'No fue posible cargar las quincenas del ciclo.';
   }
 }
 
@@ -294,9 +304,9 @@ async function loadFilterOptions() {
   try {
     const result = await fetchOperationalReportCycles();
     cycleOptions.value = result.cycles;
-    const defaultCycle = result.cycles.find((cycle) => cycle.status === 'ACTIVO') || result.cycles[0] || null;
+    const defaultCycle = result.cycles.find((cycle) => cycle.status === 'ACTIVO') || null;
     if (defaultCycle) {
-      if (!baseExtraFilters.cycleId) baseExtraFilters.cycleId = defaultCycle.id;
+      baseExtraFilters.cycleId = defaultCycle.id;
       if (!categoryHoursFilters.cycleId) categoryHoursFilters.cycleId = defaultCycle.id;
       if (canViewBaseExtra.value) await loadPayrollPeriodsForCycle(baseExtraFilters.cycleId);
     }
@@ -374,27 +384,27 @@ onMounted(() => {
             <p class="eyebrow">Pestana 1</p>
             <h2>Horas base y extras</h2>
           </div>
-          <span class="scope-badge">Admin / Direccion</span>
+          <span class="scope-badge">Admin / Direccion / Coordinador</span>
         </div>
 
         <div class="filter-grid">
           <label>
             Ciclo / cuatrimestre
             <select v-model="baseExtraFilters.cycleId" data-testid="base-extra-cycle-select" :disabled="loadingFilters">
-              <option value="">Ciclo activo automatico</option>
-              <option v-for="cycle in cycleOptions" :key="cycle.id" :value="cycle.id">
+              <option value="">Sin ciclo activo</option>
+              <option v-for="cycle in activeCycleOptions" :key="cycle.id" :value="cycle.id">
                 {{ cycle.label }}
               </option>
             </select>
           </label>
           <label>
-            Quincena guardada
+            Quincena de nomina *
             <select
               v-model="baseExtraFilters.calendarConfigId"
               data-testid="base-extra-period-select"
               :disabled="!baseExtraFilters.cycleId || loadingFilters"
             >
-              <option value="">Consulta viva del ciclo</option>
+              <option value="">Selecciona la quincena que se esta capturando</option>
               <option v-for="period in payrollPeriodOptions" :key="period.calendarConfigId" :value="period.calendarConfigId">
                 {{ period.label }}
               </option>
@@ -468,8 +478,12 @@ onMounted(() => {
             <small>{{ baseExtraSummary.teachers }} docentes</small>
           </article>
           <article>
-            <span>Horas base</span>
+            <span>Horas base de la quincena</span>
             <strong>{{ formatHours(baseExtraSummary.baseHours) }}</strong>
+          </article>
+          <article>
+            <span>Horas base netas</span>
+            <strong>{{ formatHours(baseExtraSummary.netBaseHours) }}</strong>
           </article>
           <article>
             <span>Extras incidencia</span>
@@ -483,6 +497,10 @@ onMounted(() => {
             <span>Total extras</span>
             <strong>{{ formatHours(baseExtraSummary.totalExtras) }}</strong>
           </article>
+          <article>
+            <span>Docentes con sobrecarga</span>
+            <strong>{{ baseExtraSummary.overloadedTeachers }}</strong>
+          </article>
         </div>
 
         <div class="table-shell">
@@ -495,10 +513,18 @@ onMounted(() => {
                 <th>Docente</th>
                 <th>Categoria</th>
                 <th>Coordinacion</th>
-                <th>Horas base</th>
+                <th>Responsable del horario</th>
+                <th>Horas base de la quincena</th>
+                <th>Faltas</th>
+                <th>Retardos</th>
+                <th>Descuento retardos</th>
+                <th>Horas base netas</th>
                 <th>Extras incidencia</th>
                 <th>Extras externos</th>
                 <th>Total extras</th>
+                <th>Total real del docente</th>
+                <th>Limite quincenal</th>
+                <th>Indicador</th>
                 <th>Capturador extra externo</th>
                 <th>Responsable incidencia</th>
                 <th>Motivo / referencia</th>
@@ -507,7 +533,7 @@ onMounted(() => {
             </thead>
             <tbody>
               <tr v-if="!loadingBaseExtra && !baseExtraRows.length">
-                <td colspan="14" class="empty-cell">No hay datos con el filtro actual.</td>
+                <td colspan="22" class="empty-cell">Selecciona una quincena para consultar el reporte.</td>
               </tr>
               <tr v-for="row in baseExtraRows" :key="`${row.source}-${row.teacherId}-${row.coordinationId}-${row.reason}`">
                 <td><span class="pill">{{ sourceLabel(row.source) }}</span></td>
@@ -516,10 +542,22 @@ onMounted(() => {
                 <td><strong>{{ row.teacherName }}</strong></td>
                 <td>{{ row.categoryLabel }}</td>
                 <td>{{ row.coordinationName || '-' }}</td>
+                <td>{{ row.scheduleResponsibleName || row.scheduleResponsibleEmail || '-' }}</td>
                 <td>{{ formatHours(row.baseHours) }}</td>
+                <td>{{ formatHours(row.absences) }}</td>
+                <td>{{ formatHours(row.delays) }}</td>
+                <td>{{ formatHours(row.delayDiscountHours) }}</td>
+                <td>{{ formatHours(row.netBaseHours) }}</td>
                 <td>{{ formatHours(row.incidenceExtraHours) }}</td>
                 <td>{{ formatHours(row.externalExtraHours) }}</td>
                 <td>{{ formatHours(row.totalExtraHours) }}</td>
+                <td><strong>{{ formatHours(row.teacherFortnightHours) }}</strong></td>
+                <td>{{ formatHours(row.fortnightLimit) }}</td>
+                <td>
+                  <span class="pill" :class="row.overloadStatus">
+                    {{ row.overloadStatus === 'sobrecarga' ? 'Sobrecarga' : 'Normal' }}
+                  </span>
+                </td>
                 <td>{{ row.externalExtraCapturedByName || row.externalExtraCapturedByEmail || '-' }}</td>
                 <td>
                   {{ row.incidenceUpdatedByName || row.incidenceUpdatedByEmail || '-' }}
@@ -539,7 +577,7 @@ onMounted(() => {
             <p class="eyebrow">Pestana 2</p>
             <h2>Horas base por categoria</h2>
           </div>
-          <span class="scope-badge">Admin / Direccion / Coordinador / RH</span>
+          <span class="scope-badge">Admin / Direccion / Coordinador</span>
         </div>
 
         <div class="filter-grid category">
@@ -576,14 +614,6 @@ onMounted(() => {
               <option value="completo">Completo</option>
               <option value="faltante">Faltante</option>
               <option value="excedido">Excedido</option>
-            </select>
-          </label>
-          <label>
-            Estatus docente
-            <select v-model="categoryHoursFilters.teacherStatus">
-              <option value="">Todos</option>
-              <option value="ACTIVO">Activo</option>
-              <option value="INACTIVO">Inactivo</option>
             </select>
           </label>
         </div>
@@ -660,7 +690,7 @@ onMounted(() => {
                 <th>Horas L-V</th>
                 <th>Horas modulo 1</th>
                 <th>Horas modulo 2</th>
-                <th>Coordinacion</th>
+                <th>Desglose por coordinacion</th>
               </tr>
             </thead>
             <tbody>
@@ -678,7 +708,7 @@ onMounted(() => {
                 <td>{{ formatHours(row.hoursLv) }}</td>
                 <td>{{ formatHours(row.hoursModule1) }}</td>
                 <td>{{ formatHours(row.hoursModule2) }}</td>
-                <td>{{ row.coordinationName || '-' }}</td>
+                <td>{{ row.coordinationBreakdown || row.coordinationName || '-' }}</td>
               </tr>
             </tbody>
           </table>
@@ -862,6 +892,16 @@ onMounted(() => {
   background: #fee2e2;
 }
 
+.pill.normal {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.pill.sobrecarga {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -976,7 +1016,7 @@ button:disabled {
 
 table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 1900px;
   border-collapse: collapse;
   background: #ffffff;
 }

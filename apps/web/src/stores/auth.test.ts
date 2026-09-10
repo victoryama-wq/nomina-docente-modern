@@ -109,9 +109,17 @@ describe('auth store permission helpers', () => {
     const coordinator = useAuthStore();
     coordinator.session = coordinatorSession();
 
-    expect(coordinator.canViewOperationalBaseExtraReports).toBe(false);
+    expect(coordinator.canViewOperationalBaseExtraReports).toBe(true);
     expect(coordinator.canViewOperationalCategoryHoursReports).toBe(true);
     expect(coordinator.canViewReportsModule).toBe(true);
+
+    setActivePinia(createPinia());
+    const rh = useAuthStore();
+    rh.session = rhSession();
+
+    expect(rh.canViewOperationalBaseExtraReports).toBe(false);
+    expect(rh.canViewOperationalCategoryHoursReports).toBe(false);
+    expect(rh.canViewReportsModule).toBe(false);
 
     setActivePinia(createPinia());
     const finance = useAuthStore();

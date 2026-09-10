@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-09-01
+Actualizacion: 2026-09-10
 
 ## 1. Contexto
 
@@ -23,7 +23,7 @@ Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues d
 - H13 cerrado documentalmente con checklist productivo permanente de variables, secretos, CORS, healthchecks, deploy y rollback.
 - H15 desplegado productivamente en Firebase Hosting live; sesion por inactividad y `browserSessionPersistence` quedan operativos.
 - H17 ejecutado: Directorio usa `teachers.created_by` como capturador tecnico; correccion por coordinacion descartada y 197 docentes fueron normalizados con backup y mapping aprobado.
-- H18 cerrado operativo: Reportes Operativos desplegado, filtros amigables H18-F6 vigentes, hotfix snapshot `ped.line_key` aplicado y CSV/XLSX validados en Excel institucional.
+- H18 conserva su cierre productivo previo; el ajuste post-H23 esta implementado en local/test y pendiente de predeploy/deploy para quincena obligatoria, paridad H23, sobrecarga y consolidacion multicoordinacion.
 - H19 ejecutado de forma controlada: backup exitoso, preview en ROLLBACK, 36 actualizaciones de `teachers.created_by`, 3 altas minimas y validacion posterior sin duplicados.
 - H20 cerrado operativo: preview compartido desplegado en `nomina-api-00051-9s5`, Hosting H20 activo y smoke autenticado Coordinador/Admin aprobado sin duplicacion ni exposicion fiscal.
 - H21 cerrado operativo: migracion `013`, conciliacion de cinco pares/8 horarios, deploy `nomina-api-00052-xtm` y smoke autenticado Catalogos/Horarios aprobados; CSV institucional definitivo no aplicado.
@@ -67,7 +67,7 @@ Arquitectura vigente:
 | H14 | Apps Script legacy extenso | Documentacion / Retiro legado | Cerrado | Bajo: trazabilidad historica queda en Git | P3 cerrado | No usar legacy local como referencia funcional; consultar Git solo como historico | Documento H06/H14 de cierre | No |
 | H15 | Persistencia de sesion e inactividad | Seguridad frontend / Firebase Auth | Desplegado productivamente | Bajo: queda observacion operativa del ciclo real de 60 minutos y reapertura de navegador | P2 cerrado operativo | Mantener pruebas H15 y observar comportamiento en operacion normal | Cumplido con predeploy, deploy Hosting live y smoke postdeploy minimo | Solo si se cambia politica de tiempo o UX |
 | H17 | `teachers.created_by` nulo por carga masiva | Directorio / Permisos operativos / Datos productivos | Normalizacion productiva ejecutada para 197 docentes; 12 remanentes documentados | Bajo-medio: queda validacion funcional por coordinadoras y decision futura sobre remanentes | P1 datos controlados / monitoreo | Mantener regla por capturador; validar acceso operativo y no tocar remanentes sin nuevo mapping aprobado | Validacion por coordinadoras y cierre/documentacion de los 12 remanentes si se decide atenderlos | Si, solo para remanentes o excepciones futuras |
-| H18 | Modulo Reportes Operativos desplegado con UX de filtros H18-F6 y hotfix snapshot | Reportes / Permisos / Operacion academica | Cerrado operativo | Bajo: riesgo residual por regresion futura o nuevas necesidades de snapshots historicos | P2 cerrado operativo | Mantener pruebas H18, guardas backend por rol y exportables CSV/XLSX; no crear permisos ni migraciones sin H05 | Cumplido con deploy H18-F5/F6, hotfix `ped.line_key` y validacion post-hotfix en Excel institucional | Solo si se agregan permisos nuevos o cambios de BD |
+| H18 | Modulo Reportes Operativos y ajuste post-H23 | Reportes / Permisos / Operacion academica | Version previa cerrada en produccion; ajuste post-H23 implementado local/test, pendiente de deploy | Medio-bajo hasta validar productivamente quincena obligatoria, consolidacion y permisos revisados | P1 predeploy | Validar API/UI/exportables y desplegar sin migracion; mantener `source=auto`, H23, H01 y ausencia fiscal | Smoke por rol y Excel de ambas pestanas despues del deploy controlado | No; decisiones funcionales cerradas |
 | H19 | Actualizacion controlada de Directorio desde CSV | Directorio / Datos productivos / Permisos operativos | Ejecutado y documentado: 36 `created_by` actualizados y 3 altas minimas, con backup y preview exacto | Bajo; riesgo residual solo ante futuras cargas manuales sin el mismo control | P1 cerrado / monitoreo | Repetir backup, matching nominal, preview y guardas de duplicidad para futuras cargas | Cumplido con validacion posterior, 0 discrepancias y 0 duplicados | Solo para futuras cargas o excepciones |
 | H20 | Preview de Nomina incompleto para docentes compartidos | Nomina / Permisos / Coordinaciones | Cerrado operativo; deploy y smoke autenticado aprobados | Bajo: riesgo residual solo por regresion futura en alcance, agregacion o proyeccion fiscal | P1 cerrado operativo | Mantener elegibilidad por docente separada del calculo completo y pruebas de regresion; no reutilizar esta regla para editar modulos operativos | Cumplido con revision `nomina-api-00051-9s5`, Hosting H20, docente unico, carga completa, totales sin duplicacion y ausencia fiscal | No; solo ante cambios futuros de alcance |
 | H21 | Importacion masiva y busqueda de Asignaturas | Catalogos / Horarios / Historicos / Seguridad de datos | Cerrado operativo; `013`, conciliacion, deploy y smoke autenticado aprobados | Bajo: riesgo residual por regresion o por aplicar en el futuro un CSV institucional sin control | P1 cerrado operativo | Mantener pruebas, H05/H13 y preview sin bloqueantes antes de cualquier Apply futuro | Cumplido con backup `1784582556252`, 277/277 sin cambios, cero bloqueantes y revision `nomina-api-00052-xtm` | Solo para Apply de un CSV institucional futuro |
@@ -169,7 +169,7 @@ Orden recomendado:
 4. **H13 operativo continuo.** Usar el checklist permanente antes de cada deploy productivo y actualizarlo solo si cambia infraestructura real.
 5. **H15 operativo.** Mantener smoke de sesion/inactividad si se ajusta la politica de tiempo o UX del modal.
 6. **H17 monitoreo.** Validar acceso real de coordinadoras y resolver remanentes solo con nuevo mapping aprobado.
-7. **H18 Reportes Operativos.** Cerrado operativo. Mantener pruebas/regresion, guardas por rol y monitoreo de exportables CSV/XLSX.
+7. **H18 Reportes Operativos.** Preparar predeploy del ajuste post-H23 y validar por rol, snapshot/live, consolidacion, sobrecarga y exportables CSV/XLSX.
 8. **H19 Directorio.** Cerrado controlado; monitorear Directorio y repetir el procedimiento solo ante una nueva carga aprobada.
 9. **H20 Nomina compartida.** Cerrado operativo; mantener pruebas y monitoreo de alcance, totales y seguridad fiscal.
 10. **H21 Asignaturas.** Cerrado operativo; cualquier CSV institucional futuro requiere preview, backup y autorizacion independiente.
