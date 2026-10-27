@@ -39,6 +39,7 @@ describe('auth store permission helpers', () => {
     auth.session = coordinatorSession();
 
     expect(auth.canPreviewPayroll).toBe(true);
+    expect(auth.canViewFinanceReports).toBe(true);
     expect(auth.canManageFiscal).toBe(false);
     expect(auth.canFinanceWorkflow).toBe(false);
     expect(auth.canExportFinance).toBe(false);

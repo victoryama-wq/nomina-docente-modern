@@ -1,7 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-09-10
+Ultima actualizacion: 2026-10-27
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -34,7 +34,7 @@ Estado por H:
 |---|---|
 | H01 | Cerrado. Precision monetaria protegida con `decimal.js`, strings decimales y pruebas de regresion. |
 | H02 | Cerrado operativo; `user_coordinations` existe, pero el fallback legacy sigue activo en monitoreo. |
-| H03 | Cerrado operativo; permisos fiscales, documentales, financieros, workflow y preview separados. |
+| H03 | Cerrado operativo; permisos fiscales, documentales, financieros, workflow y preview separados. Ajuste local pendiente de deploy: comprobante de efectivo consolidado por docente y nombre visible sin exponer fiscal. |
 | H04 | Implementado hasta Fase 5; H04-F6 Playwright queda opcional posterior. |
 | H05 | Cerrado con tablas de control; produccion conserva 15 baseline y migraciones `013`/`014`/`015` aplicadas, `pending=0` y `checksum mismatch=0`. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
@@ -328,7 +328,7 @@ Documentos vigentes:
 | Incidencias | Permitidas solo en ciclo operativo activo y ventana abierta; bloqueadas en `PLANEACION` y `CERRADO`; validacion por horario/coordinacion. | H02/H03 Fase 3, H09/H10 Fase 2. |
 | Extras | Listado segun rol; edicion por propiedad/captured_by donde aplique; Direccion/Subdireccion solo modifica propios; bloqueados en `PLANEACION` y `CERRADO`. | H02/H03 Fase 3, H04 Fase 5, H09/H10 Fase 2. |
 | Nomina | Preview con `payroll.preview`; guardar con `payroll.finalize`; H01 intocable; bloqueada en `PLANEACION` y `CERRADO`; `PAGADA` terminal. H20 permite al Coordinador consultar el calculo completo de docentes propios o con horario en sus coordinaciones, sin ampliar edicion, fiscal ni finalizacion. H23 aplica en produccion la interseccion temporal inclusiva de quincena, vigencia base y M1/M2 antes de H01; anula incidencias de horarios sin ocurrencias. Extras independientes, H01 e historicos permanecen intactos. | H01, H03 Fase 4, H09/H10 Fase 1, SPEC/auditoria H20 y cierre productivo H23. |
-| Finanzas | `finance.view` consulta; `finance.export` exporta; `finance.workflow` cambia estados; no cancelar `PAGADA`; no usar `BORRADOR`/`CERRADA` como acciones. | H03 Fase 4, H09/H10 Fase 1. |
+| Finanzas | `finance.view` consulta; `finance.export` exporta; `finance.workflow` cambia estados; no cancelar `PAGADA`; no usar `BORRADOR`/`CERRADA` como acciones. El comprobante de efectivo se consolida por docente usando los totales ya guardados y omite coordinacion. Coordinador consulta solo sus coordinaciones, sin exportacion, workflow ni fiscal; el nombre docente es operativo y no depende de permiso fiscal. | H03 Fase 4, H09/H10 Fase 1 y ajuste Finanzas 2026-10-27. |
 | Expediente fiscal | Ver/editar/constancias separados por permisos fiscales y documentales; Coordinador/Direccion/Contador no gestionan fiscal. | H03 Fase 4, H02/H03 Fase 5. |
 | Calendario | Ciclos `PLANEACION`, `ACTIVO`, `CERRADO`; cierre controlado Admin; activacion manual queda como compatibilidad administrativa/legacy. H23 agrega configuracion Admin de vigencia pagable inclusiva y exige M1/M2 contenidos; `27-1` opera con `2026-08-31` a `2026-12-12`. | H09/H10 Fase 3/Fase 4/deploy y cierre productivo H23. |
 | Accesos | Roles y usuarios gestionados por Admin; no mostrar checkboxes manuales de coordinaciones como fuente operativa final; subdireccion usa `direccion`. | H02/H03 Fase 5, H04 Fase 5. |

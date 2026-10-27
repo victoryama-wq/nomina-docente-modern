@@ -16,6 +16,7 @@ import {
   toMoneyDecimal
 } from '../lib/decimal.js';
 import { buildCsv as serializeCsv, csvAttachmentHeaders } from '../lib/csv.js';
+import { consolidateCashReceipts, type ConsolidatedCashReceipt } from '../lib/cash-receipts.js';
 import type { SessionUser } from '../types.js';
 import { listCycles, loadActorCoordination, type CoordinationRow, type CycleRow } from './academic-context.js';
 
@@ -246,6 +247,12 @@ function canAccessFinanceData(actor: SessionUser): boolean {
   return canViewAllFinance(actor) || canExportFinance(actor);
 }
 
+function actorFinanceCoordinationIds(actor: SessionUser, fallback: CoordinationRow | null): string[] {
+  const ids = actor.actorCoordinations.map((coordination) => coordination.id);
+  if (ids.length) return [...new Set(ids)];
+  return fallback ? [fallback.id] : [];
+}
+
 function canManageFinanceWorkflow(actor: SessionUser): boolean {
   return isSystemAdmin(actor) || actor.permissions.includes('finance.workflow');
 }
@@ -340,16 +347,19 @@ async function listFinanceRuns(
   client: PoolClient,
   cycleId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  actorCoordinationIds: string[]
 ): Promise<FinanceRun[]> {
   const params: unknown[] = [cycleId];
   let visibility = '';
+  let scopedHaving = '';
   if (!canAccessFinanceData(actor)) {
-    if (actorCoordination) {
-      params.push(actorCoordination.id);
-      visibility = 'AND pl.coordination_id = $2';
+    if (actorCoordinationIds.length) {
+      params.push(actorCoordinationIds);
+      visibility = 'AND pl.coordination_id = ANY($2::uuid[])';
+      scopedHaving = 'HAVING count(pl.id) > 0';
     } else {
       visibility = 'AND false';
+      scopedHaving = 'HAVING count(pl.id) > 0';
     }
   }
 
@@ -423,6 +433,7 @@ async function listFinanceRuns(
         approved_user.email,
         paid_user.email,
         status_user.email
+      ${scopedHaving}
       ORDER BY pr.calculated_at DESC NULLS LAST, pr.created_at DESC
       LIMIT 72
     `,
@@ -467,14 +478,14 @@ async function listFinanceLines(
   client: PoolClient,
   runId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  actorCoordinationIds: string[]
 ): Promise<FinanceLine[]> {
   const params: unknown[] = [runId];
   let visibility = '';
   if (!canAccessFinanceData(actor)) {
-    if (actorCoordination) {
-      params.push(actorCoordination.id);
-      visibility = 'AND pl.coordination_id = $2';
+    if (actorCoordinationIds.length) {
+      params.push(actorCoordinationIds);
+      visibility = 'AND pl.coordination_id = ANY($2::uuid[])';
     } else {
       visibility = 'AND false';
     }
@@ -554,14 +565,14 @@ async function listFinanceScheduleDetails(
   client: PoolClient,
   runId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  actorCoordinationIds: string[]
 ): Promise<FinanceScheduleDetail[]> {
   const params: unknown[] = [runId];
   let visibility = '';
   if (!canAccessFinanceData(actor)) {
-    if (actorCoordination) {
-      params.push(actorCoordination.id);
-      visibility = 'AND coordination_id = $2';
+    if (actorCoordinationIds.length) {
+      params.push(actorCoordinationIds);
+      visibility = 'AND coordination_id = ANY($2::uuid[])';
     } else {
       visibility = 'AND false';
     }
@@ -624,14 +635,14 @@ async function listFinanceExtraDetails(
   client: PoolClient,
   runId: string,
   actor: SessionUser,
-  actorCoordination: CoordinationRow | null
+  actorCoordinationIds: string[]
 ): Promise<FinanceExtraDetail[]> {
   const params: unknown[] = [runId];
   let visibility = '';
   if (!canAccessFinanceData(actor)) {
-    if (actorCoordination) {
-      params.push(actorCoordination.id);
-      visibility = 'AND coordination_id = $2';
+    if (actorCoordinationIds.length) {
+      params.push(actorCoordinationIds);
+      visibility = 'AND coordination_id = ANY($2::uuid[])';
     } else {
       visibility = 'AND false';
     }
@@ -944,6 +955,7 @@ function summarizeCoordinations(lines: FinanceLine[]): CoordinationSummary[] {
 async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
   const cycles = await listCycles();
   const actorCoordination = await withTransaction((client) => loadActorCoordination(client, actor, false));
+  const actorCoordinationIds = actorFinanceCoordinationIds(actor, actorCoordination);
   const requestedRun = query.runId
     ? await withTransaction((client) => loadReportRunHeader(client, query.runId as string))
     : null;
@@ -970,13 +982,13 @@ async function buildFinanceContext(actor: SessionUser, query: FinanceQuery) {
   }
 
   return withTransaction(async (client) => {
-    const runs = await listFinanceRuns(client, selectedCycle.id, actor, actorCoordination);
+    const runs = await listFinanceRuns(client, selectedCycle.id, actor, actorCoordinationIds);
     const selectedRun = runs.find((run) => run.id === query.runId) || runs[0] || null;
-    const lines = selectedRun ? await listFinanceLines(client, selectedRun.id, actor, actorCoordination) : [];
+    const lines = selectedRun ? await listFinanceLines(client, selectedRun.id, actor, actorCoordinationIds) : [];
     const scheduleDetails = selectedRun
-      ? await listFinanceScheduleDetails(client, selectedRun.id, actor, actorCoordination)
+      ? await listFinanceScheduleDetails(client, selectedRun.id, actor, actorCoordinationIds)
       : [];
-    const extraDetails = selectedRun ? await listFinanceExtraDetails(client, selectedRun.id, actor, actorCoordination) : [];
+    const extraDetails = selectedRun ? await listFinanceExtraDetails(client, selectedRun.id, actor, actorCoordinationIds) : [];
     const summary = summarizeLines(lines);
     const visibleLines = lines.map((line) => sanitizeFinanceLineForActor(actor, line));
     if (selectedRun) selectedRun.summary = summary;
@@ -1001,11 +1013,12 @@ async function loadVisibleFinanceRun(client: PoolClient, actor: SessionUser, run
   if (!runHeader) return null;
 
   const actorCoordination = await loadActorCoordination(client, actor, false);
-  const runs = await listFinanceRuns(client, runHeader.cycleId, actor, actorCoordination);
+  const actorCoordinationIds = actorFinanceCoordinationIds(actor, actorCoordination);
+  const runs = await listFinanceRuns(client, runHeader.cycleId, actor, actorCoordinationIds);
   const run = runs.find((item) => item.id === runId) || null;
   if (!run) return null;
 
-  const lines = await listFinanceLines(client, run.id, actor, actorCoordination);
+  const lines = await listFinanceLines(client, run.id, actor, actorCoordinationIds);
   run.summary = summarizeLines(lines);
   const visibleLines = lines.map((line) => sanitizeFinanceLineForActor(actor, line));
   return {
@@ -1459,7 +1472,7 @@ function receiptFileName(run: FinanceRun): string {
   return `comprobantes-efectivo-${safePeriod || run.id}.pdf`;
 }
 
-function drawReceipt(doc: PDFKit.PDFDocument, run: FinanceRun, line: FinanceLine, y: number): void {
+function drawReceipt(doc: PDFKit.PDFDocument, run: FinanceRun, receipt: ConsolidatedCashReceipt, y: number): void {
   const left = 42;
   const width = 528;
   const top = y + 28;
@@ -1487,9 +1500,8 @@ function drawReceipt(doc: PDFKit.PDFDocument, run: FinanceRun, line: FinanceLine
   };
 
   row('Quincena', run.periodLabel);
-  row('Docente', line.teacherName);
-  row('Coordinación', line.coordinationName);
-  row('Monto pagado', moneyText(line.totalAmount));
+  row('Docente', receipt.teacherName);
+  row('Monto pagado', moneyText(receipt.totalAmount));
   row('Fecha de emision', new Date().toLocaleDateString('es-MX'));
 
   cursor += 14;
@@ -1510,7 +1522,7 @@ function drawReceipt(doc: PDFKit.PDFDocument, run: FinanceRun, line: FinanceLine
   doc.restore();
 }
 
-function buildCashReceiptsPdf(run: FinanceRun, lines: FinanceLine[]): Promise<Buffer> {
+function buildCashReceiptsPdf(run: FinanceRun, receipts: ConsolidatedCashReceipt[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'LETTER', margin: 0, autoFirstPage: true });
     const chunks: Buffer[] = [];
@@ -1518,7 +1530,7 @@ function buildCashReceiptsPdf(run: FinanceRun, lines: FinanceLine[]): Promise<Bu
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    lines.forEach((line, index) => {
+    receipts.forEach((receipt, index) => {
       if (index > 0 && index % 2 === 0) doc.addPage();
       const slot = index % 2;
       if (slot === 1) {
@@ -1528,7 +1540,7 @@ function buildCashReceiptsPdf(run: FinanceRun, lines: FinanceLine[]): Promise<Bu
         doc.undash();
         doc.restore();
       }
-      drawReceipt(doc, run, line, slot === 0 ? 0 : 396);
+      drawReceipt(doc, run, receipt, slot === 0 ? 0 : 396);
     });
 
     doc.end();
@@ -1538,7 +1550,7 @@ function buildCashReceiptsPdf(run: FinanceRun, lines: FinanceLine[]): Promise<Bu
 export async function registerReportRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/reports/finance/context',
-    { preHandler: requireAnyPermission(['finance.view', 'finance.global_view']) },
+    { preHandler: requireAnyPermission(['finance.view', 'finance.global_view', 'finance.export', 'payroll.preview']) },
     async (request, reply) => {
       const parsed = querySchema.safeParse(request.query as FinanceQuery);
       if (!parsed.success) {
@@ -1665,15 +1677,14 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
         const runHeader = await loadReportRunHeader(client, parsedParams.data.id);
         if (!runHeader) return null;
         const actorCoordination = await loadActorCoordination(client, actor, false);
-        const runs = await listFinanceRuns(client, runHeader.cycleId, actor, actorCoordination);
+        const actorCoordinationIds = actorFinanceCoordinationIds(actor, actorCoordination);
+        const runs = await listFinanceRuns(client, runHeader.cycleId, actor, actorCoordinationIds);
         const run = runs.find((item) => item.id === parsedParams.data.id) || null;
         if (!run) return null;
-        const lines = await listFinanceLines(client, run.id, actor, actorCoordination);
+        const lines = await listFinanceLines(client, run.id, actor, actorCoordinationIds);
         return {
           run,
-          cashLines: lines.filter((line) => line.paymentType === 'E').sort((left, right) =>
-            left.teacherName.localeCompare(right.teacherName, 'es')
-          )
+          cashReceipts: consolidateCashReceipts(lines)
         };
       });
 
@@ -1682,12 +1693,12 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
         return;
       }
 
-      if (!result.cashLines.length) {
+      if (!result.cashReceipts.length) {
         await reply.code(404).send({ error: 'NOT_FOUND', message: 'No hay docentes con pago en efectivo en esta nómina.' });
         return;
       }
 
-      const pdf = await buildCashReceiptsPdf(result.run, result.cashLines);
+      const pdf = await buildCashReceiptsPdf(result.run, result.cashReceipts);
       await reply
         .header('Content-Type', 'application/pdf')
         .header('Content-Disposition', `attachment; filename="${receiptFileName(result.run)}"`)

@@ -121,6 +121,7 @@ const selectedCoordinationExtraDetails = computed(() =>
 );
 
 const cashLines = computed(() => lines.value.filter((line) => line.paymentType === 'E'));
+const cashReceiptCount = computed(() => new Set(cashLines.value.map((line) => line.teacherId)).size);
 
 const cashAmount = computed(() => cashLines.value.reduce((sum, line) => moneyAdd(sum, line.totalAmount), '0.00'));
 
@@ -195,7 +196,7 @@ const workflowConfirmDetails = computed(() => {
     `Estado actual: ${selectedRun.value ? statusLabel(selectedRun.value.status) : '-'}`,
     `Total: ${moneyLabel(summary.value.totalAmount)}`,
     `Pendientes fiscales: ${summary.value.fiscalPending}`,
-    `Pagos en efectivo: ${cashLines.value.length} / ${moneyLabel(cashAmount.value)}`
+    `Pagos en efectivo: ${cashReceiptCount.value} comprobantes consolidados / ${moneyLabel(cashAmount.value)}`
   ];
 
   if (pendingStatus.value === 'CANCELADA') {
@@ -771,7 +772,7 @@ onMounted(() => {
       <article class="cash-summary">
         <strong>Efectivo</strong>
         <span>{{ moneyLabel(cashAmount) }}</span>
-        <small>{{ cashLines.length }} comprobante{{ cashLines.length === 1 ? '' : 's' }}</small>
+        <small>{{ cashReceiptCount }} comprobante{{ cashReceiptCount === 1 ? '' : 's' }} consolidado{{ cashReceiptCount === 1 ? '' : 's' }}</small>
       </article>
     </section>
 
@@ -867,12 +868,12 @@ onMounted(() => {
                 </td>
               </tr>
               <tr v-for="line in filteredLines" :key="line.id">
-                <td v-if="authStore.canViewFiscal">
+                <td class="teacher-cell" data-testid="finance-teacher-name">
                   <strong>{{ line.teacherName }}</strong>
                   <span><Building2 :size="13" /> {{ line.coordinationName }}</span>
                   <small>{{ categoryLabel(line.category) }} / {{ paymentTypeLabel(line.paymentType) }}</small>
                 </td>
-                <td>
+                <td v-if="authStore.canViewFiscal">
                   <strong>{{ line.rfc || 'RFC pendiente' }}</strong>
                   <span>{{ line.email || 'Correo pendiente' }}</span>
                   <small>{{ line.bankDetail || 'Datos bancarios pendientes' }}</small>

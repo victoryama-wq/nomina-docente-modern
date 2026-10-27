@@ -11,6 +11,7 @@ import {
 import {
   PERMISSIONS,
   TEST_COORDINATIONS,
+  adminActor,
   accountantActor,
   coordinatorActor,
   createSessionUser,
@@ -177,12 +178,52 @@ describeIfDb('H03 permission separation business integration coverage', () => {
     expect(accountantExport.statusCode).toBe(200);
     expect(accountantExport.headers['content-type']).toContain('text/csv');
 
+    const accountantContext = await injectAs(app!, accountantActor(), {
+      method: 'GET',
+      url: '/api/reports/finance/context'
+    });
+    expect(accountantContext.statusCode).toBe(200);
+
     const accountantWorkflow = await injectAs(app!, accountantActor(), {
       method: 'PATCH',
       url: `/api/reports/finance/runs/${TEST_IDS.payrollRun}/status`,
       payload: { status: 'EN_REVISION' }
     });
     expect(accountantWorkflow.statusCode).toBe(403);
+  });
+
+  it('allows coordinator read-only finance within assigned coordinations and keeps fiscal data hidden', async () => {
+    const saved = await injectAs(app!, adminActor(), {
+      method: 'POST',
+      url: '/api/payroll/runs',
+      payload: payrollInput()
+    });
+    expect(saved.statusCode).toBe(201);
+
+    const runId = saved.json().run.id as string;
+    const context = await injectAs(app!, coordinatorActor(), {
+      method: 'GET',
+      url: `/api/reports/finance/context?runId=${runId}`
+    });
+
+    expect(context.statusCode).toBe(200);
+    const body = context.json();
+    expect(body.lines).toHaveLength(1);
+    expect(body.lines[0]).toMatchObject({
+      teacherName: 'Docente QA Idiomas Uno',
+      coordinationName: 'Idiomas',
+      rfc: '',
+      email: '',
+      bankDetail: '',
+      fiscalMissing: []
+    });
+    expect(body.lines.some((line: { coordinationName: string }) => line.coordinationName === 'ADETUR')).toBe(false);
+
+    const denied = await injectAs(app!, rhActor(), {
+      method: 'GET',
+      url: `/api/reports/finance/context?runId=${runId}`
+    });
+    expect(denied.statusCode).toBe(403);
   });
 
   it('allows finance.workflow to move payroll status through approved transitions', async () => {

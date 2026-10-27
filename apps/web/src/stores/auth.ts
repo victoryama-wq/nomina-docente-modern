@@ -32,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
   const canViewFinanceReports = computed(
     () =>
       isAdmin.value ||
+      session.value?.role === 'coordinador' ||
       hasPermission('finance.view') ||
       hasPermission('finance.global_view') ||
       canExportFinance.value

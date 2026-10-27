@@ -24,7 +24,10 @@ export function financeVisibility(session: SessionUser) {
 
   return {
     canOpenModule:
-      hasPermission(session, 'finance.view') || hasPermission(session, 'finance.global_view') || canExport,
+      session.role === 'coordinador' ||
+      hasPermission(session, 'finance.view') ||
+      hasPermission(session, 'finance.global_view') ||
+      canExport,
     showExportActions: canExport,
     showWorkflowActions: canWorkflow,
     showFiscalExport: canExport && canViewFiscal,

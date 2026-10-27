@@ -42,10 +42,16 @@ describe('frontend permission visibility helpers', () => {
   });
 
   it('separates finance view, export, workflow and fiscal-sensitive data', () => {
+    const coordinator = financeVisibility(coordinatorSession());
     const direction = financeVisibility(directionSession());
     const accountant = financeVisibility(accountantSession());
     const accounting = financeVisibility(accountingSession());
     const finance = financeVisibility(financeSession());
+
+    expect(coordinator.canOpenModule).toBe(true);
+    expect(coordinator.showExportActions).toBe(false);
+    expect(coordinator.showWorkflowActions).toBe(false);
+    expect(coordinator.showFiscalSensitiveData).toBe(false);
 
     expect(direction.canOpenModule).toBe(true);
     expect(direction.showWorkflowActions).toBe(false);
