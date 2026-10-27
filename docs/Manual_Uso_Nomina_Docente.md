@@ -4,7 +4,7 @@
 **Ambiente:** Producción  
 **URL:** `https://nomina-docente-prod.web.app`  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
-**Versión:** 1.3 ajuste Finanzas
+**Versión:** 1.4 Finanzas y Reportes post-H23
 
 **Fecha original:** 9 de mayo de 2026
 **Última actualización:** 27 de octubre de 2026
@@ -65,9 +65,9 @@ Los permisos se aplican en dos niveles:
 | Rol | Alcance general |
 |---|---|
 | Admin | Acceso completo al sistema, usuarios, calendario, catálogos, nómina, finanzas y auditoría |
-| Coordinador | Consulta global de Directorio; edición de docentes por capturador; operación por alcance; preview H20 sin finalización ni fiscal; Finanzas de sus coordinaciones con nombre docente, solo lectura |
+| Coordinador | Consulta global de Directorio y ambas pestañas de Reportes; edición de docentes por capturador; operación por alcance; preview H20 sin finalización ni fiscal; Finanzas de sus coordinaciones con nombre docente, solo lectura |
 | Dirección/Subdirección | Consulta global de nómina, Reportes Operativos y Finanzas con nombre docente; sin finalización ni workflow financiero |
-| RH | Gestión de expedientes fiscales y consulta autorizada de carga por categoría |
+| RH | Gestión de expedientes fiscales; sin acceso a Reportes Operativos H18 |
 | Finanzas | Nóminas guardadas, reportes financieros, pagos y workflow según permiso; sin Reportes Operativos H18 |
 | Contador/Contabilidad | Exportación y consulta financiera autorizada; sin workflow, gestión fiscal ni Reportes Operativos H18 |
 
@@ -85,7 +85,7 @@ Los permisos se aplican en dos niveles:
 | Capturar Incidencias | Sí | Sí | Sí | Sí | No |
 | Capturar Extras | Sí | Sí | Sí | Sí | No |
 | Nómina | Sí | Consulta de su alcance | Consulta global | Consulta según permiso | Consulta |
-| Reportes Operativos | Ambas pestañas | Solo carga por categoría | Ambas pestañas | Solo carga por categoría | No |
+| Reportes Operativos | Ambas pestañas, global | Ambas pestañas, global | Ambas pestañas, global | No | No |
 | Finanzas | Sí | Solo sus coordinaciones, con nombres | Consulta global con nombres | No por el permiso fiscal solo | Consulta con nombres según permisos |
 | Auditoría | Sí | No | No | No | No |
 
@@ -596,15 +596,31 @@ Al guardar:
 
 ### 15.1 Reportes Operativos
 
-La ruta `/reports` es independiente de Finanzas y contiene:
+La ruta `/reports` es independiente de Finanzas. Admin, Dirección/Subdirección y Coordinador pueden consultar y exportar ambas pestañas con alcance global, incluidos docentes capturados por otros usuarios. RH, Finanzas, Contador y Contabilidad no tienen acceso. Esta consulta no concede edición, guardado ni finalización de nómina y no amplía el alcance del módulo Finanzas.
 
-- `Horas base y extras`: visible solo para Admin y Dirección/Subdirección.
-- `Horas base por categoría`: visible para Admin, Dirección/Subdirección, Coordinador y RH.
-- Filtros por ciclo/quincena con nombres legibles y búsqueda general.
-- Descarga CSV y Excel XLSX con los mismos filtros de la consulta.
-- Uso automático de datos vivos o snapshot según exista nómina guardada no cancelada.
+**Horas base y extras: revisión de la quincena.**
 
-Coordinador queda limitado a su alcance operativo en la pestaña permitida. Finanzas, Contador y Contabilidad no ven este módulo. Los reportes no muestran RFC, banco, cuenta, CLABE, tipo de pago ni constancias.
+1. Seleccione el ciclo `ACTIVO` y una quincena obligatoria de su calendario. La lista incluye todas las quincenas configuradas, con o sin nómina guardada. La quincena de trabajo es la que selecciona el usuario, no una fecha elegida automáticamente por el sistema.
+2. Use la búsqueda general por docente, coordinación o capturador disponible; también puede filtrar categoría y tipo `Todos`, `Con extras` o `Sin extras`.
+3. Presione `Consultar`. La etiqueta `Nómina guardada` indica que se usan los datos de una corrida no cancelada de esa quincena; `Datos vivos` indica que aún no existe esa corrida y se aplica la vigencia temporal H23. No hay consulta viva de todo el ciclo sin quincena.
+4. Revise `Horas base de la quincena`, faltas, retardos, descuento por retardos, base neta, extras de incidencia y extras externos. Cada retardo descuenta 0.5 horas; la base neta no puede ser negativa. El total real informativo del docente suma su base neta y ambos tipos de extras.
+5. Revise el indicador `Sobrecarga`: aparece si el total real supera 70 horas para VIP, 50 para Medio tiempo o 30 para Nuevo ingreso. Es una alerta informativa, no un bloqueo ni una autorización de pago.
+
+El detalle conserva coordinación y responsable del horario. El total real y el límite corresponden al docente consolidado, aunque se muestren en varias filas de desglose: no deben sumarse de nuevo entre esas filas. Para revisar su carga completa, quite filtros de coordinación/capturador o tipo que puedan reducir las filas consultadas; en la búsqueda general use el nombre del docente.
+
+La vista viva necesita inicio y fin de horas base configurados en Calendario. Respeta los días elegibles y los módulos S1/S2 de H23; los extras independientes conservan su regla de fecha dentro de la quincena. La consulta no abre ventanas de captura ni modifica horarios, incidencias o extras.
+
+**Horas base por categoría: carga semanal del ciclo.**
+
+Seleccione un ciclo; esta pestaña no pide quincena y siempre consulta horarios vivos, no snapshots. Busque por docente o coordinación y filtre categoría o estado `Completo`, `Faltante` o `Excedido`.
+
+Se presenta una fila por docente. Primero se suma toda su carga entre coordinaciones: horas L-V, L-V más S1 y L-V más S2. Las horas asignadas son el mayor de esos tres valores. Se comparan una sola vez contra el umbral semanal de la categoría asignada: VIP 35, Medio tiempo 25 o Nuevo ingreso 15. Las horas restantes son esperadas menos asignadas; si son negativas, hay excedente. Las coordinaciones se conservan como desglose, sin repetir el umbral. No es un total quincenal ni un cálculo de horas pagables: no descuenta faltas/retardos ni añade extras.
+
+Ambas pestañas excluyen docentes inactivos y sin horarios. No muestran RFC, banco, cuenta, CLABE, tipo de pago ni constancias. Los datos guardados no se reescriben; algunos nombres/responsables disponibles pueden resolverse desde relaciones actuales y no constituyen una certificación histórica independiente.
+
+Después de ajustar filtros, presione `Consultar` antes de descargar `CSV` o `Excel`, para comparar la tabla con el mismo conjunto solicitado. Los archivos utilizan los filtros actuales; CSV conserva UTF-8 y Excel es XLSX real generado por el API. En nóminas guardadas, un capturador no disponible en el snapshot puede mostrarse como `-`.
+
+Este funcionamiento corresponde al ajuste H18 post-H23 cerrado operativo, documentado en `docs/auditoria/H18_Deploy_PostH23_Reportes_Operativos.md`.
 
 El módulo `Finanzas` trabaja con nóminas ya guardadas. No recalcula desde datos vivos.
 
@@ -1250,7 +1266,7 @@ Reglas:
 
 ### 22.12 Reportes Operativos y Finanzas
 
-En `Reportes`, el selector de ciclo y la quincena guardada usan etiquetas legibles; la búsqueda general filtra docente, coordinación o capturador según la pestaña. `CSV` y `Excel` exportan exactamente los filtros aplicados. La etiqueta de origen informa `Datos vivos` o `Nómina guardada` sin pedir al usuario seleccionar el origen técnico.
+En `Reportes`, `Horas base y extras` exige ciclo activo y quincena seleccionada, con etiquetas legibles; lista todos los periodos configurados, no solo los guardados. `Horas base por categoría` exige ciclo pero no quincena. La búsqueda general filtra docente, coordinación o capturador disponible según la pestaña. `CSV` y `Excel` usan los filtros actuales: consulte de nuevo tras cambiarlos. Solo la primera pestaña resuelve automáticamente `Datos vivos` o `Nómina guardada`; la segunda siempre usa horarios vivos.
 
 Permisos de Reportes Operativos:
 
@@ -1258,9 +1274,11 @@ Permisos de Reportes Operativos:
 |---|---:|---:|
 | Admin | Sí | Sí |
 | Dirección/Subdirección | Sí | Sí |
-| Coordinador | No | Sí, según alcance |
-| RH | No | Sí |
+| Coordinador | Sí, global | Sí, global |
+| RH | No | No |
 | Finanzas/Contador/Contabilidad | No | No |
+
+Admin y Dirección/Subdirección también tienen alcance global. La consulta y exportación no habilitan edición ni acciones de nómina. Los umbrales semanales 35/25/15 de categoría no deben confundirse con los límites informativos quincenales 70/50/30 de base y extras. Véase la sección 15.1 para cálculo, descuentos y lectura del desglose.
 
 Finanzas consulta nóminas guardadas. No calcula desde datos vivos.
 
@@ -1363,9 +1381,9 @@ Solo Admin debe tener acceso normal a este módulo.
 | Rol | Puede ver | Puede capturar o modificar | No debe poder hacer |
 |---|---|---|---|
 | Admin | Todos los módulos y todos los datos | Usuarios, docentes, fiscal, catálogos, calendario, horarios, incidencias, extras, nómina, finanzas y auditoría | Eliminar al administrador general protegido |
-| Coordinador | Dashboard, Directorio global de lectura, Horarios, Incidencias, Extras, Nómina H20 y Reportes de categoría según alcance | Docentes propios por `created_by`, horarios/incidencias según alcance y extras capturados por él | Editar docentes ajenos, finalizar nómina, ver fiscal, administrar usuarios/calendario/catálogos/auditoría o finanzas globales |
+| Coordinador | Dashboard, Directorio global de lectura, Horarios, Incidencias, Extras, Nómina H20 y ambas pestañas de Reportes globales | Docentes propios por `created_by`, horarios/incidencias según alcance y extras capturados por él | Editar docentes ajenos, finalizar nómina, ver fiscal, administrar usuarios/calendario/catálogos/auditoría o finanzas globales |
 | Dirección/Subdirección | Dashboard, operación tipo coordinación, nómina viva global y finanzas globales de lectura | Sin acciones financieras o destructivas; opera solo lo permitido por su configuración | Guardar nómina, cambiar estados financieros, administrar calendario o accesos |
-| RH | Dashboard, Directorio, Expediente Fiscal y operación permitida | Actualizar expedientes fiscales y datos faltantes | Guardar nómina, administrar accesos, calendario, catálogos o auditoría |
+| RH | Dashboard, Directorio, Expediente Fiscal y operación permitida | Actualizar expedientes fiscales y datos faltantes | Reportes Operativos H18, guardar nómina, administrar accesos, calendario, catálogos o auditoría |
 | Finanzas | Nóminas guardadas, pagos, reportes financieros, pendientes fiscales e histórico | Generar exportables y revisar estados según permiso financiero | Reportes Operativos H18, capturar horarios/incidencias/extras o administrar usuarios |
 | Contador/Contabilidad | Nóminas guardadas y exportaciones autorizadas | Exportar según permiso | Workflow, gestión fiscal, Reportes Operativos H18 o captura académica |
 
@@ -1386,8 +1404,8 @@ Notas:
 | Nómina | `Resumen CSV` | Líneas resumidas de nómina guardada | Revisión interna |
 | Nómina | `Horarios CSV` | Horarios considerados en la corrida | Validación académica |
 | Nómina | `Extras CSV` | Extras considerados en la corrida | Validación de pagos adicionales |
-| Reportes Operativos | CSV / XLSX `Horas base y extras` | Horas base, incidencias y extras, con origen vivo/snapshot | Admin y Dirección/Subdirección |
-| Reportes Operativos | CSV / XLSX `Horas base por categoría` | Carga esperada, asignada, restante y estado | Admin, Dirección/Subdirección, Coordinador y RH |
+| Reportes Operativos | CSV / XLSX `Horas base y extras` | Quincena seleccionada: base, descuentos, extras, total real y sobrecarga; origen vivo/snapshot | Admin, Dirección/Subdirección y Coordinador, global |
+| Reportes Operativos | CSV / XLSX `Horas base por categoría` | Carga semanal consolidada, esperada, asignada, restante, estado y desglose | Admin, Dirección/Subdirección y Coordinador, global |
 | Finanzas | PDF `Resumen` | Resumen ejecutivo de nómina | Dirección, Finanzas o Administración |
 | Finanzas | PDF `Coordinaciones` | Resumen por coordinación | Revisión por área |
 | Finanzas | PDF `Efectivo` | Comprobantes de pago en efectivo | Firma de conformidad |

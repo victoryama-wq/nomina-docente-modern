@@ -1,7 +1,7 @@
 # Manual de entrega - Nómina Docente
 
 **Proyecto:** Nómina Docente  
-**Versión de entrega:** 1.3 ajuste Finanzas
+**Versión de entrega:** 1.4 Finanzas y Reportes post-H23
 
 **Fecha original:** 8 de mayo de 2026
 
@@ -131,9 +131,9 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 | Rol | Alcance |
 |---|---|
 | Admin | Acceso completo, usuarios, calendario, nómina, finanzas, auditoría y configuración |
-| Coordinador | Consulta global de Directorio; edición por `teachers.created_by`; operación por alcance/capturador; preview H20 sin finalización ni fiscal; Finanzas de sus coordinaciones con nombres y solo lectura |
+| Coordinador | Consulta global de Directorio y ambas pestañas de Reportes; edición por `teachers.created_by`; operación por alcance/capturador; preview H20 sin finalización ni fiscal; Finanzas de sus coordinaciones con nombres y solo lectura |
 | Dirección/Subdirección | Consulta global de Nómina, Reportes y Finanzas con nombres; sin finalización ni workflow financiero; edición de Extras solo propios cuando aplica |
-| RH | Gestión global de expedientes fiscales y acceso autorizado a carga por categoría |
+| RH | Gestión global de expedientes fiscales; sin acceso a Reportes Operativos H18 |
 | Finanzas | Consulta financiera, expediente fiscal, reportes y pagos |
 | Contador/Contabilidad | Exportación y consulta financiera autorizada; sin gestión fiscal ni workflow |
 
@@ -592,15 +592,27 @@ Estados de nómina:
 
 ### 6.17 Reportes Operativos
 
-El módulo independiente `/reports` ofrece:
+El módulo independiente `/reports` incorpora el ajuste H18 post-H23 cerrado operativo. Admin, Dirección/Subdirección y Coordinador pueden consultar y exportar ambas pestañas globalmente, incluso docentes de otros capturadores. RH, Finanzas, Contador y Contabilidad están excluidos. Las guardas backend validan los roles; no se utiliza el alcance del Coordinador para recortar H18 ni se amplían permisos de captura, Finanzas o finalización de Nómina.
 
-- `Horas base y extras`: disponible para Admin y Dirección/Subdirección.
-- `Horas base por categoría`: disponible para Admin, Dirección/Subdirección, Coordinador y RH; Coordinador limitado a su alcance operativo.
-- Filtros legibles por ciclo/quincena y búsqueda general, sin IDs técnicos visibles.
-- Exportación CSV UTF-8 y XLSX real generado en API.
-- Datos vivos o snapshots según exista una corrida guardada no cancelada.
+| Aspecto | Horas base y extras | Horas base por categoría |
+|---|---|---|
+| Unidad | Quincena seleccionada | Carga semanal del ciclo seleccionado |
+| Selección | Ciclo ACTIVO y quincena obligatorios; todos sus periodos configurados, con o sin corrida | Ciclo obligatorio; no requiere quincena |
+| Fuente | `source=auto`: corrida no cancelada o cálculo vivo H23 | Siempre horarios vivos; no snapshot |
+| Comparación | Total real del docente contra V=70, M=50, N=30 | Carga global del docente contra V=35, M=25, N=15 |
+| Resultado | Desglose por coordinación, descuentos, extras y sobrecarga informativa | Una fila por docente con estado y desglose por coordinación |
 
-No expone RFC, banco, cuenta, CLABE, `paymentType` ni constancias.
+**Base y extras.** La consulta viva calcula ocurrencias de horarios elegibles dentro de la quincena y de la vigencia base del ciclo, con M1/M2 para S1/S2 y días inhábiles según H23. Requiere vigencia base configurada. No hay consulta viva del ciclo sin quincena. Los extras independientes conservan su elegibilidad por fecha de quincena y no se limitan por la vigencia base.
+
+El cálculo informativo consolidado por docente es: `base_neta = max(base_bruta - faltas - retardos * 0.5, 0)` y `total_real = base_neta + extras_incidencia + extras_externos`. Se marca sobrecarga solo cuando excede el límite quincenal de su categoría. Se muestran también coordinación, responsable de horario, capturadores disponibles, motivo y fecha. El total del docente puede repetirse en filas de desglose y no debe sumarse nuevamente. Se obtiene sobre las filas devueltas por los filtros; para evaluar su carga completa, no deben excluirse coordinaciones o tipos de filas del docente.
+
+Cuando existe una corrida no cancelada, se usa la más reciente de esa quincena y se leen sus snapshots sin recalcularlos ni reescribirlos. El responsable del horario se resuelve mediante la relación actual con `schedules.created_by`, no mediante un snapshot inmutable independiente. Los capturadores de incidencia/extra no disponibles en la proyección guardada se muestran vacíos, no se inventan.
+
+**Categoría.** Se suma globalmente por docente `L-V`, `L-V + S1` y `L-V + S2`, y se toma `GREATEST` como carga asignada semanal. Restante = esperadas menos asignadas. Igualdad produce `completo`, menor carga `faltante` y mayor carga `excedido`. El umbral se aplica una sola vez; las coordinaciones son desglose y no se suman sus máximos individuales para sustituir el máximo global. No es un cálculo quincenal pagable ni descuenta incidencias o incorpora extras.
+
+Ambas pestañas excluyen docentes inactivos y sin horarios. La primera ofrece filtros de ciclo, quincena, búsqueda general, categoría y tipo de extras; la segunda ciclo, búsqueda general, categoría y estado de carga. La UI usa nombres legibles, no IDs ni un selector técnico de origen. CSV UTF-8 con BOM/CRLF (H11) y XLSX server-side con `exceljs` reciben los mismos filtros actuales; conviene volver a consultar antes de exportar si se cambiaron filtros.
+
+No expone RFC, banco, cuenta, CLABE, `paymentType` ni constancias. No modifica H01, importes, snapshots, corridas ni ventanas administrativas. Fuentes: `docs/auditoria/H18_Ajuste_PostH23_Reportes_Operativos.md` y `docs/auditoria/H18_Deploy_PostH23_Reportes_Operativos.md`. El smoke productivo aprobado en esa acta es evidencia previa, no una nueva prueba productiva de esta revisión documental.
 
 ### 6.18 Comprobantes de pago en efectivo
 
