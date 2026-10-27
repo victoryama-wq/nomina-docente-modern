@@ -1,0 +1,159 @@
+# SPEC H24 - Expediente completo de docentes
+
+Fecha: 2026-10-27.
+
+Estado: **H24-F0 documental. Decisiones funcionales aprobadas; diseno tecnico propuesto. Sin implementacion ni despliegue.**
+
+Diseno complementario: [DISENO_TECNICO_H24_Expediente_Completo_Docentes.md](../diseno/DISENO_TECNICO_H24_Expediente_Completo_Docentes.md).
+
+## 1. Objetivo
+
+Ampliar Expediente Fiscal para administrar documentos personales y academicos del docente, conservando su constancia fiscal y los permisos por accion. Permitir seleccionar varios PDF juntos, consultarlos, descargarlos, reemplazarlos y eliminarlos definitivamente. Incorporar edicion del telefono operativo compartido con Directorio.
+
+No crear otro directorio de docentes ni otra fuente de datos personales. El expediente siempre pertenece al UUID existente de `teachers`.
+
+## 2. Situacion actual verificada en el repositorio
+
+- La ruta `/expediente-fiscal` usa `FiscalRecordsView.vue` y el listado de `teachers`.
+- La constancia tiene carga individual, vista previa autenticada y descarga. Admite PDF, JPG y PNG; esta compatibilidad se conserva.
+- `teacher_documents` almacena referencias privadas a archivos. Su indice `teacher_documents_one_current_constancia_idx` restringe a un vigente por docente/tipo, aunque su nombre mencione constancia.
+- El reemplazo actual de constancia conserva referencias anteriores como no vigentes. H24 no autoriza una limpieza retroactiva de esos objetos.
+- El modal fiscal modifica RFC, correo fiscal, tipo de pago y datos bancarios; no admite telefono actualmente.
+- `teachers.phone` ya existe y es la fuente que utiliza Directorio.
+- Los helpers actuales autorizan por permisos fiscales/documentales. No basta con reutilizarlos sin agregar la lista explicita de roles aprobada para este modulo.
+
+Estas observaciones provienen de archivos locales, no de una inspeccion de infraestructura o datos productivos.
+
+## 3. Decisiones humanas aprobadas
+
+| Tema | Decision |
+|---|---|
+| Acceso | Admin, Finanzas y Recursos Humanos; Admin conserva acceso completo |
+| Resto de roles | Sin acceso a Expediente Fiscal/completo por esta funcionalidad |
+| Documentos adicionales | Solo PDF; seleccion multiple y carga por lote desde una sola seleccion |
+| Multiplicidad | Varios PDF del mismo tipo por docente |
+| Tipos iniciales | CURP, Acta de nacimiento, Cedula profesional, Titulo y Otro |
+| Consulta | Vista previa al hacer clic y descarga desde esa vista |
+| Actualizacion | Reemplazar un archivo y actualizar su clasificacion/nombre descriptivo |
+| Retiro | Eliminar el archivo definitivamente; no conservar versiones documentales retiradas |
+| Constancia | Mantener columna y flujo separados de los PDF adicionales |
+| Entrada al expediente | Nueva columna con boton de ojo, nombre accesible y tooltip |
+| Telefono | Editar `teachers.phone` solo con edicion fiscal vigente y dentro del alcance autorizado |
+| Directorio | Mostrar el mismo telefono persistido; no duplicar campos ni sincronizar dos bases |
+
+La lista de tipos no establece documentos obligatorios ni un criterio nuevo para autorizar pagos. `Otro` permite identificar documentos adicionales sin crear un catalogo editable en esta fase.
+
+## 4. Autorizacion y alcance
+
+La API es autoridad. Ocultar botones no sustituye las comprobaciones servidoras.
+
+| Accion | Admin | Finanzas (`finanzas`) / RH (`rh`) | Otros roles |
+|---|---|---|---|
+| Entrar y consultar datos fiscales | Completo | `fiscal.view` o `fiscal.manage` | Denegado |
+| Listar, previsualizar y descargar documentos | Completo | Acceso al modulo y `fiscal.document.view` o `fiscal.document.manage` | Denegado |
+| Cargar, reemplazar, clasificar o eliminar PDF | Completo | Acceso al modulo y `fiscal.document.manage` | Denegado |
+| Editar telefono | Completo | `fiscal.manage` | Denegado |
+| Editar datos fiscales existentes | Completo | `fiscal.manage`, conservando sus validaciones | Denegado en este modulo |
+
+Se conserva la excepcion de administrador protegido existente en el sistema. No se asignan permisos mediante SQL ni se otorgan permisos nuevos automaticamente a usuarios existentes.
+
+Coordinador, Direccion/Subdireccion, Contador/Contabilidad y roles no aprobados no acceden al modulo ni a sus documentos, incluso con URL conocida. Esto no elimina sus capacidades independientes y vigentes en Directorio, Finanzas o Reportes.
+
+Alcance actual observado: el helper de `teachers.ts`, con `allowFinance: true`, permite alcance global a actores autorizados por permisos fiscales/documentales. Para Finanzas/RH que cumplen la matriz se conserva ese alcance; no se introduce un filtro por `created_by` o coordinacion. Cada solicitud verifica docente, documento y accion. Admin mantiene alcance global.
+
+## 5. Experiencia de usuario
+
+### 5.1 Listado
+
+Conservar la columna Constancia y su indicador. Agregar Expediente con boton de ojo que abra un panel amplio o modal adaptable con el nombre del docente. No mostrar UUID, rutas de almacenamiento ni tokens.
+
+No alterar los filtros existentes, nombres por rol, exportables fiscales ni el calculo de avance fiscal. Un contador de documentos adicionales puede mostrarse separado; no se suma a la completitud fiscal.
+
+### 5.2 Panel del docente
+
+- Identidad visible en solo lectura; nombre, categoria, coordinacion y estatus siguen bajo las reglas actuales de Directorio.
+- Telefono operativo con guardado explicito e independiente de archivos y campos fiscales.
+- Area de documentos adicionales con tipo, titulo/nombre, fecha de carga y acciones permitidas.
+- Selector multiple de PDF, lista previa de archivos y clasificacion por archivo. Permitir asignar un tipo a varios seleccionados.
+- Progreso y resultado individual: pendiente, cargando, disponible, fallo o eliminacion pendiente. Reintentar solo fallidos, sin duplicar los exitosos.
+- Dos PDF distintos del mismo tipo/nombre no se sobrescriben automaticamente. Reemplazar exige seleccionar expresamente el documento destino.
+- La vista previa ofrece descargar y cerrar. No debe depender de una URL publica permanente.
+- Eliminacion con confirmacion que identifique el archivo y advierta que no puede recuperarse desde la aplicacion.
+
+La carga multiple es una sola accion del usuario, aunque tecnicamente se transfieran archivos por separado. No prometer atomicidad de todo el lote: informar exitos parciales sin ocultar fallos.
+
+### 5.3 Telefono compartido
+
+Guardar exclusivamente el telefono, sin reenviar una ficha completa del docente ni un valor fiscal. Aplicar la validacion operativa actual: telefono opcional y, cuando contiene numero, entre 10 y 15 digitos con prefijo internacional opcional, conforme a la normalizacion vigente.
+
+El resultado se refleja en Directorio al volver a consultar/actualizar su listado. Invalidar la cache local correspondiente cuando exista; no prometer sincronizacion en tiempo real de otras sesiones. Un conflicto concurrente debe solicitar recarga y no sobrescribir silenciosamente.
+
+### 5.4 Accesibilidad y responsive
+
+Validar 1440x900, 768x1024 y 390x844: filtros/acciones uniformes, tabla con scroll interno, modal utilizable sin overflow general, botones accesibles por teclado, foco visible y restaurado al cerrar, labels y mensajes legibles. El ojo debe tener nombre accesible, no depender solo del icono o color.
+
+## 6. Eliminacion definitiva y reemplazo
+
+La decision de negocio es eliminar los PDF adicionales retirados, no solo ocultarlos ni archivarlos. Conservar un evento de auditoria minimo sin contenido del PDF ni copia del archivo.
+
+Un reemplazo valida y almacena primero el nuevo PDF; solo despues cambia la referencia y elimina el anterior. Un fallo no debe destruir la unica copia valida. Mientras la eliminacion fisica no se confirme, mostrar estado pendiente, no exito definitivo.
+
+La garantia depende de la configuracion real del almacenamiento: retencion, versiones no actuales, soft delete y respaldos deben revisarse antes del despliegue. Si impiden borrar el archivo, resolver la incompatibilidad antes de habilitar esta funcion. No afirmar que una eliminacion logica reduce inmediatamente almacenamiento.
+
+La aplicacion no puede retirar copias descargadas por usuarios ni prometer borrar respaldos externos ajenos a su control. No cambiar politicas del bucket fiscal compartido sin analisis/aprobacion; el diseno propone aislamiento para los documentos nuevos.
+
+Esta politica no autoriza borrar constancias fiscales historicas, documentos de otros docentes ni registros de Nomina.
+
+## 7. Seguridad y limites
+
+- Archivos privados; autorizar cada consulta, descarga y mutacion con la matriz anterior.
+- Verificar formato PDF real, tamano y nombre seguro; no confiar solo en extension/MIME declarado.
+- No ejecutar contenido del PDF ni inyectar nombres como HTML. Preview aislado y respuesta sin cache compartida.
+- No incluir bytes Base64, contenido documental, RFC, banco, tokens o URLs privadas en logs/auditoria general.
+- Los documentos pueden contener informacion personal sensible: limitar acceso, no indexar su contenido, no hacer OCR ni extraer CURP/RFC automaticamente.
+- Limites de tamano, cantidad por lote y concurrencia seran explicitos y uniformes cliente/servidor. Propuesta tecnica y gates en el diseno; no constituyen limites productivos ya instalados.
+- No agregar documentos ni telefono a exportables existentes salvo autorizacion futura.
+
+## 8. Fuera de alcance
+
+No modificar calculos H01, Nomina, pagos, snapshots, corridas, incidencias, extras, responsables/`created_by`, coordinaciones, permisos fuera de este modulo ni reglas de importacion H22. No incorporar firma digital, OCR, expediente ZIP, documentos publicos, altas masivas de docentes o nuevos requisitos para pagar.
+
+Esta fase no implementa API/UI, no crea SQL, no modifica BD, no instala dependencias y no despliega. La futura persistencia adicional requerira migracion H05 autorizada por separado.
+
+## 9. Criterios de aceptacion de implementacion futura
+
+| Caso | Resultado requerido |
+|---|---|
+| Admin, Finanzas y RH | Acceso segun rol, permiso de accion y alcance; Admin completo |
+| Rol excluido o sin sesion | Denegacion backend 403 o 401; sin menu ni contenido documental |
+| Permiso insuficiente | Lectura no habilita telefono, carga, reemplazo o eliminacion |
+| Varios PDF del mismo tipo | Todos conservados como documentos distintos |
+| Lote con un archivo invalido | Error identificado; archivos validos no se duplican al reintentar |
+| Preview y descarga | Mismo PDF, nombre seguro y autorizacion vigente |
+| ID de documento de otro docente | Rechazo; no acceso cruzado por manipulacion de URL |
+| Reemplazo falla | Documento anterior disponible; nuevo objeto huerfano recuperado/eliminado |
+| Eliminacion falla en almacenamiento | Pendiente visible, reintento durable, sin falso exito |
+| Eliminacion completa | Sin archivo/otras versiones retenidas en almacenamiento administrado; evidencia minima |
+| Telefono editado | Un solo valor en `teachers.phone`, visible en Directorio tras recarga |
+| Solicitud con campos adicionales | Rechazo; no se modifican fiscales, responsable ni campos ajenos |
+| Constancia y avance fiscal | Comportamiento vigente conservado, separado del expediente adicional |
+| Regresion | Nomina/H01, Finanzas, Directorio y roles ajenos sin cambios funcionales |
+
+## 10. Fases propuestas y pendientes tecnicos
+
+1. F0 actual: SPEC y diseno; decisiones funcionales cerradas.
+2. F1 futura: modelo, migracion H05 y API con autorizacion, almacenamiento y reconciliacion de fallos; solo pruebas aisladas.
+3. F2 futura: panel, carga multiple, telefono, preview y pruebas frontend.
+4. F3 futura: integracion, seguridad, responsive y prueba real de borrado/reemplazo en almacenamiento de prueba.
+5. F4/F5 futuras: checklist H13, backup, aprobacion de infraestructura/migracion/deploy y smoke autenticado sin documentos reales de prueba.
+
+Pendientes tecnicos: validar limites operativos y capacidad, herramienta de validacion/escaneo PDF, mecanismo de reintentos durables, configuracion de retencion del almacenamiento y numero disponible de migracion. No quedan pendientes las decisiones sobre roles, multiplicidad, telefono compartido o eliminacion definitiva.
+
+No marcar esta funcionalidad como productiva ni actualizar manuales como si estuviera disponible. El cierre operativo exigira evidencia de permisos y eliminacion fisica, ademas de smoke aprobado.
+
+## 11. Referencias
+
+- [SDD consolidado](../sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md).
+- [H05](../auditoria/H05_Control_Formal_Migraciones.md) y [H13](../auditoria/H13_Checklist_Productivo_Permanente.md).
+- [H03 Fiscal/Finanzas](../auditoria/H02_H03_Fase4_Fiscal_Finanzas_Nomina_Preview.md).
+- Implementacion revisada: `apps/api/src/routes/teachers.ts`, `apps/api/src/auth.ts`, `apps/api/src/app.ts`, `apps/web/src/views/FiscalRecordsView.vue`, `apps/web/src/stores/auth.ts`, `apps/web/src/router/index.ts`, `database/001_initial_schema.sql`.
