@@ -270,6 +270,12 @@ bloqueantes: autenticacion real en test, bucket dedicado privado y borrado sin
 retencion/versiones, parser en imagen y estrategia PDF, worker programado/alertas,
 capacidad, triage npm y ensayo DBA/backup. No reutilizar el bucket de Constancias.
 
+Seguimiento PD-01 (2026-10-27): empaquetado/parser Linux cerrado localmente,
+imagen de `95026bf`, pdfinfo 22.12.0 y smoke 12/12 en build/runtime aislado.
+Ver `H24_Fase4_Correccion_Parser_Pdfinfo.md`, seccion 8, para ID e inventario.
+Revalidar artefacto si se reconstruye; estrategia PDF y demas gates siguen
+pendientes. Esto no autoriza migracion, infraestructura cloud ni deploy.
+
 H05 esperado para esa ventana: 18 registradas hasta 015 y **solo 016 pendiente**,
 checksum mismatch=0; despues de aplicacion autorizada, 19 registradas y pending=0.
 Son expectativas, no nueva consulta a produccion. El runner aplica todos los

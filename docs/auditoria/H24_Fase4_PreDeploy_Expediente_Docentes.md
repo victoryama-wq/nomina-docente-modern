@@ -9,8 +9,9 @@ H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprob
 
 Seguimiento tecnico autorizado (2026-10-27):
 [correccion del empaquetado pdfinfo](H24_Fase4_Correccion_Parser_Pdfinfo.md).
-Dockerfile incorpora Poppler y smoke obligatorio; pruebas Windows OK. PD-01 sigue
-parcialmente pendiente hasta construir/probar la imagen Linux. Las secciones de
+**PD-01 cerrado localmente**: imagen API Linux construida desde `95026bf`, pdfinfo
+22.12.0 y 12/12 comprobaciones en build y runtime aislado, tambien como usuario node.
+PD-02 a PD-08 y AUTH-01 siguen pendientes; no se autoriza release. Las secciones de
 revision inicial y sus confirmaciones documentales se conservan como evidencia
 de la preparacion F4 anterior a esta correccion.
 
@@ -38,7 +39,7 @@ ni afirmaciones sobre la infraestructura actualmente desplegada.
 
 | ID / prioridad | Evidencia local y riesgo | Condicion de cierre / responsable |
 |---|---|---|
-| H24-PD-01 / Alta | Hallazgo inicial: runtime sin pdfinfo y validador exige ruta absoluta. Correccion local: Dockerfile instala Poppler, define /usr/bin/pdfinfo y exige smoke compilado; parser Windows validado. Imagen Linux aun no construida por ausencia de Docker/WSL | Parcial: pendiente imagen Linux, inventario/version, artefacto reproducible y PDF valido/invalido/timeout real antes de release; ver acta de correccion |
+| H24-PD-01 / Alta inicial | Dockerfile corregido; imagen Linux local de 95026bf con /usr/bin/pdfinfo 22.12.0, paquete 22.12.0-2+deb12u3. Inventario/digest registrados; smoke final 12/12 incluido timeout real y limpieza, tambien como usuario node | Cerrado en alcance empaquetado/parser Linux local. Repetir sobre artefacto de release si cambia; no cierra seguridad PDF ni vulnerabilidades. Ver acta de correccion, seccion 8 |
 | H24-PD-02 / Alta | Solo hay mock SDK GCS. `dossier-storage.ts:207` exige politica estricta; no se conoce bucket/IAM de prueba ni evidencia de borrado real | DevOps/Seguridad: bucket nuevo aislado, nunca Constancias, prueba de politica, permisos y ausencia de objetos/versiones tras borrar/reemplazar |
 | H24-PD-03 / Alta | `validateDossierPdf` hace comprobaciones estructurales/JavaScript, no antivirus. Preview Blob usa visor nativo sin sandbox HTML (`TeacherDossierPanel.vue:312`) | Seguridad: aprobar e implementar/probar estrategia PDF malicioso o aceptar formalmente control alternativo con riesgo acotado; no declarar pdfinfo un escaner |
 | H24-PD-04 / Alta | `dossier-reconcile.ts:14` es worker one-shot; no existe programacion versionada/probada. `reconcile()` procesa hasta 25 pendientes mayores de cinco minutos por invocacion | DevOps: worker privado programado, permisos minimos, reinicios/fallos ensayados, alertas por backlog y antiguedad; recuperacion real en entorno de prueba |
@@ -147,8 +148,10 @@ descargada; no afirmar sandbox HTML. Elegir control compatible con la decision
 funcional, probar corpus benigno/adverso aprobado en aislado y verificar que no se
 sirva un archivo no aprobado. No enviar expedientes a servicios de analisis externos.
 
-Imagen futura: verificar parser en la **imagen Linux final**, ruta absoluta y
+En la revision inicial se requirio verificar parser en la **imagen Linux final**, ruta absoluta y
 version, timeout, temporales, permisos de ejecucion/usuario y consumo de memoria.
+Seguimiento PD-01: build local y smoke Linux aislado aprobados, ver seccion 8 del
+acta de correccion. Prueba limitada a 512 MiB/1 CPU; capacidad sostenida pendiente.
 El Dockerfile actual usa npm install y copia node_modules del build; revisar
 reproducibilidad/inventario de imagen en el trabajo de empaquetado, sin aceptar
 cambios de lockfile no explicados. Build TypeScript OK no prueba que exista pdfinfo.
@@ -234,7 +237,7 @@ con esquema/registro hasta 015 y ejecutar 016 por runner, con autorizacion local
 separada. No copiar ese estado ni los datos sinteticos hacia produccion.
 
 Orden propuesto **NO ejecutado**:
-1. Cerrar PD-01 a PD-08 y AUTH-01, aprobar estrategia PDF/infraestructura y registrar
+1. Conservar evidencia PD-01 cerrado; cerrar PD-02 a PD-08 y AUTH-01, aprobar estrategia PDF/infraestructura y registrar
    responsables. Confirmar pruebas en entorno aislado y revision del diff.
 2. Congelar SHA/lockfile e imagen comprobada, rama limpia/sincronizada. Registrar
    revision/Hosting anteriores por consulta autorizada durante ventana, no por
@@ -285,7 +288,8 @@ Lockfile SHA-256 sin cambios:
 - [x] Regresion sin BD y auditoria de dependencias repetidas.
 - [ ] Sesiones Firebase reales autorizadas en test.
 - [ ] GCS privado de prueba, IAM/politicas/borrado comprobados.
-- [ ] Parser en imagen final y estrategia PDF aprobada/probada.
+- [x] Parser en imagen Linux final local validado (seguimiento PD-01, 12/12).
+- [ ] Estrategia PDF/visor aprobada/probada (PD-03; pdfinfo no es antivirus).
 - [ ] Worker programado y alertas/recuperacion probados.
 - [ ] Capacidad y accesibilidad/dispositivos completados.
 - [ ] Hallazgos npm y AUTH-01 resueltos o excepciones fundamentadas aprobadas.

@@ -6,11 +6,12 @@ Estado: **H24-F1/F2 implementadas; H24-F3 integracion local HTTP/PostgreSQL/stor
 
 H24-F4: preparacion predeploy completada, **NO-GO para deploy/habilitacion**.
 Ver [predeploy y bloqueantes](../auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md):
-parser pendiente de validar en imagen Linux, GCS/auth real pendientes, seguridad PDF, worker,
+GCS/auth real pendientes, seguridad PDF, worker,
 capacidad, triage npm y ensayo H05/backup. No cambia las decisiones funcionales.
 
-Seguimiento PD-01: Dockerfile incorpora Poppler/ruta absoluta y smoke obligatorio;
-parser validado en Windows, no imagen construida ni deploy. Evidencia:
+Seguimiento PD-01 cerrado localmente: imagen Linux de `95026bf` construida,
+pdfinfo 22.12.0 y smoke 12/12 en build/runtime aislado, tambien como usuario node.
+No implica deploy ni cierre de seguridad PDF o de H24. Evidencia:
 [correccion local pdfinfo](../auditoria/H24_Fase4_Correccion_Parser_Pdfinfo.md).
 
 Evidencia F3: [Integracion local del expediente](../auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md). Brave usa API y archivos reales sinteticos, con identidad de test; no constituye smoke Firebase ni validacion GCS.

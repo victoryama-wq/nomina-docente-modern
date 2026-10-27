@@ -444,9 +444,10 @@ worker programado y deploy siguen pendientes. No cambia H01,
 Nomina, Constancias historicas ni la completitud fiscal.
 
 F4 preparo predeploy documental sin acceso productivo: **NO-GO**. Seguimiento
-tecnico local PD-01: Dockerfile incorpora Poppler/ruta absoluta y smoke de build;
-parser Windows validado, imagen Linux pendiente por falta de Docker/WSL.
-Bloqueantes: validacion del parser en imagen Linux, GCS/autenticacion real sin ensayo,
+tecnico local **PD-01 cerrado**: imagen Linux de `95026bf` construida, pdfinfo 22.12.0
+y 12/12 comprobaciones en build y runtime aislado, tambien como usuario node.
+Digest/inventario en acta de correccion; no implica seguridad integral PDF ni deploy.
+Bloqueantes restantes: GCS/autenticacion real sin ensayo,
 control PDF malicioso, worker/alertas, capacidad, triage npm y ensayo H05/backup.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.
