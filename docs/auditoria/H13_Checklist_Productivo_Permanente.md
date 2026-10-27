@@ -262,6 +262,28 @@ Antes de cualquier deploy productivo:
 
 ## 10. Checklist deploy permanente
 
+### Condicion adicional H24 (predeploy 2026-10-27, no ejecutado)
+
+H24-F4 prepara el release, pero mantiene **NO-GO**. Antes de aplicar 016 o habilitar
+el expediente, revisar `H24_Fase4_PreDeploy_Expediente_Docentes.md` y cerrar sus
+bloqueantes: autenticacion real en test, bucket dedicado privado y borrado sin
+retencion/versiones, parser en imagen y estrategia PDF, worker programado/alertas,
+capacidad, triage npm y ensayo DBA/backup. No reutilizar el bucket de Constancias.
+
+H05 esperado para esa ventana: 18 registradas hasta 015 y **solo 016 pendiente**,
+checksum mismatch=0; despues de aplicacion autorizada, 19 registradas y pending=0.
+Son expectativas, no nueva consulta a produccion. El runner aplica todos los
+pendientes; detenerse si no son exactamente los aprobados. No hacer baseline
+productivo nuevo ni usar el registro vacio del harness de test como evidencia H05.
+
+Un GET autenticado puede actualizar last_login_at/firebase_uid; no afirmar cero
+escrituras para una sesion Firebase real. Las pruebas F4 no inician sesion productiva.
+API/Hosting se publican solo tras aprobacion nueva; health 200 no valida storage,
+parser ni reconciliador. Rollback conserva tablas/intenciones/objetos, sin DROP ni
+restauracion automatica de PDF eliminados. No se modifico infraestructura en F4.
+
+### Ejecucion autorizada
+
 Durante una ventana de deploy aprobada:
 
 - [ ] Registrar hora de inicio.

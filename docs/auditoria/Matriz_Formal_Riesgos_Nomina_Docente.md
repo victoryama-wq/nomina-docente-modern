@@ -224,9 +224,18 @@ Pendientes: sesiones reales autorizadas, GCS de prueba, seguridad del visor PDF,
 capacidad sostenida, worker e infraestructura aprobada y migracion/deploy
 con H05/H13. Mantener storage deshabilitado hasta cumplir los gates.
 
+F4: predeploy preparado, **NO-GO**, no cerrado operativo. Riesgo de habilitacion
+alto hasta cerrar PD-01 a PD-08 del acta: parser fuera de imagen actual, GCS/auth
+reales pendientes, seguridad PDF, worker, capacidad y ensayo DBA confiable.
+Auditoria npm actual del arbol local: 0 criticas, 15 altas, 12 moderadas, 1 baja;
+triage/correccion o excepciones fundamentadas pendientes, sin audit fix.
+AUTH-01 registra verificacion Firebase sin checkRevoked y requiere evaluacion;
+los permisos activos de app_users se siguen comprobando. No se cambia auth aqui.
+
 Evidencia: `H24_Fase1_Modelo_Backend_Expediente_Docentes.md`,
 `H24_Fase2_Frontend_Expediente_Docentes.md`,
-`H24_Fase3_Validacion_Integracion_Expediente_Docentes.md`, SPEC y diseno H24.
+`H24_Fase3_Validacion_Integracion_Expediente_Docentes.md`,
+`H24_Fase4_PreDeploy_Expediente_Docentes.md`, SPEC y diseno H24.
 
 ### Continuidad de la matriz principal
 

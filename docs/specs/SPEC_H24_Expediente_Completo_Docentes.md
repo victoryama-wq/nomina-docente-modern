@@ -4,6 +4,11 @@ Fecha: 2026-10-27.
 
 Estado: **H24-F1/F2 implementadas; H24-F3 integracion local HTTP/PostgreSQL/storage local validada con observaciones. Autenticacion real, GCS y gates productivos pendientes. No cerrado operativo.**
 
+H24-F4: preparacion predeploy completada, **NO-GO para deploy/habilitacion**.
+Ver [predeploy y bloqueantes](../auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md):
+parser ausente de imagen actual, GCS/auth real pendientes, seguridad PDF, worker,
+capacidad, triage npm y ensayo H05/backup. No cambia las decisiones funcionales.
+
 Evidencia F3: [Integracion local del expediente](../auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md). Brave usa API y archivos reales sinteticos, con identidad de test; no constituye smoke Firebase ni validacion GCS.
 
 Evidencia F2: [Frontend del expediente](../auditoria/H24_Fase2_Frontend_Expediente_Docentes.md). Esa fase no cambio backend/BD ni produccion; su pendiente de integracion local se verifica en F3.
@@ -151,7 +156,8 @@ La fase F0 fue exclusivamente documental. F1 autorizo modelo/API y pruebas local
 2. F1 validada en local/test: modelo, migracion 016 y API con autorizacion, almacenamiento y reconciliacion de fallos; sin infraestructura productiva.
 3. F2 implementada localmente: panel, carga multiple, telefono, preview y pruebas frontend con API simulada; responsive validado en Brave.
 4. F3 validada con observaciones en local: API HTTP, PostgreSQL test, archivos PDF reales sinteticos, borrado/reemplazo fisico, telefono compartido, roles sinteticos y reintento idempotente. Pendientes sesiones Firebase autorizadas y storage GCS de prueba; no equivalencia automatica con produccion.
-5. F4/F5 futuras: checklist H13, backup, aprobacion de infraestructura/migracion/deploy y smoke autenticado sin documentos reales de prueba.
+5. F4 preparada: checklist H13, revision de autenticacion/storage/seguridad y plan de release/rollback; autorizacion bloqueada por pendientes en el acta F4. Solo cambios documentales, sin recursos cloud.
+6. F5 futura: cerrar bloqueantes, backup, aprobacion de infraestructura/migracion/deploy y smoke autenticado sin documentos personales reales de prueba.
 
 Pendientes tecnicos: capacidad sostenida, autenticacion real, seguridad del visor nativo y escaneo PDF, provisionamiento del worker y politica GCS real de retencion/versionado/soft delete. F3 valida relectura tras recarga y reintento idempotente en la misma visita; no persiste IDs de operaciones pendientes en navegador. Parser/reintentos backend existen en F1 y migracion 016 esta asignada; su habilitacion productiva sigue pendiente. No quedan pendientes las decisiones sobre roles, multiplicidad, telefono compartido o eliminacion definitiva.
 
