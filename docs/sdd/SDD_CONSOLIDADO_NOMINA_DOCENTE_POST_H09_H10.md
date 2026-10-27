@@ -447,6 +447,12 @@ F4 preparo predeploy documental sin acceso productivo: **NO-GO**. Seguimiento
 tecnico local **PD-01 cerrado**: imagen Linux de `95026bf` construida, pdfinfo 22.12.0
 y 12/12 comprobaciones en build y runtime aislado, tambien como usuario node.
 Digest/inventario en acta de correccion; no implica seguridad integral PDF ni deploy.
+PD-02 tiene protocolo preparado en
+`docs/auditoria/H24_PD02_Plan_Validacion_GCS_Aislado.md`. Seguimiento autorizado en
+`docs/auditoria/H24_PD02_Copia_Local_Anonimizada_GCS.md`: copia local saneada en
+127.0.0.1:55440, H05 test 19 registradas/pending=0/mismatch=0 tras 016. Proyecto
+de pruebas creado; facturacion bloqueada por cuota, sin bucket ni ensayo GCS real.
+No cierra el gate ni modifica produccion.
 Bloqueantes restantes: GCS/autenticacion real sin ensayo,
 control PDF malicioso, worker/alertas, capacidad, triage npm y ensayo H05/backup.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;

@@ -231,6 +231,11 @@ PD-01 cerrado localmente: imagen Linux de `95026bf` construida, pdfinfo 22.12.0,
 inventario/digest registrados y 12/12 comprobaciones en build/runtime aislado,
 tambien como usuario node. No cierra antivirus, vulnerabilidades ni capacidad.
 Ver `H24_Fase4_Correccion_Parser_Pdfinfo.md`; riesgo de release no cerrado.
+PD-02: plan `H24_PD02_Plan_Validacion_GCS_Aislado.md` y seguimiento autorizado en
+`H24_PD02_Copia_Local_Anonimizada_GCS.md`. Copia local saneada preparada y 016
+ensayada por H05 (19 registradas, 0 pendientes/mismatch), sin reparar cluster
+antiguo. Proyecto de pruebas creado; cuota impide vincular facturacion, sin bucket
+ni prueba GCS real. Riesgo no cerrado; H24 sigue NO-GO.
 Auditoria npm actual del arbol local: 0 criticas, 15 altas, 12 moderadas, 1 baja;
 triage/correccion o excepciones fundamentadas pendientes, sin audit fix.
 AUTH-01 registra verificacion Firebase sin checkRevoked y requiere evaluacion;

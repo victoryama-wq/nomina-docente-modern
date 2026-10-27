@@ -15,6 +15,15 @@ PD-02 a PD-08 y AUTH-01 siguen pendientes; no se autoriza release. Las secciones
 revision inicial y sus confirmaciones documentales se conservan como evidencia
 de la preparacion F4 anterior a esta correccion.
 
+Seguimiento PD-02 (2026-10-27):
+[plan de validacion GCS aislado](H24_PD02_Plan_Validacion_GCS_Aislado.md)
+preparado, con autorizaciones de proyecto/bucket, IAM temporal y borrado sintetico
+pendientes al preparar el plan. Seguimiento autorizado:
+[copia local saneada y proyecto de pruebas](H24_PD02_Copia_Local_Anonimizada_GCS.md).
+BD test nueva en 127.0.0.1:55440; 016 aplicada por H05 local, 19 registradas,
+pending=0/mismatch=0. Proyecto aislado creado, facturacion bloqueada por cuota;
+no existe bucket ni prueba GCS real. PD-02 sigue abierto; H24 permanece NO-GO.
+
 ## 1. Alcance y evidencia
 
 Arbol limpio al inicio; HEAD y tracking local de origin sin diferencias (0/0).
