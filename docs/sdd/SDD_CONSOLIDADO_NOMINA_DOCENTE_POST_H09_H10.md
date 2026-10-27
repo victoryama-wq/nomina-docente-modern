@@ -436,14 +436,18 @@ produccion**. No cambia el estado productivo H05 descrito en este documento.
 Storage deshabilitado por defecto, validacion PDF, idempotencia y reconciliacion
 durable implementados; F1 validada en local/test. F2 frontend implementado con panel,
 carga multiple, telefono compartido y preview; pruebas con API simulada y Brave en
-tres resoluciones. Integracion real F3, controles de storage y escaneo reales,
+tres resoluciones. F3 valida API HTTP real, PostgreSQL test, archivos sinteticos en
+storage local, reemplazo/borrado fisico, telefono compartido y roles sinteticos en
+Brave. Correccion acotada: exponer Content-Disposition en la respuesta PDF para
+descarga cross-origin. Autenticacion Firebase real, GCS de prueba, escaneo aprobado,
 worker programado y deploy siguen pendientes. No cambia H01,
 Nomina, Constancias historicas ni la completitud fiscal.
 
 Fuentes: `docs/specs/SPEC_H24_Expediente_Completo_Docentes.md`,
 `docs/diseno/DISENO_TECNICO_H24_Expediente_Completo_Docentes.md` y
 `docs/auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md` y
-`docs/auditoria/H24_Fase2_Frontend_Expediente_Docentes.md`.
+`docs/auditoria/H24_Fase2_Frontend_Expediente_Docentes.md` y
+`docs/auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md`.
 
 ### Reglas generales
 

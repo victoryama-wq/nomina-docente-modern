@@ -2,13 +2,16 @@
 
 Fecha: 2026-10-27.
 
-Estado: **Diseno aprobado; F1 modelo/backend en local/test y F2 frontend implementado con pruebas simuladas. Integracion F3 y despliegue pendientes.**
+Estado: **Diseno aprobado; F1/F2 implementadas y F3 validada en integracion local con observaciones. GCS, autenticacion real y despliegue pendientes.**
+
+Evidencia F3: [Integracion HTTP/PostgreSQL/storage local](../auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md). Se expone `Content-Disposition` mediante CORS exclusivamente en la respuesta PDF del expediente para conservar el nombre UTF-8 en descargas cross-origin. No se amplian origenes ni autorizaciones.
 
 Evidencia F2: [Frontend](../auditoria/H24_Fase2_Frontend_Expediente_Docentes.md).
 Se conserva panel durante la visita y se advierte al salir; no se persiste la cola
 en el navegador. El visor nativo usa exclusivamente Blob PDF autenticado y validado,
 sin sandbox HTML porque Brave bloquea su visor con ese atributo. No se admite HTML;
-seguridad integral del visor y recuperacion tras recarga pendientes F3. Las secciones
+seguridad integral del visor sigue pendiente. F3 verifica relectura tras recarga y
+reintento sin duplicados, no persistencia de cola local. Las secciones
 de propuesta F0 siguientes son historicas, no evidencia de capacidades productivas.
 
 Implementacion y desviaciones acotadas: [H24-F1](../auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md). Las secciones de propuesta siguientes conservan el contexto F0; para capacidades implementadas consultar esa auditoria. Se asigno 016, storage permanece deshabilitado por defecto y los gates productivos no estan satisfechos.

@@ -108,6 +108,7 @@ export async function registerDossierRoutes(app: FastifyInstance, injected?: Tea
     const encodedName = encodeURIComponent(file.fileName).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
     return reply.header('Content-Type', 'application/pdf')
       .header('Content-Disposition', `${download === 'true' ? 'attachment' : 'inline'}; filename="${asciiName}"; filename*=UTF-8''${encodedName}`)
+      .header('Access-Control-Expose-Headers', 'Content-Disposition')
       .header('Cache-Control', 'private, no-store').header('X-Content-Type-Options', 'nosniff')
       .header('Content-Security-Policy', "sandbox; default-src 'none'").send(file.bytes);
   }));

@@ -2,9 +2,11 @@
 
 Fecha: 2026-10-27.
 
-Estado: **H24-F1 modelo/backend validados en local/test; H24-F2 frontend implementado y validado con API simulada. Integracion F3 y despliegue pendientes. No cerrado operativo.**
+Estado: **H24-F1/F2 implementadas; H24-F3 integracion local HTTP/PostgreSQL/storage local validada con observaciones. Autenticacion real, GCS y gates productivos pendientes. No cerrado operativo.**
 
-Evidencia F2: [Frontend del expediente](../auditoria/H24_Fase2_Frontend_Expediente_Docentes.md). Sin cambios backend/BD ni produccion; prueba integral real pendiente.
+Evidencia F3: [Integracion local del expediente](../auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md). Brave usa API y archivos reales sinteticos, con identidad de test; no constituye smoke Firebase ni validacion GCS.
+
+Evidencia F2: [Frontend del expediente](../auditoria/H24_Fase2_Frontend_Expediente_Docentes.md). Esa fase no cambio backend/BD ni produccion; su pendiente de integracion local se verifica en F3.
 
 Evidencia F1: [Modelo y backend](../auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md). La decision de implementar F1 es posterior al cierre documental F0; no autoriza produccion.
 
@@ -147,11 +149,11 @@ La fase F0 fue exclusivamente documental. F1 autorizo modelo/API y pruebas local
 
 1. F0 completada: SPEC y diseno; decisiones funcionales cerradas.
 2. F1 validada en local/test: modelo, migracion 016 y API con autorizacion, almacenamiento y reconciliacion de fallos; sin infraestructura productiva.
-3. F2 implementada localmente: panel, carga multiple, telefono, preview y pruebas frontend con API simulada; responsive validado en Brave. Integracion persistida pendiente F3.
-4. F3 futura: integracion, seguridad, responsive y prueba real de borrado/reemplazo en almacenamiento de prueba.
+3. F2 implementada localmente: panel, carga multiple, telefono, preview y pruebas frontend con API simulada; responsive validado en Brave.
+4. F3 validada con observaciones en local: API HTTP, PostgreSQL test, archivos PDF reales sinteticos, borrado/reemplazo fisico, telefono compartido, roles sinteticos y reintento idempotente. Pendientes sesiones Firebase autorizadas y storage GCS de prueba; no equivalencia automatica con produccion.
 5. F4/F5 futuras: checklist H13, backup, aprobacion de infraestructura/migracion/deploy y smoke autenticado sin documentos reales de prueba.
 
-Pendientes tecnicos: validar limites/capacidad e integracion completa, seguridad del visor nativo y escaneo PDF, recuperacion tras recarga, provisionamiento del worker y politica real de retencion. Parser/reintentos backend existen en F1 y migracion 016 esta asignada; su habilitacion productiva sigue pendiente. No quedan pendientes las decisiones sobre roles, multiplicidad, telefono compartido o eliminacion definitiva.
+Pendientes tecnicos: capacidad sostenida, autenticacion real, seguridad del visor nativo y escaneo PDF, provisionamiento del worker y politica GCS real de retencion/versionado/soft delete. F3 valida relectura tras recarga y reintento idempotente en la misma visita; no persiste IDs de operaciones pendientes en navegador. Parser/reintentos backend existen en F1 y migracion 016 esta asignada; su habilitacion productiva sigue pendiente. No quedan pendientes las decisiones sobre roles, multiplicidad, telefono compartido o eliminacion definitiva.
 
 No marcar esta funcionalidad como productiva ni actualizar manuales como si estuviera disponible. El cierre operativo exigira evidencia de permisos y eliminacion fisica, ademas de smoke aprobado.
 

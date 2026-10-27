@@ -399,6 +399,7 @@ describeIfDb('H24 dossier: PostgreSQL, authenticated routes and local PDF storag
       expect(response.statusCode).toBe(200);
       expect(response.rawPayload).toEqual(pdf);
       expect(response.headers['content-type']).toBe('application/pdf');
+      expect(response.headers['access-control-expose-headers']).toBe('Content-Disposition');
       expect(response.headers['cache-control']).toBe('private, no-store');
       expect(response.headers['x-content-type-options']).toBe('nosniff');
       expect(response.headers['content-security-policy']).toBe("sandbox; default-src 'none'");

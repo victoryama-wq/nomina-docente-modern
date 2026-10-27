@@ -210,7 +210,9 @@ Pendientes reales despues de H02/H03:
 
 H24-F1 modelo/backend implementados y validados en local/test; no cerrado operativo.
 H24-F2 frontend implementado y probado con API simulada; panel, telefono y documentos
-con responsive local. No equivale a smoke autenticado ni integracion persistida.
+con responsive local. F3 valida integracion persistida via API HTTP, PostgreSQL y
+storage local, borrado/reemplazo fisico, telefono y permisos con actores sinteticos.
+No equivale a smoke Firebase autenticado ni validacion real de Cloud Storage.
 La migracion 016 es exclusivamente local/test en esta fase, sin cambio del estado
 productivo H05. Acceso aprobado: Admin, Finanzas y RH con permisos por accion.
 No se amplian capacidades de otros roles ni se modifica H01.
@@ -218,12 +220,13 @@ No se amplian capacidades de otros roles ni se modifica H01.
 Riesgos previos a release: tratamiento de PDF maliciosos, politica real de borrado
 definitivo, capacidad y recuperacion durable entre PostgreSQL/storage. El adaptador
 GCS solo tiene pruebas simuladas y el worker no esta provisionado en produccion.
-Pendientes: validacion integral F3, seguridad del visor PDF nativo, recuperacion de
-operaciones tras recarga, infraestructura aprobada y migracion/deploy
+Pendientes: sesiones reales autorizadas, GCS de prueba, seguridad del visor PDF,
+capacidad sostenida, worker e infraestructura aprobada y migracion/deploy
 con H05/H13. Mantener storage deshabilitado hasta cumplir los gates.
 
 Evidencia: `H24_Fase1_Modelo_Backend_Expediente_Docentes.md`,
-`H24_Fase2_Frontend_Expediente_Docentes.md`, SPEC y diseno H24.
+`H24_Fase2_Frontend_Expediente_Docentes.md`,
+`H24_Fase3_Validacion_Integracion_Expediente_Docentes.md`, SPEC y diseno H24.
 
 ### Continuidad de la matriz principal
 
