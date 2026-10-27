@@ -14,14 +14,14 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00056-mll` |
-| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00055-8wn` |
-| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h23-prod-9268d42` |
-| Digest API vigente | `sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92` |
+| Revision Cloud Run vigente documentada | `nomina-api-00057-c7d` |
+| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00056-mll` |
+| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:finance-b3f40ce` |
+| Digest API vigente | `sha256:a7d0de2196c5552d50cd75b8f01e15238dc90f701941b8656613bf6d1789196b` |
 | Recursos Cloud Run | CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, min `0`, max `3` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
-| Firebase Hosting release vigente | `1787419305880000` |
-| Firebase Hosting version vigente | `07924eeeb7713f30` |
+| Firebase Hosting release vigente | `1793121624438000` |
+| Firebase Hosting version vigente | `3f9ebc88c835a143` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
@@ -34,7 +34,7 @@ Estado por H:
 |---|---|
 | H01 | Cerrado. Precision monetaria protegida con `decimal.js`, strings decimales y pruebas de regresion. |
 | H02 | Cerrado operativo; `user_coordinations` existe, pero el fallback legacy sigue activo en monitoreo. |
-| H03 | Cerrado operativo; permisos fiscales, documentales, financieros, workflow y preview separados. Ajuste local pendiente de deploy: comprobante de efectivo consolidado por docente y nombre visible sin exponer fiscal. |
+| H03 | Cerrado operativo, incluido el ajuste de comprobante consolidado y nombre docente desplegado en `nomina-api-00057-c7d` y Hosting live. Healthchecks OK; smoke autenticado del PDF y nombres por rol aprobado por el usuario. Ver `docs/auditoria/H03_Deploy_Finanzas_Comprobantes_Consolidados.md`. |
 | H04 | Implementado hasta Fase 5; H04-F6 Playwright queda opcional posterior. |
 | H05 | Cerrado con tablas de control; produccion conserva 15 baseline y migraciones `013`/`014`/`015` aplicadas, `pending=0` y `checksum mismatch=0`. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |

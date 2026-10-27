@@ -2,6 +2,12 @@
 
 Fecha: 2026-10-27
 
+Actualizacion posterior: desplegado en `nomina-api-00057-c7d` y Hosting live.
+Healthchecks y smoke autenticado postdeploy aprobados; ajuste cerrado operativo
+tras confirmacion humana del PDF consolidado y nombres por rol. Evidencia:
+`H03_Deploy_Finanzas_Comprobantes_Consolidados.md`. Las confirmaciones sin deploy
+de este documento corresponden exclusivamente a la fase de implementacion.
+
 ## 1. Objetivo
 
 Corregir dos comportamientos de presentacion del modulo Finanzas sin modificar

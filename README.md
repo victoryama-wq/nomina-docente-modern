@@ -38,16 +38,16 @@ Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` 
 
 Estado productivo consolidado posterior a H23:
 
-- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00056-mll`.
-- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h18-posth23-85c3e34`.
-- Digest vigente: `sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92`.
+- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00057-c7d`.
+- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:finance-b3f40ce`.
+- Digest vigente: `sha256:a7d0de2196c5552d50cd75b8f01e15238dc90f701941b8656613bf6d1789196b`.
 - Configuración Cloud Run verificada: CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, mínimo `0` y máximo `3` instancias.
-- Firebase Hosting live: release `1787419305880000`, version `07924eeeb7713f30`.
+- Firebase Hosting live: release `1793121624438000`, version `3f9ebc88c835a143`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.
 - H01 precision monetaria: cerrado.
-- H02/H03 permisos/coordinacion: desplegado y validado.
+- H02/H03 permisos/coordinacion: cerrado operativo, incluido el ajuste Finanzas desplegado el 2026-10-27; healthchecks OK y smoke autenticado del PDF consolidado y nombres por rol aprobado por el usuario. Ver `docs/auditoria/H03_Deploy_Finanzas_Comprobantes_Consolidados.md`.
 - H04 pruebas automatizadas: implementado hasta Fase 5; Playwright queda opcional.
 - H05 control formal de migraciones: 18 registros, 15 baseline y migraciones
   013/014/015 aplicadas; `pending=0` y `checksum mismatch=0`.

@@ -1,7 +1,7 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-09-10
+Ultima actualizacion de estado productivo: 2026-10-27
 
 ## 1. Resumen ejecutivo
 
@@ -32,16 +32,16 @@ Alcance de H13:
 | Cloud Run API | Servicio `nomina-api` |
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
-| Revision Cloud Run vigente documentada | `nomina-api-00056-mll` |
-| Revision anterior / rollback inmediato | `nomina-api-00055-8wn` |
-| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h18-posth23-85c3e34` |
-| Digest API vigente H23 | `sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92` |
+| Revision Cloud Run vigente documentada | `nomina-api-00057-c7d` |
+| Revision anterior / rollback inmediato | `nomina-api-00056-mll` |
+| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:finance-b3f40ce` |
+| Digest API vigente | `sha256:a7d0de2196c5552d50cd75b8f01e15238dc90f701941b8656613bf6d1789196b` |
 | CPU / memoria | `1` / `512Mi` |
 | Concurrencia / timeout | `80` / `300 s` |
 | Instancias min / max | `0` / `3` |
 | Imagen API H11 documentada | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h11-prod-4e0c214` |
-| Firebase Hosting release vigente | `1787419305880000` |
-| Firebase Hosting version vigente | `07924eeeb7713f30` |
+| Firebase Hosting release vigente | `1793121624438000` |
+| Firebase Hosting version vigente | `3f9ebc88c835a143` |
 | Instancia Cloud SQL | `nomina-docente-web` |
 | Base productiva | `nomina_docente` |
 | Usuario DB aplicativo | `app_nomina` |
@@ -50,7 +50,7 @@ Alcance de H13:
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true` en monitoreo |
 
-La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues del cierre productivo H23.
+La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues del ajuste de Finanzas del 2026-10-27. Ver `H03_Deploy_Finanzas_Comprobantes_Consolidados.md`: ajuste cerrado operativo, healthchecks OK y smoke autenticado del PDF consolidado y nombres por rol aprobado por el usuario. El estado H05 indicado mas adelante es documental previo y no se consulto de nuevo durante este deploy sin migraciones.
 
 ## 3. Variables no secretas Cloud Run
 
@@ -376,6 +376,7 @@ Cada deploy productivo debe registrar una fila equivalente:
 | 2026-07-31 | `081532d` | `nomina-api-00053-cjg` | `nomina-api-00054-2ld` | `1785536172540000` / `91ba12f3159468b8` | No requerido; cero escrituras | No | OK | H22-HF1B responsable real OK; sin BD ni Apply | `H22_Hotfix_Responsable_Operativo_Deploy_Productivo.md` |
 | 2026-08-22 | `9268d42` | `nomina-api-00054-2ld` | `nomina-api-00055-8wn` | `1787419305880000` / `07924eeeb7713f30` | `1787418742938` | `015` | OK | H23 Calendario/Preview/Incidencias/Reporte/H20/responsive OK; sin Guardar Nomina ni propedeuticos | `H23_Deploy_Productivo_Vigencia_Temporal_Nomina.md` |
 | 2026-09-10 | `85c3e34` | `nomina-api-00055-8wn` | `nomina-api-00056-mll` | `1789068812732000` / `c29c9b5b84133c9a` | `1789068493579` | No | OK | H18 post-H23 cerrado; smoke tecnico, autenticado y exportables aprobados | `H18_Deploy_PostH23_Reportes_Operativos.md` |
+| 2026-10-27 | `b3f40ce` | `nomina-api-00056-mll` | `nomina-api-00057-c7d` | `1793121624438000` / `3f9ebc88c835a143` | No requerido; release solo codigo, sin escritura BD | No | OK | PDF consolidado y nombres por rol aprobados por el usuario; ajuste cerrado operativo | `H03_Deploy_Finanzas_Comprobantes_Consolidados.md` |
 
 ## 15. Relacion con fases cerradas
 
