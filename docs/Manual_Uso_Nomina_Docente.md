@@ -4,10 +4,10 @@
 **Ambiente:** Producción  
 **URL:** `https://nomina-docente-prod.web.app`  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
-**Versión:** 1.2 post-H23
+**Versión:** 1.3 ajuste Finanzas
 
 **Fecha original:** 9 de mayo de 2026
-**Última actualización:** 1 de septiembre de 2026
+**Última actualización:** 27 de octubre de 2026
 
 ---
 
@@ -65,8 +65,8 @@ Los permisos se aplican en dos niveles:
 | Rol | Alcance general |
 |---|---|
 | Admin | Acceso completo al sistema, usuarios, calendario, catálogos, nómina, finanzas y auditoría |
-| Coordinador | Consulta global de Directorio; edición de docentes por capturador; operación por alcance; preview H20 de docentes propios o compartidos, sin finalización ni fiscal |
-| Dirección/Subdirección | Consulta global de nómina y Reportes Operativos; sin finalización ni workflow financiero |
+| Coordinador | Consulta global de Directorio; edición de docentes por capturador; operación por alcance; preview H20 sin finalización ni fiscal; Finanzas de sus coordinaciones con nombre docente, solo lectura |
+| Dirección/Subdirección | Consulta global de nómina, Reportes Operativos y Finanzas con nombre docente; sin finalización ni workflow financiero |
 | RH | Gestión de expedientes fiscales y consulta autorizada de carga por categoría |
 | Finanzas | Nóminas guardadas, reportes financieros, pagos y workflow según permiso; sin Reportes Operativos H18 |
 | Contador/Contabilidad | Exportación y consulta financiera autorizada; sin workflow, gestión fiscal ni Reportes Operativos H18 |
@@ -86,7 +86,7 @@ Los permisos se aplican en dos niveles:
 | Capturar Extras | Sí | Sí | Sí | Sí | No |
 | Nómina | Sí | Consulta de su alcance | Consulta global | Consulta según permiso | Consulta |
 | Reportes Operativos | Ambas pestañas | Solo carga por categoría | Ambas pestañas | Solo carga por categoría | No |
-| Finanzas | Sí | Consulta de su alcance | Consulta global | Consulta según permiso | Sí |
+| Finanzas | Sí | Solo sus coordinaciones, con nombres | Consulta global con nombres | No por el permiso fiscal solo | Consulta con nombres según permisos |
 | Auditoría | Sí | No | No | No | No |
 
 ## 4. Navegación general
@@ -615,6 +615,18 @@ El módulo `Finanzas` trabaja con nóminas ya guardadas. No recalcula desde dato
 - Pendientes.
 - Histórico.
 
+En `Pagos`, el nombre del docente se muestra a Admin, Coordinador, Dirección/Subdirección, Finanzas y Contador/Contabilidad dentro de su alcance autorizado. No se sustituye por el RFC ni depende de tener acceso fiscal. La columna fiscal y la pestaña `Pendientes` solo aparecen cuando se cuenta con el permiso fiscal correspondiente.
+
+| Rol | Consulta en Finanzas | Límites que se conservan |
+|---|---|---|
+| Admin | Todas las coordinaciones y nombres docentes | Conserva sus controles administrativos |
+| Coordinador | Solo líneas y corridas con información de sus coordinaciones autorizadas, mostrando nombres | Sin exportación financiera, cambio de estados, guardado de nómina ni datos fiscales |
+| Dirección/Subdirección | Consulta global con nombres; PDF por coordinaciones conforme a su permiso | Sin workflow ni datos fiscales sensibles; no obtiene PDF de efectivo por este cambio |
+| Finanzas | Consulta con nombres, exportaciones y estados según permisos vigentes | Los datos fiscales y documentos conservan permisos separados |
+| Contador/Contabilidad | Consulta con nombres y exportaciones autorizadas | Sin workflow ni acceso fiscal por el solo hecho de ver el nombre |
+
+El alcance de Finanzas no equivale al preview compartido H20: un Coordinador no recibe aquí las líneas de otras coordinaciones por compartir un docente. RH no obtiene acceso a Finanzas únicamente por consultar expedientes fiscales.
+
 ### 15.3 Resumen financiero
 
 Muestra:
@@ -641,7 +653,7 @@ Dirección/Subdirección puede consultar globalmente y descargar el PDF por coor
 
 ### 15.5 Comprobante de pago en efectivo
 
-El sistema genera comprobantes para docentes con pago en efectivo.
+El sistema genera un único comprobante de efectivo por docente dentro de la nómina guardada seleccionada. Si el docente tiene varias líneas por coordinación o asignatura, sus importes en efectivo se suman en ese comprobante, incluidos los extras ya guardados. No se mezclan nóminas distintas ni pagos bancarios.
 
 Características:
 
@@ -649,8 +661,13 @@ Características:
 - Dos comprobantes por hoja tamaño carta.
 - Nombre del docente.
 - Quincena.
-- Monto.
+- Monto total consolidado en efectivo.
+- Fecha de emisión.
 - Espacio para firma de conformidad.
+
+Ya no aparece el nombre de la coordinación en el comprobante. El resumen de efectivo indica el número de comprobantes consolidados, no el número de líneas de nómina. El formato de dos comprobantes por hoja puede contener dos docentes distintos; no implica dividir el pago de un docente.
+
+Para obtenerlo, seleccione la nómina guardada y use PDF `Efectivo`, si su permiso permite esa descarga. Generar el PDF no recalcula importes, no modifica la nómina y no cambia su estado a `PAGADA`. Los totales provienen de la corrida guardada; H01 y el flujo de aprobación/pago no cambian.
 
 ### 15.6 Flujo financiero
 
@@ -1272,7 +1289,7 @@ Finanzas consulta nóminas guardadas. No calcula desde datos vivos.
 | `Actualizar` | Recarga nóminas guardadas | Vista actualizada |
 | PDF `Resumen` | Genera reporte ejecutivo de nómina | PDF |
 | PDF `Coordinaciones` | Genera reporte por coordinación | PDF |
-| PDF `Efectivo` | Genera comprobantes de pago en efectivo | PDF media carta, dos comprobantes por hoja carta |
+| PDF `Efectivo` | Consolida el total en efectivo y extras guardados por docente de la nómina seleccionada | Un comprobante por docente, sin coordinación; dos por hoja carta |
 | CSV `Pagos` | Exporta listado operativo de pagos | CSV |
 | CSV `Pendientes` | Exporta pendientes fiscales | CSV |
 | CSV `Coordinaciones` | Exporta resumen por coordinación | CSV |
@@ -1284,9 +1301,12 @@ Comprobante de pago en efectivo:
 
 - Se genera desde PDF `Efectivo`.
 - Aplica a docentes con tipo de pago `Efectivo`.
-- Incluye quincena, nombre del docente, monto a pagar y espacio de firma de conformidad.
+- Genera un solo comprobante por docente y nómina guardada, aunque haya varias líneas por coordinación o asignatura.
+- Suma los importes en efectivo guardados, incluidos los extras; no recalcula ni mezcla corridas o pagos bancarios.
+- Incluye quincena, nombre del docente, monto total consolidado, fecha de emisión y firma de conformidad; omite la coordinación.
 - El formato está pensado para media carta.
 - En una hoja tamaño carta se colocan dos comprobantes.
+- Descargarlo no registra el pago ni cambia el estado de la nómina.
 
 Flujo financiero:
 
@@ -1298,10 +1318,12 @@ Flujo financiero:
 Roles:
 
 - Admin ve todo y puede ejecutar acciones de estado.
-- Finanzas/Contador ve reportes, exportaciones y flujo financiero.
+- Finanzas ve nombres, reportes y exportaciones; solo puede ejecutar workflow si tiene el permiso correspondiente.
+- Contador/Contabilidad ve nombres y exportaciones autorizadas, sin workflow ni acceso fiscal implícito.
 - Dirección/Subdirección ve información global en modo lectura y puede descargar PDF por coordinaciones.
-- Coordinador consulta su alcance, sin acciones financieras globales.
-- RH consulta información fiscal según permiso.
+- Coordinador ve nombres y únicamente líneas/corridas de sus coordinaciones; no exporta ni cambia estados y no ve datos fiscales.
+- RH consulta expedientes fiscales según permiso; ese permiso por sí solo no habilita Finanzas.
+- El nombre docente es visible independientemente del permiso fiscal. RFC, correo fiscal, banco y constancias mantienen controles separados.
 
 ### 22.13 Auditoría y Bitácora
 

@@ -1,11 +1,11 @@
 # Manual de entrega - Nómina Docente
 
 **Proyecto:** Nómina Docente  
-**Versión de entrega:** 1.2 post-H23
+**Versión de entrega:** 1.3 ajuste Finanzas
 
 **Fecha original:** 8 de mayo de 2026
 
-**Última actualización:** 1 de septiembre de 2026
+**Última actualización:** 27 de octubre de 2026
 **Ambiente:** Producción Google Cloud / Firebase  
 **Dominio permitido:** `@tecplayacar.edu.mx`  
 **Administrador general protegido:** `victor.yama@tecplayacar.edu.mx`
@@ -48,7 +48,7 @@ La operación quedó organizada por ciclos escolares y quincenas. Esto permite p
 - Preview H20 para Coordinador con docentes propios o compartidos por horario, en modo solo lectura y sin datos fiscales.
 - Exportaciones CSV.
 - PDF de reportes financieros.
-- PDF de comprobantes de pago en efectivo.
+- PDF de comprobantes de pago en efectivo consolidados por docente y nómina guardada, incluidos extras, sin coordinación.
 - Auditoría y bitácora de acciones relevantes.
 - Despliegue en Firebase Hosting y Cloud Run.
 
@@ -84,11 +84,7 @@ Estas funciones pueden agregarse posteriormente sin rehacer la arquitectura prin
 | Contenedores | Artifact Registry | Imagen Docker del API |
 | Secretos | Secret Manager | Contraseña de base de datos |
 
-Estado productivo verificado el 2026-09-01: revisión Cloud Run
-`nomina-api-00055-8wn`, imagen `h23-prod-9268d42`, digest
-`sha256:2e6dcf48aa54669c12a3efbf738737297434a528ba9e8040d9b7fa8638130e92`,
-Firebase Hosting release `1787419305880000` y version
-`07924eeeb7713f30`.
+Estado productivo documentado en el cierre del 2026-10-27: revisión Cloud Run `nomina-api-00057-c7d`, imagen `finance-b3f40ce`, digest `sha256:a7d0de2196c5552d50cd75b8f01e15238dc90f701941b8656613bf6d1789196b`, Firebase Hosting release `1793121624438000` y versión `3f9ebc88c835a143`. El PDF consolidado y los nombres por rol tienen smoke productivo aprobado por el usuario. Fuente: `docs/auditoria/H03_Deploy_Finanzas_Comprobantes_Consolidados.md`; esta revisión documental no realiza nuevas consultas productivas.
 
 ### 3.2 URLs de producción
 
@@ -135,8 +131,8 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 | Rol | Alcance |
 |---|---|
 | Admin | Acceso completo, usuarios, calendario, nómina, finanzas, auditoría y configuración |
-| Coordinador | Consulta global de Directorio; edición por `teachers.created_by`; operación por alcance/capturador; preview H20 de docentes propios o compartidos sin finalización ni datos fiscales |
-| Dirección/Subdirección | Consulta global de Nómina y Reportes; sin finalización ni workflow financiero; edición de Extras solo propios cuando aplica |
+| Coordinador | Consulta global de Directorio; edición por `teachers.created_by`; operación por alcance/capturador; preview H20 sin finalización ni fiscal; Finanzas de sus coordinaciones con nombres y solo lectura |
+| Dirección/Subdirección | Consulta global de Nómina, Reportes y Finanzas con nombres; sin finalización ni workflow financiero; edición de Extras solo propios cuando aplica |
 | RH | Gestión global de expedientes fiscales y acceso autorizado a carga por categoría |
 | Finanzas | Consulta financiera, expediente fiscal, reportes y pagos |
 | Contador/Contabilidad | Exportación y consulta financiera autorizada; sin gestión fiscal ni workflow |
@@ -157,6 +153,8 @@ El usuario `victor.yama@tecplayacar.edu.mx` es el administrador general protegid
 | `statistics.view` | Ver estadísticas |
 | `finance.view` | Ver finanzas; no habilita fiscal, exportación ni workflow por sí solo |
 | `finance.global_view` | Ver Finanzas de todas las coordinaciones en modo consulta |
+| `finance.export` | Exportaciones financieras autorizadas; no habilita workflow ni datos fiscales por sí solo |
+| `finance.workflow` | Cambiar estados financieros permitidos; no permite cancelar una nómina PAGADA |
 | `fiscal.manage` | Gestionar datos fiscales; documentos usan permisos separados |
 | `calendar.manage` | Gestionar calendario operativo |
 | `closures.manage` | Gestionar cierres |
@@ -556,6 +554,18 @@ La corrida cancelada permanece en histórico y auditoría.
 
 Trabaja sobre nóminas guardadas. No recalcula desde capturas vivas.
 
+La identidad del docente no depende de permisos fiscales: el nombre se muestra a todos los roles autorizados dentro de su alcance. El RFC no sustituye al nombre. RFC, correo fiscal, datos bancarios y constancias mantienen sus controles específicos.
+
+| Rol | Alcance de Finanzas y nombres | Acciones y restricciones |
+|---|---|---|
+| Admin | Global | Conserva exportaciones y controles administrativos |
+| Coordinador | Líneas de sus coordinaciones activas en `actorCoordinations[]`; no ve corridas sin líneas en alcance | Solo lectura; sin exportación, workflow, guardado ni datos fiscales |
+| Dirección/Subdirección | Global con nombres | Solo consulta y PDF por coordinaciones autorizado; sin workflow ni fiscal sensible |
+| Finanzas | Consulta con nombres según permisos vigentes | Exportación y workflow separados de fiscal/documentos |
+| Contador/Contabilidad | Consulta con nombres y exportación autorizada | Sin workflow ni permisos fiscales implícitos |
+
+El contexto financiero acepta permisos existentes de consulta, consulta global, exportación o `payroll.preview`; este último permite la lectura acotada de Coordinador. No se añadieron permisos persistidos mediante SQL. RH no obtiene acceso a Finanzas por el permiso fiscal solo. El alcance multicoordinación H20 del preview de Nómina no se extiende automáticamente a Finanzas.
+
 Incluye:
 
 - Resumen ejecutivo.
@@ -594,17 +604,22 @@ No expone RFC, banco, cuenta, CLABE, `paymentType` ni constancias.
 
 ### 6.18 Comprobantes de pago en efectivo
 
-El sistema genera comprobantes PDF para docentes con pago en efectivo. Cada comprobante contiene:
+El sistema genera un solo comprobante por docente en la corrida guardada seleccionada. Agrupa por identidad del docente las líneas de pago en efectivo y suma sus totales guardados, incluidos los extras. No mezcla corridas ni incorpora líneas de pago bancario. Cada comprobante contiene:
 
 - Quincena.
 - Nombre del docente.
-- Coordinación.
-- Monto pagado.
+- Monto total consolidado en efectivo.
 - Fecha de emisión.
 - Texto de conformidad.
 - Espacio para firma.
 
 El formato está pensado para media carta: dos comprobantes por hoja tamaño carta.
+
+El nombre de la coordinación se eliminó del comprobante; los reportes y desgloses por coordinación siguen disponibles conforme a los permisos existentes. El contador del resumen de efectivo representa docentes/comprobantes únicos, no líneas de nómina.
+
+Implementación de consulta: filtrar `payment_type_snapshot = 'E'`, agrupar por `teacher_id` y sumar `total_amount` de las líneas de la corrida seleccionada con los helpers decimales existentes. Los extras ya forman parte de esos totales y no se suman de nuevo. No se modifica `calculatePayroll()`, H01, redondeos, tabuladores, snapshots ni corridas históricas. Descargar el PDF no marca la corrida como `PAGADA`.
+
+La descarga conserva `finance.export` y la restricción del modo de consulta global de Dirección/Subdirección. Mostrar nombres no concede exportación, acceso fiscal ni workflow. El ajuste está cerrado operativo con smoke productivo confirmado; referencia: `docs/auditoria/H03_Deploy_Finanzas_Comprobantes_Consolidados.md`.
 
 ### 6.19 Auditoría y Bitácora
 

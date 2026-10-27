@@ -176,7 +176,7 @@ Permisos vigentes:
 | `finance.view` | Consulta financiera. No habilita fiscal, export ni workflow. |
 | `finance.export` | Exportaciones CSV/PDF financieras autorizadas. |
 | `finance.workflow` | Aprobar, marcar pagada, cancelar y cambiar estados financieros permitidos. |
-| `payroll.preview` | Calculo vivo/preview de nomina, solo lectura segun alcance. |
+| `payroll.preview` | Calculo vivo/preview de nomina; tambien habilita contexto de Finanzas de solo lectura limitado a coordinaciones, sin export ni workflow. |
 | `payroll.finalize` | Guardar corrida de nomina. |
 
 Reglas por rol:
@@ -184,9 +184,19 @@ Reglas por rol:
 - Admin: acceso global, fiscal/documentos, finanzas, workflow y guardado de nomina.
 - RH: fiscal/documentos; no workflow financiero.
 - Finanzas: fiscal/documentos, finance view/export/workflow; no guarda nomina salvo permiso explicito `payroll.finalize`.
-- Coordinador: preview de nomina por alcance operativo; no fiscal, no constancias, no finanzas global, no guardado, no workflow.
-- Direccion/Subdireccion: reportes/detalle sin fiscal sensible; no fiscal manage, no workflow.
-- Contador/Contabilidad: export financiero autorizado; no fiscal manage, no workflow.
+- Coordinador: preview de nomina por alcance operativo y Finanzas con nombres de las lineas de sus coordinaciones; no fiscal, constancias, finanzas global, export financiero, guardado ni workflow.
+- Direccion/Subdireccion: Finanzas global con nombres y PDF por coordinaciones autorizado; reportes/detalle sin fiscal sensible; no fiscal manage ni workflow.
+- Contador/Contabilidad: consulta con nombres y export financiero autorizado; no fiscal manage ni workflow.
+
+Identidad y comprobantes en Finanzas, ajuste productivo 2026-10-27:
+
+- Admin, Coordinador, Direccion/Subdireccion, Finanzas y Contador/Contabilidad ven el nombre docente dentro de su alcance; no se sustituye por RFC ni depende del permiso fiscal.
+- La columna fiscal y sus datos conservan permisos separados. RH no accede al contexto financiero por disponer solo de permisos fiscales.
+- Coordinador recibe las lineas de `actorCoordinations[]`; se conserva el fallback legacy vigente cuando corresponde y se excluyen corridas sin lineas visibles. No se amplian automaticamente al alcance compartido H20 del preview.
+- PDF de efectivo: una salida por `teacher_id` dentro de una corrida/quincena guardada, filtrando `payment_type_snapshot = 'E'` y sumando los `total_amount` con los helpers decimales existentes. Los extras ya estan incluidos: no se suman dos veces ni se recalculan desde datos vivos.
+- El comprobante elimina Coordinacion y conserva quincena, nombre, total consolidado, fecha de emision y firma; dos comprobantes por hoja carta. El contador de efectivo es por docente, no por linea.
+- No se mezclan corridas ni tipos de pago; solo se consolida la presentacion/exportacion. H01, importes guardados, snapshots, workflow y reglas de cancelacion permanecen intactos. Descargar el PDF no registra el pago.
+- `finance.export` y las restricciones de consulta global siguen controlando la descarga. Ver nombres no concede exportacion, fiscal, edicion ni cambios de estado.
 
 Reglas sensibles:
 
@@ -201,6 +211,8 @@ Documentos vigentes:
 - `docs/auditoria/H02_H03_Fase4_Fiscal_Finanzas_Nomina_Preview.md`
 - `docs/auditoria/H02_H03_Fase5_Frontend_Permisos.md`
 - `docs/auditoria/H02_H03_Deploy_Productivo_Resultado.md`
+- `docs/auditoria/H03_Ajuste_Finanzas_Comprobantes_Efectivo_Nombre_Docente.md`
+- `docs/auditoria/H03_Deploy_Finanzas_Comprobantes_Consolidados.md`
 
 ### 3.4 Pruebas / H04
 
