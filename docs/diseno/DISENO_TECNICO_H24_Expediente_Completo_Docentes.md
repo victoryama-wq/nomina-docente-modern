@@ -2,7 +2,14 @@
 
 Fecha: 2026-10-27.
 
-Estado: **Diseno aprobado; modelo/backend F1 implementados y validados en local/test. Sin frontend H24 ni despliegue.**
+Estado: **Diseno aprobado; F1 modelo/backend en local/test y F2 frontend implementado con pruebas simuladas. Integracion F3 y despliegue pendientes.**
+
+Evidencia F2: [Frontend](../auditoria/H24_Fase2_Frontend_Expediente_Docentes.md).
+Se conserva panel durante la visita y se advierte al salir; no se persiste la cola
+en el navegador. El visor nativo usa exclusivamente Blob PDF autenticado y validado,
+sin sandbox HTML porque Brave bloquea su visor con ese atributo. No se admite HTML;
+seguridad integral del visor y recuperacion tras recarga pendientes F3. Las secciones
+de propuesta F0 siguientes son historicas, no evidencia de capacidades productivas.
 
 Implementacion y desviaciones acotadas: [H24-F1](../auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md). Las secciones de propuesta siguientes conservan el contexto F0; para capacidades implementadas consultar esa auditoria. Se asigno 016, storage permanece deshabilitado por defecto y los gates productivos no estan satisfechos.
 

@@ -28,6 +28,24 @@ vi.mock('../api', () => ({
 }));
 
 describe('auth store permission helpers', () => {
+  it('restricts H24 module to active Admin, Finanzas and RH without changing shared fiscal projections', () => {
+    const auth = useAuthStore();
+    for (const role of ['admin', 'finanzas', 'rh', 'direccion', 'coordinador', 'contador', 'contabilidad'] as const) {
+      auth.session = { ...financeSession(), role, isProtectedSuperAdmin: false };
+      expect(auth.canViewFiscalRecords).toBe(['admin', 'finanzas', 'rh'].includes(role));
+      expect(auth.canManageFiscalRecords).toBe(['admin', 'finanzas', 'rh'].includes(role));
+      expect(auth.canViewFiscal).toBe(true);
+    }
+    auth.session = { ...financeSession(), permissions: ['fiscal.view'] };
+    expect(auth.canViewFiscalRecords).toBe(true);
+    expect(auth.canManageFiscalRecords).toBe(false);
+    auth.session = { ...financeSession(), permissions: ['fiscal.document.manage'] };
+    expect(auth.canViewFiscalRecords).toBe(false);
+    auth.session = { ...financeSession(), status: 'INACTIVO' };
+    expect(auth.canViewFiscalRecords).toBe(false);
+    auth.session = { ...financeSession(), role: 'admin', permissions: [] };
+    expect(auth.canManageFiscalRecords).toBe(true);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     setActivePinia(createPinia());

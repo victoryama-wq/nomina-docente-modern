@@ -1410,6 +1410,88 @@ export async function uploadTeacherConstancia(
   });
 }
 
+export type DossierDocumentType = 'CURP' | 'ACTA_NACIMIENTO' | 'CEDULA_PROFESIONAL' | 'TITULO' | 'OTRO';
+export interface DossierDocument {
+  id: string;
+  documentType: DossierDocumentType;
+  title: string;
+  fileName: string;
+  mimeType: 'application/pdf';
+  sizeBytes: number;
+  state: 'UPLOADING' | 'AVAILABLE' | 'REPLACING' | 'DELETING';
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface TeacherDossier {
+  teacher: { id: string; fullName: string; phone: string; version: string };
+  documents: DossierDocument[];
+  capabilities: { readDocuments: boolean; manageDocuments: boolean; editPhone: boolean };
+}
+export interface DossierOperation {
+  operationId: string;
+  documentId: string | null;
+  state: 'PREPARED' | 'CLEANUP' | 'ABORTING' | 'COMPLETE' | 'FAILED';
+  errorCode: string | null;
+  result: { revision?: number; version?: string };
+}
+export interface DossierFilePayload {
+  fileName: string;
+  mimeType: 'application/pdf';
+  base64Data: string;
+}
+export type DossierMutation =
+  | { action: 'upload'; payload: DossierFilePayload & { documentType: DossierDocumentType; title: string } }
+  | { action: 'replace'; documentId: string; payload: DossierFilePayload & { expectedRevision: number } }
+  | { action: 'metadata'; documentId: string; payload: { expectedRevision: number; documentType: DossierDocumentType; title: string } }
+  | { action: 'delete'; documentId: string; payload: { expectedRevision: number } }
+  | { action: 'contact'; payload: { phone: string; expectedVersion: string } };
+
+const dossierPath = (teacherId: string) => `/teachers/${encodeURIComponent(teacherId)}/dossier`;
+
+export function fetchTeacherDossier(teacherId: string): Promise<TeacherDossier> {
+  return request(dossierPath(teacherId));
+}
+
+export function fetchDossierOperation(teacherId: string, operationId: string): Promise<DossierOperation> {
+  return request(`${dossierPath(teacherId)}/operations/${encodeURIComponent(operationId)}`);
+}
+
+// All writes keep the same operationId and immutable payload on a transport retry.
+export function mutateTeacherDossier(teacherId: string, operationId: string, mutation: DossierMutation): Promise<DossierOperation> {
+  const methods = { upload: 'POST', replace: 'PUT', metadata: 'PATCH', delete: 'DELETE', contact: 'PATCH' };
+  let suffix = mutation.action === 'contact' ? '/contact' : '/documents';
+  if ('documentId' in mutation) suffix += `/${encodeURIComponent(mutation.documentId)}`;
+  if (mutation.action === 'replace') suffix += '/content';
+  return request(`${dossierPath(teacherId)}${suffix}`, {
+    method: methods[mutation.action],
+    body: JSON.stringify({ ...mutation.payload, operationId })
+  });
+}
+
+export async function fetchDossierDocumentBlob(teacherId: string, documentId: string, download = false): Promise<{ blob: Blob; fileName: string }> {
+  const token = await getIdToken();
+  const response = await fetch(`${apiBaseUrl}${dossierPath(teacherId)}/documents/${encodeURIComponent(documentId)}/content?download=${download}`, {
+    headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({})) as ApiErrorBody;
+    throw new ApiRequestError(body.message || 'No fue posible obtener el documento.', response.status, body.code || body.error || 'ERROR');
+  }
+  if (response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/pdf') {
+    throw new ApiRequestError('La respuesta no es un PDF.', 415, 'UNSUPPORTED_MEDIA_TYPE');
+  }
+  const blob = await response.blob();
+  if (!blob.size || blob.size > 7.5 * 1024 * 1024 || !(await blob.slice(0, 5).text()).startsWith('%PDF-')) {
+    throw new ApiRequestError('La respuesta no es un PDF permitido.', 422, 'INVALID_DOCUMENT');
+  }
+  const disposition = response.headers.get('Content-Disposition') || '';
+  let fileName = /filename="([^"]+)"/.exec(disposition)?.[1] || 'documento.pdf';
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+  if (encoded) { try { fileName = decodeURIComponent(encoded); } catch { /* Keep the ASCII fallback. */ } }
+  return { blob: new Blob([blob], { type: 'application/pdf' }), fileName: fileName.replace(/[\\/\u0000-\u001f\u007f]/g, '_') };
+}
+
 export async function openTeacherConstancia(teacherId: string): Promise<void> {
   const { blob } = await fetchTeacherConstanciaBlob(teacherId);
   const url = URL.createObjectURL(blob);

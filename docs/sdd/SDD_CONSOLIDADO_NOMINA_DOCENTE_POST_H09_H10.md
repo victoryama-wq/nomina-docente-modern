@@ -434,13 +434,16 @@ obtienen acceso. Migracion 016 creada para pruebas locales; **no aplicada en
 produccion**. No cambia el estado productivo H05 descrito en este documento.
 
 Storage deshabilitado por defecto, validacion PDF, idempotencia y reconciliacion
-durable implementados; F1 validada en local/test. Frontend F2, controles de storage y
-escaneo reales, worker programado y deploy siguen pendientes. No cambia H01,
+durable implementados; F1 validada en local/test. F2 frontend implementado con panel,
+carga multiple, telefono compartido y preview; pruebas con API simulada y Brave en
+tres resoluciones. Integracion real F3, controles de storage y escaneo reales,
+worker programado y deploy siguen pendientes. No cambia H01,
 Nomina, Constancias historicas ni la completitud fiscal.
 
 Fuentes: `docs/specs/SPEC_H24_Expediente_Completo_Docentes.md`,
 `docs/diseno/DISENO_TECNICO_H24_Expediente_Completo_Docentes.md` y
-`docs/auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md`.
+`docs/auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md` y
+`docs/auditoria/H24_Fase2_Frontend_Expediente_Docentes.md`.
 
 ### Reglas generales
 

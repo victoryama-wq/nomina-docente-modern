@@ -1,5 +1,7 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
+import TeacherDossierPanel from '../components/TeacherDossierPanel.vue';
 import {
   AlertTriangle,
   Building2,
@@ -81,6 +83,36 @@ const fiscalForm = ref<FiscalForm>({
   bankDetail: ''
 });
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
+const dossierTeacher = ref<Teacher | null>(null);
+const dossierOpen = ref(false);
+const dossierWorking = ref(false);
+
+function openDossier(teacher: Teacher) {
+  if (!authStore.canViewFiscalRecords) return;
+  if (dossierWorking.value && dossierTeacher.value?.id !== teacher.id) {
+    setNotice('error', 'Revisa y termina las operaciones del expediente abierto antes de cambiar de docente.');
+    dossierOpen.value = true;
+    return;
+  }
+  dossierTeacher.value = teacher;
+  dossierOpen.value = true;
+}
+
+function dossierPhoneSaved(phone: string) {
+  const teacher = teachers.value.find(item => item.id === dossierTeacher.value?.id);
+  if (teacher) teacher.phone = phone;
+}
+
+onBeforeRouteLeave(() => !dossierWorking.value || window.confirm('Hay cambios u operaciones de expediente pendientes. Salir perderá la cola local, pero no cancela operaciones aceptadas por el servidor. ¿Salir?'));
+watch(() => authStore.canViewFiscalRecords, allowed => {
+  if (allowed) return;
+  dossierTeacher.value = null;
+  dossierOpen.value = false;
+  dossierWorking.value = false;
+  teachers.value = [];
+  editingRecord.value = null;
+  closePreview();
+});
 
 const fiscalRecords = computed<FiscalRecord[]>(() =>
   teachers.value.map((teacher) => {
@@ -416,7 +448,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="view-stack">
+  <div v-if="!authStore.canViewFiscalRecords" class="notice error" role="alert">No tienes acceso a Expediente Fiscal.</div>
+  <div v-else class="view-stack">
     <div v-if="notice" class="notice" :class="notice.type">
       {{ notice.text }}
     </div>
@@ -472,15 +505,16 @@ onUnmounted(() => {
             <thead>
               <tr>
                 <th>Docente</th>
-                <th>Expediente</th>
+                <th>Avance fiscal</th>
                 <th>Nacimiento</th>
                 <th>Pago</th>
                 <th>Constancia</th>
+                <th>Expediente</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!filteredRecords.length">
-                <td colspan="5" class="empty-cell">No hay expedientes con el filtro actual.</td>
+                <td colspan="6" class="empty-cell">No hay expedientes con el filtro actual.</td>
               </tr>
               <tr v-for="record in filteredRecords" :key="record.teacher.id">
                 <td>
@@ -551,12 +585,18 @@ onUnmounted(() => {
                     </button>
                   </div>
                 </td>
+                <td>
+                  <button class="icon-button" type="button" :aria-label="`Abrir expediente de ${record.teacher.fullName}`" title="Ver expediente completo" @click="openDossier(record.teacher)"><Eye :size="18" /></button>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
+
+    <button v-if="dossierTeacher && !dossierOpen" class="secondary-action" @click="dossierOpen = true"><Eye :size="17" /> Volver al expediente de {{ dossierTeacher.fullName }}</button>
+    <TeacherDossierPanel v-if="dossierTeacher" :key="dossierTeacher.id" :teacher-id="dossierTeacher.id" :teacher-name="dossierTeacher.fullName" :show="dossierOpen" @close="dossierOpen = false" @working="dossierWorking = $event" @phone-saved="dossierPhoneSaved" />
 
     <div v-if="editingRecord" class="modal-backdrop" @click.self="closeFiscalEdit()">
       <form class="modal-card large" @submit.prevent="saveFiscalEdit">

@@ -36,13 +36,15 @@ export function financeVisibility(session: SessionUser) {
 }
 
 export function fiscalVisibility(session: SessionUser) {
-  const canView = hasPermission(session, 'fiscal.view') || hasPermission(session, 'fiscal.manage');
+  const allowedRole = session.status === 'ACTIVO' &&
+    (session.isProtectedSuperAdmin || ['admin', 'finanzas', 'rh'].includes(session.role));
+  const canView = allowedRole && (hasPermission(session, 'fiscal.view') || hasPermission(session, 'fiscal.manage'));
 
   return {
     canOpenModule: canView,
-    showFiscalEditActions: hasPermission(session, 'fiscal.manage'),
-    showDocumentViewActions: hasPermission(session, 'fiscal.document.view') || hasPermission(session, 'fiscal.document.manage'),
-    showDocumentManageActions: hasPermission(session, 'fiscal.document.manage')
+    showFiscalEditActions: canView && hasPermission(session, 'fiscal.manage'),
+    showDocumentViewActions: canView && (hasPermission(session, 'fiscal.document.view') || hasPermission(session, 'fiscal.document.manage')),
+    showDocumentManageActions: canView && hasPermission(session, 'fiscal.document.manage')
   };
 }
 

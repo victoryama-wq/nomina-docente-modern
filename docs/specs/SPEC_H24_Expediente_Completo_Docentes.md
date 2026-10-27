@@ -2,7 +2,9 @@
 
 Fecha: 2026-10-27.
 
-Estado: **H24-F1 modelo/backend implementados y validados en local/test. Frontend H24-F2 y despliegue pendientes. No cerrado operativo.**
+Estado: **H24-F1 modelo/backend validados en local/test; H24-F2 frontend implementado y validado con API simulada. Integracion F3 y despliegue pendientes. No cerrado operativo.**
+
+Evidencia F2: [Frontend del expediente](../auditoria/H24_Fase2_Frontend_Expediente_Docentes.md). Sin cambios backend/BD ni produccion; prueba integral real pendiente.
 
 Evidencia F1: [Modelo y backend](../auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md). La decision de implementar F1 es posterior al cierre documental F0; no autoriza produccion.
 
@@ -14,7 +16,7 @@ Ampliar Expediente Fiscal para administrar documentos personales y academicos de
 
 No crear otro directorio de docentes ni otra fuente de datos personales. El expediente siempre pertenece al UUID existente de `teachers`.
 
-## 2. Situacion actual verificada en el repositorio
+## 2. Situacion verificada al iniciar F0 (referencia historica)
 
 - La ruta `/expediente-fiscal` usa `FiscalRecordsView.vue` y el listado de `teachers`.
 - La constancia tiene carga individual, vista previa autenticada y descarga. Admite PDF, JPG y PNG; esta compatibilidad se conserva.
@@ -120,7 +122,7 @@ Esta politica no autoriza borrar constancias fiscales historicas, documentos de 
 
 No modificar calculos H01, Nomina, pagos, snapshots, corridas, incidencias, extras, responsables/`created_by`, coordinaciones, permisos fuera de este modulo ni reglas de importacion H22. No incorporar firma digital, OCR, expediente ZIP, documentos publicos, altas masivas de docentes o nuevos requisitos para pagar.
 
-La fase F0 fue exclusivamente documental. F1 autoriza modelo/API y pruebas locales, incluida migracion aditiva 016 en test; no autoriza frontend, infraestructura productiva ni deploy. La aplicacion productiva de 016 requiere H05 y aprobacion independiente.
+La fase F0 fue exclusivamente documental. F1 autorizo modelo/API y pruebas locales, incluida migracion aditiva 016 en test. F2 autoriza frontend y pruebas locales sin cambiar backend/BD. Ninguna de estas fases autoriza infraestructura productiva ni deploy. La aplicacion productiva de 016 requiere H05 y aprobacion independiente.
 
 ## 9. Criterios de aceptacion de implementacion futura
 
@@ -145,11 +147,11 @@ La fase F0 fue exclusivamente documental. F1 autoriza modelo/API y pruebas local
 
 1. F0 completada: SPEC y diseno; decisiones funcionales cerradas.
 2. F1 validada en local/test: modelo, migracion 016 y API con autorizacion, almacenamiento y reconciliacion de fallos; sin infraestructura productiva.
-3. F2 futura: panel, carga multiple, telefono, preview y pruebas frontend.
+3. F2 implementada localmente: panel, carga multiple, telefono, preview y pruebas frontend con API simulada; responsive validado en Brave. Integracion persistida pendiente F3.
 4. F3 futura: integracion, seguridad, responsive y prueba real de borrado/reemplazo en almacenamiento de prueba.
 5. F4/F5 futuras: checklist H13, backup, aprobacion de infraestructura/migracion/deploy y smoke autenticado sin documentos reales de prueba.
 
-Pendientes tecnicos: validar limites operativos y capacidad, herramienta de validacion/escaneo PDF, mecanismo de reintentos durables, configuracion de retencion del almacenamiento y numero disponible de migracion. No quedan pendientes las decisiones sobre roles, multiplicidad, telefono compartido o eliminacion definitiva.
+Pendientes tecnicos: validar limites/capacidad e integracion completa, seguridad del visor nativo y escaneo PDF, recuperacion tras recarga, provisionamiento del worker y politica real de retencion. Parser/reintentos backend existen en F1 y migracion 016 esta asignada; su habilitacion productiva sigue pendiente. No quedan pendientes las decisiones sobre roles, multiplicidad, telefono compartido o eliminacion definitiva.
 
 No marcar esta funcionalidad como productiva ni actualizar manuales como si estuviera disponible. El cierre operativo exigira evidencia de permisos y eliminacion fisica, ademas de smoke aprobado.
 

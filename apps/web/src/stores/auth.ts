@@ -43,8 +43,11 @@ export const useAuthStore = defineStore('auth', () => {
     () => isAdmin.value || hasPermission('fiscal.document.view') || hasPermission('fiscal.document.manage')
   );
   const canManageFiscalDocuments = computed(() => isAdmin.value || hasPermission('fiscal.document.manage'));
-  const canViewFiscalRecords = computed(() => canViewFiscal.value);
-  const canManageFiscalRecords = computed(() => canManageFiscal.value);
+  const canViewFiscalRecords = computed(() =>
+    session.value?.status === 'ACTIVO' &&
+    (isAdmin.value || ['finanzas', 'rh'].includes(session.value.role)) && canViewFiscal.value
+  );
+  const canManageFiscalRecords = computed(() => canViewFiscalRecords.value && canManageFiscal.value);
   const canExportTeacherHistory = computed(() => hasPermission('audit.view'));
   const canViewAudit = computed(
     () => session.value?.isProtectedSuperAdmin || hasPermission('audit.view')
