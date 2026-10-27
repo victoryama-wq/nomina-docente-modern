@@ -30,6 +30,7 @@ import {
 } from '../lib/teacher-names.js';
 import type { ActorScope, SessionUser } from '../types.js';
 import { type CoordinationRow } from './academic-context.js';
+import { requireDossier } from '../lib/dossier-policy.js';
 
 type TeacherStatus = 'ACTIVO' | 'INACTIVO';
 
@@ -1002,7 +1003,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.patch(
     '/teachers/:id/fiscal',
-    { preHandler: requirePermission('fiscal.manage') },
+    { preHandler: requireDossier('contact') },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = teacherFiscalBodySchema.safeParse(request.body);
@@ -1076,6 +1077,16 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const before = await loadTeacherById(client, params.data.id);
       if (!before) throw new Error('No se encontró el docente.');
 
+      // Serializes dossier creation against deletion of its owning teacher.
+      await client.query('SELECT id FROM teachers WHERE id=$1 FOR UPDATE', [before.id]);
+      const dossier = await client.query(`SELECT 1 FROM teacher_dossier_documents WHERE teacher_id=$1
+        UNION ALL SELECT 1 FROM teacher_dossier_operations WHERE teacher_id=$1
+        AND state IN ('PREPARED','CLEANUP','ABORTING') LIMIT 1`, [before.id]);
+      if (dossier.rowCount) {
+        await reply.code(409).send({ error: 'DOSSIER_NOT_EMPTY', message: 'Retira los documentos del expediente y completa sus operaciones antes de eliminar al docente.' });
+        return null;
+      }
+
       const dependencies = await client.query<TeacherDependencyRow>(
         `
           SELECT
@@ -1115,6 +1126,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       return documents.rows;
     });
 
+    if (!deletedDocuments) return;
     for (const document of deletedDocuments) {
       try {
         await firebaseAdmin.storage().bucket(document.storageBucket).file(document.storageObject).delete({ ignoreNotFound: true });
@@ -1128,7 +1140,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.post(
     '/teachers/:id/documents/constancia',
-    { preHandler: requirePermission('fiscal.document.manage') },
+    { preHandler: requireDossier('manage') },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = documentBodySchema.safeParse(request.body);
@@ -1208,7 +1220,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.get(
     '/teachers/:id/documents/current',
-    { preHandler: requirePermission('fiscal.document.view') },
+    { preHandler: requireDossier('read') },
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       if (!params.success) {

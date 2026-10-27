@@ -425,6 +425,25 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 
 ## 8. Reglas para futuras fases Codex
 
+### H24 - Expediente completo (local, no productivo)
+
+H24-F1 agrega modelo/backend local para PDF adicionales del docente, separados de
+Constancias, y telefono compartido con Directorio. Admin conserva acceso completo;
+Finanzas/RH requieren permisos fiscales/documentales por accion. Otros roles no
+obtienen acceso. Migracion 016 creada para pruebas locales; **no aplicada en
+produccion**. No cambia el estado productivo H05 descrito en este documento.
+
+Storage deshabilitado por defecto, validacion PDF, idempotencia y reconciliacion
+durable implementados; F1 validada en local/test. Frontend F2, controles de storage y
+escaneo reales, worker programado y deploy siguen pendientes. No cambia H01,
+Nomina, Constancias historicas ni la completitud fiscal.
+
+Fuentes: `docs/specs/SPEC_H24_Expediente_Completo_Docentes.md`,
+`docs/diseno/DISENO_TECNICO_H24_Expediente_Completo_Docentes.md` y
+`docs/auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md`.
+
+### Reglas generales
+
 Para cualquier fase posterior:
 
 1. Leer primero `docs/sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md`.

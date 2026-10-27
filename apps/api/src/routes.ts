@@ -11,6 +11,7 @@ import { registerOperationalReportRoutes } from './routes/operational-reports.js
 import { registerReportRoutes } from './routes/reports.js';
 import { registerScheduleRoutes } from './routes/schedules.js';
 import { registerTeacherRoutes } from './routes/teachers.js';
+import { registerDossierRoutes } from './routes/teacher-dossier.js';
 import { registerUserRoutes } from './routes/users.js';
 
 interface CountRow {
@@ -58,6 +59,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   await registerUserRoutes(app);
   await registerTeacherRoutes(app);
+  await registerDossierRoutes(app);
   await registerScheduleRoutes(app);
   await registerIncidenceRoutes(app);
   await registerExtraRoutes(app);

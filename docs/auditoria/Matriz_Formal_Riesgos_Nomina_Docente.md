@@ -206,6 +206,23 @@ Pendientes reales despues de H02/H03:
 
 ## 7. Recomendacion final
 
+### Seguimiento H24 - Expediente completo
+
+H24-F1 modelo/backend implementados y validados en local/test; no cerrado operativo.
+La migracion 016 es exclusivamente local/test en esta fase, sin cambio del estado
+productivo H05. Acceso aprobado: Admin, Finanzas y RH con permisos por accion.
+No se amplian capacidades de otros roles ni se modifica H01.
+
+Riesgos previos a release: tratamiento de PDF maliciosos, politica real de borrado
+definitivo, capacidad y recuperacion durable entre PostgreSQL/storage. El adaptador
+GCS solo tiene pruebas simuladas y el worker no esta provisionado en produccion.
+Pendientes: frontend F2, validacion integral, infraestructura aprobada y migracion/deploy
+con H05/H13. Mantener storage deshabilitado hasta cumplir los gates.
+
+Evidencia: `H24_Fase1_Modelo_Backend_Expediente_Docentes.md`, SPEC y diseno H24.
+
+### Continuidad de la matriz principal
+
 No se recomienda reabrir H02/H03 mientras produccion siga estable.
 
 El foco tecnico inmediato debe pasar a:

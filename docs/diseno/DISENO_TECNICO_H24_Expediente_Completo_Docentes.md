@@ -2,7 +2,9 @@
 
 Fecha: 2026-10-27.
 
-Estado: **Propuesta tecnica documental basada en decisiones funcionales aprobadas. No implementada.**
+Estado: **Diseno aprobado; modelo/backend F1 implementados y validados en local/test. Sin frontend H24 ni despliegue.**
+
+Implementacion y desviaciones acotadas: [H24-F1](../auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md). Las secciones de propuesta siguientes conservan el contexto F0; para capacidades implementadas consultar esa auditoria. Se asigno 016, storage permanece deshabilitado por defecto y los gates productivos no estan satisfechos.
 
 Contrato funcional: [SPEC_H24_Expediente_Completo_Docentes.md](../specs/SPEC_H24_Expediente_Completo_Docentes.md).
 
@@ -178,7 +180,7 @@ Antes de desarrollar: confirmar parametros de carga, solucion de validacion PDF,
 - Infraestructura: almacenamiento/reconciliador privados sujetos a aprobacion independiente.
 - Documentacion: auditorias por fase; SDD/matriz/manuales al estado real, sin presentar H24 como productivo antes de su cierre.
 
-## 12. Evidencia y confirmaciones de esta fase
+## 12. Evidencia y confirmaciones de la fase documental F0
 
 Fuentes locales revisadas: `database/001_initial_schema.sql`, `apps/api/src/routes/teachers.ts`, `apps/api/src/auth.ts`, `apps/api/src/app.ts`, `apps/web/src/views/FiscalRecordsView.vue`, `apps/web/src/stores/auth.ts`, `apps/web/src/router/index.ts`, SDD consolidado y auditorias H03/H05/H13.
 

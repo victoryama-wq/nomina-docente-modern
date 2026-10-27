@@ -2,7 +2,9 @@
 
 Fecha: 2026-10-27.
 
-Estado: **H24-F0 documental. Decisiones funcionales aprobadas; diseno tecnico propuesto. Sin implementacion ni despliegue.**
+Estado: **H24-F1 modelo/backend implementados y validados en local/test. Frontend H24-F2 y despliegue pendientes. No cerrado operativo.**
+
+Evidencia F1: [Modelo y backend](../auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md). La decision de implementar F1 es posterior al cierre documental F0; no autoriza produccion.
 
 Diseno complementario: [DISENO_TECNICO_H24_Expediente_Completo_Docentes.md](../diseno/DISENO_TECNICO_H24_Expediente_Completo_Docentes.md).
 
@@ -118,7 +120,7 @@ Esta politica no autoriza borrar constancias fiscales historicas, documentos de 
 
 No modificar calculos H01, Nomina, pagos, snapshots, corridas, incidencias, extras, responsables/`created_by`, coordinaciones, permisos fuera de este modulo ni reglas de importacion H22. No incorporar firma digital, OCR, expediente ZIP, documentos publicos, altas masivas de docentes o nuevos requisitos para pagar.
 
-Esta fase no implementa API/UI, no crea SQL, no modifica BD, no instala dependencias y no despliega. La futura persistencia adicional requerira migracion H05 autorizada por separado.
+La fase F0 fue exclusivamente documental. F1 autoriza modelo/API y pruebas locales, incluida migracion aditiva 016 en test; no autoriza frontend, infraestructura productiva ni deploy. La aplicacion productiva de 016 requiere H05 y aprobacion independiente.
 
 ## 9. Criterios de aceptacion de implementacion futura
 
@@ -141,8 +143,8 @@ Esta fase no implementa API/UI, no crea SQL, no modifica BD, no instala dependen
 
 ## 10. Fases propuestas y pendientes tecnicos
 
-1. F0 actual: SPEC y diseno; decisiones funcionales cerradas.
-2. F1 futura: modelo, migracion H05 y API con autorizacion, almacenamiento y reconciliacion de fallos; solo pruebas aisladas.
+1. F0 completada: SPEC y diseno; decisiones funcionales cerradas.
+2. F1 validada en local/test: modelo, migracion 016 y API con autorizacion, almacenamiento y reconciliacion de fallos; sin infraestructura productiva.
 3. F2 futura: panel, carga multiple, telefono, preview y pruebas frontend.
 4. F3 futura: integracion, seguridad, responsive y prueba real de borrado/reemplazo en almacenamiento de prueba.
 5. F4/F5 futuras: checklist H13, backup, aprobacion de infraestructura/migracion/deploy y smoke autenticado sin documentos reales de prueba.

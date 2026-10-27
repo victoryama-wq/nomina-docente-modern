@@ -13,7 +13,10 @@ const envSchema = z.object({
   DB_HOST: z.string().optional(),
   DB_PORT: z.coerce.number().int().positive().default(5432),
   INSTANCE_CONNECTION_NAME: z.string().optional(),
-  CONSTANCIAS_BUCKET: z.string().default('nomina-docente-prod-constancias')
+  CONSTANCIAS_BUCKET: z.string().default('nomina-docente-prod-constancias'),
+  DOSSIER_STORAGE_MODE: z.enum(['disabled', 'local', 'gcs']).default('disabled'),
+  DOSSIER_LOCAL_ROOT: z.string().optional(),
+  DOSSIER_BUCKET: z.string().optional()
 });
 
 export const config = envSchema.parse(process.env);
