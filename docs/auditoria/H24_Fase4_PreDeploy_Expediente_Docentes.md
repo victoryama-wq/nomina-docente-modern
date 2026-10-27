@@ -29,6 +29,13 @@ con GCS, borrado sin residuos y recuperacion tras corte de proceso. RH/Contador
 sin actor local y Firebase real permanecen en PD-05; worker programado en PD-04.
 Ver [resultado GCS aislado](H24_PD02_Resultado_GCS_Aislado.md). H24 sigue NO-GO.
 
+Seguimiento PD-05 (2026-10-27):
+[plan de Firebase Auth real y sesiones por rol](H24_PD05_Plan_Validacion_Firebase_Auth_Real.md)
+preparado, no ejecutado. Requiere aprobar Firebase/Google en el proyecto H24,
+designar cuentas institucionales QA y autorizar fixtures/escrituras de sesion
+en BD local. Incluye aislamiento de configuracion, matriz por accion y limpieza.
+No se han provisionado recursos Auth ni validado sesiones reales; AUTH-01 sigue abierto.
+
 ## 1. Alcance y evidencia
 
 Arbol limpio al inicio; HEAD y tracking local de origin sin diferencias (0/0).

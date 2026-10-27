@@ -247,6 +247,12 @@ triage/correccion o excepciones fundamentadas pendientes, sin audit fix.
 AUTH-01 registra verificacion Firebase sin checkRevoked y requiere evaluacion;
 los permisos activos de app_users se siguen comprobando. No se cambia auth aqui.
 
+PD-05 tiene plan preparado, no ejecutado, en
+`H24_PD05_Plan_Validacion_Firebase_Auth_Real.md`: Firebase/Google exclusivo H24,
+cuentas institucionales QA y fixtures locales requieren autorizacion explicita.
+Login actual escribe UID/timestamps en test; no es una prueba read-only de BD.
+La matriz real por accion y la observacion AUTH-01 siguen pendientes; H24 mantiene NO-GO.
+
 Evidencia: `H24_Fase1_Modelo_Backend_Expediente_Docentes.md`,
 `H24_Fase2_Frontend_Expediente_Docentes.md`,
 `H24_Fase3_Validacion_Integracion_Expediente_Docentes.md`,

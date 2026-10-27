@@ -2,14 +2,18 @@
 
 Fecha: 2026-10-27.
 
-Estado: **Diseno aprobado; F1/F2 implementadas y F3 validada en integracion local con observaciones. GCS, autenticacion real y despliegue pendientes.**
+Estado: **Diseno aprobado; F1/F2 implementadas y F3 validada en integracion local con observaciones. PD-02 GCS aislado cerrado tecnicamente; autenticacion real y despliegue pendientes.**
 
 F4: [revision predeploy](../auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md)
-preparada; NO-GO hasta cerrar PD-02 a PD-08 y evaluar AUTH-01. PD-01 cerrado:
+preparada; NO-GO hasta cerrar PD-03 a PD-08 y evaluar AUTH-01. PD-01 cerrado:
 imagen Linux local de `95026bf` con pdfinfo 22.12.0 y smoke obligatorio, 12/12 en
-build/runtime, tambien como usuario node. No hay ensayo GCS/auth real ni provisionamiento probado del
-worker. El plan describe configuracion, pruebas y rollback futuros, no cambios
-de infraestructura cloud ejecutados ni autorizacion de deploy. Se mantiene storage disabled.
+build/runtime, tambien como usuario node. GCS real aislado validado en
+[PD-02](../auditoria/H24_PD02_Resultado_GCS_Aislado.md). Autenticacion real solo
+[planificada en PD-05](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),
+pendiente de autorizaciones y ejecucion. No hay provisionamiento probado del
+worker. El plan de release describe configuracion productiva y rollback futuros,
+no cambios productivos ejecutados ni autorizacion de deploy. El default de storage
+sigue disabled; PD-02 uso gcs explicitamente solo en el entorno aislado.
 Evidencia: [correccion local pdfinfo](../auditoria/H24_Fase4_Correccion_Parser_Pdfinfo.md).
 
 Evidencia F3: [Integracion HTTP/PostgreSQL/storage local](../auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md). Se expone `Content-Disposition` mediante CORS exclusivamente en la respuesta PDF del expediente para conservar el nombre UTF-8 en descargas cross-origin. No se amplian origenes ni autorizaciones.

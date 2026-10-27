@@ -2,12 +2,18 @@
 
 Fecha: 2026-10-27.
 
-Estado: **H24-F1/F2 implementadas; H24-F3 integracion local HTTP/PostgreSQL/storage local validada con observaciones. Autenticacion real, GCS y gates productivos pendientes. No cerrado operativo.**
+Estado: **H24-F1/F2 implementadas; H24-F3 integracion local validada con observaciones. PD-02 GCS aislado cerrado tecnicamente; autenticacion real y gates productivos pendientes. No cerrado operativo.**
 
 H24-F4: preparacion predeploy completada, **NO-GO para deploy/habilitacion**.
 Ver [predeploy y bloqueantes](../auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md):
-GCS/auth real pendientes, seguridad PDF, worker,
+Auth real pendiente, seguridad PDF, worker,
 capacidad, triage npm y ensayo H05/backup. No cambia las decisiones funcionales.
+
+PD-02 acredita GCS real solo en test; ver
+[resultado aislado](../auditoria/H24_PD02_Resultado_GCS_Aislado.md).
+PD-05 tiene [plan preparado](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),
+pendiente de autorizaciones y ejecucion. No hay sesiones Firebase reales aprobadas
+ni configuracion productiva habilitada por estos ensayos.
 
 Seguimiento PD-01 cerrado localmente: imagen Linux de `95026bf` construida,
 pdfinfo 22.12.0 y smoke 12/12 en build/runtime aislado, tambien como usuario node.
@@ -164,7 +170,7 @@ La fase F0 fue exclusivamente documental. F1 autorizo modelo/API y pruebas local
 5. F4 preparada: checklist H13, revision de autenticacion/storage/seguridad y plan de release/rollback; autorizacion bloqueada por pendientes en el acta F4. Solo cambios documentales, sin recursos cloud.
 6. F5 futura: cerrar bloqueantes, backup, aprobacion de infraestructura/migracion/deploy y smoke autenticado sin documentos personales reales de prueba.
 
-Pendientes tecnicos: capacidad sostenida, autenticacion real, seguridad del visor nativo y escaneo PDF, provisionamiento del worker y politica GCS real de retencion/versionado/soft delete. F3 valida relectura tras recarga y reintento idempotente en la misma visita; no persiste IDs de operaciones pendientes en navegador. Parser/reintentos backend existen en F1 y migracion 016 esta asignada; su habilitacion productiva sigue pendiente. No quedan pendientes las decisiones sobre roles, multiplicidad, telefono compartido o eliminacion definitiva.
+Pendientes tecnicos: capacidad sostenida, autenticacion real, seguridad del visor nativo y escaneo PDF, provisionamiento del worker y configuracion GCS productiva de retencion/versionado/soft delete; la politica GCS aislada ya fue ensayada en PD-02. F3 valida relectura tras recarga y reintento idempotente en la misma visita; no persiste IDs de operaciones pendientes en navegador. Parser/reintentos backend existen en F1 y migracion 016 esta asignada; su habilitacion productiva sigue pendiente. No quedan pendientes las decisiones sobre roles, multiplicidad, telefono compartido o eliminacion definitiva.
 
 No marcar esta funcionalidad como productiva ni actualizar manuales como si estuviera disponible. El cierre operativo exigira evidencia de permisos y eliminacion fisica, ademas de smoke aprobado.
 

@@ -461,6 +461,12 @@ Ver `docs/auditoria/H24_PD02_Resultado_GCS_Aislado.md`. No modifica produccion.
 RH/Contador sin actor local y Firebase real quedan en PD-05; worker programado
 permanece en PD-04. softDeleted=true devolvio 400, con evidencia alternativa de
 borrado documentada, no una lista vacia.
+PD-05: plan preparado en
+`docs/auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md`, sin ejecucion.
+Propone Google Sign-In real en Firebase exclusivo H24, API loopback y BD/storage
+de prueba; requiere autorizacion de provisionamiento, cuentas institucionales QA
+y escrituras locales de sesion/fixtures. No cambia autenticacion ni permisos del
+sistema. AUTH-01 y el smoke real por accion siguen pendientes.
 Bloqueantes restantes: autenticacion real sin ensayo,
 control PDF malicioso, worker/alertas, capacidad, triage npm y ensayo H05/backup.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
