@@ -2,8 +2,14 @@
 
 Fecha: 2026-10-27. Base revisada: `a9733d6`.
 Rama: `feature/h02-h03-user-coordinations-permissions`, limpia al iniciar.
-Estado: **preparado; pendiente de autorizacion, provisionamiento y ejecucion**.
+Estado actualizado: **Firebase Auth/Google y Web App H24 provisionados con autorizacion;
+cuentas QA, autorizaciones de fixtures y sesiones por rol pendientes**.
 PD-05 y AUTH-01 abiertos. H24 mantiene NO-GO. No hay smoke real aprobado en esta fase.
+
+Seguimiento autorizado posterior a este plan:
+[provisionamiento Auth aislado](H24_PD05_Provisionamiento_Firebase_Auth_Aislado.md).
+Las secciones siguientes conservan el protocolo y la evidencia de preparacion
+original; no afirman que sus pruebas ya se hayan ejecutado.
 
 ## 1. Objetivo y alcance actual
 

@@ -36,6 +36,12 @@ designar cuentas institucionales QA y autorizar fixtures/escrituras de sesion
 en BD local. Incluye aislamiento de configuracion, matriz por accion y limpieza.
 No se han provisionado recursos Auth ni validado sesiones reales; AUTH-01 sigue abierto.
 
+Continuacion autorizada PD-05 del mismo dia: Firebase Auth estandar, Google Sign-In
+y Web App habilitados exclusivamente en el proyecto H24. Ver
+[acta de provisionamiento](H24_PD05_Provisionamiento_Firebase_Auth_Aislado.md).
+Esto sustituye el pendiente de provisionamiento anterior, no el de pruebas:
+0 usuarios Auth, cuentas QA y sesiones por rol aun pendientes; H24 sigue NO-GO.
+
 ## 1. Alcance y evidencia
 
 Arbol limpio al inicio; HEAD y tracking local de origin sin diferencias (0/0).
