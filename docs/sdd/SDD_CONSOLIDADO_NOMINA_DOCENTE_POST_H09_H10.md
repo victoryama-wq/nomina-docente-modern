@@ -439,8 +439,9 @@ carga multiple, telefono compartido y preview; pruebas con API simulada y Brave 
 tres resoluciones. F3 valida API HTTP real, PostgreSQL test, archivos sinteticos en
 storage local, reemplazo/borrado fisico, telefono compartido y roles sinteticos en
 Brave. Correccion acotada: exponer Content-Disposition en la respuesta PDF para
-descarga cross-origin. Autenticacion Firebase real, GCS de prueba, escaneo aprobado,
-worker programado y deploy siguen pendientes. No cambia H01,
+descarga cross-origin. GCS de prueba fue validado posteriormente en PD-02;
+autenticacion Firebase real, escaneo aprobado, worker programado y deploy siguen
+pendientes. No cambia H01,
 Nomina, Constancias historicas ni la completitud fiscal.
 
 F4 preparo predeploy documental sin acceso productivo: **NO-GO**. Seguimiento
@@ -451,9 +452,16 @@ PD-02 tiene protocolo preparado en
 `docs/auditoria/H24_PD02_Plan_Validacion_GCS_Aislado.md`. Seguimiento autorizado en
 `docs/auditoria/H24_PD02_Copia_Local_Anonimizada_GCS.md`: copia local saneada en
 127.0.0.1:55440, H05 test 19 registradas/pending=0/mismatch=0 tras 016. Proyecto
-de pruebas creado; facturacion bloqueada por cuota, sin bucket ni ensayo GCS real.
-No cierra el gate ni modifica produccion.
-Bloqueantes restantes: GCS/autenticacion real sin ensayo,
+de pruebas creado. La cuota de facturacion se resolvio en una continuacion:
+bucket privado `nomina-h24-test-234692275301-dossier`, IAM minimo y pruebas reales
+GCS/API local satisfactorias (21 comprobaciones adaptador y 15 API/BD).
+**PD-02 cerrado tecnicamente en local/test**, sin objetos/versiones residuales y
+con recuperacion tras corte de proceso; 23 tablas ajenas al expediente intactas.
+Ver `docs/auditoria/H24_PD02_Resultado_GCS_Aislado.md`. No modifica produccion.
+RH/Contador sin actor local y Firebase real quedan en PD-05; worker programado
+permanece en PD-04. softDeleted=true devolvio 400, con evidencia alternativa de
+borrado documentada, no una lista vacia.
+Bloqueantes restantes: autenticacion real sin ensayo,
 control PDF malicioso, worker/alertas, capacidad, triage npm y ensayo H05/backup.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.

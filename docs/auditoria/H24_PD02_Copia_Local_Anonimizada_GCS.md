@@ -3,7 +3,15 @@
 Fecha: 2026-10-27.
 Rama: `feature/h02-h03-user-coordinations-permissions`.
 Base de codigo: `be4646d`.
-Resultado: **BD local preparada; GCS bloqueado por cuota de facturacion. PD-02 abierto. H24 NO-GO.**
+Resultado inicial: **BD local preparada; GCS bloqueado por cuota de facturacion. PD-02 abierto. H24 NO-GO.**
+
+Continuacion 2026-10-27: cuota aprobada por el usuario, facturacion vinculada y
+bucket aislado creado. Ensayos reales de adaptador, permisos, borrado y API/BD
+local satisfactorios: **PD-02 cerrado tecnicamente en local/test; H24 sigue NO-GO**.
+Ver [resultado GCS](H24_PD02_Resultado_GCS_Aislado.md), incluidos casos sin actor
+RH/Contador, Firebase real pendiente y registros sinteticos conservados en la BD.
+Este documento conserva la cronologia de exportacion/preparacion anterior; su
+seccion 6 describe el bloqueo inicial, ya superado, no la facturacion vigente.
 
 ## 1. Autorizaciones y limites
 

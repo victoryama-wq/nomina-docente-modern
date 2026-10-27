@@ -4,12 +4,20 @@ Fecha: 2026-10-27.
 Base revisada: `be4646d` en `feature/h02-h03-user-coordinations-permissions`.
 Estado inicial: **preparado, pendiente de autorizacion y ejecucion. PD-02 abierto; H24 NO-GO**.
 
-Seguimiento autorizado 2026-10-27: exportacion read-only y copia local saneada
+Primer seguimiento autorizado 2026-10-27: exportacion read-only y copia local saneada
 completadas; proyecto `nomina-h24-test-20261027` creado. Vinculacion de facturacion
 rechazada por cuota; no hay bucket ni prueba GCS. Ver
 [resultado y custodia local](H24_PD02_Copia_Local_Anonimizada_GCS.md).
 Las autorizaciones pendientes de las tablas siguientes describen la preparacion
 inicial; el acta de resultado registra las aprobaciones posteriores y su alcance.
+
+Continuacion tras aprobacion de cuota: facturacion vinculada, bucket privado e
+IAM de prueba creados; adaptador real y API local con GCS ensayados. **PD-02
+cerrado en alcance tecnico local/test**, con RH/Contador y Firebase real separados
+en PD-05, y programacion del worker en PD-04. H24 permanece NO-GO. Ver
+[resultado GCS y limites de evidencia](H24_PD02_Resultado_GCS_Aislado.md).
+Las matrices futuras y pendientes siguientes se conservan como protocolo original;
+no representan el resultado final de las pruebas.
 
 ## 1. Alcance y evidencia disponible
 
