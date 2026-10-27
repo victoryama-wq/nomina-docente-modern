@@ -14,8 +14,16 @@ RUN npm --workspace apps/api run build
 FROM node:24-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+ENV DOSSIER_PDFINFO_PATH=/usr/bin/pdfinfo
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends poppler-utils \
+    && rm -rf /var/lib/apt/lists/* \
+    && test -x "$DOSSIER_PDFINFO_PATH" \
+    && "$DOSSIER_PDFINFO_PATH" -v
 COPY package.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
+# Fail the image build if the installed parser cannot validate synthetic PDFs.
+RUN node apps/api/dist/test/dossier-pdfinfo.smoke.js
 CMD ["node", "apps/api/dist/server.js"]

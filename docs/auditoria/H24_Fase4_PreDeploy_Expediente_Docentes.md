@@ -7,6 +7,13 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
+Seguimiento tecnico autorizado (2026-10-27):
+[correccion del empaquetado pdfinfo](H24_Fase4_Correccion_Parser_Pdfinfo.md).
+Dockerfile incorpora Poppler y smoke obligatorio; pruebas Windows OK. PD-01 sigue
+parcialmente pendiente hasta construir/probar la imagen Linux. Las secciones de
+revision inicial y sus confirmaciones documentales se conservan como evidencia
+de la preparacion F4 anterior a esta correccion.
+
 ## 1. Alcance y evidencia
 
 Arbol limpio al inicio; HEAD y tracking local de origin sin diferencias (0/0).
@@ -31,7 +38,7 @@ ni afirmaciones sobre la infraestructura actualmente desplegada.
 
 | ID / prioridad | Evidencia local y riesgo | Condicion de cierre / responsable |
 |---|---|---|
-| H24-PD-01 / Alta | `apps/api/Dockerfile:14` usa node:24-slim sin instalar/copiar pdfinfo; `dossier-storage.ts:320` exige ruta absoluta. Cargas/reemplazos fallaran si la imagen no contiene el parser | DevOps: imagen reproducible con parser aprobado, version registrada y prueba Linux de PDF valido/invalido/timeout antes de release |
+| H24-PD-01 / Alta | Hallazgo inicial: runtime sin pdfinfo y validador exige ruta absoluta. Correccion local: Dockerfile instala Poppler, define /usr/bin/pdfinfo y exige smoke compilado; parser Windows validado. Imagen Linux aun no construida por ausencia de Docker/WSL | Parcial: pendiente imagen Linux, inventario/version, artefacto reproducible y PDF valido/invalido/timeout real antes de release; ver acta de correccion |
 | H24-PD-02 / Alta | Solo hay mock SDK GCS. `dossier-storage.ts:207` exige politica estricta; no se conoce bucket/IAM de prueba ni evidencia de borrado real | DevOps/Seguridad: bucket nuevo aislado, nunca Constancias, prueba de politica, permisos y ausencia de objetos/versiones tras borrar/reemplazar |
 | H24-PD-03 / Alta | `validateDossierPdf` hace comprobaciones estructurales/JavaScript, no antivirus. Preview Blob usa visor nativo sin sandbox HTML (`TeacherDossierPanel.vue:312`) | Seguridad: aprobar e implementar/probar estrategia PDF malicioso o aceptar formalmente control alternativo con riesgo acotado; no declarar pdfinfo un escaner |
 | H24-PD-04 / Alta | `dossier-reconcile.ts:14` es worker one-shot; no existe programacion versionada/probada. `reconcile()` procesa hasta 25 pendientes mayores de cinco minutos por invocacion | DevOps: worker privado programado, permisos minimos, reinicios/fallos ensayados, alertas por backlog y antiguedad; recuperacion real en entorno de prueba |
@@ -40,9 +47,9 @@ ni afirmaciones sobre la infraestructura actualmente desplegada.
 | H24-PD-07 / Media | Limite de dos cargas por proceso, Base64 y buffers en memoria; no prueba sostenida con memoria/concurrencia de destino | QA/DevOps: medir capacidad, memoria, latencias, cola y 429 con archivos limite, red lenta, usuarios y replicas concurrentes |
 | H24-PD-08 / Alta operativa | 016 solo ensayada por harness local; F3 dejo registro H05 test vacio. Backup local fallo por namespace PostgreSQL ausente | DBA: resolver entorno de ensayo confiable, probar 016 por H05 y restauracion; luego backup/ventana productiva aprobados independientemente |
 
-No se cambian codigo, dependencias, Dockerfile, SQL ni politicas para cerrar
-artificialmente estos puntos en F4. La siguiente fase debe autorizar los ajustes
-tecnicos y recursos aislados necesarios; no es todavia H24-F5 deploy.
+La revision documental inicial no cambio codigo, dependencias, Dockerfile, SQL
+ni politicas. El seguimiento autorizado solo corrige el empaquetado del parser
+y agrega smoke local; no cierra artificialmente los gates ni autoriza H24-F5.
 
 ## 3. Autenticacion y permisos
 

@@ -443,8 +443,10 @@ descarga cross-origin. Autenticacion Firebase real, GCS de prueba, escaneo aprob
 worker programado y deploy siguen pendientes. No cambia H01,
 Nomina, Constancias historicas ni la completitud fiscal.
 
-F4 prepara predeploy sin cambios tecnicos ni acceso productivo: **NO-GO**.
-Bloqueantes: parser no empaquetado en imagen, GCS/autenticacion real sin ensayo,
+F4 preparo predeploy documental sin acceso productivo: **NO-GO**. Seguimiento
+tecnico local PD-01: Dockerfile incorpora Poppler/ruta absoluta y smoke de build;
+parser Windows validado, imagen Linux pendiente por falta de Docker/WSL.
+Bloqueantes: validacion del parser en imagen Linux, GCS/autenticacion real sin ensayo,
 control PDF malicioso, worker/alertas, capacidad, triage npm y ensayo H05/backup.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.
@@ -454,7 +456,8 @@ Fuentes: `docs/specs/SPEC_H24_Expediente_Completo_Docentes.md`,
 `docs/auditoria/H24_Fase1_Modelo_Backend_Expediente_Docentes.md` y
 `docs/auditoria/H24_Fase2_Frontend_Expediente_Docentes.md` y
 `docs/auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md` y
-`docs/auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md`.
+`docs/auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md` y
+`docs/auditoria/H24_Fase4_Correccion_Parser_Pdfinfo.md`.
 
 ### Reglas generales
 

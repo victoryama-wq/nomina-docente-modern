@@ -225,8 +225,11 @@ capacidad sostenida, worker e infraestructura aprobada y migracion/deploy
 con H05/H13. Mantener storage deshabilitado hasta cumplir los gates.
 
 F4: predeploy preparado, **NO-GO**, no cerrado operativo. Riesgo de habilitacion
-alto hasta cerrar PD-01 a PD-08 del acta: parser fuera de imagen actual, GCS/auth
+alto hasta cerrar PD-01 a PD-08 del acta: parser pendiente de prueba en imagen Linux, GCS/auth
 reales pendientes, seguridad PDF, worker, capacidad y ensayo DBA confiable.
+PD-01 parcialmente atendido: Dockerfile declara Poppler/ruta absoluta y smoke
+obligatorio; parser Windows validado. Sin Docker/WSL no se acredita imagen Linux.
+Ver `H24_Fase4_Correccion_Parser_Pdfinfo.md`; riesgo de release no cerrado.
 Auditoria npm actual del arbol local: 0 criticas, 15 altas, 12 moderadas, 1 baja;
 triage/correccion o excepciones fundamentadas pendientes, sin audit fix.
 AUTH-01 registra verificacion Firebase sin checkRevoked y requiere evaluacion;

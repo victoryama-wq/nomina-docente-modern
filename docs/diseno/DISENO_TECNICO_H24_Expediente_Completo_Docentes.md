@@ -5,10 +5,12 @@ Fecha: 2026-10-27.
 Estado: **Diseno aprobado; F1/F2 implementadas y F3 validada en integracion local con observaciones. GCS, autenticacion real y despliegue pendientes.**
 
 F4: [revision predeploy](../auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md)
-preparada; NO-GO hasta cerrar PD-01 a PD-08 y evaluar AUTH-01. El Dockerfile no
-incorpora pdfinfo; no hay ensayo GCS/auth real ni provisionamiento probado del
+preparada; NO-GO hasta cerrar PD-01 a PD-08 y evaluar AUTH-01. El seguimiento local
+incorpora pdfinfo en Dockerfile con ruta absoluta y smoke de build; falta construir
+y validar imagen Linux. No hay ensayo GCS/auth real ni provisionamiento probado del
 worker. El plan describe configuracion, pruebas y rollback futuros, no cambios
-implementados ni autorizacion de infraestructura. Se mantiene storage disabled.
+de infraestructura ejecutados ni autorizacion de deploy. Se mantiene storage disabled.
+Evidencia: [correccion local pdfinfo](../auditoria/H24_Fase4_Correccion_Parser_Pdfinfo.md).
 
 Evidencia F3: [Integracion HTTP/PostgreSQL/storage local](../auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md). Se expone `Content-Disposition` mediante CORS exclusivamente en la respuesta PDF del expediente para conservar el nombre UTF-8 en descargas cross-origin. No se amplian origenes ni autorizaciones.
 
