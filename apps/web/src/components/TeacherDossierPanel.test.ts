@@ -1,11 +1,11 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiRequestError, fetchDossierDocumentBlob, fetchDossierOperation, fetchTeacherDossier, mutateTeacherDossier, type TeacherDossier } from '../api';
+import { ApiRequestError, fetchDossierDocumentBlob, fetchDossierOperation, fetchTeacherDossier, mutateTeacherDossier, updateTeacherFiscal, type Teacher, type TeacherDossier } from '../api';
 import TeacherDossierPanel from './TeacherDossierPanel.vue';
 
 vi.mock('../api', async importOriginal => ({
   ...await importOriginal<typeof import('../api')>(),
-  fetchTeacherDossier: vi.fn(), mutateTeacherDossier: vi.fn(), fetchDossierOperation: vi.fn(), fetchDossierDocumentBlob: vi.fn()
+  fetchTeacherDossier: vi.fn(), mutateTeacherDossier: vi.fn(), fetchDossierOperation: vi.fn(), fetchDossierDocumentBlob: vi.fn(), updateTeacherFiscal: vi.fn()
 }));
 vi.mock('../utils/dossierFiles', async importOriginal => ({
   ...await importOriginal<typeof import('../utils/dossierFiles')>(),
@@ -66,6 +66,39 @@ describe('H24 dossier panel', () => {
     await button('Guardar teléfono').trigger('click');
     expect(mutateTeacherDossier).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('10 a 15 dígitos');
+  });
+  it('groups fiscal fields in the dossier, saves through the existing endpoint and renews the phone version', async () => {
+    await open();
+    const teacher = { id: 'teacher-1', rfc: 'TEST010101AAA', email: 'synthetic@example.invalid', paymentType: 'E', bankDetail: '' } as Teacher;
+    await wrapper.setProps({ fiscalTeacher: teacher, canEditFiscal: true });
+    expect(wrapper.text()).toContain('Datos fiscales');
+    expect(wrapper.get('input[placeholder="RFC del docente"]').element).toHaveProperty('value', teacher.rfc);
+    await wrapper.get('input[type=tel]').setValue('9981112233');
+    await wrapper.get('input[type=email]').setValue('updated@example.invalid');
+    vi.mocked(updateTeacherFiscal).mockResolvedValue({ teacher: { ...teacher, email: 'updated@example.invalid' }, message: 'Guardado' });
+    vi.mocked(fetchTeacherDossier).mockResolvedValue({ ...data(), teacher: { ...data().teacher, version: 'after-fiscal' } });
+    await wrapper.get('fieldset').element.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flushPromises();
+    expect(updateTeacherFiscal).toHaveBeenCalledWith('teacher-1', { rfc: teacher.rfc, email: 'updated@example.invalid', paymentType: 'E', bankDetail: '' });
+    expect(wrapper.emitted('fiscalSaved')).toHaveLength(1);
+    expect(wrapper.get('input[type=tel]').element).toHaveProperty('value', '9981112233');
+    await button('Guardar teléfono').trigger('click'); await flushPromises();
+    expect(mutateTeacherDossier).toHaveBeenCalledWith('teacher-1', expect.any(String), { action: 'contact', payload: { phone: '9981112233', expectedVersion: 'after-fiscal' } });
+  });
+  it('does not grant fiscal write through document or phone capabilities', async () => {
+    await open(); await wrapper.setProps({ fiscalTeacher: { id: 'teacher-1', paymentType: 'E' } as Teacher, canEditFiscal: false });
+    expect(wrapper.get('fieldset').attributes('disabled')).toBeDefined();
+    expect(button('Guardar datos fiscales')).toBeUndefined();
+    await wrapper.findAll('form')[0].trigger('submit');
+    expect(updateTeacherFiscal).not.toHaveBeenCalled();
+  });
+  it('tracks unsaved fiscal fields and hides them after a forbidden fiscal mutation', async () => {
+    await open(); await wrapper.setProps({ fiscalTeacher: { id: 'teacher-1', paymentType: 'E' } as Teacher, canEditFiscal: true });
+    await wrapper.get('input[type=email]').setValue('test@example.invalid');
+    expect(wrapper.emitted('working')?.at(-1)).toEqual([true]);
+    vi.mocked(updateTeacherFiscal).mockRejectedValue(new ApiRequestError('Denegado', 403, 'FORBIDDEN'));
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(wrapper.find('input[type=email]').exists()).toBe(false);
   });
   it('honors per-action capabilities without granting write from read', async () => {
     vi.mocked(fetchTeacherDossier).mockResolvedValue({ ...data(), capabilities: { readDocuments: true, manageDocuments: false, editPhone: false } });

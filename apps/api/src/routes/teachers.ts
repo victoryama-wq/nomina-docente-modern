@@ -31,6 +31,8 @@ import {
 import type { ActorScope, SessionUser } from '../types.js';
 import { type CoordinationRow } from './academic-context.js';
 import { requireDossier } from '../lib/dossier-policy.js';
+import { replaceConstancia } from '../lib/constancia-replacement.js';
+import { constanciaStorage, ConstanciaStorageError } from '../lib/constancia-storage.js';
 
 type TeacherStatus = 'ACTIVO' | 'INACTIVO';
 
@@ -1160,61 +1162,32 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       }
 
       const actor = request.user!;
-      const uploaded = await withTransaction(async (client) => {
-        const teacher = await loadTeacherById(client, params.data.id);
-        if (!teacher) throw new Error('No se encontró el docente.');
-
-        await assertTeacherOwnedByActorCoordination(client, actor, teacher, { allowFinance: true });
-
-        const safeName = parsed.data.fileName.replace(/[^a-zA-Z0-9._-]+/g, '-');
-        const storageObject = `constancias/${teacher.id}/${Date.now()}-${safeName}`;
-        const bucket = firebaseAdmin.storage().bucket(config.CONSTANCIAS_BUCKET);
-        const file = bucket.file(storageObject);
-        await file.save(buffer, {
-          metadata: {
-            contentType: parsed.data.mimeType,
-            metadata: {
-              teacherId: teacher.id,
-              uploadedBy: actor.email
-            }
+      try {
+        let before: TeacherRow | null = null;
+        const uploaded = await replaceConstancia({
+          transaction: withTransaction,
+          storage: constanciaStorage(config.CONSTANCIAS_BUCKET),
+          bucket: config.CONSTANCIAS_BUCKET,
+          teacherId: params.data.id, actorId: actor.id,
+          fileName: parsed.data.fileName, mimeType: parsed.data.mimeType, bytes: buffer,
+          authorize: async client => {
+            before = await loadTeacherById(client, params.data.id);
+            if (!before) throw new Error('No se encontró el docente.');
+            await assertTeacherOwnedByActorCoordination(client, actor, before, { allowFinance: true });
+          },
+          afterSwitch: async client => {
+            const after = await loadTeacherById(client, params.data.id);
+            await auditTeacher(client, actor, 'TEACHER_CONSTANCIA_UPLOADED', params.data.id, before, after);
+            return after;
           }
         });
-
-        await client.query(
-          `
-            UPDATE teacher_documents
-            SET is_current = false
-            WHERE teacher_id = $1
-              AND document_type = 'CONSTANCIA_FISCAL'
-              AND is_current = true
-          `,
-          [teacher.id]
-        );
-
-        const doc = await client.query<{ id: string }>(
-          `
-            INSERT INTO teacher_documents (
-              teacher_id,
-              document_type,
-              storage_bucket,
-              storage_object,
-              original_file_name,
-              mime_type,
-              uploaded_by,
-              is_current
-            )
-            VALUES ($1, 'CONSTANCIA_FISCAL', $2, $3, $4, $5, $6, true)
-            RETURNING id
-          `,
-          [teacher.id, config.CONSTANCIAS_BUCKET, storageObject, parsed.data.fileName, parsed.data.mimeType, actor.id]
-        );
-
-        const after = await loadTeacherById(client, teacher.id);
-        await auditTeacher(client, actor, 'TEACHER_CONSTANCIA_UPLOADED', teacher.id, teacher, after);
-        return { id: doc.rows[0].id, teacher: after };
-      });
-
-      return { documentId: uploaded.id, teacher: uploaded.teacher, message: 'Constancia fiscal cargada correctamente.' };
+        return { ...uploaded, message: uploaded.cleanupPending
+          ? 'Constancia guardada. La eliminación del archivo anterior está pendiente de recuperación; no vuelvas a cargarla.'
+          : 'Constancia fiscal guardada; cualquier archivo sustituido fue eliminado.' };
+      } catch (error) {
+        if (!(error instanceof ConstanciaStorageError)) throw error;
+        return reply.code(503).send({ error: 'CONSTANCIA_STORAGE_UNAVAILABLE', message: error.message });
+      }
     }
   );
 

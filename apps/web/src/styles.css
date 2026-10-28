@@ -2469,23 +2469,34 @@ td span {
 }
 
 .fiscal-records-table th:nth-child(1) {
-  width: 24%;
+  width: 22%;
 }
 
 .fiscal-records-table th:nth-child(2) {
-  width: 26%;
+  width: 23%;
 }
 
 .fiscal-records-table th:nth-child(3) {
-  width: 14%;
+  width: 13%;
 }
 
 .fiscal-records-table th:nth-child(4) {
-  width: 17%;
+  width: 15%;
 }
 
 .fiscal-records-table th:nth-child(5) {
   width: 19%;
+}
+
+.fiscal-records-table th:nth-child(6) {
+  width: 8%;
+  text-align: center;
+}
+
+.fiscal-records-table .fiscal-dossier-cell {
+  background: inherit;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .fiscal-progress {

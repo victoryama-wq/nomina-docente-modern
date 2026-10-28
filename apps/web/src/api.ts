@@ -1403,7 +1403,7 @@ export async function downloadTeacherConstancia(teacherId: string): Promise<void
 export async function uploadTeacherConstancia(
   teacherId: string,
   payload: { fileName: string; mimeType: string; base64Data: string }
-): Promise<{ teacher: Teacher; message: string }> {
+): Promise<{ teacher: Teacher; message: string; cleanupPending?: boolean }> {
   return request(`/teachers/${teacherId}/documents/constancia`, {
     method: 'POST',
     body: JSON.stringify(payload)

@@ -21,10 +21,8 @@ import {
   downloadTeacherConstancia,
   fetchTeacherConstanciaBlob,
   fetchTeachers,
-  updateTeacherFiscal,
   uploadTeacherConstancia,
   type Teacher,
-  type TeacherFiscalPayload,
   type TeacherSummary
 } from '../api';
 import { useAuthStore } from '../stores/auth';
@@ -51,8 +49,6 @@ interface ConstanciaPreview {
   fileName: string;
 }
 
-interface FiscalForm extends TeacherFiscalPayload {}
-
 const authStore = useAuthStore();
 
 const teachers = ref<Teacher[]>([]);
@@ -76,16 +72,11 @@ const fiscalSaving = ref(false);
 const constanciaPreview = ref<ConstanciaPreview | null>(null);
 const editingRecord = ref<FiscalRecord | null>(null);
 const selectedConstancia = ref<File | null>(null);
-const fiscalForm = ref<FiscalForm>({
-  paymentType: '1',
-  email: '',
-  rfc: '',
-  bankDetail: ''
-});
 const notice = ref<{ type: 'ok' | 'error'; text: string } | null>(null);
 const dossierTeacher = ref<Teacher | null>(null);
 const dossierOpen = ref(false);
 const dossierWorking = ref(false);
+let noticeTimer: number | undefined;
 
 function openDossier(teacher: Teacher) {
   if (!authStore.canViewFiscalRecords) return;
@@ -101,6 +92,12 @@ function openDossier(teacher: Teacher) {
 function dossierPhoneSaved(phone: string) {
   const teacher = teachers.value.find(item => item.id === dossierTeacher.value?.id);
   if (teacher) teacher.phone = phone;
+}
+
+function dossierFiscalSaved(teacher: Teacher) {
+  const index = teachers.value.findIndex(item => item.id === teacher.id);
+  if (index >= 0) teachers.value[index] = teacher;
+  if (dossierTeacher.value?.id === teacher.id) dossierTeacher.value = teacher;
 }
 
 onBeforeRouteLeave(() => !dossierWorking.value || window.confirm('Hay cambios u operaciones de expediente pendientes. Salir perderá la cola local, pero no cancela operaciones aceptadas por el servidor. ¿Salir?'));
@@ -176,33 +173,25 @@ const fiscalMetrics = computed(() => {
   };
 });
 
-function setNotice(type: 'ok' | 'error', text: string) {
+function setNotice(type: 'ok' | 'error', text: string, persistent = false) {
+  window.clearTimeout(noticeTimer);
   notice.value = { type, text };
-  window.setTimeout(() => {
+  if (persistent) return;
+  noticeTimer = window.setTimeout(() => {
     notice.value = null;
   }, 3200);
 }
 
-function fiscalPayloadFromTeacher(teacher: Teacher): FiscalForm {
-  return {
-    paymentType: teacher.paymentType === 'E' || teacher.paymentType === '1' || teacher.paymentType === '2' ? teacher.paymentType : '1',
-    email: teacher.email || '',
-    rfc: teacher.rfc || '',
-    bankDetail: teacher.bankDetail || ''
-  };
-}
-
 function canManageRecord(record: FiscalRecord) {
-  return authStore.canManageFiscalRecords && !!record.teacher.id;
+  return authStore.canManageFiscalDocuments && !!record.teacher.id;
 }
 
 function openFiscalEdit(record: FiscalRecord) {
   if (!canManageRecord(record)) {
-    setNotice('error', 'No tienes permiso para actualizar este expediente fiscal.');
+    setNotice('error', 'No tienes permiso para actualizar la constancia fiscal.');
     return;
   }
   editingRecord.value = record;
-  fiscalForm.value = fiscalPayloadFromTeacher(record.teacher);
   selectedConstancia.value = null;
   notice.value = null;
 }
@@ -210,12 +199,6 @@ function openFiscalEdit(record: FiscalRecord) {
 function closeFiscalEdit(force = false) {
   if (fiscalSaving.value && !force) return;
   editingRecord.value = null;
-  fiscalForm.value = {
-    paymentType: '1',
-    email: '',
-    rfc: '',
-    bankDetail: ''
-  };
   selectedConstancia.value = null;
 }
 
@@ -255,35 +238,23 @@ function documentMimeType(file: File) {
 
 async function saveFiscalEdit() {
   const record = editingRecord.value;
-  if (!record || !authStore.canManageFiscalRecords) return;
+  if (!record || !authStore.canManageFiscalDocuments || !selectedConstancia.value || fiscalSaving.value) return;
   fiscalSaving.value = true;
   notice.value = null;
   try {
-    let message = '';
-    const response = await updateTeacherFiscal(record.teacher.id, {
-      paymentType: fiscalForm.value.paymentType,
-      email: fiscalForm.value.email,
-      rfc: fiscalForm.value.rfc,
-      bankDetail: fiscalForm.value.bankDetail
+    const file = selectedConstancia.value;
+    const base64Data = await readFileAsBase64(file);
+    const uploadResponse = await uploadTeacherConstancia(record.teacher.id, {
+      fileName: file.name,
+      mimeType: documentMimeType(file),
+      base64Data
     });
-    message = response.message;
-
-    if (selectedConstancia.value && authStore.canManageFiscalDocuments) {
-      const file = selectedConstancia.value;
-      const base64Data = await readFileAsBase64(file);
-      const uploadResponse = await uploadTeacherConstancia(record.teacher.id, {
-        fileName: file.name,
-        mimeType: documentMimeType(file),
-        base64Data
-      });
-      message = `${message} ${uploadResponse.message}`;
-    }
 
     closeFiscalEdit(true);
     await loadFiscalRecords();
-    setNotice('ok', message.trim() || 'Expediente fiscal actualizado.');
+    setNotice(uploadResponse.cleanupPending ? 'error' : 'ok', uploadResponse.message, uploadResponse.cleanupPending);
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible actualizar el expediente fiscal.');
+    setNotice('error', err instanceof Error ? err.message : 'No fue posible actualizar la constancia fiscal.');
   } finally {
     fiscalSaving.value = false;
   }
@@ -429,8 +400,10 @@ async function loadFiscalRecords() {
   notice.value = null;
   try {
     const data = await fetchTeachers();
+    if (!authStore.canViewFiscalRecords) return;
     teachers.value = data.teachers;
     summary.value = data.summary;
+    if (dossierTeacher.value) dossierTeacher.value = data.teachers.find(teacher => teacher.id === dossierTeacher.value?.id) || null;
   } catch (err) {
     setNotice('error', err instanceof Error ? err.message : 'No fue posible cargar expedientes fiscales.');
   } finally {
@@ -443,6 +416,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.clearTimeout(noticeTimer);
   closePreview();
 });
 </script>
@@ -572,20 +546,20 @@ onUnmounted(() => {
                   </div>
                   <span v-else-if="record.teacher.documentId" class="badge muted">Restringida</span>
                   <span v-else class="badge warning"><AlertTriangle :size="12" /> Pendiente</span>
-                  <div v-if="authStore.canManageFiscalRecords" class="fiscal-document-actions">
+                  <div v-if="authStore.canManageFiscalDocuments" class="fiscal-document-actions">
                     <button
                       class="primary-inline fiscal-edit-button"
                       type="button"
                       :disabled="!canManageRecord(record)"
-                      :title="canManageRecord(record) ? 'Actualizar fiscal' : 'Requiere permiso fiscal de edicion'"
+                      :title="canManageRecord(record) ? 'Actualizar constancia' : 'Requiere permiso de documentos fiscales'"
                       @click="openFiscalEdit(record)"
                     >
                       <Edit3 :size="15" />
-                      Actualizar fiscal
+                      Actualizar constancia
                     </button>
                   </div>
                 </td>
-                <td>
+                <td class="fiscal-dossier-cell">
                   <button class="icon-button" type="button" :aria-label="`Abrir expediente de ${record.teacher.fullName}`" title="Ver expediente completo" @click="openDossier(record.teacher)"><Eye :size="18" /></button>
                 </td>
               </tr>
@@ -596,13 +570,13 @@ onUnmounted(() => {
     </section>
 
     <button v-if="dossierTeacher && !dossierOpen" class="secondary-action" @click="dossierOpen = true"><Eye :size="17" /> Volver al expediente de {{ dossierTeacher.fullName }}</button>
-    <TeacherDossierPanel v-if="dossierTeacher" :key="dossierTeacher.id" :teacher-id="dossierTeacher.id" :teacher-name="dossierTeacher.fullName" :show="dossierOpen" @close="dossierOpen = false" @working="dossierWorking = $event" @phone-saved="dossierPhoneSaved" />
+    <TeacherDossierPanel v-if="dossierTeacher" :key="dossierTeacher.id" :teacher-id="dossierTeacher.id" :teacher-name="dossierTeacher.fullName" :fiscal-teacher="dossierTeacher" :can-edit-fiscal="authStore.canManageFiscalRecords" :show="dossierOpen" @close="dossierOpen = false" @working="dossierWorking = $event" @phone-saved="dossierPhoneSaved" @fiscal-saved="dossierFiscalSaved" @refresh-fiscal="loadFiscalRecords" />
 
     <div v-if="editingRecord" class="modal-backdrop" @click.self="closeFiscalEdit()">
       <form class="modal-card large" @submit.prevent="saveFiscalEdit">
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Actualizacion fiscal</p>
+            <p class="eyebrow">Actualizar constancia fiscal</p>
             <h3>{{ editingRecord.teacher.fullName }}</h3>
             <span>{{ editingRecord.teacher.coordinationName || 'Sin coordinación' }}</span>
           </div>
@@ -611,48 +585,25 @@ onUnmounted(() => {
           </button>
         </div>
 
-        <div class="form-grid">
-          <label>
-            <span>RFC</span>
-            <input v-model.trim="fiscalForm.rfc" maxlength="20" placeholder="RFC del docente" />
-          </label>
-          <label>
-            <span>Correo</span>
-            <input v-model.trim="fiscalForm.email" type="email" maxlength="160" placeholder="correo@dominio.mx" />
-          </label>
-          <label>
-            <span>Tipo de pago</span>
-            <select v-model="fiscalForm.paymentType">
-              <option value="1">Santander</option>
-              <option value="2">Banorte</option>
-              <option value="E">Efectivo</option>
-            </select>
-          </label>
-          <label>
-            <span>Banco / cuenta / CLABE</span>
-            <input v-model.trim="fiscalForm.bankDetail" maxlength="140" placeholder="Datos bancarios para pago" />
-          </label>
-        </div>
-
         <div v-if="authStore.canManageFiscalDocuments" class="upload-box fiscal-edit-upload">
           <FileText :size="22" />
           <div>
             <strong>Constancia fiscal</strong>
             <span>{{ selectedConstancia?.name || editingRecord.teacher.documentName || 'Selecciona PDF, JPG o PNG para cargar o reemplazar' }}</span>
           </div>
-          <input type="file" accept="application/pdf,image/jpeg,image/png" @change="onConstanciaSelected" />
+          <input type="file" accept="application/pdf,image/jpeg,image/png" :disabled="fiscalSaving" @change="onConstanciaSelected" />
         </div>
 
         <div class="security-box fiscal-edit-note">
           <ShieldCheck :size="18" />
-          <span>Esta ventana solo actualiza datos fiscales. Nombre, coordinación, categoría y estatus operativo se mantienen en Directorio.</span>
+          <span>Al sustituir la constancia se elimina definitivamente el archivo anterior después de guardar la nueva. Los datos fiscales se editan en Expediente.</span>
         </div>
 
         <div class="modal-actions">
           <button class="secondary-action" type="button" :disabled="fiscalSaving" @click="closeFiscalEdit()">Cancelar</button>
-          <button class="primary-inline" type="submit" :disabled="fiscalSaving">
+          <button class="primary-inline" type="submit" :disabled="fiscalSaving || !selectedConstancia">
             <ShieldCheck :size="16" />
-            {{ fiscalSaving ? 'Guardando...' : 'Guardar fiscal' }}
+            {{ fiscalSaving ? 'Guardando...' : 'Guardar constancia' }}
           </button>
         </div>
       </form>

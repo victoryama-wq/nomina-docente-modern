@@ -1,17 +1,52 @@
 <script setup lang="ts">
 import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Download, Eye, FileText, Pencil, RefreshCw, Save, Trash2, Upload, X } from 'lucide-vue-next';
-import { fetchTeacherDossier, fetchDossierDocumentBlob, type DossierDocument, type DossierDocumentType, type TeacherDossier } from '../api';
+import { fetchTeacherDossier, fetchDossierDocumentBlob, updateTeacherFiscal, type Teacher, type DossierDocument, type DossierDocumentType, type TeacherDossier } from '../api';
 import { dossierError, useDossierOperations } from '../composables/useDossierOperations';
 import { dossierFilePayload, MAX_DOSSIER_SELECTION, validateDossierFile } from '../utils/dossierFiles';
 
-const props = defineProps<{ teacherId: string; teacherName: string; show: boolean }>();
-const emit = defineEmits<{ close: []; phoneSaved: [phone: string]; working: [busy: boolean] }>();
+const props = defineProps<{ teacherId: string; teacherName: string; show: boolean; fiscalTeacher?: Teacher; canEditFiscal?: boolean }>();
+const emit = defineEmits<{ close: []; phoneSaved: [phone: string]; fiscalSaved: [teacher: Teacher]; refreshFiscal: []; working: [busy: boolean] }>();
 const dossier = ref<TeacherDossier | null>(null);
 const phone = ref('');
 const loading = ref(false);
 const error = ref('');
 const forbidden = ref(false);
+const fiscalValues = (teacher?: Teacher) => ({ rfc: teacher?.rfc || '', email: teacher?.email || '', bankDetail: teacher?.bankDetail || '', paymentType: teacher?.paymentType || '' });
+const fiscalOriginal = ref(fiscalValues(props.fiscalTeacher));
+const fiscalForm = ref({ ...fiscalOriginal.value });
+const fiscalSaving = ref(false);
+const fiscalMessage = ref('');
+const fiscalDirty = computed(() => JSON.stringify(fiscalForm.value) !== JSON.stringify(fiscalOriginal.value));
+watch(() => props.fiscalTeacher, teacher => {
+  if (!fiscalDirty.value && !fiscalSaving.value) {
+    fiscalOriginal.value = fiscalValues(teacher);
+    fiscalForm.value = { ...fiscalOriginal.value };
+  }
+});
+
+async function saveFiscal() {
+  if (!props.canEditFiscal || forbidden.value || loading.value || unsettled.value || fiscalSaving.value) return;
+  const paymentType = fiscalForm.value.paymentType;
+  if (!['1', '2', 'E'].includes(paymentType)) { error.value = 'Selecciona el tipo de pago.'; return; }
+  fiscalSaving.value = true;
+  fiscalMessage.value = '';
+  error.value = '';
+  try {
+    const result = await updateTeacherFiscal(props.teacherId, { ...fiscalForm.value, paymentType: paymentType as '1' | '2' | 'E' });
+    if (disposed || forbidden.value) return;
+    fiscalOriginal.value = fiscalValues(result.teacher);
+    fiscalForm.value = { ...fiscalOriginal.value };
+    emit('fiscalSaved', result.teacher);
+    // Fiscal edits change the teacher version used by the independent phone mutation.
+    await load();
+    fiscalMessage.value = result.message;
+  } catch (err) {
+    if (disposed) return;
+    error.value = dossierError(err);
+    if ([401, 403].includes((err as { status?: number }).status || 0)) deny();
+  } finally { fiscalSaving.value = false; }
+}
 const panel = ref<HTMLElement | null>(null);
 const closeButton = ref<HTMLButtonElement | null>(null);
 let returnFocus: HTMLElement | null = null;
@@ -58,18 +93,26 @@ async function load(resetPhone = false) {
   } finally { if (version === loadVersion) loading.value = false; }
 }
 
+async function refreshPanel() {
+  await load();
+  if (!forbidden.value && !disposed) emit('refreshFiscal');
+}
+
 function deny() {
   forbidden.value = true;
   dossier.value = null;
   selected.value = [];
   phone.value = '';
+  fiscalForm.value = fiscalValues();
+  fiscalOriginal.value = fiscalValues();
+  fiscalMessage.value = '';
   edit.value = null;
   closePreview();
 }
 const { tasks, inFlight, unsettled, enqueue, retry, retryFailedUpload, refresh } = useDossierOperations(props.teacherId, async mutation => {
   await load(mutation?.action === 'contact');
 }, deny);
-const occupied = computed(() => unsettled.value || !!selected.value.length || phoneDirty.value || !!edit.value);
+const occupied = computed(() => unsettled.value || !!selected.value.length || phoneDirty.value || fiscalDirty.value || fiscalSaving.value || !!edit.value);
 watch(occupied, value => emit('working', value), { immediate: true });
 
 function chooseFiles(event: Event) {
@@ -98,7 +141,7 @@ function startUpload() {
 }
 
 function savePhone() {
-  if (!dossier.value?.capabilities.editPhone || forbidden.value || unsettled.value || loading.value) return;
+  if (!dossier.value?.capabilities.editPhone || forbidden.value || unsettled.value || loading.value || fiscalSaving.value) return;
   const value = phone.value.trim();
   if (value && (!/^[\d+\s().-]+$/.test(value) || !/^\+?\d{10,15}$/.test(value.replace(/[\s().-]/g, '')))) {
     error.value = 'Escribe de 10 a 15 dígitos, con prefijo + opcional.';
@@ -247,11 +290,22 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
       <template v-else>
         <p v-if="error" class="notice error" role="alert">{{ error }}</p>
         <p v-if="loading" role="status">Cargando expediente…</p>
-        <div class="dossier-actions"><button class="secondary-action" :disabled="loading || inFlight > 0 || forbidden" @click="load()"><RefreshCw :size="16" /> Actualizar expediente</button></div>
+        <div class="dossier-actions"><button class="secondary-action" :disabled="loading || inFlight > 0 || forbidden || fiscalSaving" @click="refreshPanel"><RefreshCw :size="16" /> Actualizar expediente</button></div>
         <template v-if="dossier && !forbidden">
+          <form v-if="fiscalTeacher" class="dossier-section" @submit.prevent="saveFiscal">
+            <h4>Datos fiscales</h4>
+            <fieldset class="dossier-fiscal-fields" :disabled="!canEditFiscal || fiscalSaving || loading || unsettled">
+              <label>RFC<input v-model.trim="fiscalForm.rfc" maxlength="20" placeholder="RFC del docente" /></label>
+              <label>Correo<input v-model.trim="fiscalForm.email" type="email" maxlength="160" placeholder="correo@dominio.mx" /></label>
+              <label>Tipo de pago<select v-model="fiscalForm.paymentType"><option disabled value="">Sin definir</option><option value="1">Santander</option><option value="2">Banorte</option><option value="E">Efectivo</option></select></label>
+              <label>Banco / cuenta / CLABE<input v-model.trim="fiscalForm.bankDetail" maxlength="140" placeholder="Datos bancarios para pago" /></label>
+            </fieldset>
+            <p v-if="fiscalMessage" role="status">{{ fiscalMessage }}</p>
+            <div class="dossier-actions"><button v-if="canEditFiscal" type="submit" class="primary-inline" :disabled="!fiscalDirty || fiscalSaving || loading || unsettled"><Save :size="16" /> {{ fiscalSaving ? 'Guardando...' : 'Guardar datos fiscales' }}</button></div>
+          </form>
           <form class="dossier-section dossier-contact" @submit.prevent="savePhone">
             <label>Teléfono operativo<input v-model="phone" type="tel" maxlength="20" autocomplete="off" :readonly="!dossier.capabilities.editPhone" :disabled="unsettled || loading" /></label>
-            <button v-if="dossier.capabilities.editPhone" class="primary-inline" :disabled="!phoneDirty || unsettled || loading"><Save :size="16" /> Guardar teléfono</button>
+            <button v-if="dossier.capabilities.editPhone" class="primary-inline" :disabled="!phoneDirty || unsettled || loading || fiscalSaving"><Save :size="16" /> Guardar teléfono</button>
             <small>Compartido con Directorio. Se actualiza allí al volver a consultar.</small>
           </form>
           <section class="dossier-section">
@@ -330,6 +384,7 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
 .dossier-panel :focus-visible { outline: 3px solid #167d9a; outline-offset: 2px; }
 .dossier-panel :disabled { opacity: .65; cursor: not-allowed; }
 .dossier-contact { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.dossier-fiscal-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; border: 0; margin: 0 0 16px; padding: 0; min-width: 0; }
 .dossier-contact small { grid-column: 1 / -1; color: #526176; }
 .dossier-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .dossier-panel .icon-button { width: 40px; height: 40px; flex: 0 0 40px; }
@@ -348,7 +403,7 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
 .dossier-preview iframe { display: block; width: 100%; height: min(65dvh, 620px); min-height: 250px; border: 1px solid #bac9d8; margin-top: 12px; }
 .dossier-confirm { padding: 20px 0; }
 @media (max-width: 700px) {
-  .dossier-contact, .dossier-edit, .dossier-upload-controls, .dossier-selection .dossier-edit { grid-template-columns: minmax(0, 1fr); }
+  .dossier-contact, .dossier-fiscal-fields, .dossier-edit, .dossier-upload-controls, .dossier-selection .dossier-edit { grid-template-columns: minmax(0, 1fr); }
   .dossier-documents li, .dossier-operations li { flex-direction: column; gap: 10px; }
 }
 @media (max-width: 450px) {
