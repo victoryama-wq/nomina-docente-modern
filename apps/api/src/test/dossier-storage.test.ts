@@ -371,7 +371,8 @@ describe('validateDossierPdf', () => {
       callback(error, stdout, stderr);
       return {};
     }) as typeof execFile);
-    await expect(validateDossierPdf(await pdf())).rejects.toThrow(/^DOSSIER_PDF_INVALID$/);
+    await expect(validateDossierPdf(await pdf())).rejects.toThrow(error
+      ? /^DOSSIER_PDF_VALIDATOR_UNAVAILABLE$/ : /^DOSSIER_PDF_INVALID$/);
     const call = vi.mocked(execFile).mock.calls[0];
     expect(call[2]).toMatchObject({ shell: false, windowsHide: true, timeout: 10_000, maxBuffer: 256 * 1024 });
     await expect(lstat(path.dirname((call[1] as string[])[0]))).rejects.toMatchObject({ code: 'ENOENT' });

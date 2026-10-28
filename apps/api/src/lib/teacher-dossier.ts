@@ -6,6 +6,7 @@ import type { SessionUser } from '../types.js';
 import { canUseDossier, type DossierAction } from './dossier-policy.js';
 import { DossierError, decodeDossierPdf, type uploadSchema, type replaceSchema, type metadataSchema, type contactSchema, type deleteSchema } from './dossier-contract.js';
 import type { DossierStorage } from './dossier-storage.js';
+import { DocumentSecurityError } from './document-security.js';
 
 interface Operation {
   id: string;
@@ -249,6 +250,8 @@ export class TeacherDossierService {
     if (doc.storage_namespace !== this.namespace) throw conflict();
     await this.storage.assertSafe();
     const bytes = await this.storage.read({ key: doc.storage_key, generation: doc.storage_generation });
+    // Legacy objects have no stored security verdict: validate without rewriting/deleting them.
+    await this.validatePdf(bytes);
     // A deletion/replacement committed during the read must not disclose a retired document.
     const current = await query(`SELECT 1 FROM teacher_dossier_documents WHERE id=$1 AND teacher_id=$2
       AND storage_generation=$3 AND storage_key=$4 AND state IN ('AVAILABLE','REPLACING')`,
@@ -282,25 +285,35 @@ export class TeacherDossierService {
           // Recovered objects are checked against the intent, not trusted by path alone.
           const recovered = await this.storage.read(object);
           if (createHash('sha256').update(recovered).digest('hex') !== op.payload.contentHash) throw conflict();
+          try { await this.validatePdf(recovered); }
+          catch (error) {
+            if (!(error instanceof DocumentSecurityError) || error.statusCode !== 422) throw error;
+            // Retire only the rejected candidate, never the previous current document.
+            await client.query(`UPDATE teacher_dossier_operations SET state='ABORTING',new_generation=$2,
+              error_code=$3 WHERE id=$1`, [op.id, object.generation, error.code]);
+            op = (await client.query<Operation>('SELECT * FROM teacher_dossier_operations WHERE id=$1', [op.id])).rows[0];
+          }
         }
-        const allowed = object && await actorStillAllowed(client, op.actor_id, 'manage');
-        if (!allowed) {
-          await client.query(`UPDATE teacher_dossier_operations SET state='ABORTING',new_generation=$2,
-            error_code=$3 WHERE id=$1`, [op.id, object?.generation || null, object ? 'AUTHORIZATION_REVOKED' : 'UPLOAD_INTERRUPTED']);
-        } else {
-          await client.query('BEGIN');
-          try {
-            const result = await client.query(`UPDATE teacher_dossier_documents SET storage_key=$2,storage_generation=$3,
-              original_file_name=$4,size_bytes=$5,state='AVAILABLE',revision=revision+1,updated_at=now(),updated_by=$6
-              WHERE id=$1 AND state IN ('UPLOADING','REPLACING') RETURNING revision`,
-              [op.document_id, object!.key, object!.generation, op.payload.fileName, op.payload.sizeBytes, op.actor_id]);
-            if (!result.rowCount) throw conflict();
-            await client.query(`UPDATE teacher_dossier_operations SET state='CLEANUP',new_generation=$2,
-              result=$3::jsonb,error_code=NULL WHERE id=$1`, [op.id, object!.generation, JSON.stringify({ revision: result.rows[0].revision })]);
-            await audit(client, op.actor_id, op.teacher_id, op.action === 'UPLOAD' ? 'TEACHER_DOSSIER_UPLOADED' : 'TEACHER_DOSSIER_REPLACED',
-              { operationId: op.id, documentId: op.document_id });
-            await client.query('COMMIT');
-          } catch (error) { await client.query('ROLLBACK'); throw error; }
+        if (op.state !== 'ABORTING') {
+          const allowed = object && await actorStillAllowed(client, op.actor_id, 'manage');
+          if (!allowed) {
+            await client.query(`UPDATE teacher_dossier_operations SET state='ABORTING',new_generation=$2,
+              error_code=$3 WHERE id=$1`, [op.id, object?.generation || null, object ? 'AUTHORIZATION_REVOKED' : 'UPLOAD_INTERRUPTED']);
+          } else {
+            await client.query('BEGIN');
+            try {
+              const result = await client.query(`UPDATE teacher_dossier_documents SET storage_key=$2,storage_generation=$3,
+                original_file_name=$4,size_bytes=$5,state='AVAILABLE',revision=revision+1,updated_at=now(),updated_by=$6
+                WHERE id=$1 AND state IN ('UPLOADING','REPLACING') RETURNING revision`,
+                [op.document_id, object!.key, object!.generation, op.payload.fileName, op.payload.sizeBytes, op.actor_id]);
+              if (!result.rowCount) throw conflict();
+              await client.query(`UPDATE teacher_dossier_operations SET state='CLEANUP',new_generation=$2,
+                result=$3::jsonb,error_code=NULL WHERE id=$1`, [op.id, object!.generation, JSON.stringify({ revision: result.rows[0].revision })]);
+              await audit(client, op.actor_id, op.teacher_id, op.action === 'UPLOAD' ? 'TEACHER_DOSSIER_UPLOADED' : 'TEACHER_DOSSIER_REPLACED',
+                { operationId: op.id, documentId: op.document_id });
+              await client.query('COMMIT');
+            } catch (error) { await client.query('ROLLBACK'); throw error; }
+          }
         }
         op = (await client.query<Operation>('SELECT * FROM teacher_dossier_operations WHERE id=$1', [op.id])).rows[0];
       }

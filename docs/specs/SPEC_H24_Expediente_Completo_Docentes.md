@@ -9,6 +9,13 @@ Ver [predeploy y bloqueantes](../auditoria/H24_Fase4_PreDeploy_Expediente_Docent
 Auth real pendiente, seguridad PDF, worker,
 capacidad, triage npm y ensayo H05/backup. No cambia las decisiones funcionales.
 
+Seguimiento 2026-10-28: [PD-03 A3 local](../auditoria/H24_PD03_A3_Controles_PDF_ClamAV_Local.md)
+implementa pipeline PDF/ClamAV para constancias/adicionales y revalidacion de
+lectura/recuperacion, sin BD/nube. Rechazo antes de publicar y sin retirar el
+anterior; indisponibilidad no equivale a limpio. JPG/PNG mantienen compatibilidad,
+con decodificacion acotada pendiente. A4, politica completa PDF, historicos, visor
+y transporte cloud no aprobados/validados por esta entrega. H24 sigue NO-GO.
+
 PD-02 acredita GCS real solo en test; ver
 [resultado aislado](../auditoria/H24_PD02_Resultado_GCS_Aislado.md).
 PD-05 tiene [plan y seguimiento](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),

@@ -34,6 +34,14 @@ Implementacion y desviaciones acotadas: [H24-F1](../auditoria/H24_Fase1_Modelo_B
 
 Contrato funcional: [SPEC_H24_Expediente_Completo_Docentes.md](../specs/SPEC_H24_Expediente_Completo_Docentes.md).
 
+Seguimiento tecnico 2026-10-28: [PD-03 A3](../auditoria/H24_PD03_A3_Controles_PDF_ClamAV_Local.md)
+agrega document-security.ts y admision compartida. Parser y ClamAV ejecutados por
+stdin en contenedores separados, no root/sin red, con limites y firmas recientes;
+hash/veredicto exacto, sin cache persistente. Transporte exclusivamente Docker
+Desktop local y entorno H24/test explicito; no hay adaptador Cloud Run. Lectura y
+recuperacion se revalidan. Fallos de infraestructura no publican ni retiran el
+anterior. No hay migracion. A4/visor/politica PDF y JPG/PNG completos pendientes.
+
 ## 1. Arquitectura y limites
 
 ### Ampliacion local 2026-10-28: C.P. fiscal y CURP

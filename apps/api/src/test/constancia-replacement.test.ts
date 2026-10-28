@@ -32,11 +32,20 @@ function fixture() {
     remove: vi.fn(async object => { expect(rows.some(r => r.key === object.key && r.current)).toBe(false); events.push('delete'); objects.delete(object.key); })
   };
   const options = { transaction, storage, bucket: 'test-only', teacherId: 'teacher', actorId: 'actor', fileName: 'synthetic.pdf', mimeType: 'application/pdf', bytes: Buffer.from('%PDF'),
-    authorize: vi.fn(async () => {}), afterSwitch: vi.fn(async () => ({ id: 'teacher' })) };
+    authorize: vi.fn(async () => {}), afterSwitch: vi.fn(async () => ({ id: 'teacher' })), validateContent: vi.fn(async () => {}) };
   return { options, objects, rows: () => rows, events, query };
 }
 
 describe('constancia replacement without losing the current document', () => {
+  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SECURITY_UNAVAILABLE'])('preserves all records and current bytes on %s', async code => {
+    const f = fixture(); f.options.validateContent.mockRejectedValue(new Error(code));
+    await expect(replaceConstancia(f.options)).rejects.toThrow(code);
+    expect(f.rows()).toHaveLength(2);
+    expect(f.rows()[0].current).toBe(true);
+    expect(f.options.storage.put).not.toHaveBeenCalled();
+    expect(f.options.storage.remove).not.toHaveBeenCalled();
+    expect(f.query).not.toHaveBeenCalled();
+  });
   it('publishes before deleting, leaves one current version and preserves unrelated legacy history', async () => {
     const f = fixture();
     const result = await replaceConstancia(f.options);
@@ -44,7 +53,7 @@ describe('constancia replacement without losing the current document', () => {
     expect(f.rows().filter(r => r.current).map(r => r.id)).toEqual([result.documentId]);
     expect(f.objects.has('old-object')).toBe(false);
     expect(f.objects.has('history-object')).toBe(true);
-    expect(f.events).toEqual(['commit', 'upload', 'commit', 'commit', 'delete', 'commit']);
+    expect(f.events).toEqual(['commit', 'commit', 'upload', 'commit', 'commit', 'delete', 'commit']);
     expect(f.query.mock.calls.every(([sql]) => !/UPDATE teachers|DELETE FROM|payment_type/i.test(sql))).toBe(true);
   });
   it('denies out-of-scope access before storage or staging', async () => {

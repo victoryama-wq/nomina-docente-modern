@@ -301,7 +301,8 @@ function pdfinfo(executable: string, args: string[]): Promise<string> {
         TMP: process.env.TMP, TEMP: process.env.TEMP, TMPDIR: process.env.TMPDIR, LC_ALL: 'C', LANG: 'C' }
     }, (error, stdout, stderr) => {
       if (error || stderr.trim()) {
-        const unavailable = ['ENOENT', 'EACCES', 'ENOEXEC'].includes(String(errorCode(error)));
+        const unavailable = !!error?.killed || !!error?.signal ||
+          ['ENOENT', 'EACCES', 'ENOEXEC', 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER'].includes(String(errorCode(error)));
         reject(new DossierStorageError(unavailable ? 'DOSSIER_PDF_VALIDATOR_UNAVAILABLE' : 'DOSSIER_PDF_INVALID'));
       } else {
         resolve(stdout);

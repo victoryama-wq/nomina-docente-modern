@@ -1,0 +1,7 @@
+# Previously validated local PD-01 image; no registry publication or API startup.
+FROM nomina-api:h24-pdfinfo-local
+COPY apps/api/dist/lib/dossier-storage.js /app/apps/api/dist/lib/dossier-storage.js
+COPY tools/validation/h24-pd03/validate-stdin.mjs /opt/h24/validate-stdin.mjs
+HEALTHCHECK NONE
+USER 1000:1000
+ENTRYPOINT ["node", "/opt/h24/validate-stdin.mjs"]

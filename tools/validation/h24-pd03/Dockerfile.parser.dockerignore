@@ -1,0 +1,10 @@
+**
+!apps/
+!apps/api/
+!apps/api/dist/
+!apps/api/dist/lib/
+!apps/api/dist/lib/dossier-storage.js
+!tools/
+!tools/validation/
+!tools/validation/h24-pd03/
+!tools/validation/h24-pd03/validate-stdin.mjs

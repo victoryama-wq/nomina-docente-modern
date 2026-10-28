@@ -3,12 +3,18 @@
 Fecha: 2026-10-28.
 Base revisada: `c11a8e875fa47c28b9ea179ec240919dd8fbb0c9`.
 Rama: `feature/h02-h03-user-coordinations-permissions`.
-Estado: revision estatica y propuesta; **PD-03 abierto, H24 NO-GO**.
+Estado: revision inicial y seguimiento A1/A2/A3 local; **PD-03 abierto, H24 NO-GO**.
 
 Seguimiento autorizado del 2026-10-28: A1/A2 ejecutados en laboratorio Docker local,
 con firmas oficiales y EICAR, sin BD/nube. Ver [resultados y limites](H24_PD03_Laboratorio_ClamAV_EICAR.md).
-No implementa A3/A4 ni cierra PD-03. Las afirmaciones de revision sin pruebas de
+Ese laboratorio no implemento A3/A4 ni cerro PD-03. Las afirmaciones de revision sin pruebas de
 las secciones siguientes corresponden a la entrega inicial, anterior al laboratorio.
+
+Seguimiento A3 autorizado: [controles locales PDF/ClamAV](H24_PD03_A3_Controles_PDF_ClamAV_Local.md)
+implementados en constancias/adicionales, recuperacion y entrega fail-closed, con
+pruebas unitarias y Docker real sin BD/nube. A4 no ejecutado; decodificador JPG/PNG,
+politica completa PDF, historicos, visor y arquitectura cloud pendientes. Las
+brechas iniciales se conservan como antecedente; consultar el acta A3 para su avance.
 
 ## 1. Resumen y limites
 

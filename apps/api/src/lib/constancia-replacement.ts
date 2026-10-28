@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
+import { validateDocumentContent } from './document-security.js';
 
 export interface ConstanciaObject { bucket: string; key: string }
 export interface ConstanciaStorage {
@@ -45,8 +46,13 @@ export async function replaceConstancia<T>(options: {
   teacherId: string; actorId: string; fileName: string; mimeType: string; bytes: Buffer;
   authorize: (client: PoolClient) => Promise<void>;
   afterSwitch: (client: PoolClient) => Promise<T>;
+  validateContent?: (bytes: Buffer, mimeType: string) => Promise<void>;
 }): Promise<{ documentId: string; teacher: T; cleanupPending: boolean }> {
   const { transaction, storage, teacherId } = options;
+  const bytes = Buffer.from(options.bytes);
+  // Authorize first, but never hold a SQL transaction during content analysis.
+  await transaction(client => options.authorize(client));
+  await (options.validateContent || validateDocumentContent)(bytes, options.mimeType);
   const documentId = randomUUID();
   const object = { bucket: options.bucket, key: `constancias/${teacherId}/${documentId}` };
   // Admission is committed before GCS I/O so a crash cannot orphan an untracked upload.
@@ -63,7 +69,7 @@ export async function replaceConstancia<T>(options: {
     const staged = await client.query(`SELECT id FROM teacher_documents
       WHERE id = $1 AND document_type = 'CONSTANCIA_FISCAL_STAGING' AND is_current = false FOR UPDATE`, [documentId]);
     if (staged.rows.length !== 1) throw new Error('Constancia staging is no longer available.');
-    await storage.put(object, options.bytes, options.mimeType);
+    await storage.put(object, bytes, options.mimeType);
   });
   const teacher = await transaction(async client => {
     // Serialize simultaneous replacements for one teacher; never delete the current file first.

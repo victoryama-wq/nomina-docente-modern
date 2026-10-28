@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TeacherDossierService } from '../lib/teacher-dossier.js';
 import type { DossierStorage } from '../lib/dossier-storage.js';
+import { createHash } from 'node:crypto';
+import { DocumentSecurityError } from '../lib/document-security.js';
+import { adminActor } from './fixtures/index.js';
 
 const db = vi.hoisted(() => ({
   connect: vi.fn(), query: vi.fn(), transaction: vi.fn(),
@@ -53,6 +56,58 @@ beforeEach(() => {
 });
 
 describe('H24 dossier worker connection recovery without a database', () => {
+  it('revalidates recovered bytes and removes only the rejected replacement', async () => {
+    const { service, storage, validator } = fixture();
+    const bytes = Buffer.from('synthetic candidate');
+    const op = { ...operation(), action: 'REPLACE', old_key: 'previous', old_generation: '1',
+      new_generation: '2', payload: { contentHash: createHash('sha256').update(bytes).digest('hex') } };
+    const aborted = { ...op, state: 'ABORTING', error_code: 'DOCUMENT_REJECTED' };
+    storage.stat.mockResolvedValueOnce({ key: op.new_key, generation: '2' }).mockResolvedValue(null);
+    storage.read.mockResolvedValue(bytes);
+    validator.mockRejectedValue(new DocumentSecurityError('DOCUMENT_REJECTED'));
+    let reads = 0;
+    db.clientQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('pg_try_advisory_lock')) return { rows: [{ locked: true }] };
+      if (sql.startsWith('SELECT * FROM teacher_dossier_operations')) return { rows: [reads++ ? aborted : op] };
+      return { rows: [], rowCount: 1 };
+    });
+    db.query.mockResolvedValue([{ ...aborted, state: 'FAILED' }]);
+    await expect(service.process(operationId)).resolves.toMatchObject({ state: 'FAILED', errorCode: 'DOCUMENT_REJECTED' });
+    expect(validator).toHaveBeenCalledExactlyOnceWith(bytes);
+    expect(storage.remove).toHaveBeenCalledExactlyOnceWith({ key: op.new_key, generation: '2' });
+    expect(db.clientQuery).toHaveBeenCalledWith(expect.stringContaining("state='AVAILABLE' WHERE id=$1 AND state='REPLACING'"), [op.document_id]);
+    expect(JSON.stringify(db.clientQuery.mock.calls)).not.toMatch(/SET storage_key|DELETE FROM teacher_dossier_documents/);
+    expect(storage.put).not.toHaveBeenCalled();
+  });
+
+  it('keeps recovered replacement pending without publishing or deleting when the scanner is unavailable', async () => {
+    const { service, storage, validator } = fixture();
+    const bytes = Buffer.from('synthetic candidate');
+    const op = { ...operation(), payload: { contentHash: createHash('sha256').update(bytes).digest('hex') } };
+    storage.stat.mockResolvedValue({ key: op.new_key, generation: '2' });
+    storage.read.mockResolvedValue(bytes);
+    validator.mockRejectedValue(new DocumentSecurityError('DOCUMENT_SECURITY_UNAVAILABLE'));
+    db.clientQuery.mockImplementation(async (sql: string) => ({ rows: sql.includes('pg_try_advisory_lock') ? [{ locked: true }]
+      : sql.startsWith('SELECT *') ? [op] : [], rowCount: 1 }));
+    db.query.mockResolvedValue([{ ...op, error_code: 'DOSSIER_RETRY_REQUIRED' }]);
+    await expect(service.process(operationId)).resolves.toMatchObject({ state: 'PREPARED', errorCode: 'DOSSIER_RETRY_REQUIRED' });
+    expect(JSON.stringify(db.clientQuery.mock.calls)).not.toMatch(/SET storage_key|ABORTING|BEGIN/);
+    expect(storage.remove).not.toHaveBeenCalled();
+    expect(storage.put).not.toHaveBeenCalled();
+  });
+
+  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SECURITY_UNAVAILABLE'] as const)('never serves existing bytes on %s and does not delete the object', async code => {
+    const { service, storage, validator } = fixture();
+    db.query.mockResolvedValue([{ storage_namespace: namespace, storage_key: 'old', storage_generation: '1' }]);
+    storage.read.mockResolvedValue(Buffer.from('legacy synthetic'));
+    validator.mockRejectedValue(new DocumentSecurityError(code));
+    await expect(service.content(adminActor(), operation().teacher_id, operation().document_id)).rejects.toMatchObject({ code });
+    expect(storage.remove).not.toHaveBeenCalled();
+    expect(db.transaction).not.toHaveBeenCalled();
+    expect(db.clientQuery).not.toHaveBeenCalled();
+    expect(db.query).toHaveBeenCalledTimes(1);
+  });
+
   it('discards a connection when unlock fails after returning a completed operation', async () => {
     const { service, storage, validator } = fixture();
     db.clientQuery.mockResolvedValueOnce({ rows: [{ locked: true }] })

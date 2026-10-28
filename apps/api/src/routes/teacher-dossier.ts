@@ -1,44 +1,12 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { requireDossier } from '../lib/dossier-policy.js';
 import { createDossierService } from '../lib/dossier-runtime.js';
 import { DossierError, dossierParams, uploadSchema, replaceSchema, metadataSchema, deleteSchema, contactSchema } from '../lib/dossier-contract.js';
 import type { TeacherDossierService } from '../lib/teacher-dossier.js';
 import { DossierStorageError } from '../lib/dossier-storage.js';
-
-// Bound large bodies before JSON/Base64 allocation, shared by both /api and root registrations.
-const fileRequests = new Set<FastifyRequest>();
-const bodyTimers = new Map<FastifyRequest, NodeJS.Timeout>();
-function clearBodyTimer(request: FastifyRequest) {
-  const timer = bodyTimers.get(request);
-  if (timer) clearTimeout(timer);
-  bodyTimers.delete(request);
-}
-function releaseAdmission(request: FastifyRequest) {
-  clearBodyTimer(request);
-  fileRequests.delete(request);
-}
-const fileAdmission = {
-  onRequest: async (request: FastifyRequest, reply: FastifyReply) => {
-    await requireDossier('manage')(request, reply);
-    if (reply.sent) return;
-    if (fileRequests.size >= 2) {
-      await reply.code(429).header('Retry-After', '2').send({ error: 'DOSSIER_BUSY', message: 'Espera a que termine la carga anterior.' });
-    } else {
-      fileRequests.add(request);
-      const timer = setTimeout(() => {
-        request.raw.destroy();
-        releaseAdmission(request);
-      }, 30_000);
-      timer.unref();
-      bodyTimers.set(request, timer);
-    }
-  },
-  preValidation: async (request: FastifyRequest) => { clearBodyTimer(request); },
-  onResponse: async (request: FastifyRequest) => { releaseAdmission(request); },
-  onRequestAbort: async (request: FastifyRequest) => { releaseAdmission(request); },
-  onTimeout: async (request: FastifyRequest) => { releaseAdmission(request); }
-};
+import { documentAdmission as fileAdmission } from '../lib/document-admission.js';
+import { DocumentSecurityError } from '../lib/document-security.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value);
@@ -57,6 +25,7 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
 async function respond(reply: FastifyReply, work: () => Promise<unknown>) {
   try { return await work(); }
   catch (error) {
+    if (error instanceof DocumentSecurityError) return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
     if (error instanceof DossierError) return reply.code(error.statusCode).send({ error: error.code, message: error.message });
     if (error instanceof DossierStorageError) {
       const status = error.code === 'DOSSIER_PDF_INVALID' ? 422 : error.code === 'DOSSIER_PDF_TOO_LARGE' ? 413 : 503;

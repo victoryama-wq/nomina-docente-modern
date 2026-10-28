@@ -33,6 +33,9 @@ import { type CoordinationRow } from './academic-context.js';
 import { canUseDossier, requireDossier } from '../lib/dossier-policy.js';
 import { replaceConstancia } from '../lib/constancia-replacement.js';
 import { constanciaStorage, ConstanciaStorageError } from '../lib/constancia-storage.js';
+import { documentAdmission } from '../lib/document-admission.js';
+import { decodeDossierPdf, DossierError } from '../lib/dossier-contract.js';
+import { DocumentSecurityError, validateDocumentContent, validateDocumentName } from '../lib/document-security.js';
 
 type TeacherStatus = 'ACTIVO' | 'INACTIVO';
 
@@ -169,7 +172,7 @@ const teacherImportTemplateSchema = z.object({
 const documentBodySchema = z.object({
   fileName: z.string().trim().min(1).max(180),
   mimeType: z.enum(['application/pdf', 'image/jpeg', 'image/png']),
-  base64Data: z.string().trim().min(1)
+  base64Data: z.string().min(4).max(10485760)
 });
 
 function buildFullName(body: z.infer<typeof teacherBodySchema>): string {
@@ -1167,7 +1170,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
   app.post(
     '/teachers/:id/documents/constancia',
-    { preHandler: requireDossier('manage') },
+    documentAdmission,
     async (request, reply) => {
       const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
       const parsed = documentBodySchema.safeParse(request.body);
@@ -1180,14 +1183,10 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
         return;
       }
 
-      const buffer = Buffer.from(parsed.data.base64Data, 'base64');
-      if (buffer.length > 7.5 * 1024 * 1024) {
-        await reply.code(400).send({ error: 'FILE_TOO_LARGE', message: 'La constancia excede 7.5 MB.' });
-        return;
-      }
-
       const actor = request.user!;
       try {
+        validateDocumentName(parsed.data.fileName, parsed.data.mimeType);
+        const buffer = decodeDossierPdf(parsed.data.base64Data);
         let before: TeacherRow | null = null;
         const uploaded = await replaceConstancia({
           transaction: withTransaction,
@@ -1210,6 +1209,8 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           ? 'Constancia guardada. La eliminación del archivo anterior está pendiente de recuperación; no vuelvas a cargarla.'
           : 'Constancia fiscal guardada; cualquier archivo sustituido fue eliminado.' };
       } catch (error) {
+        if (error instanceof DocumentSecurityError) return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
+        if (error instanceof DossierError) return reply.code(error.statusCode).send({ error: error.code, message: 'El archivo no es valido.' });
         if (!(error instanceof ConstanciaStorageError)) throw error;
         return reply.code(503).send({ error: 'CONSTANCIA_STORAGE_UNAVAILABLE', message: error.message });
       }
@@ -1259,9 +1260,21 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
 
       const file = firebaseAdmin.storage().bucket(doc.storageBucket).file(doc.storageObject);
       const [buffer] = await file.download();
+      try { await validateDocumentContent(buffer, doc.mimeType); }
+      catch (error) {
+        if (error instanceof DocumentSecurityError) return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
+        return reply.code(503).send({ error: 'DOCUMENT_SECURITY_UNAVAILABLE', message: 'La validacion documental no esta disponible.' });
+      }
+      const current = await query('SELECT id FROM teacher_documents WHERE id=$1 AND is_current=true', [doc.id]);
+      if (!current.length) return reply.code(409).send({ error: 'DOCUMENT_CHANGED', message: 'La constancia cambio. Recarga antes de continuar.' });
+      const safeName = doc.originalFileName.replace(/[^a-zA-Z0-9._-]/g, '_');
       reply
         .header('Content-Type', doc.mimeType || 'application/octet-stream')
-        .header('Content-Disposition', `inline; filename="${doc.originalFileName.replace(/"/g, '')}"`)
+        .header('Content-Disposition', `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(doc.originalFileName).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`)
+        .header('Cache-Control', 'private, no-store')
+        .header('X-Content-Type-Options', 'nosniff')
+        .header('Content-Security-Policy', "sandbox; default-src 'none'")
+        .header('Access-Control-Expose-Headers', 'Content-Disposition')
         .send(buffer);
     }
   );

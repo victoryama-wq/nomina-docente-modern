@@ -1,6 +1,6 @@
 import { Blob as NodeBlob } from 'node:buffer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchDossierDocumentBlob, fetchDossierOperation, fetchTeacherDossier, mutateTeacherDossier, type DossierMutation } from './api';
+import { fetchTeacherConstanciaBlob, fetchDossierDocumentBlob, fetchDossierOperation, fetchTeacherDossier, mutateTeacherDossier, type DossierMutation } from './api';
 
 vi.mock('./firebase', () => ({ auth: { currentUser: { getIdToken: async () => 'local-mocked-token' } } }));
 vi.mock('./config', () => ({ apiBaseUrl: 'http://localhost:8080' }));
@@ -9,6 +9,15 @@ beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('H24 authenticated API contracts', () => {
+  it('checks constancia bytes/MIME and prevents caching', async () => {
+    fetchMock.mockResolvedValue({ ok: true, headers: new Headers({ 'Content-Type': 'application/pdf' }), blob: async () => new NodeBlob(['%PDF-1.7 synthetic']) });
+    expect((await fetchTeacherConstanciaBlob('teacher')).mimeType).toBe('application/pdf');
+    expect(fetchMock.mock.calls[0][1].cache).toBe('no-store');
+  });
+  it.each(['text/html', 'application/pdf', 'image/svg+xml'])('rejects invalid constancia preview %s', async mime => {
+    fetchMock.mockResolvedValue({ ok: true, headers: new Headers({ 'Content-Type': mime }), blob: async () => new NodeBlob(['<html>']) });
+    await expect(fetchTeacherConstanciaBlob('teacher')).rejects.toThrow('documento permitido');
+  });
   it.each([
     ['upload', 'POST', '/documents', { title: 'CURP', documentType: 'CURP', fileName: 'curp.pdf', mimeType: 'application/pdf', base64Data: 'JVBERg==' }],
     ['replace', 'PUT', '/documents/doc/content', { expectedRevision: 2, fileName: 'curp.pdf', mimeType: 'application/pdf', base64Data: 'JVBERg==' }],

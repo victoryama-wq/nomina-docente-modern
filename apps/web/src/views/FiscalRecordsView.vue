@@ -627,6 +627,7 @@ onUnmounted(() => {
             v-if="constanciaPreview.mimeType.includes('pdf')"
             :src="constanciaPreview.url"
             title="Vista previa de constancia fiscal"
+            referrerpolicy="no-referrer"
           ></iframe>
           <img v-else-if="constanciaPreview.mimeType.startsWith('image/')" :src="constanciaPreview.url" alt="Constancia fiscal" />
           <div v-else class="fiscal-preview-empty">

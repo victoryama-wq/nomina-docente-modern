@@ -18,7 +18,15 @@ Seguimiento A1/A2 posteriormente autorizado (2026-10-28): [laboratorio ClamAV/EI
 completado sin BD ni nube; deteccion del marcador, errores/limites/edad de firmas y
 deadline comprobados. PDF malformado y JS inerte no detectados por antivirus:
 se mantienen parser y politica como controles separados. Sin integracion API/visor;
-A3/A4 pendientes de autorizacion y PD-03 aun abierto. No autoriza deploy.
+A3/A4 estaban pendientes de autorizacion en ese laboratorio. No autorizo deploy.
+
+Seguimiento A3 autorizado (2026-10-28): [pipeline local PDF/ClamAV](H24_PD03_A3_Controles_PDF_ClamAV_Local.md)
+implementado en ambas clases de documentos, recuperacion y lectura. API/web y cinco
+casos reales Docker aprobados; wrapper EICAR aprobado. Sin BD/nube. **PD-03 sigue
+abierto:** A4 requiere autorizacion, faltan politica completa PDF, decodificacion
+acotada JPG/PNG y prueba/aceptacion del visor. Solo existe transporte Docker local;
+no desplegarlo a Cloud Run. Sin configuracion H24 explicita se rechaza validacion
+con 503, nunca se omite analisis. H24 permanece NO-GO.
 
 Ampliacion C.P./CURP 2026-10-28: campos fiscales opcionales implementados localmente,
 sin ampliar roles ni cambiar completitud/pagos. [Acta del ajuste](H24_Ajuste_CP_CURP_Expediente.md).

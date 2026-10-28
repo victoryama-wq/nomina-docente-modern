@@ -1369,7 +1369,7 @@ export async function fetchTeacherConstanciaBlob(teacherId: string): Promise<{
 }> {
   const token = await getIdToken();
   const response = await fetch(`${apiBaseUrl}/teachers/${teacherId}/documents/current`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
   });
 
   if (!response.ok) {
@@ -1385,10 +1385,22 @@ export async function fetchTeacherConstanciaBlob(teacherId: string): Promise<{
   const disposition = response.headers.get('Content-Disposition') || '';
   const match = /filename="([^"]+)"/.exec(disposition);
   const blob = await response.blob();
+  const mimeType = response.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() || '';
+  const prefix = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+  const allowed = mimeType === 'application/pdf' ? new TextDecoder().decode(prefix).startsWith('%PDF-')
+    : mimeType === 'image/png' ? [137,80,78,71,13,10,26,10].every((v, i) => prefix[i] === v)
+    : mimeType === 'image/jpeg' ? prefix[0] === 255 && prefix[1] === 216 && prefix[2] === 255
+    : false;
+  if (!allowed || !blob.size || blob.size > 7.5 * 1024 * 1024) {
+    throw new ApiRequestError('La respuesta no es un documento permitido.', 422, 'INVALID_DOCUMENT');
+  }
+  let fileName = match?.[1] || 'constancia-fiscal';
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+  if (encoded) { try { fileName = decodeURIComponent(encoded); } catch { /* Keep safe fallback. */ } }
   return {
-    blob,
-    fileName: match?.[1] || 'constancia-fiscal',
-    mimeType: response.headers.get('Content-Type') || blob.type || 'application/octet-stream'
+    blob: new Blob([blob], { type: mimeType }),
+    fileName: fileName.replace(/[\\/\u0000-\u001f\u007f]/g, '_'),
+    mimeType
   };
 }
 
