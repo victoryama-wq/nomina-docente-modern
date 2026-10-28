@@ -7,6 +7,14 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
+Ampliacion C.P./CURP 2026-10-28: campos fiscales opcionales implementados localmente,
+sin ampliar roles ni cambiar completitud/pagos. [Acta del ajuste](H24_Ajuste_CP_CURP_Expediente.md).
+017 aplicada por H05 solo en nomina_docente_test: 20 registradas, pending=0/mismatch=0.
+**Actualiza el plan de salida historico de la seccion 8:** H24 ahora requiere 016 y
+017, en orden; estado esperado despues del futuro release: 20 registradas. Verificar
+inspect real autorizado antes de apply, sin asumir estado productivo desde test.
+No se modifico/aplico 016 de nuevo. Ningun gate pendiente queda aprobado por este ajuste.
+
 Seguimiento UX/constancia (2026-10-28): campos fiscales reunidos en Expediente;
 Constancia solo gestiona archivo. Borrado fisico de la version sustituida aprobado
 por el usuario e implementado localmente con recuperacion durable. Ver

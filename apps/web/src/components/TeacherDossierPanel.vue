@@ -12,7 +12,7 @@ const phone = ref('');
 const loading = ref(false);
 const error = ref('');
 const forbidden = ref(false);
-const fiscalValues = (teacher?: Teacher) => ({ rfc: teacher?.rfc || '', email: teacher?.email || '', bankDetail: teacher?.bankDetail || '', paymentType: teacher?.paymentType || '' });
+const fiscalValues = (teacher?: Teacher) => ({ rfc: teacher?.rfc || '', email: teacher?.email || '', bankDetail: teacher?.bankDetail || '', paymentType: teacher?.paymentType || '', fiscalPostalCode: teacher?.fiscalPostalCode || '', curp: teacher?.curp || '' });
 const fiscalOriginal = ref(fiscalValues(props.fiscalTeacher));
 const fiscalForm = ref({ ...fiscalOriginal.value });
 const fiscalSaving = ref(false);
@@ -29,11 +29,15 @@ async function saveFiscal() {
   if (!props.canEditFiscal || forbidden.value || loading.value || unsettled.value || fiscalSaving.value) return;
   const paymentType = fiscalForm.value.paymentType;
   if (!['1', '2', 'E'].includes(paymentType)) { error.value = 'Selecciona el tipo de pago.'; return; }
+  const fiscalPostalCode = fiscalForm.value.fiscalPostalCode.trim();
+  const curp = fiscalForm.value.curp.trim().toUpperCase();
+  if (fiscalPostalCode && !/^[0-9]{5}$/.test(fiscalPostalCode)) { error.value = 'El C.P. fiscal debe contener cinco dígitos.'; return; }
+  if (curp && !/^[A-Z]{4}[0-9]{6}[A-Z]{6}[A-Z0-9][0-9]$/.test(curp)) { error.value = 'La CURP debe tener 18 caracteres con formato válido.'; return; }
   fiscalSaving.value = true;
   fiscalMessage.value = '';
   error.value = '';
   try {
-    const result = await updateTeacherFiscal(props.teacherId, { ...fiscalForm.value, paymentType: paymentType as '1' | '2' | 'E' });
+    const result = await updateTeacherFiscal(props.teacherId, { ...fiscalForm.value, fiscalPostalCode, curp, paymentType: paymentType as '1' | '2' | 'E' });
     if (disposed || forbidden.value) return;
     fiscalOriginal.value = fiscalValues(result.teacher);
     fiscalForm.value = { ...fiscalOriginal.value };
@@ -297,6 +301,8 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
             <fieldset class="dossier-fiscal-fields" :disabled="!canEditFiscal || fiscalSaving || loading || unsettled">
               <label>RFC<input v-model.trim="fiscalForm.rfc" maxlength="20" placeholder="RFC del docente" /></label>
               <label>Correo<input v-model.trim="fiscalForm.email" type="email" maxlength="160" placeholder="correo@dominio.mx" /></label>
+              <label>C.P. fiscal<input v-model.trim="fiscalForm.fiscalPostalCode" name="fiscalPostalCode" inputmode="numeric" maxlength="5" placeholder="Código postal de 5 dígitos" autocomplete="off" /></label>
+              <label>CURP<input v-model.trim="fiscalForm.curp" name="curp" maxlength="18" placeholder="CURP de 18 caracteres" autocomplete="off" autocapitalize="characters" :spellcheck="false" /></label>
               <label>Tipo de pago<select v-model="fiscalForm.paymentType"><option disabled value="">Sin definir</option><option value="1">Santander</option><option value="2">Banorte</option><option value="E">Efectivo</option></select></label>
               <label>Banco / cuenta / CLABE<input v-model.trim="fiscalForm.bankDetail" maxlength="140" placeholder="Datos bancarios para pago" /></label>
             </fieldset>

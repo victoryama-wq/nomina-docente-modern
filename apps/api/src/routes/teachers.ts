@@ -30,7 +30,7 @@ import {
 } from '../lib/teacher-names.js';
 import type { ActorScope, SessionUser } from '../types.js';
 import { type CoordinationRow } from './academic-context.js';
-import { requireDossier } from '../lib/dossier-policy.js';
+import { canUseDossier, requireDossier } from '../lib/dossier-policy.js';
 import { replaceConstancia } from '../lib/constancia-replacement.js';
 import { constanciaStorage, ConstanciaStorageError } from '../lib/constancia-storage.js';
 
@@ -59,6 +59,8 @@ interface TeacherRow {
   externalIdentifier: string;
   bankDetail: string;
   status: TeacherStatus;
+  fiscalPostalCode: string;
+  curp: string;
   createdAt: string;
   updatedAt: string;
   createdById: string | null;
@@ -143,7 +145,9 @@ const teacherFiscalBodySchema = z.object({
   paymentType: z.enum(['E', '1', '2']),
   email: z.string().trim().toLowerCase().max(160).optional().default(''),
   rfc: z.string().trim().toUpperCase().max(20).optional().default(''),
-  bankDetail: z.string().trim().max(140).optional().default('')
+  bankDetail: z.string().trim().max(140).optional().default(''),
+  fiscalPostalCode: z.string().trim().regex(/^$|^[0-9]{5}$/, 'El C.P. fiscal debe contener cinco dígitos.').optional(),
+  curp: z.string().trim().toUpperCase().regex(/^$|^[A-Z]{4}[0-9]{6}[A-Z]{6}[A-Z0-9][0-9]$/, 'La CURP debe tener 18 caracteres con formato válido.').optional()
 });
 
 const teacherImportFileSchema = z.object({
@@ -261,7 +265,9 @@ const fiscalSensitiveTeacherFields: Record<string, string> = {
   paymentType: 'tipo de pago',
   email: 'correo fiscal',
   rfc: 'RFC',
-  bankDetail: 'datos bancarios'
+  bankDetail: 'datos bancarios',
+  fiscalPostalCode: 'C.P. fiscal',
+  curp: 'CURP'
 };
 
 function submittedFiscalTeacherFields(payload: unknown): string[] {
@@ -301,6 +307,7 @@ function canManageTeacherDocuments(actor: SessionUser): boolean {
 }
 
 function sanitizeTeacherForActor(actor: SessionUser, teacher: TeacherRow): TeacherRow {
+  if (!canUseDossier(actor, 'view')) teacher = { ...teacher, fiscalPostalCode: '', curp: '' };
   if (canViewTeacherFiscal(actor)) return teacher;
 
   return {
@@ -496,12 +503,24 @@ async function auditTeacher(
   beforeData: unknown,
   afterData: unknown
 ): Promise<void> {
+  // Keep new identity values out of general audit/history exports, retaining change evidence.
+  const auditData = (data: unknown) => {
+    if (!data || typeof data !== 'object') return data || null;
+    const { curp, fiscalPostalCode, ...rest } = data as Record<string, unknown>;
+    return { ...rest, ...(curp !== undefined ? { curpPresent: !!curp } : {}),
+      ...(fiscalPostalCode !== undefined ? { fiscalPostalCodePresent: !!fiscalPostalCode } : {}) };
+  };
+  const previous = beforeData as Partial<TeacherRow> | null;
+  const next = afterData as Partial<TeacherRow> | null;
+  const identityFieldsChanged = (['curp', 'fiscalPostalCode'] as const)
+    .filter(field => previous?.[field] !== next?.[field]);
   await client.query(
     `
       INSERT INTO audit_log (actor_user_id, actor_email, action, entity_type, entity_id, before_data, after_data)
       VALUES ($1, $2, $3, 'teacher', $4, $5::jsonb, $6::jsonb)
     `,
-    [actor.id, actor.email, action, entityId, JSON.stringify(beforeData || null), JSON.stringify(afterData || null)]
+    [actor.id, actor.email, action, entityId, JSON.stringify(auditData(beforeData)),
+      JSON.stringify(afterData ? { ...auditData(afterData) as object, identityFieldsChanged } : null)]
   );
 }
 
@@ -529,6 +548,8 @@ function teacherSelectSql(whereClause = ''): string {
       t.rfc,
       t.external_identifier AS "externalIdentifier",
       t.bank_detail AS "bankDetail",
+      t.fiscal_postal_code AS "fiscalPostalCode",
+      t.curp,
       t.status,
       t.created_at AS "createdAt",
       t.updated_at AS "updatedAt",
@@ -1039,6 +1060,8 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
               email = $2,
               rfc = $3,
               bank_detail = $4,
+              fiscal_postal_code = COALESCE($7::text, fiscal_postal_code),
+              curp = COALESCE($8::text, curp),
               updated_by = $5,
               updated_at = now()
             WHERE id = $6
@@ -1049,7 +1072,9 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
             parsed.data.rfc,
             parsed.data.bankDetail,
             actor.id,
-            before.id
+            before.id,
+            parsed.data.fiscalPostalCode ?? null,
+            parsed.data.curp ?? null
           ]
         );
 

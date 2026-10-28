@@ -49,6 +49,15 @@ Estas observaciones provienen de archivos locales, no de una inspeccion de infra
 
 ## 3. Decisiones humanas aprobadas
 
+Ampliacion aprobada 2026-10-28: incorporar **C.P. fiscal y CURP opcionales** en
+Datos fiscales del Expediente. Se capturan manualmente, sin OCR; C.P. como texto
+de cinco digitos (conserva ceros), CURP normalizada a mayusculas con validacion
+basica de estructura de 18 caracteres, no verificacion oficial. Los vacios no
+bloquean archivos ni pagos y no cambian avance fiscal. Mismos roles/permisos de
+lectura/edicion fiscal del expediente; no exponer en roles ajenos, exportables o
+importaciones. Implementacion local/test con migracion aditiva 017, sin modificar
+016 ni datos anteriores. Ver [auditoria C.P./CURP](../auditoria/H24_Ajuste_CP_CURP_Expediente.md).
+
 Actualizacion local del 2026-10-28, posterior a F0/F2: el usuario aprobo reunir
 RFC, correo fiscal, tipo de pago y banco/cuenta/CLABE dentro de Expediente, junto
 con telefono y documentos adicionales. Constancia conserva solo acciones de
@@ -104,7 +113,7 @@ No alterar los filtros existentes, nombres por rol, exportables fiscales ni el c
 ### 5.2 Panel del docente
 
 - Identidad visible en solo lectura; nombre, categoria, coordinacion y estatus siguen bajo las reglas actuales de Directorio.
-- Datos fiscales existentes dentro del panel, con guardado explicito mediante el endpoint fiscal vigente; sin cambio de campos ni permisos. La columna Constancia ya no edita estos datos.
+- Datos fiscales dentro del panel, incluidos C.P. fiscal y CURP opcionales, con guardado explicito mediante el endpoint fiscal vigente y sin ampliar permisos. La columna Constancia ya no edita estos datos.
 - Telefono operativo con guardado explicito e independiente de archivos y campos fiscales.
 - Area de documentos adicionales con tipo, titulo/nombre, fecha de carga y acciones permitidas.
 - Selector multiple de PDF, lista previa de archivos y clasificacion por archivo. Permitir asignar un tipo a varios seleccionados.

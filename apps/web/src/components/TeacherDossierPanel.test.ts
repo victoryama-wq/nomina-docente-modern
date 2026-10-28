@@ -79,7 +79,7 @@ describe('H24 dossier panel', () => {
     vi.mocked(fetchTeacherDossier).mockResolvedValue({ ...data(), teacher: { ...data().teacher, version: 'after-fiscal' } });
     await wrapper.get('fieldset').element.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await flushPromises();
-    expect(updateTeacherFiscal).toHaveBeenCalledWith('teacher-1', { rfc: teacher.rfc, email: 'updated@example.invalid', paymentType: 'E', bankDetail: '' });
+    expect(updateTeacherFiscal).toHaveBeenCalledWith('teacher-1', { rfc: teacher.rfc, email: 'updated@example.invalid', paymentType: 'E', bankDetail: '', fiscalPostalCode: '', curp: '' });
     expect(wrapper.emitted('fiscalSaved')).toHaveLength(1);
     expect(wrapper.get('input[type=tel]').element).toHaveProperty('value', '9981112233');
     await button('Guardar teléfono').trigger('click'); await flushPromises();
@@ -91,6 +91,40 @@ describe('H24 dossier panel', () => {
     expect(button('Guardar datos fiscales')).toBeUndefined();
     await wrapper.findAll('form')[0].trigger('submit');
     expect(updateTeacherFiscal).not.toHaveBeenCalled();
+  });
+  it('loads optional fiscal identity, normalizes CURP, preserves leading zero and saves without document upload', async () => {
+    await open();
+    const teacher = { id: 'teacher-1', paymentType: 'E', fiscalPostalCode: '01234', curp: 'TEST010101HQRXXX09' } as Teacher;
+    await wrapper.setProps({ fiscalTeacher: teacher, canEditFiscal: true });
+    expect(wrapper.get('input[name=fiscalPostalCode]').element).toHaveProperty('value', '01234');
+    expect(wrapper.get('input[name=curp]').element).toHaveProperty('value', teacher.curp);
+    await wrapper.get('input[name=curp]').setValue('test010101hqrxxx09');
+    vi.mocked(updateTeacherFiscal).mockResolvedValue({ teacher, message: 'Guardado' });
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(updateTeacherFiscal).toHaveBeenCalledWith('teacher-1', expect.objectContaining({ fiscalPostalCode: '01234', curp: teacher.curp }));
+    expect(mutateTeacherDossier).not.toHaveBeenCalled();
+    expect(wrapper.get('input[name=curp]').element).toHaveProperty('value', teacher.curp);
+  });
+  it.each([
+    ['fiscalPostalCode', '1234', 'cinco dígitos'],
+    ['fiscalPostalCode', '12A45', 'cinco dígitos'],
+    ['curp', 'INVALIDA', '18 caracteres']
+  ])('rejects invalid %s before calling fiscal API', async (field, value, message) => {
+    await open(); await wrapper.setProps({ fiscalTeacher: { id: 'teacher-1', paymentType: 'E' } as Teacher, canEditFiscal: true });
+    await wrapper.get(`input[name=${field}]`).setValue(value);
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(updateTeacherFiscal).not.toHaveBeenCalled();
+    expect(wrapper.get('[role=alert]').text()).toContain(message);
+  });
+  it('allows explicit clearing of optional fiscal identity fields', async () => {
+    await open();
+    const teacher = { id: 'teacher-1', paymentType: 'E', fiscalPostalCode: '01234', curp: 'TEST010101HQRXXX09' } as Teacher;
+    await wrapper.setProps({ fiscalTeacher: teacher, canEditFiscal: true });
+    await wrapper.get('input[name=fiscalPostalCode]').setValue('');
+    await wrapper.get('input[name=curp]').setValue('');
+    vi.mocked(updateTeacherFiscal).mockResolvedValue({ teacher: { ...teacher, fiscalPostalCode: '', curp: '' }, message: 'Guardado' });
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(updateTeacherFiscal).toHaveBeenCalledWith('teacher-1', expect.objectContaining({ fiscalPostalCode: '', curp: '' }));
   });
   it('tracks unsaved fiscal fields and hides them after a forbidden fiscal mutation', async () => {
     await open(); await wrapper.setProps({ fiscalTeacher: { id: 'teacher-1', paymentType: 'E' } as Teacher, canEditFiscal: true });

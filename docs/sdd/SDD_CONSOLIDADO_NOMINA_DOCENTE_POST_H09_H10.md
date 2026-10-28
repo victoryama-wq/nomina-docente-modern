@@ -427,6 +427,15 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 
 ### H24 - Expediente completo (local, no productivo)
 
+Ampliacion aprobada 2026-10-28: C.P. fiscal y CURP opcionales en Datos fiscales del
+panel, sin OCR ni nuevos requisitos de pago. Datos compartidos en teachers mediante
+`fiscal_postal_code`/`curp`, endpoint fiscal existente, lectura limitada a roles H24
+y edicion fiscal vigente. Campos nuevos excluidos de exportables y valores de auditoria
+general. Migracion 017 aplicada exclusivamente en test, sin backfill: H05 20 registradas,
+pending=0/mismatch=0; release futuro requiere 016 y 017 antes de API. Evidencia:
+`docs/auditoria/H24_Ajuste_CP_CURP_Expediente.md`. No cambia H01 ni estado productivo;
+H24 sigue NO-GO y PD-05 parcial.
+
 H24-F1 agrega modelo/backend local para PDF adicionales del docente, separados de
 Constancias, y telefono compartido con Directorio. Admin conserva acceso completo;
 Finanzas/RH requieren permisos fiscales/documentales por accion. Otros roles no

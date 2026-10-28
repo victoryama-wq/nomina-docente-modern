@@ -208,6 +208,13 @@ Pendientes reales despues de H02/H03:
 
 ### Seguimiento H24 - Expediente completo
 
+Ampliacion local 2026-10-28: C.P. fiscal y CURP opcionales, con validacion de formato
+y permisos fiscales del expediente. 017 agrega dos columnas sin backfill; H05 test
+20 registradas, pending=0/mismatch=0. Sin valores nuevos en auditoria general ni
+exportables; sin cambios H01 o produccion. El release futuro debe incluir 016 y
+017. No cierra PD-03 a PD-08 ni la cobertura parcial PD-05. Evidencia:
+`H24_Ajuste_CP_CURP_Expediente.md`. H24 mantiene NO-GO.
+
 H24-F1 modelo/backend implementados y validados en local/test; no cerrado operativo.
 H24-F2 frontend implementado y probado con API simulada; panel, telefono y documentos
 con responsive local. F3 valida integracion persistida via API HTTP, PostgreSQL y

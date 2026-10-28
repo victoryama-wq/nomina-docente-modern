@@ -117,6 +117,8 @@ export interface Teacher {
   documentName: string;
   documentMimeType: string;
   documentUploadedAt: string | null;
+  fiscalPostalCode?: string;
+  curp?: string;
 }
 
 export interface TeacherSummary {
@@ -1055,6 +1057,8 @@ export interface TeacherFiscalPayload {
   email: string;
   rfc: string;
   bankDetail: string;
+  fiscalPostalCode?: string;
+  curp?: string;
 }
 
 export interface UserPayload {

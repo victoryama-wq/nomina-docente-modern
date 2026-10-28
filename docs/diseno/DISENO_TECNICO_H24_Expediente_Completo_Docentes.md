@@ -36,6 +36,23 @@ Contrato funcional: [SPEC_H24_Expediente_Completo_Docentes.md](../specs/SPEC_H24
 
 ## 1. Arquitectura y limites
 
+### Ampliacion local 2026-10-28: C.P. fiscal y CURP
+
+Migracion `017_h24_teacher_fiscal_identity.sql` agrega `teachers.fiscal_postal_code`
+y `teachers.curp` como text NOT NULL DEFAULT '', con CHECK de vacio/formato.
+Sin modificar 016 ni backfill. `PATCH /teachers/:id/fiscal` recibe campos opcionales
+`fiscalPostalCode`/`curp`: omision conserva, '' limpia, null o formato invalido 400;
+trim y CURP mayuscula. C.P. cinco digitos; CURP estructura basica de 18 caracteres,
+sin validar identidad, fecha interna, entidad o digito verificador oficial.
+
+Lectura de ambos valores exige `canUseDossier(actor, 'view')`; mutacion conserva
+`requireDossier('contact')`. Roles ajenos reciben campos vacios en proyeccion de
+teachers. No cambia autorizacion del resto de campos ni exportables. Auditoria
+general omite estos valores y registra presencia/campos cambiados. No OCR.
+Panel reutiliza grid responsive/guardado fiscal; archivos y telefono siguen separados.
+017 ensayada por H05 solo en test: 20 registradas, pending=0/mismatch=0. Release
+futuro requiere 016 y 017 antes de API. Ver [evidencia](../auditoria/H24_Ajuste_CP_CURP_Expediente.md).
+
 ### Actualizacion aprobada 2026-10-28: ficha y sustitucion de constancia
 
 Implementada solo localmente, ver
