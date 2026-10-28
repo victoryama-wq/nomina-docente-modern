@@ -7,6 +7,19 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
+Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
+completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
+de validacion entre constancias y PDF adicionales, falta de analisis antimalware,
+aislamiento del parser no demostrado y visor nativo sin sandbox HTML acreditado.
+Incluye propuesta, corpus y autorizaciones A1-A4; no implica aprobacion para
+ejecutarlos. PD-03 permanece abierto y H24 NO-GO.
+
+Seguimiento A1/A2 posteriormente autorizado (2026-10-28): [laboratorio ClamAV/EICAR](H24_PD03_Laboratorio_ClamAV_EICAR.md)
+completado sin BD ni nube; deteccion del marcador, errores/limites/edad de firmas y
+deadline comprobados. PDF malformado y JS inerte no detectados por antivirus:
+se mantienen parser y politica como controles separados. Sin integracion API/visor;
+A3/A4 pendientes de autorizacion y PD-03 aun abierto. No autoriza deploy.
+
 Ampliacion C.P./CURP 2026-10-28: campos fiscales opcionales implementados localmente,
 sin ampliar roles ni cambiar completitud/pagos. [Acta del ajuste](H24_Ajuste_CP_CURP_Expediente.md).
 017 aplicada por H05 solo en nomina_docente_test: 20 registradas, pending=0/mismatch=0.
@@ -234,9 +247,12 @@ recuperar archivos eliminados definitivamente.
 ## 5. Parser, visor, capacidad y worker
 
 Controles presentes: PDF <=7.5 MiB, hasta 500 paginas, Base64 canonico, schemas
-estrictos, filename seguro, timeout parser 10 s/salida limitada, proceso sin
-credenciales de aplicacion, rechazo de cifrado y JavaScript detectado. La respuesta
-PDF es privada/no-store/nosniff; CORS expone solo Content-Disposition para el nombre.
+estrictos, filename seguro, timeout parser 10 s/salida limitada y entorno del
+subproceso sin variables de credenciales de aplicacion. Esto no acredita aislamiento
+de archivos/red/metadata respecto de la API. Rechazo de cifrado y JavaScript
+detectado. La respuesta de PDF adicionales es privada/no-store/nosniff; CORS expone
+Content-Disposition para el nombre. No extrapolar estos controles a constancias;
+ver brechas y propuesta PD-03.
 
 No hay escaneo antivirus implementado ni certificacion de ausencia de malware.
 El Blob del visor no hereda automaticamente la cabecera CSP de la respuesta
