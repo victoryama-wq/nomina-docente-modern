@@ -21,6 +21,12 @@ Seguimiento A4 autorizado y aprobado: [integracion API/BD test/GCS](H24_PD03_A4_
 en GCS, produccion ni deploy. Los pendientes de politica, imagenes, visor y cloud
 se mantienen; no confundir la integracion aprobada con cierre integral PD-03.
 
+Revision posterior a A4: [propuesta de imagenes, funciones PDF y visor](H24_PD03_Politica_Imagenes_PDF_Visor_Propuesta.md).
+Confirma la brecha de decodificacion JPG/PNG, propone politica PDF/historicos y
+registra una carrera de respuestas de constancia pendiente de reproduccion.
+Contiene autorizaciones separadas de laboratorio, politica, implementacion e
+integracion. Ninguna herramienta nueva instalada ni control adicional implementado.
+
 ## 1. Resumen y limites
 
 La carga de PDF adicionales tiene controles estructurales, permisos y almacenamiento
