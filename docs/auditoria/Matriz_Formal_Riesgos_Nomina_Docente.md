@@ -273,7 +273,14 @@ de permiso durante carga, con restitucion. AUTH-01 confirmado en H24: token prev
 a deshabilitacion/revocacion Firebase sigue obteniendo API 200; verificador estricto
 lo rechaza. Esa evidencia es anterior al fix AUTH-01 del 2026-10-28; la correccion
 y sus comprobaciones aisladas se registran en el acta nueva, no en produccion.
-Faltan sesiones avanzadas e identidades complementarias. H24 mantiene NO-GO,
+Seguimiento 2026-10-28: sesiones de navegador aprobadas por usuario en H24:
+F5, logout manual, cierre/reapertura Invitado y H15 abreviado autorizado 90/120 s
+(aviso, contador, Continuar, cierre automatico a login). Fuentes conservan 55/60
+minutos; no se espero una hora real. Solo last_login_at QA cambio; instancia
+temporal detenida. Usuario mantiene pendientes las identidades complementarias,
+sin autorizar nuevos recursos ni aceptar formalmente cobertura limitada. Ver
+`H24_PD05_Resultado_Persistencia_Inactividad.md`. PD-04 cloud pendiente.
+H24 mantiene NO-GO,
 sin cierre operativo ni deploy autorizado. QA ACTIVO solo para revision local
 solicitada; no cambia permisos productivos.
 

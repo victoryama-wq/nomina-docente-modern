@@ -22,6 +22,15 @@ AUTH-01 cerrado tecnicamente en local/H24 el 2026-10-28: disabled/revoked 401,
 nuevo login real en Brave invitado 200, identidad habilitada e integridad restituida.
 No cierra las otras sesiones avanzadas del plan ni prueba el runtime productivo.
 
+Seguimiento 2026-10-28: [persistencia, logout e inactividad](H24_PD05_Resultado_Persistencia_Inactividad.md)
+validados por usuario con Firebase H24 real: F5 conserva sesion, logout manual y
+automatico a login, aviso/contador y Continuar, cierre/reapertura en Brave Invitado.
+Inactividad abreviada autorizada solo en instancia 5185: aviso 90 s/cierre 120 s;
+fuentes versionadas conservan 55/60 minutos. Instancia temporal detenida; 5184
+conservada. Integridad final: solo last_login_at QA. El usuario decidio mantener
+pendientes las identidades complementarias, sin nuevos recursos ni aceptacion
+formal de cobertura limitada. PD-05 sigue parcial; pendientes cloud PD-04 intactos.
+
 Seguimiento autorizado posterior a este plan:
 [provisionamiento Auth aislado](H24_PD05_Provisionamiento_Firebase_Auth_Aislado.md).
 Las secciones siguientes conservan el protocolo y la evidencia de preparacion

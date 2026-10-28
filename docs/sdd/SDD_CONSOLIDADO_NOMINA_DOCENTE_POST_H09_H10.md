@@ -491,7 +491,13 @@ solicitudes se verifican; no se revocan bytes ya descargados ni solicitudes en c
 AUTH-01 cerrado tecnicamente local/H24: token nuevo tras login real en Brave invitado
 aceptado (200), identidad habilitada y solo last_login_at QA modificado. No se
 atribuye ni declara corregido el cierre del perfil habitual del navegador.
-PD-05 y H24 no cerrados; sesiones avanzadas y demas gates siguen pendientes.
+PD-05 y H24 no cerrados. Seguimiento 2026-10-28: F5, logout manual,
+cierre/reapertura en Brave Invitado, aviso/contador, Continuar y cierre automatico
+validados por usuario en H24. Inactividad abreviada autorizada 90/120 s en instancia
+local temporal, ya detenida; H15 versionado conserva 55/60 minutos. Sin cambios
+persistentes fuera de last_login_at QA. El usuario mantiene pendientes las
+identidades complementarias; no es aceptacion de cobertura limitada ni cierre PD-04.
+Ver `docs/auditoria/H24_PD05_Resultado_Persistencia_Inactividad.md`.
 Sesion QA local retenida a solicitud del usuario. Ajuste UX implementado localmente:
 RFC, correo, tipo de pago y banco dentro de Expediente junto al telefono; Constancia
 solo gestiona archivo. Borrado fisico de constancia sustituida aprobado el

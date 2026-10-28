@@ -91,6 +91,14 @@ integridad comprobada (solo last_login_at QA), cuenta habilitada y token tempora
 eliminado. Login recuperado en Brave invitado; cierre del perfil habitual sin causa
 determinada, no presentado como corregido. No hubo publicacion productiva.
 
+Continuacion PD-05 del 2026-10-28: [acta de persistencia e inactividad](H24_PD05_Resultado_Persistencia_Inactividad.md).
+Usuario aprobo F5, logout manual, cierre/reapertura Invitado, aviso/contador,
+Continuar y logout automatico a login con tiempo abreviado autorizado 90/120 s.
+Sin modificar H15 versionado; no se esperaron 60 minutos reales. Test H15 9/9,
+auth/policy 36/36; fingerprints solo last_login_at QA. Instancia temporal detenida.
+PD-05 parcial: usuario mantiene pendientes cuentas independientes, dominio externo,
+correo no verificado y token valido de otro proyecto. PD-04 cloud no cerrado.
+
 ## 1. Alcance y evidencia
 
 Arbol limpio al inicio; HEAD y tracking local de origin sin diferencias (0/0).
@@ -119,7 +127,7 @@ ni afirmaciones sobre la infraestructura actualmente desplegada.
 | H24-PD-02 / Alta inicial | Bucket test nuevo, privado, versionado false y soft delete 0; politica aceptada por adaptador real, permisos efectivos minimos, operaciones GCS y recuperacion con BD test aprobadas; inventarios finales 0 vivos/0 versiones | Cerrado tecnicamente en local/test. softDeleted=true retorna 400, con evidencia alternativa prevista en plan. No cierra Firebase/roles faltantes (PD-05), worker programado (PD-04), ni configuracion productiva. Ver acta GCS |
 | H24-PD-03 / Alta | `validateDossierPdf` hace comprobaciones estructurales/JavaScript, no antivirus. Preview Blob usa visor nativo sin sandbox HTML (`TeacherDossierPanel.vue:312`) | Seguridad: aprobar e implementar/probar estrategia PDF malicioso o aceptar formalmente control alternativo con riesgo acotado; no declarar pdfinfo un escaner |
 | H24-PD-04 / Alta | Worker reforzado y recuperacion GCS/test aprobada; dos disparos de Task Scheduler locales, idempotencia, alarma estructurada y restitucion sin diferencias. Lotes de 25 y espera >5 min conservados | Parcial: falta job/scheduler cloud privado, entrega externa de alertas, timeout/reintentos e identidad del runtime cloud. Evidencia en H24_PD04_Validacion_Worker_Recuperacion_Alertas.md; no deploy autorizado |
-| H24-PD-05 / Alta | F3 sustituye identidad Firebase. Cliente/API tienen defaults de proyecto productivo; un arranque local sin configurar no es aislamiento | QA/Admin: proyecto de autenticacion de prueba explicitamente aprobado y sesiones autorizadas por rol contra BD/storage test, sin mocks ni identidades productivas |
+| H24-PD-05 / Alta | Firebase H24 real, matriz secuencial por rol, AUTH-01 y sesiones de navegador validados en sus actas. Inactividad abreviada 90/120 s autorizada; defaults productivos requieren configuracion local explicita | Parcial: identidades complementarias pendientes por decision humana; no confundir mocks o una cuenta rotada con cambio entre cuentas reales. Ver H24_PD05_Resultado_Persistencia_Inactividad.md |
 | H24-PD-06 / Alta | npm audit actual tiene hallazgos high, incluidos Fastify/Zod; ninguna explotabilidad fue ensayada | Seguridad: triage por ruta real, correcciones puntuales y regresion o excepcion formal por hallazgo no alcanzable; cero criticas no autoriza por si solo |
 | H24-PD-07 / Media | Limite de dos cargas por proceso, Base64 y buffers en memoria; no prueba sostenida con memoria/concurrencia de destino | QA/DevOps: medir capacidad, memoria, latencias, cola y 429 con archivos limite, red lenta, usuarios y replicas concurrentes |
 | H24-PD-08 / Alta operativa | 016 solo ensayada por harness local; F3 dejo registro H05 test vacio. Backup local fallo por namespace PostgreSQL ausente | DBA: resolver entorno de ensayo confiable, probar 016 por H05 y restauracion; luego backup/ventana productiva aprobados independientemente |
@@ -369,15 +377,19 @@ Lockfile SHA-256 sin cambios:
 - [x] Codigo, contratos, roles y evidencia F1/F2/F3 revisados.
 - [x] Bloqueantes y plan de smoke/release/rollback documentados.
 - [x] Regresion sin BD y auditoria de dependencias repetidas.
-- [x] Login Firebase real autorizado y matriz de roles vigentes en test (PD-05 parcial;
-  negativos complementarios/sesiones avanzadas y AUTH-01 siguen abiertos).
+- [x] Login Firebase real autorizado y matriz de roles vigentes en test; AUTH-01
+  cerrado local/H24. PD-05 parcial por identidades complementarias pendientes.
+- [x] Persistencia, logout y cierre/reapertura Invitado; H15 abreviado autorizado
+  90/120 s aprobado. No es espera real de una hora ni prueba de perfil restaurado.
 - [x] GCS privado de prueba, IAM/politicas/borrado comprobados en PD-02 y limpieza
   con sesiones reales confirmada en PD-05; no equivale a infraestructura productiva.
 - [x] Parser en imagen Linux final local validado (seguimiento PD-01, 12/12).
 - [ ] Estrategia PDF/visor aprobada/probada (PD-03; pdfinfo no es antivirus).
 - [ ] Worker programado y alertas/recuperacion probados.
 - [ ] Capacidad y accesibilidad/dispositivos completados.
-- [ ] Hallazgos npm y AUTH-01 resueltos o excepciones fundamentadas aprobadas.
+- [x] AUTH-01 corregido y validado local/H24; no desplegado.
+- [ ] Hallazgos npm resueltos o excepciones fundamentadas aprobadas; verificar
+  IAM/latencia AUTH-01 del runtime destino dentro de un release autorizado.
 - [ ] Entorno DBA confiable, ensayo H05 016 y restauracion.
 - [ ] Aprobacion explicita de backup/migracion/API/Hosting productivos.
 

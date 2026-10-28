@@ -125,8 +125,10 @@ cierre de Brave en su perfil habitual. No hubo cambios frontend para evitarlo.
   y retorno a login al recargar; no prometer desaparicion instantanea de toda UI.
 - Alcance compartido de authenticate: requiere el predeploy/smoke del artefacto final,
   incluida identidad runtime, antes de publicar; no ejecutar deploy solo por cerrar AUTH-01.
-- PD-05 conserva otros casos pendientes: cuentas independientes, cierre de navegador
-  sin restauracion, 60 minutos reales H15 e identidades especiales autorizadas.
+- Seguimiento PD-05 2026-10-28: cierre/reapertura de Brave Invitado sin restauracion,
+  F5/logout y H15 con tiempo abreviado autorizado 90/120 s aprobados por usuario.
+  No se esperaron 60 minutos reales. Cuentas independientes e identidades especiales
+  siguen pendientes por decision humana; ver `H24_PD05_Resultado_Persistencia_Inactividad.md`.
 - PD-03/04/06/07/08 y reorganizacion UX de campos fiscales no se implementan aqui.
 
 ## 6. Confirmaciones
