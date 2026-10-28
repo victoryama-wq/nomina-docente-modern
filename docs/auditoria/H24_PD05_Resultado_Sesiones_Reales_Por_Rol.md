@@ -5,6 +5,12 @@ Rama: `feature/h02-h03-user-coordinations-permissions`; limpia al inicio.
 **Matriz de roles vigentes y flujo documental: satisfactorios en entorno aislado.
 PD-05 con validacion parcial; casos complementarios pendientes. H24 sigue NO-GO.**
 
+Seguimiento posterior del mismo dia: [validacion complementaria autorizada](H24_PD05_Validacion_Complementaria_Auth_Sesiones.md).
+Resuelve permisos reducidos, identidad local y retirada durante carga; confirma
+AUTH-01, no lo corrige. Los conteos y la restitucion INACTIVO de este documento
+corresponden al primer ensayo. El seguimiento conserva QA ACTIVO para revision
+expresa del usuario y registra los nuevos conteos por separado.
+
 ## 1. Autorizacion y aislamiento
 
 El usuario autorizo usar su cuenta institucional para login Google real, preparar

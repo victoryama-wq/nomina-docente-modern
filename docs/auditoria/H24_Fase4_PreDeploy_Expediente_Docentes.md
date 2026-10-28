@@ -49,6 +49,14 @@ residuales; rol/estado y telefono restituidos. No se modificaron permisos compar
 PD-05 parcialmente validado: faltan negativos complementarios, sesiones avanzadas
 y tratamiento AUTH-01. H24 sigue NO-GO; no hubo produccion ni deploy.
 
+Continuacion PD-05 autorizada: [acta complementaria](H24_PD05_Validacion_Complementaria_Auth_Sesiones.md).
+Diez variantes de permisos reducidos, identidad local ausente/incompatible y retiro
+durante carga validados; restitucion y GCS vacio. AUTH-01 confirmado: API acepta
+token emitido antes de revocacion/deshabilitacion Firebase. No cerrar PD-05 ni
+autorizar deploy sin decision de correccion/riesgo. Casos de sesiones/identidades
+adicionales siguen pendientes. QA local activo y servicios abiertos solo para la
+revision solicitada, no como estado productivo.
+
 ## 1. Alcance y evidencia
 
 Arbol limpio al inicio; HEAD y tracking local de origin sin diferencias (0/0).

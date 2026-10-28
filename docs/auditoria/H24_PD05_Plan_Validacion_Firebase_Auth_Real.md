@@ -6,6 +6,10 @@ Estado actualizado: **matriz de roles vigentes y flujo documental probados con
 Firebase real, una cuenta autorizada rotada secuencialmente y GCS aislado**.
 PD-05 parcialmente validado; casos complementarios y AUTH-01 abiertos. H24 mantiene NO-GO.
 Resultado posterior: [sesiones reales por rol](H24_PD05_Resultado_Sesiones_Reales_Por_Rol.md).
+Continuacion autorizada: [validacion complementaria](H24_PD05_Validacion_Complementaria_Auth_Sesiones.md).
+Permisos reducidos, identidad local y retirada durante carga probados; AUTH-01
+confirmado con token previo aceptado tras revocacion/deshabilitacion Firebase.
+No se declara cerrado PD-05. Sesion local retenida para revision por el usuario.
 El protocolo siguiente conserva el alcance de preparacion original; sus pendientes
 se interpretan con el acta de resultado, no como ausencia actual de todo smoke real.
 
@@ -269,3 +273,76 @@ AUTH-01 y demas dependencias expresamente. H24 sigue NO-GO mientras falten gates
 - git diff --check, git diff --name-only y git status; no tests/build por ser Markdown.
 - Sin cambios de codigo, SQL, BD, cuentas, IAM, recursos cloud, migraciones,
   dependencias, produccion o deploy. Sin commit/push automaticos.
+
+## 12. Continuacion de pendientes despues del resultado parcial
+
+Revision local del 2026-10-27, base `36aa68e`. No sustituye el acta de sesiones
+reales ni afirma nuevos ensayos contra Firebase. Se revisaron authenticate,
+canUseDossier y el temporizador H15, sin cambiar implementaciones.
+
+Regresion focalizada ejecutada:
+- `npm --workspace apps/api run test -- src/test/dossier-policy.test.ts`: 11/11.
+- `npm --workspace apps/web run test -- src/test/session-timeout.test.ts`: 9/9.
+
+Son pruebas unitarias, sin BD ni sesiones reales: H15 usa reloj simulado y callback
+de logout simulado. No acreditan por si solas cierre de Brave, revocacion Firebase
+o inactividad de 60 minutos con una sesion real. No se ejecuto reset de test.
+
+### Autorizaciones adicionales solicitadas
+
+| ID | Alcance concreto | Protecciones y restitucion |
+|---|---|---|
+| A5-P | Reducir temporalmente fiscal.view/manage y fiscal.document.view/manage en role_permissions de Finanzas/RH, exclusivamente en nomina_docente_test; incluir retirada durante una carga sintetica | Ventana exclusiva sin otros usuarios locales; backup y snapshot exacto de las relaciones; restitucion en bloque finally, comparacion final e inventario GCS. No modificar roles ni permisos productivos |
+| A5-I | Cambiar temporalmente email/firebase_uid del fixture QA local para probar usuario no registrado y UID incompatible | Solo la fila QA autorizada, con valores unicos de prueba, sin borrar usuarios, sin crear buzones ni tocar Google; restaurar identidad, rol y estado originales y conservar evidencia |
+| A7-R | Deshabilitar/rehabilitar y revocar refresh tokens del UID de prueba del usuario autorizado, exclusivamente en Firebase nomina-h24-test-20261027 | Confirmar proyecto y UID antes de cada accion; no cuenta Google/Workspace ni Firebase productivo. Restituir enabled y solicitar nuevo login. La revocacion no se deshace: una nueva sesion reemplaza la revocada |
+
+La autorizacion anterior cubria rotacion local de rol/estado y operaciones
+sinteticas, no cambios de permisos compartidos, email/UID o revocacion Firebase.
+No se han ejecutado esas ampliaciones durante esta revision.
+
+Para login, refresh, logout y cierre/reapertura se reutilizara la identidad ya
+autorizada en una ventana/perfil dedicado de Brave; no cerrar ventanas ajenas ni
+cambiar la restauracion de sesiones del perfil habitual. El usuario tendra que
+completar el login interactivo. La cuenta local quedara de nuevo INACTIVO al terminar.
+
+Casos que requieren recursos adicionales o una decision formal de alcance:
+- Cambio entre cuentas y dominio incorrecto: segunda cuenta Google de prueba
+  designada y autorizada por su titular. No son necesarias cuatro cuentas por rol.
+- Correo no verificado: identidad/proveedor de ensayo apropiado aprobado por
+  separado; no alterar JWT ni habilitar proveedores para fingir cobertura Google.
+- Token valido de otro proyecto: otro Firebase de prueba autorizado. No usar
+  tokens productivos ni crear otro proyecto implicitamente.
+
+Si no se facilitan estos recursos, conservar los casos como pendientes o solicitar
+aceptacion formal de cobertura limitada; nunca declararlos aprobados por equivalencia.
+
+### Secuencia y condicion de cierre
+
+1. Confirmar ampliaciones, aislamiento, ausencia de otros ensayos y backup local.
+2. Reanudar API/web loopback con configuracion H24 explicita y login real en Brave.
+3. Ejecutar permisos reducidos, identidad y retirada de permiso durante carga;
+   verificar rechazo antes de publicar, limpieza y restitucion.
+4. Probar persistencia/logout y H15 en navegador; distinguir reloj real o acelerado.
+5. Con A7-R, observar revocacion/deshabilitacion con token previo y nuevo login,
+   sin ampliar IAM runtime. Si falta permiso del operador, detener y reportarlo.
+6. Comparar fixtures, permisos, fingerprints e inventario; logout, detener procesos
+   propios y retirar credenciales temporales. Registrar resultado real de cada caso.
+
+AUTH-01 sigue abierto: el backend llama verifyIdToken(token) sin checkRevoked.
+Observar su comportamiento no corrige la implementacion ni prueba revocacion
+inmediata. Requiere decision humana de correccion tecnica separada o aceptacion
+formal del riesgo; esta continuacion no autoriza cambiar autenticacion compartida.
+PD-05 no se cierra anticipadamente. Aun cerrandolo, H24 conserva los otros gates
+PD-03/04/06/07/08 del predeploy; no se deriva autorizacion de deploy.
+
+### Resultado posterior de las tres ampliaciones
+
+A5-P, A5-I y A7-R fueron autorizadas expresamente y ejecutadas el mismo dia.
+Diez variantes Finanzas/RH satisfactorias; identidad ausente/incompatible 403;
+retirada durante carga FAILED/AUTHORIZATION_REVOKED sin publicacion. Permisos,
+identidad y telefono restituidos; nuevo login valido tras revocacion.
+AUTH-01 ya no es solo hipotesis: API 200 con token anterior a deshabilitacion o
+revocacion, mientras el verificador estricto lo rechaza. Requiere decision separada.
+El usuario solicito conservar sesion de revision: QA local queda ACTIVO/admin,
+API/web loopback abiertos, sin captura de token, con limpieza final pendiente de
+terminar esa revision. Detalle y limites en el acta complementaria enlazada arriba.

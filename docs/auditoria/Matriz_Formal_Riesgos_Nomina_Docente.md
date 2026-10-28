@@ -256,8 +256,14 @@ UI de carga multiple/preview/descarga, telefono por API, limpieza GCS y restituc
 Evidencia: `H24_PD05_Resultado_Sesiones_Reales_Por_Rol.md`. No cambia autorizacion
 productiva ni permisos compartidos. Login escribe UID/timestamps y las pruebas
 conservan auditoria local; no se presentan como read-only de BD test.
-Faltan casos complementarios de permisos reducidos/identidad y sesiones avanzadas;
-AUTH-01 abierto. H24 mantiene NO-GO, sin cierre operativo ni deploy autorizado.
+Seguimiento: `H24_PD05_Validacion_Complementaria_Auth_Sesiones.md` acredita diez
+variantes de permisos reducidos, usuario local ausente/UID incompatible y retiro
+de permiso durante carga, con restitucion. AUTH-01 confirmado en H24: token previo
+a deshabilitacion/revocacion Firebase sigue obteniendo API 200; verificador estricto
+lo rechaza. Requiere correccion separada o aceptacion formal de riesgo, no cierre.
+Faltan sesiones avanzadas e identidades complementarias. H24 mantiene NO-GO,
+sin cierre operativo ni deploy autorizado. QA ACTIVO solo para revision local
+solicitada; no cambia permisos productivos.
 
 Evidencia: `H24_Fase1_Modelo_Backend_Expediente_Docentes.md`,
 `H24_Fase2_Frontend_Expediente_Docentes.md`,

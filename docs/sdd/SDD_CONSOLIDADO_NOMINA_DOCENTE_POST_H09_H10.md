@@ -476,6 +476,13 @@ PD-05 parcial: negativos complementarios y sesiones avanzadas pendientes; AUTH-0
 abierto. Bloqueantes restantes: cobertura Auth complementaria, control PDF
 malicioso, worker/alertas, capacidad, triage npm y requisitos DBA/release/backup.
 El ensayo H05/016 local ya realizado en PD-02 no se presenta como pendiente nuevo.
+Continuacion PD-05: `docs/auditoria/H24_PD05_Validacion_Complementaria_Auth_Sesiones.md`.
+Permisos reducidos Finanzas/RH, identidad local y retiro durante carga comprobados;
+restitucion exacta de permisos, documentos/GCS sin residuos. AUTH-01 confirmado:
+la API acepta token previo a revocacion/deshabilitacion Firebase; no hubo correccion
+de codigo. PD-05 y H24 no cerrados; sesiones avanzadas y decision AUTH-01 pendientes.
+Sesion QA local retenida a solicitud del usuario. Solicitud de reunir campos
+fiscales actuales en el expediente registrada como siguiente ajuste UX, no implementado.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.
 
