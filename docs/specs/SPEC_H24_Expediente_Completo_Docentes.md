@@ -13,8 +13,11 @@ Seguimiento 2026-10-28: [PD-03 A3 local](../auditoria/H24_PD03_A3_Controles_PDF_
 implementa pipeline PDF/ClamAV para constancias/adicionales y revalidacion de
 lectura/recuperacion, sin BD/nube. Rechazo antes de publicar y sin retirar el
 anterior; indisponibilidad no equivale a limpio. JPG/PNG mantienen compatibilidad,
-con decodificacion acotada pendiente. A4, politica completa PDF, historicos, visor
-y transporte cloud no aprobados/validados por esta entrega. H24 sigue NO-GO.
+con decodificacion acotada pendiente. Politica completa PDF, historicos, visor
+y transporte cloud no aprobados/validados por esa entrega. H24 sigue NO-GO.
+Seguimiento [A4](../auditoria/H24_PD03_A4_Integracion_PDF_ClamAV_GCS.md): autorizado
+y aprobado en API/BD test/GCS, 16 grupos con restitucion exacta; no modifica
+decisiones funcionales ni representa smoke visual/Auth real o cierre PD-03.
 
 PD-02 acredita GCS real solo en test; ver
 [resultado aislado](../auditoria/H24_PD02_Resultado_GCS_Aislado.md).

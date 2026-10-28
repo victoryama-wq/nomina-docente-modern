@@ -40,7 +40,12 @@ stdin en contenedores separados, no root/sin red, con limites y firmas recientes
 hash/veredicto exacto, sin cache persistente. Transporte exclusivamente Docker
 Desktop local y entorno H24/test explicito; no hay adaptador Cloud Run. Lectura y
 recuperacion se revalidan. Fallos de infraestructura no publican ni retiran el
-anterior. No hay migracion. A4/visor/politica PDF y JPG/PNG completos pendientes.
+anterior. No hay migracion. Visor/politica PDF y JPG/PNG completos pendientes.
+[A4 posterior](../auditoria/H24_PD03_A4_Integracion_PDF_ClamAV_GCS.md) valida 16 grupos
+con API/BD test/GCS reales, scanner Docker, fallos controlados y restitucion exacta.
+No hay transporte cloud ni cierre PD-03; el runtime factory nominal fue ensayado
+sin inyectar un validador alternativo. Inyeccion de rechazo durante recuperacion
+queda distinguida del pipeline real para no subir adversos a GCS.
 
 ## 1. Arquitectura y limites
 

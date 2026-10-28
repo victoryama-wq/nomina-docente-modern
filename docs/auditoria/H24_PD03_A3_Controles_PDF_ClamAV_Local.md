@@ -5,6 +5,11 @@ Base: `9f0278e9984e6deb90f4b7f0ca03910b2a42ef5e`.
 Rama: `feature/h02-h03-user-coordinations-permissions`.
 Estado: **A3 implementado y probado sin BD/nube. PD-03 abierto; H24 NO-GO.**
 
+Seguimiento posterior autorizado: [A4 API/BD test/GCS](H24_PD03_A4_Integracion_PDF_ClamAV_GCS.md)
+aprobada el 2026-10-28, 16 grupos y restitucion exacta. Las confirmaciones sin BD/nube
+de este documento corresponden exclusivamente a A3; A4 realizo escrituras sinteticas
+temporales autorizadas. No cierra PD-03 ni habilita transporte productivo.
+
 ## 1. Autorizacion y alcance
 
 El usuario autorizo implementar controles PDF/ClamAV locales en constancias y
@@ -124,8 +129,8 @@ conservados; no quedaron contenedores h24-security ni del ensayo.
 
 ## 6. Pendientes y siguiente paso
 
-1. Autorizar A4: respaldo/restitucion de nomina_docente_test y storage H24; cargas
-   multiples, reemplazos, recuperacion y lectura con este pipeline real.
+1. A4 autorizada y completada posteriormente: respaldo/restitucion, multiples PDF,
+   reemplazos, recuperacion y lectura reales; ver acta enlazada. No pendiente de autorizacion.
 2. Decodificador JPG/PNG y limites de dimensiones; revision/aprobacion antes de
    instalar una dependencia.
 3. Politica/corpus Launch, XFA, adjuntos, enlaces/formularios y firmas; historicos

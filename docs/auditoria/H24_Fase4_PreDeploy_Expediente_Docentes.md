@@ -23,10 +23,18 @@ A3/A4 estaban pendientes de autorizacion en ese laboratorio. No autorizo deploy.
 Seguimiento A3 autorizado (2026-10-28): [pipeline local PDF/ClamAV](H24_PD03_A3_Controles_PDF_ClamAV_Local.md)
 implementado en ambas clases de documentos, recuperacion y lectura. API/web y cinco
 casos reales Docker aprobados; wrapper EICAR aprobado. Sin BD/nube. **PD-03 sigue
-abierto:** A4 requiere autorizacion, faltan politica completa PDF, decodificacion
+abierto:** al terminar A3, A4 requeria autorizacion; faltan politica completa PDF, decodificacion
 acotada JPG/PNG y prueba/aceptacion del visor. Solo existe transporte Docker local;
 no desplegarlo a Cloud Run. Sin configuracion H24 explicita se rechaza validacion
 con 503, nunca se omite analisis. H24 permanece NO-GO.
+
+Seguimiento A4 autorizado (2026-10-28): [integracion real API/BD test/GCS](H24_PD03_A4_Integracion_PDF_ClamAV_GCS.md)
+aprobada en 16 grupos. Respaldo local, pipeline A3 real, rechazo previo, lecturas,
+reemplazos, fallos/recuperacion y restitucion verificados. Las 26 tablas y ambos
+inventarios regresaron exactamente al estado inicial; B manual conservada.
+A4 ya no requiere autorizacion para este ensayo completado. No se valida UI/Auth
+real de nuevo, ni se cierran JPG/PNG, politica PDF, visor, capacidad o cloud.
+PD-03 permanece abierto, H24 NO-GO; no hubo produccion ni deploy.
 
 Ampliacion C.P./CURP 2026-10-28: campos fiscales opcionales implementados localmente,
 sin ampliar roles ni cambiar completitud/pagos. [Acta del ajuste](H24_Ajuste_CP_CURP_Expediente.md).

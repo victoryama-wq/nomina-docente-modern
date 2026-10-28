@@ -3,7 +3,7 @@
 Fecha: 2026-10-28.
 Base revisada: `c11a8e875fa47c28b9ea179ec240919dd8fbb0c9`.
 Rama: `feature/h02-h03-user-coordinations-permissions`.
-Estado: revision inicial y seguimiento A1/A2/A3 local; **PD-03 abierto, H24 NO-GO**.
+Estado: revision inicial y seguimiento A1/A2/A3/A4 aislado; **PD-03 abierto, H24 NO-GO**.
 
 Seguimiento autorizado del 2026-10-28: A1/A2 ejecutados en laboratorio Docker local,
 con firmas oficiales y EICAR, sin BD/nube. Ver [resultados y limites](H24_PD03_Laboratorio_ClamAV_EICAR.md).
@@ -12,9 +12,14 @@ las secciones siguientes corresponden a la entrega inicial, anterior al laborato
 
 Seguimiento A3 autorizado: [controles locales PDF/ClamAV](H24_PD03_A3_Controles_PDF_ClamAV_Local.md)
 implementados en constancias/adicionales, recuperacion y entrega fail-closed, con
-pruebas unitarias y Docker real sin BD/nube. A4 no ejecutado; decodificador JPG/PNG,
+pruebas unitarias y Docker real sin BD/nube. A4 no se ejecuto durante A3; decodificador JPG/PNG,
 politica completa PDF, historicos, visor y arquitectura cloud pendientes. Las
 brechas iniciales se conservan como antecedente; consultar el acta A3 para su avance.
+
+Seguimiento A4 autorizado y aprobado: [integracion API/BD test/GCS](H24_PD03_A4_Integracion_PDF_ClamAV_GCS.md),
+16 grupos con respaldo/restitucion exacta de 26 tablas e inventarios. Sin adversos
+en GCS, produccion ni deploy. Los pendientes de politica, imagenes, visor y cloud
+se mantienen; no confundir la integracion aprobada con cierre integral PD-03.
 
 ## 1. Resumen y limites
 

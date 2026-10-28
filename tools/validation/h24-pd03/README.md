@@ -117,5 +117,7 @@ Require exit 0 and ADAPTER_RESULT=PASS. Do not copy fixtures out of tmpfs.
 
 See `docs/auditoria/H24_PD03_A3_Controles_PDF_ClamAV_Local.md` for evidence, image
 IDs and limitations. Image decoding, full PDF active-content policy, native viewer
-assurance, storage/DB integration A4 and cloud isolation remain open. No production
-environment configuration is provided here.
+assurance and cloud isolation remain open. A4 was subsequently authorized and
+validated against isolated test DB/GCS with exact restoration; see
+`docs/auditoria/H24_PD03_A4_Integracion_PDF_ClamAV_GCS.md` for the 16 groups and
+limits. That evidence does not authorize production configuration or deployment.
