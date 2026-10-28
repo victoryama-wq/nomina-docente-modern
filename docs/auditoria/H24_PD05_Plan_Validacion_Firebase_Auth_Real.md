@@ -2,9 +2,12 @@
 
 Fecha: 2026-10-27. Base revisada: `a9733d6`.
 Rama: `feature/h02-h03-user-coordinations-permissions`, limpia al iniciar.
-Estado actualizado: **Firebase Auth/Google y Web App H24 provisionados con autorizacion;
-cuentas QA, autorizaciones de fixtures y sesiones por rol pendientes**.
-PD-05 y AUTH-01 abiertos. H24 mantiene NO-GO. No hay smoke real aprobado en esta fase.
+Estado actualizado: **matriz de roles vigentes y flujo documental probados con
+Firebase real, una cuenta autorizada rotada secuencialmente y GCS aislado**.
+PD-05 parcialmente validado; casos complementarios y AUTH-01 abiertos. H24 mantiene NO-GO.
+Resultado posterior: [sesiones reales por rol](H24_PD05_Resultado_Sesiones_Reales_Por_Rol.md).
+El protocolo siguiente conserva el alcance de preparacion original; sus pendientes
+se interpretan con el acta de resultado, no como ausencia actual de todo smoke real.
 
 Seguimiento autorizado posterior a este plan:
 [provisionamiento Auth aislado](H24_PD05_Provisionamiento_Firebase_Auth_Aislado.md).

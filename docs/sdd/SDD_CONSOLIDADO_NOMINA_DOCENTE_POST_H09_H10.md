@@ -440,7 +440,8 @@ tres resoluciones. F3 valida API HTTP real, PostgreSQL test, archivos sinteticos
 storage local, reemplazo/borrado fisico, telefono compartido y roles sinteticos en
 Brave. Correccion acotada: exponer Content-Disposition en la respuesta PDF para
 descarga cross-origin. GCS de prueba fue validado posteriormente en PD-02;
-autenticacion Firebase real, escaneo aprobado, worker programado y deploy siguen
+autenticacion Firebase real se valido parcialmente despues en PD-05;
+escaneo aprobado, worker programado y deploy siguen
 pendientes. No cambia H01,
 Nomina, Constancias historicas ni la completitud fiscal.
 
@@ -458,17 +459,23 @@ GCS/API local satisfactorias (21 comprobaciones adaptador y 15 API/BD).
 **PD-02 cerrado tecnicamente en local/test**, sin objetos/versiones residuales y
 con recuperacion tras corte de proceso; 23 tablas ajenas al expediente intactas.
 Ver `docs/auditoria/H24_PD02_Resultado_GCS_Aislado.md`. No modifica produccion.
-RH/Contador sin actor local y Firebase real quedan en PD-05; worker programado
+RH/Contador sin actor local y Firebase real quedaron en PD-05 y se probaron
+posteriormente; worker programado
 permanece en PD-04. softDeleted=true devolvio 400, con evidencia alternativa de
 borrado documentada, no una lista vacia.
 PD-05: plan preparado en
-`docs/auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md`, sin ejecucion.
-Propone Google Sign-In real en Firebase exclusivo H24, API loopback y BD/storage
-de prueba; requiere autorizacion de provisionamiento, cuentas institucionales QA
-y escrituras locales de sesion/fixtures. No cambia autenticacion ni permisos del
-sistema. AUTH-01 y el smoke real por accion siguen pendientes.
-Bloqueantes restantes: autenticacion real sin ensayo,
-control PDF malicioso, worker/alertas, capacidad, triage npm y ensayo H05/backup.
+`docs/auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md`, con ejecucion parcial
+posterior registrada en `docs/auditoria/H24_PD05_Resultado_Sesiones_Reales_Por_Rol.md`.
+Utiliza Google Sign-In real en Firebase exclusivo H24, API loopback y BD/storage
+de prueba, con autorizacion humana de provisionamiento y una identidad institucional
+rotada secuencialmente en test. Admin/Finanzas/RH y rechazos de los cuatro roles
+excluidos aprobados por UI/API; 72 solicitudes negativas y 36 operaciones COMPLETE.
+Carga multiple UI, preview/descarga, telefono, GCS sin residuos y restitucion
+comprobados. No cambia autenticacion ni permisos compartidos del sistema.
+PD-05 parcial: negativos complementarios y sesiones avanzadas pendientes; AUTH-01
+abierto. Bloqueantes restantes: cobertura Auth complementaria, control PDF
+malicioso, worker/alertas, capacidad, triage npm y requisitos DBA/release/backup.
+El ensayo H05/016 local ya realizado en PD-02 no se presenta como pendiente nuevo.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.
 

@@ -221,13 +221,13 @@ Riesgos previos a release: tratamiento de PDF maliciosos, politica real de borra
 definitivo, capacidad y recuperacion durable entre PostgreSQL/storage. El adaptador
 GCS solo tenia pruebas simuladas en F3; PD-02 posterior acredita ensayo real aislado.
 El worker no esta provisionado en produccion.
-Pendientes: sesiones reales autorizadas, seguridad del visor PDF,
+Pendientes: completar negativos/sesiones avanzadas de PD-05, seguridad del visor PDF,
 capacidad sostenida, worker e infraestructura aprobada y migracion/deploy
 con H05/H13. Mantener storage deshabilitado hasta cumplir los gates.
 
 F4: predeploy preparado, **NO-GO**, no cerrado operativo. Riesgo de habilitacion
-alto hasta cerrar PD-03 a PD-08 del acta: autenticacion
-real pendiente, seguridad PDF, worker, capacidad y requisitos DBA/release restantes.
+alto hasta cerrar PD-03 a PD-08 del acta: cobertura Auth complementaria
+pendiente, seguridad PDF, worker, capacidad y requisitos DBA/release restantes.
 PD-01 cerrado localmente: imagen Linux de `95026bf` construida, pdfinfo 22.12.0,
 inventario/digest registrados y 12/12 comprobaciones en build/runtime aislado,
 tambien como usuario node. No cierra antivirus, vulnerabilidades ni capacidad.
@@ -239,7 +239,8 @@ antiguo. Cuota resuelta, facturacion vinculada y bucket aislado creado. PD-02
 cerrado tecnicamente local/test: 21 comprobaciones GCS y 15 API/BD satisfactorias,
 permisos efectivos minimos, borrado sin residuos y recuperacion tras corte real.
 Ver `H24_PD02_Resultado_GCS_Aislado.md`. RH/Contador sin actor local y Firebase
-real siguen pendientes en PD-05; programacion/alertas del worker en PD-04.
+real quedaron pendientes al cerrar PD-02; se probaron despues en PD-05.
+Programacion/alertas del worker siguen en PD-04.
 La comprobacion de borrado usa politica 0 desde creacion, GET 404 e inventario
 vacio; softDeleted=true devolvio 400, no una lista vacia. H24 sigue NO-GO.
 Auditoria npm actual del arbol local: 0 criticas, 15 altas, 12 moderadas, 1 baja;
@@ -247,11 +248,16 @@ triage/correccion o excepciones fundamentadas pendientes, sin audit fix.
 AUTH-01 registra verificacion Firebase sin checkRevoked y requiere evaluacion;
 los permisos activos de app_users se siguen comprobando. No se cambia auth aqui.
 
-PD-05 tiene plan preparado, no ejecutado, en
-`H24_PD05_Plan_Validacion_Firebase_Auth_Real.md`: Firebase/Google exclusivo H24,
-cuentas institucionales QA y fixtures locales requieren autorizacion explicita.
-Login actual escribe UID/timestamps en test; no es una prueba read-only de BD.
-La matriz real por accion y la observacion AUTH-01 siguen pendientes; H24 mantiene NO-GO.
+PD-05: plan `H24_PD05_Plan_Validacion_Firebase_Auth_Real.md` ejecutado parcialmente
+con aprobacion humana, Firebase/Google exclusivo H24 y una identidad rotada solo en
+test. Matriz vigente Admin/Finanzas/RH y rechazos Coordinador/Direccion/Contador/
+Contabilidad satisfactorios; 72 solicitudes negativas y 36 operaciones COMPLETE.
+UI de carga multiple/preview/descarga, telefono por API, limpieza GCS y restitucion validados.
+Evidencia: `H24_PD05_Resultado_Sesiones_Reales_Por_Rol.md`. No cambia autorizacion
+productiva ni permisos compartidos. Login escribe UID/timestamps y las pruebas
+conservan auditoria local; no se presentan como read-only de BD test.
+Faltan casos complementarios de permisos reducidos/identidad y sesiones avanzadas;
+AUTH-01 abierto. H24 mantiene NO-GO, sin cierre operativo ni deploy autorizado.
 
 Evidencia: `H24_Fase1_Modelo_Backend_Expediente_Docentes.md`,
 `H24_Fase2_Frontend_Expediente_Docentes.md`,

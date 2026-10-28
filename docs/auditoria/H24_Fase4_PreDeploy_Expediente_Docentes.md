@@ -40,7 +40,14 @@ Continuacion autorizada PD-05 del mismo dia: Firebase Auth estandar, Google Sign
 y Web App habilitados exclusivamente en el proyecto H24. Ver
 [acta de provisionamiento](H24_PD05_Provisionamiento_Firebase_Auth_Aislado.md).
 Esto sustituye el pendiente de provisionamiento anterior, no el de pruebas:
-0 usuarios Auth, cuentas QA y sesiones por rol aun pendientes; H24 sigue NO-GO.
+al provisionar habia 0 usuarios Auth, cuentas QA y sesiones por rol pendientes.
+Seguimiento ejecutado: [resultado de sesiones reales](H24_PD05_Resultado_Sesiones_Reales_Por_Rol.md).
+Una identidad autorizada rotada en test valido Admin/Finanzas/RH y denegaciones
+Coordinador/Direccion/Contador/Contabilidad, UI/API, GCS y telefono. 72 solicitudes
+negativas correctas, 36 operaciones COMPLETE, cero objetos/versiones o pendientes
+residuales; rol/estado y telefono restituidos. No se modificaron permisos compartidos.
+PD-05 parcialmente validado: faltan negativos complementarios, sesiones avanzadas
+y tratamiento AUTH-01. H24 sigue NO-GO; no hubo produccion ni deploy.
 
 ## 1. Alcance y evidencia
 
@@ -314,8 +321,10 @@ Lockfile SHA-256 sin cambios:
 - [x] Codigo, contratos, roles y evidencia F1/F2/F3 revisados.
 - [x] Bloqueantes y plan de smoke/release/rollback documentados.
 - [x] Regresion sin BD y auditoria de dependencias repetidas.
-- [ ] Sesiones Firebase reales autorizadas en test.
-- [ ] GCS privado de prueba, IAM/politicas/borrado comprobados.
+- [x] Login Firebase real autorizado y matriz de roles vigentes en test (PD-05 parcial;
+  negativos complementarios/sesiones avanzadas y AUTH-01 siguen abiertos).
+- [x] GCS privado de prueba, IAM/politicas/borrado comprobados en PD-02 y limpieza
+  con sesiones reales confirmada en PD-05; no equivale a infraestructura productiva.
 - [x] Parser en imagen Linux final local validado (seguimiento PD-01, 12/12).
 - [ ] Estrategia PDF/visor aprobada/probada (PD-03; pdfinfo no es antivirus).
 - [ ] Worker programado y alertas/recuperacion probados.

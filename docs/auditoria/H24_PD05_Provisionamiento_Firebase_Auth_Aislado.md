@@ -1,8 +1,12 @@
 # H24-PD-05 - Firebase Auth aislado habilitado
 
 Fecha: 2026-10-27. Base de codigo/documentacion: `a5393bd`.
-Estado: infraestructura Auth de prueba configurada; sesiones por rol pendientes.
-**PD-05 abierto. H24 NO-GO para deploy.**
+Estado al provisionar: infraestructura Auth de prueba configurada; sesiones por rol pendientes.
+Seguimiento autorizado del 2026-10-27: [sesiones reales por rol](H24_PD05_Resultado_Sesiones_Reales_Por_Rol.md).
+Login real, matriz vigente y operaciones sinteticas satisfactorios; fixture local
+restituido e inactivo. El dato de cero usuarios Auth mas abajo pertenece al momento
+del provisionamiento, no al estado posterior al login. **PD-05 parcial, AUTH-01
+abierto y H24 NO-GO para deploy.**
 
 ## 1. Autorizacion y alcance
 
