@@ -4,14 +4,23 @@ Fecha: 2026-10-27. Base revisada: `a9733d6`.
 Rama: `feature/h02-h03-user-coordinations-permissions`, limpia al iniciar.
 Estado actualizado: **matriz de roles vigentes y flujo documental probados con
 Firebase real, una cuenta autorizada rotada secuencialmente y GCS aislado**.
-PD-05 parcialmente validado; casos complementarios y AUTH-01 abiertos. H24 mantiene NO-GO.
+PD-05 parcialmente validado; casos complementarios pendientes. AUTH-01 corregido
+localmente con validacion especifica del 2026-10-28. H24 mantiene NO-GO.
 Resultado posterior: [sesiones reales por rol](H24_PD05_Resultado_Sesiones_Reales_Por_Rol.md).
 Continuacion autorizada: [validacion complementaria](H24_PD05_Validacion_Complementaria_Auth_Sesiones.md).
 Permisos reducidos, identidad local y retirada durante carga probados; AUTH-01
 confirmado con token previo aceptado tras revocacion/deshabilitacion Firebase.
 No se declara cerrado PD-05. Sesion local retenida para revision por el usuario.
+Seguimiento nuevo: [correccion AUTH-01](H24_AUTH01_Correccion_Revocacion_Firebase.md).
+El codigo local ahora solicita checkRevoked=true y el runtime H24 dispone solo de
+firebaseauth.users.get adicional, expresamente aprobado. La evidencia de API 200
+con token revocado que sigue en este plan corresponde al codigo previo al fix.
 El protocolo siguiente conserva el alcance de preparacion original; sus pendientes
 se interpretan con el acta de resultado, no como ausencia actual de todo smoke real.
+
+AUTH-01 cerrado tecnicamente en local/H24 el 2026-10-28: disabled/revoked 401,
+nuevo login real en Brave invitado 200, identidad habilitada e integridad restituida.
+No cierra las otras sesiones avanzadas del plan ni prueba el runtime productivo.
 
 Seguimiento autorizado posterior a este plan:
 [provisionamiento Auth aislado](H24_PD05_Provisionamiento_Firebase_Auth_Aislado.md).
@@ -232,7 +241,7 @@ revocar retroactivamente; el rechazo se mide en nuevas solicitudes autenticadas.
 
 ## 9. AUTH-01: separacion de sesion y revocacion
 
-Codigo vigente: verifyIdToken(token), sin checkRevoked=true. Permite verificar firma,
+Codigo al preparar el plan, anterior a la correccion: verifyIdToken(token), sin checkRevoked=true. Permite verificar firma,
 expiracion y proyecto, pero no demuestra revocacion inmediata de un ID token ya
 emitido al deshabilitar/revocar solo en Firebase. Inactivar app_users es distinto:
 se consulta en cada nueva solicitud. Logout del navegador tampoco invalida por si
@@ -328,7 +337,7 @@ aceptacion formal de cobertura limitada; nunca declararlos aprobados por equival
 6. Comparar fixtures, permisos, fingerprints e inventario; logout, detener procesos
    propios y retirar credenciales temporales. Registrar resultado real de cada caso.
 
-AUTH-01 sigue abierto: el backend llama verifyIdToken(token) sin checkRevoked.
+Estado al preparar esta continuacion del 2026-10-27: AUTH-01 abierto; el backend llamaba verifyIdToken(token) sin checkRevoked.
 Observar su comportamiento no corrige la implementacion ni prueba revocacion
 inmediata. Requiere decision humana de correccion tecnica separada o aceptacion
 formal del riesgo; esta continuacion no autoriza cambiar autenticacion compartida.

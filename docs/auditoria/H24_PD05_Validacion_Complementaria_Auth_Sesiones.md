@@ -4,6 +4,13 @@ Fecha: 2026-10-27 (America/Cancun). Base: `36aa68e`.
 Estado: pruebas adicionales autorizadas ejecutadas; **AUTH-01 confirmado**.
 PD-05 no cerrado como aprobado. H24 conserva NO-GO para deploy.
 
+Seguimiento 2026-10-28: [correccion AUTH-01](H24_AUTH01_Correccion_Revocacion_Firebase.md)
+implementada localmente con autorizacion humana; rechazo real disabled/revoked
+comprobado en Firebase H24. Este documento conserva la evidencia anterior al fix;
+el acta nueva contiene la validacion y sus limites. No hubo deploy.
+AUTH-01 cerrado tecnicamente solo en local/H24 tras nuevo login real 200 e
+integridad comprobada. La evidencia historica 200 con token revocado no se borra.
+
 ## 1. Autorizacion y destinos
 
 El usuario aprobo tres ampliaciones: permisos compartidos reducidos de Finanzas/RH

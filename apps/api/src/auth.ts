@@ -137,7 +137,8 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   }
 
   try {
-    const decoded = await firebaseAdmin.auth().verifyIdToken(token);
+    // Reject revoked sessions and disabled Firebase users before any local user lookup.
+    const decoded = await firebaseAdmin.auth().verifyIdToken(token, true);
     const email = (decoded.email || '').toLowerCase();
 
     if (!email || decoded.email_verified !== true) {
@@ -164,8 +165,10 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 
     request.user = user;
   } catch (error) {
-    console.error('--- AUTH ERROR ---', error);
-    request.log.warn({ error: error instanceof Error ? error.message : String(error) }, 'Firebase token rejected');
+    // SDK error messages may contain credential/request details; log only known codes.
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+    const authCode = typeof code === 'string' && /^auth\/[a-z-]+$/.test(code) ? code : 'AUTH_VERIFICATION_FAILED';
+    request.log.warn({ authCode }, 'Firebase token rejected');
     await reply.code(401).send({ error: 'INVALID_TOKEN', message: 'La sesión no es válida o expiró.' });
   }
 }
