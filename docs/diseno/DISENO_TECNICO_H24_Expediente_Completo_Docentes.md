@@ -2,15 +2,19 @@
 
 Fecha: 2026-10-27.
 
-Estado: **Diseno aprobado; F1/F2 implementadas y F3 validada en integracion local con observaciones. PD-02 GCS aislado cerrado tecnicamente; autenticacion real y despliegue pendientes.**
+Estado: **Diseno aprobado; F1/F2 implementadas y F3 validada en integracion local con observaciones. PD-02 GCS aislado cerrado tecnicamente; PD-05 real parcialmente validado; despliegue pendiente.**
 
 F4: [revision predeploy](../auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md)
-preparada; NO-GO hasta cerrar PD-03 a PD-08 y evaluar AUTH-01. PD-01 cerrado:
+preparada; NO-GO hasta cerrar PD-03 a PD-08. AUTH-01 tiene correccion local autorizada
+el 2026-10-28, [evidencia aislada](../auditoria/H24_AUTH01_Correccion_Revocacion_Firebase.md),
+sin publicacion. Requiere firebaseauth.users.get en runtime; permiso aprobado solo
+para H24, sin capacidad de modificar identidades. AUTH-01 cerrado tecnicamente
+en ese entorno con rechazo real, nuevo login e integridad comprobados. PD-01 cerrado:
 imagen Linux local de `95026bf` con pdfinfo 22.12.0 y smoke obligatorio, 12/12 en
 build/runtime, tambien como usuario node. GCS real aislado validado en
-[PD-02](../auditoria/H24_PD02_Resultado_GCS_Aislado.md). Autenticacion real solo
-[planificada en PD-05](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),
-pendiente de autorizaciones y ejecucion. No hay provisionamiento probado del
+[PD-02](../auditoria/H24_PD02_Resultado_GCS_Aislado.md). Autenticacion real
+[parcialmente validada en PD-05](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),
+con casos de sesiones avanzadas pendientes. No hay provisionamiento probado del
 worker. El plan de release describe configuracion productiva y rollback futuros,
 no cambios productivos ejecutados ni autorizacion de deploy. El default de storage
 sigue disabled; PD-02 uso gcs explicitamente solo en el entorno aislado.
@@ -31,6 +35,41 @@ Implementacion y desviaciones acotadas: [H24-F1](../auditoria/H24_Fase1_Modelo_B
 Contrato funcional: [SPEC_H24_Expediente_Completo_Docentes.md](../specs/SPEC_H24_Expediente_Completo_Docentes.md).
 
 ## 1. Arquitectura y limites
+
+### Actualizacion aprobada 2026-10-28: ficha y sustitucion de constancia
+
+Implementada solo localmente, ver
+[auditoria del ajuste](../auditoria/H24_Ajuste_Expediente_Fiscal_Constancia.md).
+El panel reutiliza `PATCH /teachers/:id/fiscal` para RFC, correo, pago y banco;
+telefono conserva su endpoint/version independiente. Tras guardar fiscal se
+relee la version de telefono sin perder una edicion local no guardada.
+
+La sustitucion usa la ruta POST de constancia existente. Se conserva el esquema
+de `teacher_documents` y su indice. Su campo text `document_type` representa
+estados internos nuevos siempre no vigentes: `CONSTANCIA_FISCAL_STAGING`,
+`CONSTANCIA_FISCAL_DELETE_PENDING`, `CONSTANCIA_FISCAL_DELETED`. Solo el documento
+vigente mantiene `CONSTANCIA_FISCAL` y `is_current=true`, compatible con joins
+existentes. Esta extension de valores implementa el ajuste posterior al diseno
+F0, sin nueva columna ni migracion. La metadata permanece para trazabilidad;
+los bytes retirados se eliminan. No se recorre ni borra el historial previo.
+
+Admision persistida antes de GCS; objeto UUID create-only; bloqueo de staging
+durante upload; publicacion transaccional bajo bloqueo del docente con auditoria;
+limpieza posterior. Si falla publicacion queda staging recuperable y la constancia
+anterior sigue vigente. Si falla borrado queda pendiente durable, con advertencia
+explicita al usuario. El worker one-shot existente tambien procesa estos estados,
+maximo 25 por invocacion, y staging abandonado de mas de 24 horas. No se programa
+ni ejecuta worker productivo en esta fase. No se borran referencias vigentes.
+
+El adaptador exige bucket privado sin versionado, soft delete, retencion ni holds;
+borra condicionando la generacion observada. Configuracion insegura/desconocida
+produce error controlado, no relajacion de la politica ni cambios automaticos.
+**Pendiente:** bucket aislado de constancias y ensayo GCS real propio, mas worker
+y alertas. PD-02 validaba documentos adicionales, no este nuevo comportamiento.
+La prohibicion de purga retroactiva del texto F0 sigue vigente; la constancia
+que se sustituye ahora es la unica version previa incorporada al borrado nuevo.
+
+### Alcance original F0 (referencia historica)
 
 Extender `/expediente-fiscal`, conservando Vue 3/TypeScript, Fastify, PostgreSQL y almacenamiento privado. Separar el documento fiscal existente de los documentos personales/academicos adicionales.
 

@@ -11,9 +11,10 @@ capacidad, triage npm y ensayo H05/backup. No cambia las decisiones funcionales.
 
 PD-02 acredita GCS real solo en test; ver
 [resultado aislado](../auditoria/H24_PD02_Resultado_GCS_Aislado.md).
-PD-05 tiene [plan preparado](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),
-pendiente de autorizaciones y ejecucion. No hay sesiones Firebase reales aprobadas
-ni configuracion productiva habilitada por estos ensayos.
+PD-05 tiene [plan y seguimiento](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),
+con validacion real parcial en H24 y AUTH-01 cerrado tecnicamente en ese entorno;
+sesiones avanzadas y gates restantes siguen pendientes. Estos ensayos no habilitan
+configuracion productiva ni constituyen aprobacion de deploy.
 
 Seguimiento PD-01 cerrado localmente: imagen Linux de `95026bf` construida,
 pdfinfo 22.12.0 y smoke 12/12 en build/runtime aislado, tambien como usuario node.
@@ -47,6 +48,15 @@ No crear otro directorio de docentes ni otra fuente de datos personales. El expe
 Estas observaciones provienen de archivos locales, no de una inspeccion de infraestructura o datos productivos.
 
 ## 3. Decisiones humanas aprobadas
+
+Actualizacion local del 2026-10-28, posterior a F0/F2: el usuario aprobo reunir
+RFC, correo fiscal, tipo de pago y banco/cuenta/CLABE dentro de Expediente, junto
+con telefono y documentos adicionales. Constancia conserva solo acciones de
+archivo: cargar/sustituir, vista previa y descarga. Tambien aprobo **borrar
+fisicamente la constancia sustituida**, una vez publicada correctamente la nueva.
+No se autoriza purgar constancias historicas que ya eran no vigentes antes del
+nuevo flujo. La decision no permite tocar produccion ni desplegar.
+Ver [ajuste local y validaciones](../auditoria/H24_Ajuste_Expediente_Fiscal_Constancia.md).
 
 | Tema | Decision |
 |---|---|
@@ -94,6 +104,7 @@ No alterar los filtros existentes, nombres por rol, exportables fiscales ni el c
 ### 5.2 Panel del docente
 
 - Identidad visible en solo lectura; nombre, categoria, coordinacion y estatus siguen bajo las reglas actuales de Directorio.
+- Datos fiscales existentes dentro del panel, con guardado explicito mediante el endpoint fiscal vigente; sin cambio de campos ni permisos. La columna Constancia ya no edita estos datos.
 - Telefono operativo con guardado explicito e independiente de archivos y campos fiscales.
 - Area de documentos adicionales con tipo, titulo/nombre, fecha de carga y acciones permitidas.
 - Selector multiple de PDF, lista previa de archivos y clasificacion por archivo. Permitir asignar un tipo a varios seleccionados.

@@ -7,11 +7,29 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
+Seguimiento UX/constancia (2026-10-28): campos fiscales reunidos en Expediente;
+Constancia solo gestiona archivo. Borrado fisico de la version sustituida aprobado
+por el usuario e implementado localmente con recuperacion durable. Ver
+[auditoria del ajuste](H24_Ajuste_Expediente_Fiscal_Constancia.md).
+**Gate adicional antes de habilitar este cambio:** validar bucket aislado de
+constancias (distinto del bucket de PDF adicionales), politica sin retencion,
+IAM y borrado GCS real, junto con worker/alertas PD-04. No reutilizar como evidencia
+de constancias el cierre PD-02 de documentos adicionales. No se cambio GCS/IAM.
+
+Seguimiento posterior autorizado: [bucket de constancias aislado preparado](H24_Constancias_Preparacion_Prueba_GCS.md)
+el 2026-10-28. Politica privada sin retencion y adaptador real (carga/lectura/borrado
+fisico) verificados. Seguimiento manual: usuario cargo A y sustituyo por B;
+lectura posterior confirmo A eliminado fisicamente, B unica vigente con SHA-256
+correcto, cero pendientes y fingerprints de docentes/Nomina/snapshots intactos.
+Fallos reales y worker siguen pendientes. No habilita produccion ni cierra el
+gate completo de constancias o H24.
+
 Seguimiento tecnico autorizado (2026-10-27):
 [correccion del empaquetado pdfinfo](H24_Fase4_Correccion_Parser_Pdfinfo.md).
 **PD-01 cerrado localmente**: imagen API Linux construida desde `95026bf`, pdfinfo
 22.12.0 y 12/12 comprobaciones en build y runtime aislado, tambien como usuario node.
-PD-03 a PD-08 y AUTH-01 siguen pendientes; no se autoriza release. PD-02 obtuvo
+PD-03 a PD-08 siguen pendientes; no se autoriza release. AUTH-01 tiene correccion
+local autorizada el 2026-10-28, con evidencia especifica enlazada abajo. PD-02 obtuvo
 cierre tecnico local/test en el seguimiento siguiente. Las secciones de
 revision inicial y sus confirmaciones documentales se conservan como evidencia
 de la preparacion F4 anterior a esta correccion.
@@ -56,6 +74,17 @@ token emitido antes de revocacion/deshabilitacion Firebase. No cerrar PD-05 ni
 autorizar deploy sin decision de correccion/riesgo. Casos de sesiones/identidades
 adicionales siguen pendientes. QA local activo y servicios abiertos solo para la
 revision solicitada, no como estado productivo.
+
+Seguimiento 2026-10-28: [correccion AUTH-01](H24_AUTH01_Correccion_Revocacion_Firebase.md).
+authenticate solicita checkRevoked=true; tokens disabled/revoked reciben 401 antes
+de BD en API H24 real. Se concedio exclusivamente firebaseauth.users.get al runtime
+aislado, con aprobacion adicional. No se concede Firebase Auth Admin ni se cambia
+IAM productivo. API 170/170, web 139/139, typecheck/build OK. Ver acta para cierre
+del ensayo y casos pendientes; no equivale a cerrar PD-05 ni autorizar deploy.
+AUTH-01 cerrado tecnicamente en local/H24: nuevo login real posterior 200,
+integridad comprobada (solo last_login_at QA), cuenta habilitada y token temporal
+eliminado. Login recuperado en Brave invitado; cierre del perfil habitual sin causa
+determinada, no presentado como corregido. No hubo publicacion productiva.
 
 ## 1. Alcance y evidencia
 
@@ -115,11 +144,14 @@ Revision estatica:
 El ensayo de autenticacion se limita a usuarios de prueba y BD test; no se ejecuta
 una sesion productiva como atajo para completar F4.
 
-**Observacion AUTH-01 (Media, preexistente):** verifyIdToken(token) no solicita
+**Observacion inicial AUTH-01 (Media, preexistente, antes de la correccion):** verifyIdToken(token) no solicita
 checkRevoked=true. No prometer rechazo inmediato por revocacion/deshabilitacion
 solo en Firebase; distinguirlo de la inactivacion en app_users, consultada en cada
 solicitud. Antes de habilitar documentos personales, Seguridad debe evaluar el
-riesgo y definir cambio o aceptacion explicita; no se modifica auth compartido aqui.
+riesgo y definir cambio o aceptacion explicita; la revision inicial no modifico auth.
+El seguimiento autorizado del 2026-10-28 si corrige auth compartido localmente;
+la verificacion de IAM runtime y regresion del artefacto productivo sigue siendo
+precondicion de una futura salida, sin ejecutarla en este ensayo.
 Referencia: [verificacion Firebase](https://firebase.google.com/docs/auth/admin/verify-id-tokens)
 y [revocacion de sesiones](https://firebase.google.com/docs/auth/admin/manage-sessions).
 

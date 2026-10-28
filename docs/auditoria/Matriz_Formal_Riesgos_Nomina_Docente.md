@@ -245,8 +245,13 @@ La comprobacion de borrado usa politica 0 desde creacion, GET 404 e inventario
 vacio; softDeleted=true devolvio 400, no una lista vacia. H24 sigue NO-GO.
 Auditoria npm actual del arbol local: 0 criticas, 15 altas, 12 moderadas, 1 baja;
 triage/correccion o excepciones fundamentadas pendientes, sin audit fix.
-AUTH-01 registra verificacion Firebase sin checkRevoked y requiere evaluacion;
-los permisos activos de app_users se siguen comprobando. No se cambia auth aqui.
+AUTH-01 registro verificacion Firebase sin checkRevoked; el seguimiento autorizado
+del 2026-10-28 activa checkRevoked=true localmente y conserva las guardas app_users.
+Ver `H24_AUTH01_Correccion_Revocacion_Firebase.md`: rechazo real Firebase H24,
+permiso runtime minimo aprobado, regresion API/web/typecheck/build. No desplegado.
+AUTH-01 cerrado tecnicamente local/H24 con nuevo login 200 e integridad verificada;
+riesgo de release: comprobar IAM/latencia del runtime destino con aprobacion futura.
+El cierre de Brave en perfil habitual queda sin causa determinada; invitado funciono.
 
 PD-05: plan `H24_PD05_Plan_Validacion_Firebase_Auth_Real.md` ejecutado parcialmente
 con aprobacion humana, Firebase/Google exclusivo H24 y una identidad rotada solo en
@@ -260,10 +265,17 @@ Seguimiento: `H24_PD05_Validacion_Complementaria_Auth_Sesiones.md` acredita diez
 variantes de permisos reducidos, usuario local ausente/UID incompatible y retiro
 de permiso durante carga, con restitucion. AUTH-01 confirmado en H24: token previo
 a deshabilitacion/revocacion Firebase sigue obteniendo API 200; verificador estricto
-lo rechaza. Requiere correccion separada o aceptacion formal de riesgo, no cierre.
+lo rechaza. Esa evidencia es anterior al fix AUTH-01 del 2026-10-28; la correccion
+y sus comprobaciones aisladas se registran en el acta nueva, no en produccion.
 Faltan sesiones avanzadas e identidades complementarias. H24 mantiene NO-GO,
 sin cierre operativo ni deploy autorizado. QA ACTIVO solo para revision local
 solicitada; no cambia permisos productivos.
+
+Ajuste local de expediente/constancia aprobado el 2026-10-28: ficha fiscal reunida,
+columna corregida y sustitucion con borrado fisico recuperable. Sin ampliar roles.
+Evidencia: `H24_Ajuste_Expediente_Fiscal_Constancia.md`. Pendiente adicional:
+bucket de constancias aislado sin retencion y ensayo real de borrado/recuperacion;
+PD-02 de PDF adicionales no cubre constancias. H24 conserva NO-GO.
 
 Evidencia: `H24_Fase1_Modelo_Backend_Expediente_Docentes.md`,
 `H24_Fase2_Frontend_Expediente_Docentes.md`,

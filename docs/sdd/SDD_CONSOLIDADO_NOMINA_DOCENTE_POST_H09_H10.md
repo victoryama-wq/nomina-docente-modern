@@ -473,16 +473,31 @@ excluidos aprobados por UI/API; 72 solicitudes negativas y 36 operaciones COMPLE
 Carga multiple UI, preview/descarga, telefono, GCS sin residuos y restitucion
 comprobados. No cambia autenticacion ni permisos compartidos del sistema.
 PD-05 parcial: negativos complementarios y sesiones avanzadas pendientes; AUTH-01
-abierto. Bloqueantes restantes: cobertura Auth complementaria, control PDF
+corregido localmente en seguimiento autorizado del 2026-10-28, no desplegado.
+Bloqueantes restantes: cobertura Auth complementaria, control PDF
 malicioso, worker/alertas, capacidad, triage npm y requisitos DBA/release/backup.
 El ensayo H05/016 local ya realizado en PD-02 no se presenta como pendiente nuevo.
 Continuacion PD-05: `docs/auditoria/H24_PD05_Validacion_Complementaria_Auth_Sesiones.md`.
 Permisos reducidos Finanzas/RH, identidad local y retiro durante carga comprobados;
 restitucion exacta de permisos, documentos/GCS sin residuos. AUTH-01 confirmado:
 la API acepta token previo a revocacion/deshabilitacion Firebase; no hubo correccion
-de codigo. PD-05 y H24 no cerrados; sesiones avanzadas y decision AUTH-01 pendientes.
-Sesion QA local retenida a solicitud del usuario. Solicitud de reunir campos
-fiscales actuales en el expediente registrada como siguiente ajuste UX, no implementado.
+de codigo en ese ensayo del 2026-10-27. Seguimiento autorizado:
+`docs/auditoria/H24_AUTH01_Correccion_Revocacion_Firebase.md`: authenticate ahora usa
+verifyIdToken(token, true), manteniendo 401 INVALID_TOKEN y guardas locales;
+rechazo real disabled/revoked validado en H24. Runtime de prueba con permiso minimo
+firebaseauth.users.get aprobado, sin administrar usuarios ni IAM productivo.
+No hay cache/fallback inseguro; Firebase no disponible deniega acceso. Nuevas
+solicitudes se verifican; no se revocan bytes ya descargados ni solicitudes en curso.
+AUTH-01 cerrado tecnicamente local/H24: token nuevo tras login real en Brave invitado
+aceptado (200), identidad habilitada y solo last_login_at QA modificado. No se
+atribuye ni declara corregido el cierre del perfil habitual del navegador.
+PD-05 y H24 no cerrados; sesiones avanzadas y demas gates siguen pendientes.
+Sesion QA local retenida a solicitud del usuario. Ajuste UX implementado localmente:
+RFC, correo, tipo de pago y banco dentro de Expediente junto al telefono; Constancia
+solo gestiona archivo. Borrado fisico de constancia sustituida aprobado el
+2026-10-28; implementacion local con estados durables, sin purga historica.
+Validacion GCS de constancias y worker pendientes; no equivale al cierre PD-02.
+Ver `docs/auditoria/H24_Ajuste_Expediente_Fiscal_Constancia.md`. Sin deploy.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.
 
