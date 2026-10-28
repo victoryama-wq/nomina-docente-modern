@@ -496,7 +496,12 @@ Sesion QA local retenida a solicitud del usuario. Ajuste UX implementado localme
 RFC, correo, tipo de pago y banco dentro de Expediente junto al telefono; Constancia
 solo gestiona archivo. Borrado fisico de constancia sustituida aprobado el
 2026-10-28; implementacion local con estados durables, sin purga historica.
-Validacion GCS de constancias y worker pendientes; no equivale al cierre PD-02.
+Seguimiento 2026-10-28: GCS de constancias verificado con prueba manual A/B y
+recuperacion PD-04. Dos disparos programados locales, fallos controlados e
+idempotencia aprobados; fingerprints test restituidos, constancia B preservada.
+Worker reforzado con canales independientes y metricas/alertas estructuradas.
+PD-04 parcial: job cloud privado y entrega de alertas pendientes; H24 NO-GO.
+Ver `docs/auditoria/H24_PD04_Validacion_Worker_Recuperacion_Alertas.md`.
 Ver `docs/auditoria/H24_Ajuste_Expediente_Fiscal_Constancia.md`. Sin deploy.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.

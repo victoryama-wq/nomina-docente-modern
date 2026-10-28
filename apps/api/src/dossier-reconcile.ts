@@ -1,8 +1,9 @@
 import { config } from './config.js';
-import { closeDatabase, withTransaction } from './db.js';
+import { closeDatabase, query, withTransaction } from './db.js';
 import { createDossierService } from './lib/dossier-runtime.js';
 import { reconcileConstancias } from './lib/constancia-replacement.js';
 import { constanciaStorage } from './lib/constancia-storage.js';
+import { readDossierBacklog, runDossierWorker } from './lib/dossier-worker.js';
 
 // One-shot worker: schedule separately after storage/security approval. No public HTTP trigger.
 async function main() {
@@ -13,14 +14,17 @@ async function main() {
     || !['localhost', '127.0.0.1', '::1'].includes(config.DB_HOST || ''))) {
     throw new Error('Local worker requires the loopback nomina_docente_test database.');
   }
-  const results = await createDossierService().reconcile();
-  const constancias = await reconcileConstancias(withTransaction, constanciaStorage(config.CONSTANCIAS_BUCKET));
-  console.log(JSON.stringify({ processed: results.length,
-    complete: results.filter((r) => r.state === 'COMPLETE').length,
-    failed: results.filter((r) => r.state === 'FAILED').length,
-    pending: results.filter((r) => !['COMPLETE', 'FAILED'].includes(r.state)).length, constancias }));
-  if (constancias.pending) process.exitCode = 1;
+  const summary = await runDossierWorker({
+    reconcileDocuments: () => createDossierService().reconcile(),
+    reconcileCertificates: () => reconcileConstancias(withTransaction, constanciaStorage(config.CONSTANCIAS_BUCKET)),
+    readBacklog: () => readDossierBacklog(query, createDossierService().namespace)
+  });
+  console.log(JSON.stringify(summary));
+  process.exitCode = summary.exitCode;
 }
 
-main().catch(() => { console.error('Dossier reconciliation failed; inspect pending operation codes.'); process.exitCode = 1; })
+main().catch(() => {
+  console.error(JSON.stringify({ event: 'dossier_reconcile', severity: 'ERROR', alerts: ['WORKER_START_FAILED'], exitCode: 1 }));
+  process.exitCode = 1;
+})
   .finally(closeDatabase);

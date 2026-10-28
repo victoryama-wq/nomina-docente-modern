@@ -21,8 +21,13 @@ el 2026-10-28. Politica privada sin retencion y adaptador real (carga/lectura/bo
 fisico) verificados. Seguimiento manual: usuario cargo A y sustituyo por B;
 lectura posterior confirmo A eliminado fisicamente, B unica vigente con SHA-256
 correcto, cero pendientes y fingerprints de docentes/Nomina/snapshots intactos.
-Fallos reales y worker siguen pendientes. No habilita produccion ni cierra el
-gate completo de constancias o H24.
+Seguimiento PD-04 del 2026-10-28: fallos controlados alrededor de GCS real,
+recuperacion y dos ejecuciones programadas locales aprobados; restitucion completa
+de test y constancia B conservada. Worker reforzado con canales independientes,
+backlog/edad/FAILED y salida no exitosa ante incidentes. Ver
+[acta PD-04](H24_PD04_Validacion_Worker_Recuperacion_Alertas.md).
+PD-04 sigue parcial: job cloud privado, alertas externas y ensayo en runtime cloud
+pendientes. No habilita produccion ni cierra el gate completo de H24.
 
 Seguimiento tecnico autorizado (2026-10-27):
 [correccion del empaquetado pdfinfo](H24_Fase4_Correccion_Parser_Pdfinfo.md).
@@ -113,7 +118,7 @@ ni afirmaciones sobre la infraestructura actualmente desplegada.
 | H24-PD-01 / Alta inicial | Dockerfile corregido; imagen Linux local de 95026bf con /usr/bin/pdfinfo 22.12.0, paquete 22.12.0-2+deb12u3. Inventario/digest registrados; smoke final 12/12 incluido timeout real y limpieza, tambien como usuario node | Cerrado en alcance empaquetado/parser Linux local. Repetir sobre artefacto de release si cambia; no cierra seguridad PDF ni vulnerabilidades. Ver acta de correccion, seccion 8 |
 | H24-PD-02 / Alta inicial | Bucket test nuevo, privado, versionado false y soft delete 0; politica aceptada por adaptador real, permisos efectivos minimos, operaciones GCS y recuperacion con BD test aprobadas; inventarios finales 0 vivos/0 versiones | Cerrado tecnicamente en local/test. softDeleted=true retorna 400, con evidencia alternativa prevista en plan. No cierra Firebase/roles faltantes (PD-05), worker programado (PD-04), ni configuracion productiva. Ver acta GCS |
 | H24-PD-03 / Alta | `validateDossierPdf` hace comprobaciones estructurales/JavaScript, no antivirus. Preview Blob usa visor nativo sin sandbox HTML (`TeacherDossierPanel.vue:312`) | Seguridad: aprobar e implementar/probar estrategia PDF malicioso o aceptar formalmente control alternativo con riesgo acotado; no declarar pdfinfo un escaner |
-| H24-PD-04 / Alta | `dossier-reconcile.ts:14` es worker one-shot; no existe programacion versionada/probada. `reconcile()` procesa hasta 25 pendientes mayores de cinco minutos por invocacion | DevOps: worker privado programado, permisos minimos, reinicios/fallos ensayados, alertas por backlog y antiguedad; recuperacion real en entorno de prueba |
+| H24-PD-04 / Alta | Worker reforzado y recuperacion GCS/test aprobada; dos disparos de Task Scheduler locales, idempotencia, alarma estructurada y restitucion sin diferencias. Lotes de 25 y espera >5 min conservados | Parcial: falta job/scheduler cloud privado, entrega externa de alertas, timeout/reintentos e identidad del runtime cloud. Evidencia en H24_PD04_Validacion_Worker_Recuperacion_Alertas.md; no deploy autorizado |
 | H24-PD-05 / Alta | F3 sustituye identidad Firebase. Cliente/API tienen defaults de proyecto productivo; un arranque local sin configurar no es aislamiento | QA/Admin: proyecto de autenticacion de prueba explicitamente aprobado y sesiones autorizadas por rol contra BD/storage test, sin mocks ni identidades productivas |
 | H24-PD-06 / Alta | npm audit actual tiene hallazgos high, incluidos Fastify/Zod; ninguna explotabilidad fue ensayada | Seguridad: triage por ruta real, correcciones puntuales y regresion o excepcion formal por hallazgo no alcanzable; cero criticas no autoriza por si solo |
 | H24-PD-07 / Media | Limite de dos cargas por proceso, Base64 y buffers en memoria; no prueba sostenida con memoria/concurrencia de destino | QA/DevOps: medir capacidad, memoria, latencias, cola y 429 con archivos limite, red lenta, usuarios y replicas concurrentes |
@@ -238,7 +243,10 @@ Scheduler/identidad de invocacion autorizados aparte; no timer residente dependi
 de trafico Cloud Run. Cadencia inicial propuesta cinco minutos, sujeta a capacidad:
 worker espera antiguedad >5 min y procesa 25 operaciones por invocacion, no vacia
 automaticamente backlog ilimitado. Alertar por pendientes, FAILED, edad y fallos
-de job; exit 0 con pending>0 no demuestra limpieza completa.
+de job; exit 0 con pending>0 no demuestra limpieza completa. El ajuste local PD-04
+ya retorna exit 1 por pendientes/fallos y emite senales estructuradas; los FAILED
+recientes alertan durante 24 h aunque la limpieza este completa. No confundir esos
+abortos terminales con backlog. Todavia no hay entrega a destinatario de Monitoring.
 
 Capacidad pendiente: 10 archivos por seleccion y dos envios simultaneos UI no son
 cuota global. API admite dos cuerpos grandes por proceso, no por proyecto/usuario;

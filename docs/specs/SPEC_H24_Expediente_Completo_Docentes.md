@@ -187,6 +187,13 @@ No marcar esta funcionalidad como productiva ni actualizar manuales como si estu
 
 ## 11. Referencias
 
+Seguimiento PD-04 (2026-10-28): recuperacion de documentos y constancias con GCS
+aislado, programacion Windows temporal e idempotencia validadas. Worker reporta
+backlog, antiguedad y fallos con canales independientes. Restitucion de BD test
+sin diferencias y constancia B manual conservada. No modifica permisos, UI o H01.
+PD-04 no cerrado: faltan job privado cloud y entrega externa de alertas; H24 NO-GO.
+Ver [acta PD-04](../auditoria/H24_PD04_Validacion_Worker_Recuperacion_Alertas.md).
+
 - [SDD consolidado](../sdd/SDD_CONSOLIDADO_NOMINA_DOCENTE_POST_H09_H10.md).
 - [H05](../auditoria/H05_Control_Formal_Migraciones.md) y [H13](../auditoria/H13_Checklist_Productivo_Permanente.md).
 - [H03 Fiscal/Finanzas](../auditoria/H02_H03_Fase4_Fiscal_Finanzas_Nomina_Preview.md).

@@ -64,8 +64,10 @@ ni ejecuta worker productivo en esta fase. No se borran referencias vigentes.
 El adaptador exige bucket privado sin versionado, soft delete, retencion ni holds;
 borra condicionando la generacion observada. Configuracion insegura/desconocida
 produce error controlado, no relajacion de la politica ni cambios automaticos.
-**Pendiente:** bucket aislado de constancias y ensayo GCS real propio, mas worker
-y alertas. PD-02 validaba documentos adicionales, no este nuevo comportamiento.
+**Seguimiento 2026-10-28:** bucket aislado de constancias creado y ensayo manual
+A/B verificado: A borrada fisicamente, B vigente. PD-04 agrega fallos controlados,
+recuperacion y ejecucion programada local; falta job cloud y entrega de alertas.
+PD-02 validaba documentos adicionales, no sustituye estas nuevas evidencias.
 La prohibicion de purga retroactiva del texto F0 sigue vigente; la constancia
 que se sustituye ahora es la unica version previa incorporada al borrado nuevo.
 
@@ -242,6 +244,19 @@ Antes de desarrollar: confirmar parametros de carga, solucion de validacion PDF,
 - Documentacion: auditorias por fase; SDD/matriz/manuales al estado real, sin presentar H24 como productivo antes de su cierre.
 
 ## 12. Evidencia y confirmaciones de la fase documental F0
+
+Seguimiento de implementacion PD-04 (2026-10-28): `dossier-worker.ts` separa
+recuperacion de adicionales/constancias, reporta backlog posterior y no expone
+detalles privados de errores. Umbrales iniciales: >25 pendientes o >900 s;
+FAILED reciente avisa por 24 h, sin reintento de operaciones terminales.
+Antiguedad de adicionales usa created_at para no reiniciarla en cada retry.
+Constancias usa uploaded_at como limite conservador y gracia STAGING de 24 h.
+Prueba programada Windows limitada a dos ejecuciones, tarea retirada, test
+restituido. No equivale a job Cloud Run/Scheduler ni Monitoring aprovisionados.
+Evidencia y pendientes en
+`docs/auditoria/H24_PD04_Validacion_Worker_Recuperacion_Alertas.md`.
+
+Confirmaciones historicas F0:
 
 Fuentes locales revisadas: `database/001_initial_schema.sql`, `apps/api/src/routes/teachers.ts`, `apps/api/src/auth.ts`, `apps/api/src/app.ts`, `apps/web/src/views/FiscalRecordsView.vue`, `apps/web/src/stores/auth.ts`, `apps/web/src/router/index.ts`, SDD consolidado y auditorias H03/H05/H13.
 

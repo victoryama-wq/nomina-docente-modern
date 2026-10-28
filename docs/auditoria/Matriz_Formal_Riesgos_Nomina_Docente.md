@@ -240,7 +240,13 @@ cerrado tecnicamente local/test: 21 comprobaciones GCS y 15 API/BD satisfactoria
 permisos efectivos minimos, borrado sin residuos y recuperacion tras corte real.
 Ver `H24_PD02_Resultado_GCS_Aislado.md`. RH/Contador sin actor local y Firebase
 real quedaron pendientes al cerrar PD-02; se probaron despues en PD-05.
-Programacion/alertas del worker siguen en PD-04.
+Seguimiento PD-04 2026-10-28: recuperacion GCS real con fallos controlados,
+liberacion de lock tras terminar proceso, dos disparos programados locales e
+idempotencia aprobados; test restituido sin diferencias. Worker reforzado con
+backlog/edad/FAILED y errores aislados por canal. PD-04 permanece parcial:
+job privado cloud, alertas externas y configuracion de reintentos pendientes;
+no equivale a provisionamiento productivo. Evidencia:
+`H24_PD04_Validacion_Worker_Recuperacion_Alertas.md`. H24 sigue NO-GO.
 La comprobacion de borrado usa politica 0 desde creacion, GET 404 e inventario
 vacio; softDeleted=true devolvio 400, no una lista vacia. H24 sigue NO-GO.
 Auditoria npm actual del arbol local: 0 criticas, 15 altas, 12 moderadas, 1 baja;
