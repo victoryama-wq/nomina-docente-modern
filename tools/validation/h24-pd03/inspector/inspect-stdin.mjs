@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { validateDossierPdf } from '/app/apps/api/dist/lib/dossier-storage.js';
 import { validatePdfPolicy, PolicyRejection } from './pdf-policy.mjs';
 import { validateImage } from './image-policy.mjs';
@@ -33,11 +35,11 @@ try {
   if (!bytes.length) throw new PolicyRejection('EMPTY');
   if (kind === 'pdf') {
     await validateDossierPdf(bytes);
-    directory = await mkdtemp('/tmp/h24-inspect-');
-    const path = `${directory}/document.pdf`;
-    await writeFile(path, bytes, { mode: 0o600, flag: 'wx' });
-    await qpdf(['--check', path]);
-    validatePdfPolicy(JSON.parse(await qpdf(['--json=2', '--json-key=qpdf', '--json-stream-data=none', path])));
+    directory = await mkdtemp(path.join(tmpdir(), 'h24-inspect-'));
+    const filename = `${directory}/document.pdf`;
+    await writeFile(filename, bytes, { mode: 0o600, flag: 'wx' });
+    await qpdf(['--check', filename]);
+    validatePdfPolicy(JSON.parse(await qpdf(['--json=2', '--json-key=qpdf', '--json-stream-data=none', filename])));
   } else await validateImage(bytes, kind);
   // A versioned protocol prevents an older A3 parser image from silently bypassing the new policy.
   result = `H24_POLICY_V1_${kind.toUpperCase()}_OK ${createHash('sha256').update(bytes).digest('hex')}`;

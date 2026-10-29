@@ -1,0 +1,14 @@
+FROM node:24-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils qpdf=11.3.0-1+deb12u1 \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/h24
+COPY tools/validation/h24-pd03/inspector/package*.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+# Built from the same checkout. This module has only Node built-in runtime imports.
+COPY apps/api/dist/lib/dossier-storage.js /app/apps/api/dist/lib/dossier-storage.js
+COPY tools/validation/h24-pd03/inspector/inspect-stdin.mjs tools/validation/h24-pd03/inspector/pdf-policy.mjs tools/validation/h24-pd03/inspector/image-policy.mjs ./
+COPY services/document-security/server.mjs ./
+ENV DOCUMENT_CHECK_MODE=inspector
+ENV DOSSIER_PDFINFO_PATH=/usr/bin/pdfinfo
+USER 1000:1000
+CMD ["node", "/opt/h24/server.mjs"]

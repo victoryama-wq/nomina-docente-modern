@@ -7,6 +7,14 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
+Seguimiento 2026-10-29, posterior a la evidencia siguiente:
+[cloud aislado PD-03/PD-04](H24_PD03_PD04_Arquitectura_Cloud_Aislada.md).
+Servicios privados y job efimero autorizados y probados con datos sinteticos;
+13 comprobaciones cloud, dos ejecuciones de recuperacion exitosas (una mediante
+Scheduler), inventarios GCS restituidos. Scheduler queda pausado. Recepcion email
+externa aun no confirmada; aislamiento/capacidad/destino final siguen pendientes.
+Se conserva NO-GO y el objetivo condicionado al sabado 31.
+
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
 de validacion entre constancias y PDF adicionales, falta de analisis antimalware,

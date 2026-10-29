@@ -1,0 +1,9 @@
+**
+!services/
+!services/document-security/
+!services/document-security/server.mjs
+!services/document-security/freshclam.conf
+!tools/
+!tools/validation/
+!tools/validation/h24-pd03/
+!tools/validation/h24-pd03/scan-stdin.sh

@@ -2,7 +2,7 @@
 set -eu
 umask 077
 export LC_ALL=C
-root=$(mktemp -d /tmp/h24-scan.XXXXXX)
+root=$(mktemp -d "${TMPDIR:-/tmp}/h24-scan.XXXXXX")
 trap 'rm -rf "$root"' EXIT
 # Never persist input outside this size-limited container tmpfs.
 head -c 7864321 > "$root/input"

@@ -20,6 +20,16 @@ no cambios productivos ejecutados ni autorizacion de deploy. El default de stora
 sigue disabled; PD-02 uso gcs explicitamente solo en el entorno aislado.
 Evidencia: [correccion local pdfinfo](../auditoria/H24_Fase4_Correccion_Parser_Pdfinfo.md).
 
+Seguimiento tecnico 2026-10-29: transporte `DOCUMENT_SECURITY_MODE=cloud-run`
+implementado y validado exclusivamente en H24. Servicios privados inspector/AV,
+ID token de runtime por audiencia, limites/hash/politica sin fallback. Job efimero
+con recuperacion y disparo Scheduler probados; recepcion email aun pendiente.
+El comentario anterior sobre worker describe la preparacion inicial: ahora hay
+provisionamiento de ensayo, no productivo. Ver
+[arquitectura, digests y limitaciones](../auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md)
+y `services/document-security/README.md`. No afirmar equivalencia entre IAM privado
+y aislamiento de red Docker.
+
 Evidencia F3: [Integracion HTTP/PostgreSQL/storage local](../auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md). Se expone `Content-Disposition` mediante CORS exclusivamente en la respuesta PDF del expediente para conservar el nombre UTF-8 en descargas cross-origin. No se amplian origenes ni autorizaciones.
 
 Evidencia F2: [Frontend](../auditoria/H24_Fase2_Frontend_Expediente_Docentes.md).

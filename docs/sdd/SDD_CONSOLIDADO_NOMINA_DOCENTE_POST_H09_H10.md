@@ -517,6 +517,12 @@ idempotencia aprobados; fingerprints test restituidos, constancia B preservada.
 Worker reforzado con canales independientes y metricas/alertas estructuradas.
 PD-04 parcial: job cloud privado y entrega de alertas pendientes; H24 NO-GO.
 Ver `docs/auditoria/H24_PD04_Validacion_Worker_Recuperacion_Alertas.md`.
+
+Seguimiento posterior 2026-10-29: servicios privados inspector/ClamAV H24 y job
+con PostgreSQL efimero sintetico validados, incluidos recuperacion/idempotencia y
+disparo Scheduler. Inventarios GCS sin diferencias, scheduler pausado; recepcion
+de alerta email por confirmar. Ver `docs/auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`.
+Sin cambios H01, Cloud SQL o deploy productivo; H24 mantiene NO-GO hasta completar gates.
 Ver `docs/auditoria/H24_Ajuste_Expediente_Fiscal_Constancia.md`. Sin deploy.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.

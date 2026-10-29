@@ -258,6 +258,10 @@ La comprobacion de borrado usa politica 0 desde creacion, GET 404 e inventario
 vacio; softDeleted=true devolvio 400, no una lista vacia. H24 sigue NO-GO.
 Auditoria npm actual del arbol local: 0 criticas, 15 altas, 12 moderadas, 1 baja;
 triage/correccion o excepciones fundamentadas pendientes, sin audit fix.
+Cloud PD-03/PD-04 autorizado y ensayado: servicios privados, worker efimero y
+Scheduler exitosos, GCS restituido; recepcion email pendiente, Scheduler pausado.
+Ver `H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`. No cierra aislamiento, capacidad,
+H05/rollback ni autorizacion de release. H24 conserva NO-GO.
 AUTH-01 registro verificacion Firebase sin checkRevoked; el seguimiento autorizado
 del 2026-10-28 activa checkRevoked=true localmente y conserva las guardas app_users.
 Ver `H24_AUTH01_Correccion_Revocacion_Firebase.md`: rechazo real Firebase H24,

@@ -8,6 +8,15 @@ Base publicada antes del ensayo: `e66977a`, junto con `acf6f62` y `a880a4b`.
 PD-04 permanece PARCIAL: job cloud privado y entrega externa de alertas pendientes.
 No autoriza deploy ni cierra H24.**
 
+Seguimiento cloud autorizado 2026-10-29:
+[ensayo privado con PostgreSQL efimero](H24_PD03_PD04_Arquitectura_Cloud_Aislada.md).
+Job `h24-recovery-rehearsal` aprobado en ejecuciones `qdq7q` y `qrr5j`; segunda
+disparada por Scheduler con OAuth/IAM minimo. Carga, lectura, idempotencia, borrado
+y retiro de constancia recuperados; tres objetos sinteticos y BD efimera retirados.
+Inventarios previos intactos. Scheduler PAUSED; politica ERROR y canal email creados
+solo H24, recepcion externa pendiente. No es ensayo Cloud SQL ni cadencia productiva;
+PD-04 permanece parcial. Las secciones siguientes conservan el ensayo local anterior.
+
 ## 1. Alcance y aislamiento
 
 - Proyecto exclusivo `nomina-h24-test-20261027`.

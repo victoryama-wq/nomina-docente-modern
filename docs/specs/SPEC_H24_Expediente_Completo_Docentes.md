@@ -9,6 +9,11 @@ Ver [predeploy y bloqueantes](../auditoria/H24_Fase4_PreDeploy_Expediente_Docent
 Auth real pendiente, seguridad PDF, worker,
 capacidad, triage npm y ensayo H05/backup. No cambia las decisiones funcionales.
 
+Seguimiento 2026-10-29: [servicios cloud privados y recuperacion aislada](../auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md)
+autorizados y probados, sin produccion. Scheduler manual verificado y pausado;
+recepcion de alerta externa y controles residuales pendientes. Se conserva NO-GO, alcance
+funcional y roles. No se presenta H24 como funcionalidad productiva.
+
 Seguimiento 2026-10-28: [PD-03 A3 local](../auditoria/H24_PD03_A3_Controles_PDF_ClamAV_Local.md)
 implementa pipeline PDF/ClamAV para constancias/adicionales y revalidacion de
 lectura/recuperacion, sin BD/nube. Rechazo antes de publicar y sin retirar el

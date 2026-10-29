@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import { cloudDocumentSecuritySettings, createCloudDocumentRunner } from './document-cloud.js';
 
 export const DOCUMENT_MAX_BYTES = 7.5 * 1024 * 1024;
 export type DocumentMime = 'application/pdf' | 'image/png' | 'image/jpeg';
@@ -95,9 +96,14 @@ export function createDocumentValidator(run: DocumentRunner) {
 
 let active = 0;
 export async function validateDocumentContent(bytes: Buffer, mime: string): Promise<void> {
-  const settings = localDocumentSecuritySettings();
+  let runner: DocumentRunner;
+  try {
+    runner = process.env.DOCUMENT_SECURITY_MODE === 'cloud-run'
+      ? createCloudDocumentRunner(cloudDocumentSecuritySettings())
+      : createLocalDocumentRunner(localDocumentSecuritySettings());
+  } catch { throw unavailable(); }
   if (active >= 2) throw new DocumentSecurityError('DOCUMENT_SECURITY_BUSY');
   active++;
-  try { await createDocumentValidator(createLocalDocumentRunner(settings))(bytes, mime); }
+  try { await createDocumentValidator(runner)(bytes, mime); }
   finally { active--; }
 }

@@ -1,0 +1,15 @@
+**
+!services/
+!services/document-security/
+!services/document-security/server.mjs
+!tools/
+!tools/validation/
+!tools/validation/h24-pd03/
+!tools/validation/h24-pd03/inspector/
+!tools/validation/h24-pd03/inspector/*.json
+!tools/validation/h24-pd03/inspector/*.mjs
+!apps/
+!apps/api/
+!apps/api/dist/
+!apps/api/dist/lib/
+!apps/api/dist/lib/dossier-storage.js

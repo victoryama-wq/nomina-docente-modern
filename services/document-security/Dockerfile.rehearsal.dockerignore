@@ -1,0 +1,13 @@
+**
+!package.json
+!package-lock.json
+!apps/
+!apps/api/
+!apps/api/package.json
+!apps/api/dist/
+!apps/api/dist/**
+!database/
+!database/016_h24_teacher_dossier.sql
+!services/
+!services/document-security/
+!services/document-security/rehearsal.mjs
