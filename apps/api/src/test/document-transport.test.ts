@@ -12,13 +12,15 @@ beforeEach(() => {
   });
 });
 describe('isolated document transport lifecycle', () => {
-  it.each(['pdf', 'av'] as const)('isolates %s and does not place file data in command arguments', async kind => {
+  it.each(['pdf', 'png', 'jpeg', 'av'] as const)('isolates %s and does not place file data in command arguments', async kind => {
     const bytes = Buffer.from('synthetic secret file');
     await createLocalDocumentRunner(settings)(kind, bytes);
     const [, args, options] = child.exec.mock.calls[0];
     expect(args).toEqual(expect.arrayContaining(['--network', 'none', '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pull', 'never']));
-    expect(args).toContain(kind === 'pdf' ? settings.parser : settings.scanner);
-    expect(args).toContain(kind === 'pdf' ? '1000:1000' : '100:101');
+    expect(args).toContain(kind === 'av' ? settings.scanner : settings.parser);
+    expect(args).toContain(kind === 'av' ? '100:101' : '1000:1000');
+    expect(args).toContain(kind === 'av' ? '4g' : '512m');
+    if (kind !== 'av') expect(args.at(-1)).toBe(kind);
     expect(args).not.toContain('synthetic secret file');
     expect(args).not.toContain('-p');
     expect(args).not.toContain('-v');

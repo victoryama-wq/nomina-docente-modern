@@ -10,7 +10,7 @@ const env = { NODE_ENV: 'test', DB_NAME: 'nomina_docente_test', DB_HOST: '127.0.
   DOCUMENT_SECURITY_SIGNATURE_VOLUME: 'h24-pd03-signatures-test' };
 describe('H24 document security contract without external services', () => {
   it('requires both isolated checks on identical content', async () => {
-    const run = vi.fn(async (kind: string) => ({ code: 0, stdout: `H24_${kind.toUpperCase()}_OK ${digest}\n`, stderr: '' }));
+    const run = vi.fn(async (kind: string) => ({ code: 0, stdout: `${kind === 'av' ? 'H24_AV' : 'H24_POLICY_V1_PDF'}_OK ${digest}\n`, stderr: '' }));
     await createDocumentValidator(run)(pdf, 'application/pdf');
     expect(run.mock.calls.map(c => c[0])).toEqual(['pdf', 'av']);
   });
@@ -20,18 +20,32 @@ describe('H24 document security contract without external services', () => {
     [0, `H24_AV_OK ${'0'.repeat(64)}`, 'DOCUMENT_SECURITY_UNAVAILABLE'],
     [0, 'H24_AV_OK', 'DOCUMENT_SECURITY_UNAVAILABLE']
   ])('does not treat exit %s / %s as clean', async (code, stdout, expected) => {
-    const run = vi.fn().mockResolvedValueOnce({ code: 0, stdout: `H24_PDF_OK ${digest}`, stderr: '' })
+    const run = vi.fn().mockResolvedValueOnce({ code: 0, stdout: `H24_POLICY_V1_PDF_OK ${digest}`, stderr: '' })
       .mockResolvedValueOnce({ code, stdout, stderr: '' });
     await expect(createDocumentValidator(run)(pdf, 'application/pdf')).rejects.toMatchObject({ code: expected });
   });
   it('rejects warnings even with matching clean verdict', async () => {
-    const run = vi.fn().mockResolvedValue({ code: 0, stdout: `H24_PDF_OK ${digest}`, stderr: 'private diagnostic' });
+    const run = vi.fn().mockResolvedValue({ code: 0, stdout: `H24_POLICY_V1_PDF_OK ${digest}`, stderr: 'private diagnostic' });
     await expect(createDocumentValidator(run)(pdf, 'application/pdf')).rejects.toMatchObject({ code: 'DOCUMENT_SECURITY_UNAVAILABLE' });
     expect(run).toHaveBeenCalledOnce();
   });
   it('does not expose transport diagnostics', async () => {
     const run = vi.fn().mockRejectedValue(new Error('secret /private-path'));
     await expect(createDocumentValidator(run)(pdf, 'application/pdf')).rejects.toThrow(/^DOCUMENT_SECURITY_UNAVAILABLE$/);
+  });
+  it('rejects a legacy parser verdict even with the correct hash', async () => {
+    const run = vi.fn().mockResolvedValue({ code: 0, stdout: `H24_PDF_OK ${digest}`, stderr: '' });
+    await expect(createDocumentValidator(run)(pdf, 'application/pdf')).rejects.toMatchObject({ code: 'DOCUMENT_SECURITY_UNAVAILABLE' });
+    expect(run).toHaveBeenCalledOnce();
+  });
+  it.each([
+    ['png', 'image/png', Buffer.from([137,80,78,71,13,10,26,10])],
+    ['jpeg', 'image/jpeg', Buffer.from([255,216,255,0,255,217])]
+  ] as const)('requires %s decoding and AV over identical bytes', async (kind, mime, bytes) => {
+    const hash = createHash('sha256').update(bytes).digest('hex');
+    const run = vi.fn(async (check: string) => ({ code: 0, stdout: `${check === 'av' ? 'H24_AV' : `H24_POLICY_V1_${kind.toUpperCase()}`}_OK ${hash}`, stderr: '' }));
+    await expect(createDocumentValidator(run)(bytes, mime)).resolves.toBeUndefined();
+    expect(run.mock.calls.map(c => c[0])).toEqual([kind, 'av']);
   });
   it('allows only explicit local settings and immutable image IDs', () => {
     expect(localDocumentSecuritySettings(env).signatures).toBe(env.DOCUMENT_SECURITY_SIGNATURE_VOLUME);

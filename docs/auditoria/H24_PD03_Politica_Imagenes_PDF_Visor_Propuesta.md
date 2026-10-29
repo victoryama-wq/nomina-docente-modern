@@ -3,7 +3,14 @@
 Fecha: 2026-10-28.
 Base revisada: `360ea6397bcd607581d0b02ea0b44b678ab60b55`.
 Rama: `feature/h02-h03-user-coordinations-permissions`.
-Estado: **revision y propuesta; autorizaciones pendientes. PD-03 abierto, H24 NO-GO**.
+Estado actualizado: **puntos 1-3 aprobados e implementados localmente; punto 4 pendiente. PD-03 abierto, H24 NO-GO**.
+
+El usuario autorizo laboratorio, politica e implementacion local el 2026-10-28.
+Ver [resultados y limites](H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md).
+Las secciones siguientes conservan la propuesta anterior a esa autorizacion;
+sus frases de pendiente/no implementado describen ese momento historico, no el
+estado actual de 1-3. Integracion nueva BD/GCS, aceptacion residual del visor y
+arquitectura cloud no quedan autorizadas ni aprobadas por los ensayos locales.
 
 ## 1. Alcance y evidencia
 

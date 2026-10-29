@@ -77,6 +77,8 @@ const dossierTeacher = ref<Teacher | null>(null);
 const dossierOpen = ref(false);
 const dossierWorking = ref(false);
 let noticeTimer: number | undefined;
+let previewRequest = 0;
+let disposed = false;
 
 function openDossier(teacher: Teacher) {
   if (!authStore.canViewFiscalRecords) return;
@@ -110,6 +112,7 @@ watch(() => authStore.canViewFiscalRecords, allowed => {
   editingRecord.value = null;
   closePreview();
 });
+watch(() => [authStore.session?.id, authStore.session?.firebaseUid, authStore.canViewFiscalDocuments], () => closePreview(), { flush: 'sync' });
 
 const fiscalRecords = computed<FiscalRecord[]>(() =>
   teachers.value.map((teacher) => {
@@ -344,16 +347,20 @@ function exportBirthdays() {
 }
 
 function closePreview() {
+  previewRequest++;
+  previewBusyId.value = '';
   if (constanciaPreview.value?.url) URL.revokeObjectURL(constanciaPreview.value.url);
   constanciaPreview.value = null;
 }
 
 async function previewConstancia(record: FiscalRecord) {
-  if (!record.teacher.documentId || !authStore.canViewFiscalDocuments) return;
+  if (!record.teacher.documentId || !authStore.canViewFiscalRecords || !authStore.canViewFiscalDocuments || disposed) return;
+  closePreview();
+  const request = previewRequest;
   previewBusyId.value = record.teacher.id;
   try {
-    closePreview();
     const document = await fetchTeacherConstanciaBlob(record.teacher.id);
+    if (disposed || request !== previewRequest || !authStore.canViewFiscalRecords || !authStore.canViewFiscalDocuments) return;
     const url = URL.createObjectURL(document.blob);
     constanciaPreview.value = {
       teacher: record.teacher,
@@ -362,9 +369,9 @@ async function previewConstancia(record: FiscalRecord) {
       fileName: document.fileName
     };
   } catch (err) {
-    setNotice('error', err instanceof Error ? err.message : 'No fue posible abrir la vista previa.');
+    if (!disposed && request === previewRequest) setNotice('error', err instanceof Error ? err.message : 'No fue posible abrir la vista previa.');
   } finally {
-    previewBusyId.value = '';
+    if (request === previewRequest) previewBusyId.value = '';
   }
 }
 
@@ -416,6 +423,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  disposed = true;
   window.clearTimeout(noticeTimer);
   closePreview();
 });

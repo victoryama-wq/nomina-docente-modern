@@ -1,0 +1,13 @@
+**
+!apps/
+!apps/api/
+!apps/api/dist/
+!apps/api/dist/lib/
+!apps/api/dist/lib/dossier-storage.js
+!tools/
+!tools/validation/
+!tools/validation/h24-pd03/
+!tools/validation/h24-pd03/inspector/
+!tools/validation/h24-pd03/inspector/package.json
+!tools/validation/h24-pd03/inspector/package-lock.json
+!tools/validation/h24-pd03/inspector/*.mjs

@@ -1,17 +1,65 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchTeachers, updateTeacherFiscal, uploadTeacherConstancia, type SessionUser } from '../api';
+import { fetchTeachers, fetchTeacherConstanciaBlob, updateTeacherFiscal, uploadTeacherConstancia, type SessionUser } from '../api';
 import { useAuthStore } from '../stores/auth';
 import { createSessionUser } from '../test/fixtures/session-users';
 import FiscalRecordsView from './FiscalRecordsView.vue';
 
 vi.mock('vue-router', () => ({ onBeforeRouteLeave: vi.fn() }));
-vi.mock('../api', async importOriginal => ({ ...await importOriginal<typeof import('../api')>(), fetchTeachers: vi.fn(), updateTeacherFiscal: vi.fn(), uploadTeacherConstancia: vi.fn() }));
+vi.mock('../api', async importOriginal => ({ ...await importOriginal<typeof import('../api')>(), fetchTeachers: vi.fn(), fetchTeacherConstanciaBlob: vi.fn(), updateTeacherFiscal: vi.fn(), uploadTeacherConstancia: vi.fn() }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(fetchTeachers).mockResolvedValue({ teachers: [{ id: 'teacher', fullName: 'Docente QA', status: 'ACTIVO', phone: '9981234567', rfc: '', email: '', bankDetail: '', documentId: null, paymentType: '1' }], summary: { total: 1, active: 1, inactive: 0, withRfc: 0, withBank: 0, withConstancia: 0, fiscalReady: 0 } } as Awaited<ReturnType<typeof fetchTeachers>>);
+});
+
+describe('H24 constancia preview lifecycle', () => {
+  const file = { blob: new Blob(['%PDF-1.7'], { type: 'application/pdf' }), fileName: 'synthetic.pdf', mimeType: 'application/pdf' };
+  function deferred() {
+    let resolve!: (value: typeof file) => void;
+    const promise = new Promise<typeof file>(r => { resolve = r; });
+    return { promise, resolve };
+  }
+  async function ready() {
+    const data = await vi.mocked(fetchTeachers).getMockImplementation()!();
+    data.teachers[0].documentId = 'doc-a';
+    data.teachers.push({ ...data.teachers[0], id: 'teacher-b', fullName: 'Docente QB', documentId: 'doc-b' });
+    vi.mocked(fetchTeachers).mockResolvedValue(data);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:synthetic');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const wrapper = open('admin'); await flushPromises();
+    return wrapper;
+  }
+  it.each(['unmount', 'logout', 'permission', 'identity'] as const)('ignores a late PDF after %s', async event => {
+    const wrapper = await ready();
+    const pending = deferred(); vi.mocked(fetchTeacherConstanciaBlob).mockReturnValue(pending.promise);
+    await wrapper.findAll('button').find(b => b.text() === 'Vista previa')!.trigger('click');
+    if (event === 'unmount') wrapper.unmount();
+    else if (event === 'logout') useAuthStore().session = null;
+    else if (event === 'permission') useAuthStore().session = createSessionUser({ role: 'rh', permissions: ['fiscal.view'] });
+    else useAuthStore().session = createSessionUser({ role: 'admin', id: 'other-admin' });
+    await flushPromises();
+    pending.resolve(file); await flushPromises();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    if (event !== 'unmount') wrapper.unmount();
+  });
+  it('ignores an older response and revokes the current Blob when closed', async () => {
+    const wrapper = await ready();
+    const older = deferred(); const newer = deferred();
+    vi.mocked(fetchTeacherConstanciaBlob).mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+    const buttons = wrapper.findAll('button').filter(b => b.text() === 'Vista previa');
+    await buttons[0].trigger('click'); await buttons[1].trigger('click');
+    newer.resolve(file); await flushPromises();
+    expect(wrapper.get('.fiscal-preview-modal').text()).toContain('Docente QB');
+    older.resolve(file); await flushPromises();
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(wrapper.get('.fiscal-preview-modal').text()).toContain('Docente QB');
+    await wrapper.get('.fiscal-preview-modal button[title="Cerrar"]').trigger('click');
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:synthetic');
+    expect(wrapper.find('iframe').exists()).toBe(false);
+    wrapper.unmount();
+  });
 });
 
 function open(role: SessionUser['role']) {

@@ -19,6 +19,15 @@ Seguimiento [A4](../auditoria/H24_PD03_A4_Integracion_PDF_ClamAV_GCS.md): autori
 y aprobado en API/BD test/GCS, 16 grupos con restitucion exacta; no modifica
 decisiones funcionales ni representa smoke visual/Auth real o cierre PD-03.
 
+Politica PD-03 aprobada posteriormente, puntos 1-3: imagenes JPG/PNG estaticas hasta
+25 MP y 10 000 px por lado, decodificacion completa aislada, politica PDF estructural
+y originales sin transformacion. Historicos se revalidan al leer; rechazo bloquea
+preview/descarga sin eliminar original, indisponibilidad permite reintentar sin
+bypass. VIEW-02 corregido y probado. [Implementacion local y limites](../auditoria/H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md).
+No modifica permisos ni formatos de PDF adicionales. Nueva integracion test/GCS,
+compatibilidad institucional, aceptacion residual del visor y cloud pendientes.
+H24 sigue NO-GO; las menciones previas de politica pendiente son antecedentes A3/A4.
+
 PD-02 acredita GCS real solo en test; ver
 [resultado aislado](../auditoria/H24_PD02_Resultado_GCS_Aislado.md).
 PD-05 tiene [plan y seguimiento](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),

@@ -60,6 +60,10 @@ any host protection intervention. No npm install, audit fix, migrations or deplo
 
 ## A3 local API adapters (not a Cloud Run deployment recipe)
 
+Historical A3 recipe below. After the approved policy extension, the application
+requires H24_POLICY_V1 and rejects the old parser image. Use the new inspector
+recipe at the end of this file for current tests; do not bypass this rejection.
+
 `document-security.ts` starts disposable, networkless containers using bounded
 stdin. It requires the H24 local/test settings explicitly, immutable image IDs
 and a dedicated signature volume. It fails closed if these are missing. Do not
@@ -121,3 +125,64 @@ assurance and cloud isolation remain open. A4 was subsequently authorized and
 validated against isolated test DB/GCS with exact restoration; see
 `docs/auditoria/H24_PD03_A4_Integracion_PDF_ClamAV_GCS.md` for the 16 groups and
 limits. That evidence does not authorize production configuration or deployment.
+
+## Approved local policy extension (2026-10-28)
+
+Points 1-3 only: no DB, Firebase, GCS or production. New test/storage integration
+needs separate authorization. The unchanged API Dockerfile is NOT this inspector.
+Root/workspace package manifests and locks are unchanged. The inspector has its
+own sharp 0.35.5 lock; qpdf is pinned to Debian 11.3.0-1+deb12u1. Build needs network
+for packages, but all parsing and scanning runs networkless. Preserve dependency
+licenses. See `docs/auditoria/H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md`.
+
+```powershell
+$expected = 'sha256:34658533a39f07a1e20e6a6c46c4aa8dded3a4a0e19bf5c9c14aabaf85ffa36a'
+$actual = (docker --context desktop-linux image inspect nomina-api:h24-pdfinfo-local --format '{{.Id}}').Trim()
+if ($LASTEXITCODE -ne 0 -or $actual -ne $expected) { throw 'Unreviewed PD-01 base' }
+npm --workspace apps/api run build
+if ($LASTEXITCODE -ne 0) { throw 'API compilation failed' }
+docker --context desktop-linux build -f tools/validation/h24-pd03/Dockerfile.inspector -t h24-pd03-policy:local .
+if ($LASTEXITCODE -ne 0) { throw 'Inspector build failed' }
+$inspector = (docker --context desktop-linux image inspect h24-pd03-policy:local --format '{{.Id}}').Trim()
+docker --context desktop-linux run --pull never --name h24-policy-corpus-review --network none --user 1000:1000 --read-only --cap-drop ALL --security-opt no-new-privileges --memory 512m --memory-swap 512m --cpus 2 --pids-limit 64 --tmpfs /tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777 --entrypoint node $inspector --test /opt/h24/pdf-policy.test.mjs /opt/h24/corpus.test.mjs
+docker --context desktop-linux inspect h24-policy-corpus-review --format '{{json .State}}'
+# Require 15/15 groups, ExitCode=0 and OOMKilled=false before removal.
+docker --context desktop-linux rm -v h24-policy-corpus-review
+```
+
+Use a unique container name if one already exists. Do not copy adversarial corpus
+out of tmpfs, open it in a browser or upload it. Benign files alone go to the viewer.
+For the existing seven opt-in API pipeline tests use the A3 environment recipe
+above, replacing ONLY the parser setting with this inspector's immutable ID:
+
+```powershell
+$env:DOCUMENT_SECURITY_PARSER_IMAGE=$inspector
+npm --workspace apps/api run test -- src/test/document-security.docker.test.ts
+```
+
+Run in a disposable shell with the H24 guard settings, never an API server.
+The seven tests use no database client; DB_NAME is only a local safety guard.
+Fresh AV signatures are still required; the existing scanner is not replaced.
+
+### Synthetic browser check
+
+`preview-local.mjs` uses the real Vue components and API helpers with intercepted
+GET-only synthetic responses, in-memory auth and no Firebase initialization. It
+first validates a benign generated PDF through the actual Docker pipeline. Set
+the same guard/image/signature variables, plus:
+
+```powershell
+$env:H24_PD03_PREVIEW_APPROVED='true'
+$env:H24_BROWSER_PATH='C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe'
+# Supply the absolute path of the already installed Playwright package; do not install another.
+$env:H24_PLAYWRIGHT_MODULE='<absolute-path-to-existing-playwright-package>'
+node --import tsx tools/validation/h24-pd03/preview-local.mjs
+```
+
+The harness uses fresh headless Brave on loopback port 5196; it does not control
+personal browser profiles. External requests are blocked/logged; internal native
+viewer resources are allowed. Evidence in ignored `.cache/h24-pd03-policy-preview`
+is synthetic. It closes browser/Vite/temp env in finally. A pass covers rendering,
+responsive containment, original download hash, Blob release and no observed
+automatic external navigation; NOT universal PDF sandboxing, real signature
+verification, cloud capacity or institutional acceptance of residual viewer risk.

@@ -36,6 +36,12 @@ A4 ya no requiere autorizacion para este ensayo completado. No se valida UI/Auth
 real de nuevo, ni se cierran JPG/PNG, politica PDF, visor, capacidad o cloud.
 PD-03 permanece abierto, H24 NO-GO; no hubo produccion ni deploy.
 
+Seguimiento posterior PD-03: puntos 1-3 autorizados e implementados localmente,
+[decoder JPG/PNG, politica PDF y visor](H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md).
+15 grupos Docker, 7 pruebas pipeline real, API/web/typecheck/build y UI sintetica
+aprobados. Sin BD/nube. Requiere nueva autorizacion para repetir integracion GCS,
+aceptacion residual del visor y arquitectura cloud; no cierra PD-03 ni habilita deploy.
+
 Ampliacion C.P./CURP 2026-10-28: campos fiscales opcionales implementados localmente,
 sin ampliar roles ni cambiar completitud/pagos. [Acta del ajuste](H24_Ajuste_CP_CURP_Expediente.md).
 017 aplicada por H05 solo en nomina_docente_test: 20 registradas, pending=0/mismatch=0.

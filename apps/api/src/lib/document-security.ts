@@ -40,7 +40,8 @@ export function localDocumentSecuritySettings(env: NodeJS.ProcessEnv = process.e
 }
 
 type Result = { code: number; stdout: string; stderr: string };
-export type DocumentRunner = (kind: 'pdf' | 'av', bytes: Buffer) => Promise<Result>;
+export type DocumentCheck = 'pdf' | 'png' | 'jpeg' | 'av';
+export type DocumentRunner = (kind: DocumentCheck, bytes: Buffer) => Promise<Result>;
 function docker(args: string[], input?: Buffer, timeout = 125_000): Promise<Result> {
   return new Promise((resolve, reject) => {
     const child = execFile(process.platform === 'win32' ? 'docker.exe' : 'docker', ['--context', 'desktop-linux', ...args], {
@@ -59,13 +60,14 @@ function docker(args: string[], input?: Buffer, timeout = 125_000): Promise<Resu
 export function createLocalDocumentRunner(settings: LocalSettings): DocumentRunner {
   return async (kind, bytes) => {
     const name = `h24-security-${randomUUID()}`;
-    const memory = kind === 'pdf' ? '512m' : '4g';
+    const memory = kind === 'av' ? '4g' : '512m';
     const args = ['run', '--pull', 'never', '--name', name, '--rm', '-i', '--network', 'none', '--read-only',
       '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--memory', memory, '--memory-swap', memory,
       '--cpus', '2', '--pids-limit', '64', '--tmpfs', '/tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777'];
     if (kind === 'av') args.push('--mount', `type=volume,source=${settings.signatures},target=/var/lib/clamav,readonly`);
-    args.push('--user', kind === 'pdf' ? '1000:1000' : '100:101', kind === 'pdf' ? settings.parser : settings.scanner);
-    try { return await docker(args, bytes, kind === 'pdf' ? 35_000 : 125_000); }
+    args.push('--user', kind === 'av' ? '100:101' : '1000:1000', kind === 'av' ? settings.scanner : settings.parser);
+    if (kind !== 'av') args.push(kind);
+    try { return await docker(args, bytes, kind === 'av' ? 125_000 : 35_000); }
     finally {
       // Killing the CLI alone does not guarantee the container stopped. Names are generated here.
       const cleanup = await docker(['rm', '-f', '-v', name], undefined, 15_000);
@@ -79,12 +81,14 @@ export function createDocumentValidator(run: DocumentRunner) {
     const bytes = Buffer.from(input);
     validateDocumentEnvelope(bytes, mime);
     const hash = createHash('sha256').update(bytes).digest('hex');
-    for (const kind of (mime === 'application/pdf' ? ['pdf', 'av'] : ['av']) as ('pdf' | 'av')[]) {
+    const parser: DocumentCheck = mime === 'application/pdf' ? 'pdf' : mime === 'image/png' ? 'png' : 'jpeg';
+    for (const kind of [parser, 'av'] as DocumentCheck[]) {
       let result: Result;
       try { result = await run(kind, bytes); } catch { throw unavailable(); }
       if (result.code === 10 && result.stdout.trim() === 'H24_INVALID') throw new DocumentSecurityError('DOCUMENT_INVALID');
       if (result.code === 20 && result.stdout.trim() === 'H24_REJECTED') throw new DocumentSecurityError('DOCUMENT_REJECTED');
-      if (result.code !== 0 || result.stderr.trim() || result.stdout.trim() !== `H24_${kind.toUpperCase()}_OK ${hash}`) throw unavailable();
+      const protocol = kind === 'av' ? 'H24_AV' : `H24_POLICY_V1_${kind.toUpperCase()}`;
+      if (result.code !== 0 || result.stderr.trim() || result.stdout.trim() !== `${protocol}_OK ${hash}`) throw unavailable();
     }
   };
 }

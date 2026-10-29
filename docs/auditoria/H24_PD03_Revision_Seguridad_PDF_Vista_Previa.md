@@ -29,6 +29,13 @@ integracion. Ninguna herramienta nueva instalada ni control adicional implementa
 
 ## 1. Resumen y limites
 
+Actualizacion posterior: el usuario aprobo puntos 1-3 de la propuesta. Se implemento
+[decodificacion JPG/PNG, politica estructural PDF y correccion VIEW-02](H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md),
+con corpus Docker, pipeline real y visor sintetico sin BD/nube. Las brechas de la
+revision inicial permanecen como antecedente; no son descripcion del nuevo parser.
+Nueva integracion BD/GCS, aceptacion residual del visor y cloud siguen pendientes.
+PD-03 abierto, H24 NO-GO.
+
 La carga de PDF adicionales tiene controles estructurales, permisos y almacenamiento
 privado. No tiene analisis antimalware. La ruta de constancias mantiene controles
 de contenido mas debiles y debe incluirse en el alcance de seguridad del expediente.

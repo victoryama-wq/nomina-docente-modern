@@ -1,0 +1,13 @@
+# Local laboratory only. The reviewed PD-01 base is already present locally.
+FROM nomina-api:h24-pdfinfo-local
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends qpdf=11.3.0-1+deb12u1 \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/h24
+COPY tools/validation/h24-pd03/inspector/package*.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+COPY apps/api/dist/lib/dossier-storage.js /app/apps/api/dist/lib/dossier-storage.js
+COPY tools/validation/h24-pd03/inspector/*.mjs ./
+HEALTHCHECK NONE
+USER 1000:1000
+ENTRYPOINT ["node", "/opt/h24/inspect-stdin.mjs"]

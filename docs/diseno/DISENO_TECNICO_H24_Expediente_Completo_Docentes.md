@@ -34,6 +34,18 @@ Implementacion y desviaciones acotadas: [H24-F1](../auditoria/H24_Fase1_Modelo_B
 
 Contrato funcional: [SPEC_H24_Expediente_Completo_Docentes.md](../specs/SPEC_H24_Expediente_Completo_Docentes.md).
 
+Ampliacion PD-03 aprobada 2026-10-28: [implementacion local de politica/decoder/visor](../auditoria/H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md).
+Inspector separado con sharp 0.35.5/libvips 8.18.7 y qpdf 11.3.0-1+deb12u1;
+lock propio de laboratorio, sin dependencias nuevas en app. Decodifica JPG/PNG
+completos y examina JSON estructural PDF antes de AV sobre los mismos bytes.
+Protocolo H24_POLICY_V1 rechaza la imagen parser A3 antigua, sin fallback.
+512 MiB/2 CPU/64 PID/30 s, sin red, no root, filesystem read-only y tmpfs privado.
+Constancias invalidan solicitudes y Blob al cambiar identidad/permisos o desmontar.
+El visor nativo sigue sin sandbox HTML demostrado; ensayo sintetico no constituye
+aceptacion residual. Nueva ronda BD/GCS y arquitectura cloud requieren aprobacion;
+no desplegar transporte Docker local. Se conserva politica historica sin borrados
+ni transformaciones. El acta contiene limites exactos y evidencia reproducible.
+
 Seguimiento tecnico 2026-10-28: [PD-03 A3](../auditoria/H24_PD03_A3_Controles_PDF_ClamAV_Local.md)
 agrega document-security.ts y admision compartida. Parser y ClamAV ejecutados por
 stdin en contenedores separados, no root/sin red, con limites y firmas recientes;
