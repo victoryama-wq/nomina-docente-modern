@@ -31,5 +31,9 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "overrides": {
+    "vue": "3.5.44",
+    "@vue/server-renderer": "3.5.44"
   }
 }

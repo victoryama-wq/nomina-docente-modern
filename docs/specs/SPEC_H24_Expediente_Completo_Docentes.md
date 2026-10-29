@@ -11,7 +11,9 @@ capacidad, triage npm y ensayo H05/backup. No cambia las decisiones funcionales.
 
 Seguimiento 2026-10-29: [servicios cloud privados y recuperacion aislada](../auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md)
 autorizados y probados, sin produccion. Scheduler manual verificado y pausado;
-recepcion de alerta externa y controles residuales pendientes. Se conserva NO-GO, alcance
+recepcion de alerta externa y controles residuales pendientes. [PD-06](../auditoria/H24_PD06_Correccion_Compatible_Dependencias.md)
+actualiza dependencias compatibles con regresion local; quedan cinco altas,
+sin salto Zod 4 ni aceptacion automatica de riesgos. Se conserva NO-GO, alcance
 funcional y roles. No se presenta H24 como funcionalidad productiva.
 
 Seguimiento 2026-10-28: [PD-03 A3 local](../auditoria/H24_PD03_A3_Controles_PDF_ClamAV_Local.md)

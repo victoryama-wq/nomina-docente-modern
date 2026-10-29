@@ -522,7 +522,11 @@ Seguimiento posterior 2026-10-29: servicios privados inspector/ClamAV H24 y job
 con PostgreSQL efimero sintetico validados, incluidos recuperacion/idempotencia y
 disparo Scheduler. Inventarios GCS sin diferencias, scheduler pausado; recepcion
 de alerta email por confirmar. Ver `docs/auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`.
-Sin cambios H01, Cloud SQL o deploy productivo; H24 mantiene NO-GO hasta completar gates.
+PD-06 compatible local: audit 0 criticas/5 altas/9 moderadas/1 baja,
+API 306 aprobadas/15 omitidas, web 158/158, typecheck/build OK. No se cambio Zod a 4
+ni Firebase de mayor; riesgo restante no aceptado automaticamente. Ver
+`docs/auditoria/H24_PD06_Correccion_Compatible_Dependencias.md`. Sin cambios H01,
+Cloud SQL o deploy productivo; H24 mantiene NO-GO hasta completar gates.
 Ver `docs/auditoria/H24_Ajuste_Expediente_Fiscal_Constancia.md`. Sin deploy.
 Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
 no inventario de imagen productiva). No se aplicaron fixes ni excepciones.

@@ -256,8 +256,10 @@ no equivale a provisionamiento productivo. Evidencia:
 `H24_PD04_Validacion_Worker_Recuperacion_Alertas.md`. H24 sigue NO-GO.
 La comprobacion de borrado usa politica 0 desde creacion, GET 404 e inventario
 vacio; softDeleted=true devolvio 400, no una lista vacia. H24 sigue NO-GO.
-Auditoria npm actual del arbol local: 0 criticas, 15 altas, 12 moderadas, 1 baja;
-triage/correccion o excepciones fundamentadas pendientes, sin audit fix.
+Auditoria npm anterior a PD-06: 0 criticas, 15 altas, 12 moderadas, 1 baja.
+Seguimiento compatible autorizado 2026-10-29: 0 criticas, 5 altas, 9 moderadas,
+1 baja, sin audit fix. Zod y cadena gRPC/Firebase siguen pendientes; regresion
+local aprobada, no excepcion productiva. Ver `H24_PD06_Correccion_Compatible_Dependencias.md`.
 Cloud PD-03/PD-04 autorizado y ensayado: servicios privados, worker efimero y
 Scheduler exitosos, GCS restituido; recepcion email pendiente, Scheduler pausado.
 Ver `H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`. No cierra aislamiento, capacidad,

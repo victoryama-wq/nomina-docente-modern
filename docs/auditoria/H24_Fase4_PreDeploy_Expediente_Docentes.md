@@ -13,7 +13,10 @@ Servicios privados y job efimero autorizados y probados con datos sinteticos;
 13 comprobaciones cloud, dos ejecuciones de recuperacion exitosas (una mediante
 Scheduler), inventarios GCS restituidos. Scheduler queda pausado. Recepcion email
 externa aun no confirmada; aislamiento/capacidad/destino final siguen pendientes.
-Se conserva NO-GO y el objetivo condicionado al sabado 31.
+[PD-06 compatible](H24_PD06_Correccion_Compatible_Dependencias.md): audit pasa de
+0 criticas/15 altas/12 moderadas/1 baja a 0/5/9/1, regresion local aprobada.
+Zod 4 no aplicado; cadena gRPC/Firebase pendiente. No equivale a aceptar riesgos
+ni autorizar produccion. Se conserva NO-GO y el objetivo condicionado al sabado 31.
 
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia

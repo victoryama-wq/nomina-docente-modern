@@ -28,7 +28,8 @@ El comentario anterior sobre worker describe la preparacion inicial: ahora hay
 provisionamiento de ensayo, no productivo. Ver
 [arquitectura, digests y limitaciones](../auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md)
 y `services/document-security/README.md`. No afirmar equivalencia entre IAM privado
-y aislamiento de red Docker.
+y aislamiento de red Docker. PD-06 tiene correccion compatible parcial y regresion
+local, sin cierre de riesgos ni cambio del contrato funcional.
 
 Evidencia F3: [Integracion HTTP/PostgreSQL/storage local](../auditoria/H24_Fase3_Validacion_Integracion_Expediente_Docentes.md). Se expone `Content-Disposition` mediante CORS exclusivamente en la respuesta PDF del expediente para conservar el nombre UTF-8 en descargas cross-origin. No se amplian origenes ni autorizaciones.
 
