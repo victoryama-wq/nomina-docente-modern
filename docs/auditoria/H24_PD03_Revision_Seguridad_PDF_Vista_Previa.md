@@ -29,6 +29,12 @@ integracion. Ninguna herramienta nueva instalada ni control adicional implementa
 
 ## 1. Resumen y limites
 
+Seguimiento 2026-10-29: punto 4 autorizado separadamente para
+[integracion del nuevo inspector con BD test/GCS y restitucion](H24_PD03_Integracion_Politica_Imagenes_PDF_GCS.md).
+Resultado: 19 grupos aprobados, 26 tablas e inventarios restituidos exactamente.
+No sustituye smoke UI/Auth real, aceptacion
+residual del visor ni validacion de la arquitectura cloud.
+
 Actualizacion posterior: el usuario aprobo puntos 1-3 de la propuesta. Se implemento
 [decodificacion JPG/PNG, politica estructural PDF y correccion VIEW-02](H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md),
 con corpus Docker, pipeline real y visor sintetico sin BD/nube. Las brechas de la

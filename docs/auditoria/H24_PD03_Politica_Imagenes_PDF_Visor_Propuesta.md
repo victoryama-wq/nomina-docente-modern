@@ -3,7 +3,12 @@
 Fecha: 2026-10-28.
 Base revisada: `360ea6397bcd607581d0b02ea0b44b678ab60b55`.
 Rama: `feature/h02-h03-user-coordinations-permissions`.
-Estado actualizado: **puntos 1-3 aprobados e implementados localmente; punto 4 pendiente. PD-03 abierto, H24 NO-GO**.
+Estado actualizado: **puntos 1-3 implementados localmente; punto 4 aprobado en test/GCS el 2026-10-29. PD-03 abierto, H24 NO-GO**.
+
+Resultado de la nueva ronda y restitucion en
+[integracion de politica JPG/PNG/PDF con test/GCS](H24_PD03_Integracion_Politica_Imagenes_PDF_GCS.md).
+Esta autorizacion separada no acepta el riesgo residual del visor ni permite deploy.
+19 grupos aprobados; 26 tablas e inventarios restituidos exactamente.
 
 El usuario autorizo laboratorio, politica e implementacion local el 2026-10-28.
 Ver [resultados y limites](H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md).

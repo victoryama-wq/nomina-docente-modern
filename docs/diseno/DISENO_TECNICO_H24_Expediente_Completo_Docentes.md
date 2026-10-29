@@ -34,6 +34,13 @@ Implementacion y desviaciones acotadas: [H24-F1](../auditoria/H24_Fase1_Modelo_B
 
 Contrato funcional: [SPEC_H24_Expediente_Completo_Docentes.md](../specs/SPEC_H24_Expediente_Completo_Docentes.md).
 
+Seguimiento 2026-10-29: autorizacion separada para integrar el inspector actual
+con API/BD test/GCS. [Acta y restitucion](../auditoria/H24_PD03_Integracion_Politica_Imagenes_PDF_GCS.md).
+19 grupos aprobados, 26 tablas e inventarios restituidos; PNG/JPEG y PDF reales
+del pipeline local, sin publicar bytes adversos en GCS.
+Conserva transporte Docker local y originales; no incorpora adaptador cloud ni
+constituye aceptacion residual del visor. No hay cambio de diseno funcional.
+
 Ampliacion PD-03 aprobada 2026-10-28: [implementacion local de politica/decoder/visor](../auditoria/H24_PD03_Implementacion_Imagenes_PDF_Visor_Local.md).
 Inspector separado con sharp 0.35.5/libvips 8.18.7 y qpdf 11.3.0-1+deb12u1;
 lock propio de laboratorio, sin dependencias nuevas en app. Decodifica JPG/PNG

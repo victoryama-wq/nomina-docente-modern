@@ -42,6 +42,12 @@ Seguimiento posterior PD-03: puntos 1-3 autorizados e implementados localmente,
 aprobados. Sin BD/nube. Requiere nueva autorizacion para repetir integracion GCS,
 aceptacion residual del visor y arquitectura cloud; no cierra PD-03 ni habilita deploy.
 
+Seguimiento 2026-10-29: punto 4 autorizado para repetir el ensayo con la politica
+actual y PNG/JPEG. [Acta de integracion y restitucion](H24_PD03_Integracion_Politica_Imagenes_PDF_GCS.md).
+Resultado aprobado: 19 grupos, restitucion exacta de 26 tablas e inventarios GCS.
+La autorizacion pendiente del parrafo anterior describe el cierre local previo.
+No habilita deploy ni acepta implicitamente los demas gates H24.
+
 Ampliacion C.P./CURP 2026-10-28: campos fiscales opcionales implementados localmente,
 sin ampliar roles ni cambiar completitud/pagos. [Acta del ajuste](H24_Ajuste_CP_CURP_Expediente.md).
 017 aplicada por H05 solo en nomina_docente_test: 20 registradas, pending=0/mismatch=0.

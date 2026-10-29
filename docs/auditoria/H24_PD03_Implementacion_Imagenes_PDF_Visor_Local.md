@@ -5,6 +5,12 @@ Base: `59a8498 docs(h24): propose image PDF and preview security policy`.
 Rama: `feature/h02-h03-user-coordinations-permissions`; arbol inicialmente limpio.
 Estado: **puntos 1-3 autorizados e implementados localmente; PD-03 abierto, H24 NO-GO**.
 
+Seguimiento 2026-10-29: el usuario autorizo separadamente el punto 4. La nueva
+[integracion BD test/GCS con este inspector](H24_PD03_Integracion_Politica_Imagenes_PDF_GCS.md)
+aprobo 19 grupos y restitucion exacta de 26 tablas/inventarios; las referencias a autorizacion pendiente en
+esta acta corresponden al cierre local del 2026-10-28, no a una prohibicion vigente.
+La aceptacion residual del visor y arquitectura cloud siguen siendo gates separados.
+
 ## 1. Autorizacion y alcance
 
 El usuario aprobo laboratorio, politica e implementacion local de JPG/PNG, PDF y

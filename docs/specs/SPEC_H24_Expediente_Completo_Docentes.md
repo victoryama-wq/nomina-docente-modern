@@ -28,6 +28,12 @@ No modifica permisos ni formatos de PDF adicionales. Nueva integracion test/GCS,
 compatibilidad institucional, aceptacion residual del visor y cloud pendientes.
 H24 sigue NO-GO; las menciones previas de politica pendiente son antecedentes A3/A4.
 
+Seguimiento 2026-10-29: nueva integracion de politica en test/GCS autorizada como
+punto 4 separado. Ver [evidencia y restitucion](../auditoria/H24_PD03_Integracion_Politica_Imagenes_PDF_GCS.md).
+Resultado: 19 grupos aprobados y restitucion exacta de 26 tablas/inventarios.
+No modifica contratos, roles, limites ni decisiones funcionales. Los pendientes
+del visor y transporte cloud permanecen; no implica habilitacion productiva.
+
 PD-02 acredita GCS real solo en test; ver
 [resultado aislado](../auditoria/H24_PD02_Resultado_GCS_Aislado.md).
 PD-05 tiene [plan y seguimiento](../auditoria/H24_PD05_Plan_Validacion_Firebase_Auth_Real.md),
