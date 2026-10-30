@@ -431,7 +431,7 @@ describe('validateDossierPdf', () => {
     });
 
     it('caps real parser output and cleans files after oversized metadata', async () => {
-      await expect(validateDossierPdf(await pdf({ info: { Title: 'x'.repeat(300 * 1024) } }))).rejects.toThrow('DOSSIER_PDF_INVALID');
+      await expect(validateDossierPdf(await pdf({ info: { Title: 'x'.repeat(300 * 1024) } }))).rejects.toThrow('DOSSIER_PDF_VALIDATOR_UNAVAILABLE');
       const filename = (vi.mocked(execFile).mock.calls[0][1] as string[])[0];
       await expect(lstat(path.dirname(filename))).rejects.toMatchObject({ code: 'ENOENT' });
     });

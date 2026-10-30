@@ -88,17 +88,17 @@ interface IncidenceCalendarPeriodRow {
 }
 
 const contextQuerySchema = z.object({
-  cycleId: z.string().uuid().optional(),
-  calendarConfigId: z.string().uuid().optional()
+  cycleId: z.string().guid('Invalid uuid').optional(),
+  calendarConfigId: z.string().guid('Invalid uuid').optional()
 });
 
 const incidenceParamsSchema = z.object({
-  scheduleId: z.string().uuid()
+  scheduleId: z.string().guid('Invalid uuid')
 });
 
 const incidencePayloadSchema = z.object({
-  scheduleId: z.string().uuid().optional(),
-  calendarConfigId: z.string().uuid(),
+  scheduleId: z.string().guid('Invalid uuid').optional(),
+  calendarConfigId: z.string().guid('Invalid uuid'),
   absences: z
     .union([z.string(), z.number()])
     .optional()
@@ -144,7 +144,7 @@ const incidencePayloadSchema = z.object({
 });
 
 const incidenceBatchSchema = z.object({
-  rows: z.array(incidencePayloadSchema.extend({ scheduleId: z.string().uuid() })).min(1).max(500)
+  rows: z.array(incidencePayloadSchema.extend({ scheduleId: z.string().guid('Invalid uuid') })).min(1).max(500)
 });
 
 type IncidencePayload = z.infer<typeof incidencePayloadSchema>;

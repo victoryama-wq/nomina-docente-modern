@@ -100,19 +100,19 @@ interface ExtraDependencyRow {
 }
 
 const contextQuerySchema = z.object({
-  cycleId: z.string().uuid().optional()
+  cycleId: z.string().guid('Invalid uuid').optional()
 });
 
 const extraParamsSchema = z.object({
-  id: z.string().uuid()
+  id: z.string().guid('Invalid uuid')
 });
 
-const nullableUuid = z.preprocess((value) => (value === '' ? undefined : value), z.string().uuid().optional());
+const nullableUuid = z.preprocess((value) => (value === '' ? undefined : value), z.string().guid('Invalid uuid').optional());
 
 const extraBodySchema = z.object({
-  cycleId: z.string().uuid().optional(),
+  cycleId: z.string().guid('Invalid uuid').optional(),
   coordinationId: nullableUuid,
-  teacherId: z.string().uuid(),
+  teacherId: z.string().guid('Invalid uuid'),
   hours: z
     .union([z.string(), z.number()])
     .transform((value, ctx): string => {

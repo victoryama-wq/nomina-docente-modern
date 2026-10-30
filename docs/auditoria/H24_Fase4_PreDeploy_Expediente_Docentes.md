@@ -15,8 +15,11 @@ Scheduler), inventarios GCS restituidos. Scheduler queda pausado. Recepcion emai
 externa aun no confirmada; aislamiento/capacidad/destino final siguen pendientes.
 [PD-06 compatible](H24_PD06_Correccion_Compatible_Dependencias.md): audit pasa de
 0 criticas/15 altas/12 moderadas/1 baja a 0/5/9/1, regresion local aprobada.
-Zod 4 no aplicado; cadena gRPC/Firebase pendiente. No equivale a aceptar riesgos
-ni autorizar produccion. Se conserva NO-GO y el objetivo condicionado al sabado 31.
+Posteriormente se autorizaron y validaron Zod 4.6.7, gRPC 1.14.7 y npm 10.9.4:
+[regresion aislada PD-06](H24_PD06_Zod_Grpc_Regresion_Aislada.md).
+Audit actual 0 criticas/0 altas/9 moderadas/1 baja; API, web, integracion efimera,
+typecheck/build e imagen API Linux validados. No equivale a aceptar los hallazgos
+restantes ni autorizar produccion. Se conserva NO-GO y el objetivo condicionado al sabado 31.
 
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
@@ -188,7 +191,7 @@ ni afirmaciones sobre la infraestructura actualmente desplegada.
 | H24-PD-03 / Alta | `validateDossierPdf` hace comprobaciones estructurales/JavaScript, no antivirus. Preview Blob usa visor nativo sin sandbox HTML (`TeacherDossierPanel.vue:312`) | Seguridad: aprobar e implementar/probar estrategia PDF malicioso o aceptar formalmente control alternativo con riesgo acotado; no declarar pdfinfo un escaner |
 | H24-PD-04 / Alta | Worker reforzado y recuperacion GCS/test aprobada; dos disparos de Task Scheduler locales, idempotencia, alarma estructurada y restitucion sin diferencias. Lotes de 25 y espera >5 min conservados | Parcial: falta job/scheduler cloud privado, entrega externa de alertas, timeout/reintentos e identidad del runtime cloud. Evidencia en H24_PD04_Validacion_Worker_Recuperacion_Alertas.md; no deploy autorizado |
 | H24-PD-05 / Alta | Firebase H24 real, matriz secuencial por rol, AUTH-01 y sesiones de navegador validados en sus actas. Inactividad abreviada 90/120 s autorizada; defaults productivos requieren configuracion local explicita | Parcial: identidades complementarias pendientes por decision humana; no confundir mocks o una cuenta rotada con cambio entre cuentas reales. Ver H24_PD05_Resultado_Persistencia_Inactividad.md |
-| H24-PD-06 / Alta | npm audit actual tiene hallazgos high, incluidos Fastify/Zod; ninguna explotabilidad fue ensayada | Seguridad: triage por ruta real, correcciones puntuales y regresion o excepcion formal por hallazgo no alcanzable; cero criticas no autoriza por si solo |
+| H24-PD-06 / Media | Zod/gRPC corregidos localmente; audit 0 criticas/0 altas/9 moderadas/1 baja | Completar triage o aceptacion formal de hallazgos restantes y ensayo final; regresion local no autoriza deploy |
 | H24-PD-07 / Media | Limite de dos cargas por proceso, Base64 y buffers en memoria; no prueba sostenida con memoria/concurrencia de destino | QA/DevOps: medir capacidad, memoria, latencias, cola y 429 con archivos limite, red lenta, usuarios y replicas concurrentes |
 | H24-PD-08 / Alta operativa | 016 solo ensayada por harness local; F3 dejo registro H05 test vacio. Backup local fallo por namespace PostgreSQL ausente | DBA: resolver entorno de ensayo confiable, probar 016 por H05 y restauracion; luego backup/ventana productiva aprobados independientemente |
 

@@ -35,6 +35,11 @@ local('constancia replacement SQL on temporary tables only', () => {
       };
       const options = { transaction, storage, bucket: 'synthetic-test', teacherId, actorId,
         fileName: 'synthetic.pdf', mimeType: 'application/pdf', bytes: Buffer.from('%PDF synthetic'),
+        // This test isolates SQL/cleanup; real parser/AV coverage lives in document-security.docker.test.ts.
+        validateContent: async (bytes: Buffer, mime: string) => {
+          expect(bytes).toEqual(Buffer.from('%PDF synthetic'));
+          expect(mime).toBe('application/pdf');
+        },
         authorize: async () => {}, afterSwitch: async () => ({ id: teacherId }) };
       const first = await replaceConstancia(options);
       expect(first.cleanupPending).toBe(true);

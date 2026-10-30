@@ -38,7 +38,7 @@ const userBodySchema = z.object({
   status: z.enum(['ACTIVO', 'INACTIVO']).default('ACTIVO'),
   notes: z.string().trim().max(250).optional().default(''),
   legacyUsername: z.string().trim().max(120).optional().default(''),
-  coordinationIds: z.array(z.string().uuid()).optional().default([])
+  coordinationIds: z.array(z.string().guid('Invalid uuid')).optional().default([])
 });
 
 const userPatchSchema = z.object({
@@ -48,7 +48,7 @@ const userPatchSchema = z.object({
   status: z.enum(['ACTIVO', 'INACTIVO']).optional(),
   notes: z.string().trim().max(250).optional(),
   legacyUsername: z.string().trim().max(120).optional(),
-  coordinationIds: z.array(z.string().uuid()).optional()
+  coordinationIds: z.array(z.string().guid('Invalid uuid')).optional()
 });
 
 function normalizeDomain(email: string): boolean {
@@ -406,7 +406,7 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/users/:id', { preHandler: requirePermission('access.manage') }, async (request, reply) => {
-    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
     const parsed = userPatchSchema.safeParse(request.body);
     if (!params.success) {
       await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Usuario inválido.' });
@@ -547,7 +547,7 @@ export async function registerUserRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.delete('/users/:id', { preHandler: requirePermission('access.manage') }, async (request, reply) => {
-    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
     if (!params.success) {
       await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Usuario inválido.' });
       return;

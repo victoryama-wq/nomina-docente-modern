@@ -258,8 +258,12 @@ La comprobacion de borrado usa politica 0 desde creacion, GET 404 e inventario
 vacio; softDeleted=true devolvio 400, no una lista vacia. H24 sigue NO-GO.
 Auditoria npm anterior a PD-06: 0 criticas, 15 altas, 12 moderadas, 1 baja.
 Seguimiento compatible autorizado 2026-10-29: 0 criticas, 5 altas, 9 moderadas,
-1 baja, sin audit fix. Zod y cadena gRPC/Firebase siguen pendientes; regresion
-local aprobada, no excepcion productiva. Ver `H24_PD06_Correccion_Compatible_Dependencias.md`.
+1 baja, sin audit fix. Seguimiento posterior autorizado: Zod 4.6.7 y gRPC 1.14.7,
+npm 10.9.4 fijado, audit 0 criticas/0 altas/9 moderadas/1 baja. Regresion API/web,
+PostgreSQL efimero, typecheck/build y gate de imagen Linux satisfactorios.
+PD-06 sigue abierto por hallazgos restantes, sin excepcion productiva ni deploy.
+Ver `H24_PD06_Correccion_Compatible_Dependencias.md` y
+`H24_PD06_Zod_Grpc_Regresion_Aislada.md`.
 Cloud PD-03/PD-04 autorizado y ensayado: servicios privados, worker efimero y
 Scheduler exitosos, GCS restituido; recepcion email pendiente, Scheduler pausado.
 Ver `H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`. No cierra aislamiento, capacidad,

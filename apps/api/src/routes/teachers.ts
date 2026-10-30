@@ -134,7 +134,7 @@ const teacherBodySchema = z.object({
   location: z.string().trim().max(40).optional().default('Local'),
   comment: z.string().trim().max(120).optional().default(''),
   observation: z.string().trim().max(250).optional().default(''),
-  coordinationId: z.string().uuid().optional().nullable(),
+  coordinationId: z.string().guid('Invalid uuid').optional().nullable(),
   coordinationName: z.string().trim().max(120).optional().default(''),
   phone: z.string().trim().max(20).optional().default(''),
   email: z.string().trim().toLowerCase().max(160).optional().default(''),
@@ -910,7 +910,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.patch('/teachers/:id', { preHandler: requirePermission('teachers.manage') }, async (request, reply) => {
-    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
     const parsed = teacherBodySchema.safeParse(request.body);
     if (!params.success) {
       await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
@@ -1031,7 +1031,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     '/teachers/:id/fiscal',
     { preHandler: requireDossier('contact') },
     async (request, reply) => {
-      const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+      const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
       const parsed = teacherFiscalBodySchema.safeParse(request.body);
       if (!params.success) {
         await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
@@ -1091,7 +1091,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
   );
 
   app.delete('/teachers/:id', { preHandler: requirePermission('teachers.manage') }, async (request, reply) => {
-    const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+    const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
     if (!params.success) {
       await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
       return;
@@ -1172,7 +1172,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     '/teachers/:id/documents/constancia',
     documentAdmission,
     async (request, reply) => {
-      const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+      const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
       const parsed = documentBodySchema.safeParse(request.body);
       if (!params.success) {
         await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
@@ -1221,7 +1221,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     '/teachers/:id/documents/current',
     { preHandler: requireDossier('read') },
     async (request, reply) => {
-      const params = z.object({ id: z.string().uuid() }).safeParse(request.params);
+      const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
       if (!params.success) {
         await reply.code(400).send({ error: 'VALIDATION_ERROR', message: 'Docente inválido.' });
         return;

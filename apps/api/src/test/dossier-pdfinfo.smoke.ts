@@ -57,7 +57,7 @@ try {
   await check('embedded JavaScript', async () => rejects(await pdf({}, true)));
   await check('500 pages accepted', async () => validateDossierPdf(await pdf({}, false, 500)));
   await check('501 pages rejected', async () => rejects(await pdf({}, false, 501)));
-  await check('output limit', async () => rejects(await pdf({ info: { Title: 'x'.repeat(300 * 1024) } })));
+  await check('output limit fails closed', async () => rejects(await pdf({ info: { Title: 'x'.repeat(300 * 1024) } }), 'DOSSIER_PDF_VALIDATOR_UNAVAILABLE'));
   await check('byte limit', () => rejects(Buffer.alloc(7.5 * 1024 * 1024 + 1), 'DOSSIER_PDF_TOO_LARGE'));
   await check('missing executable fails closed', async () => {
     process.env.DOSSIER_PDFINFO_PATH = path.join(root, 'missing-pdfinfo');
@@ -71,7 +71,7 @@ try {
       process.env.DOSSIER_PDFINFO_PATH = stalledParser;
       const start = Date.now();
       try {
-        await rejects(valid);
+        await rejects(valid, 'DOSSIER_PDF_VALIDATOR_UNAVAILABLE');
         assert.ok(Date.now() - start >= 9_000, 'Must exercise the real parser timeout');
         assert.ok(Date.now() - start < 30_000, 'Timeout must terminate the stalled child');
       } finally {

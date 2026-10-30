@@ -74,11 +74,11 @@ interface QuarterClosureRow {
 }
 
 const contextQuerySchema = z.object({
-  cycleId: z.string().uuid().optional()
+  cycleId: z.string().guid('Invalid uuid').optional()
 });
 
 const paramsSchema = z.object({
-  id: z.string().uuid()
+  id: z.string().guid('Invalid uuid')
 });
 
 const blackoutDateSchema = z.object({
@@ -159,7 +159,7 @@ function addCycleDateIssue(body: CycleDateFields, ctx: z.RefinementCtx): void {
 
 const calendarPeriodBodySchema = z
   .object({
-    cycleId: z.string().uuid().optional(),
+    cycleId: z.string().guid('Invalid uuid').optional(),
     periodLabel: z.string().trim().max(120).optional().default(''),
     payrollStart: z.string().date(),
     payrollEnd: z.string().date(),
@@ -242,7 +242,7 @@ const academicCycleBodySchema = cycleModuleDatesBodySchema.and(
 type AcademicCycleBody = z.infer<typeof academicCycleBodySchema>;
 
 const closeCycleBodySchema = z.object({
-  nextCycleId: z.string().uuid(),
+  nextCycleId: z.string().guid('Invalid uuid'),
   observation: z.string().trim().max(1000).optional().default('')
 });
 

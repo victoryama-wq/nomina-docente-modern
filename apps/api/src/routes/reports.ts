@@ -193,8 +193,8 @@ interface PaymentTypeSummary {
 }
 
 const querySchema = z.object({
-  cycleId: z.string().uuid().optional(),
-  runId: z.string().uuid().optional()
+  cycleId: z.string().guid('Invalid uuid').optional(),
+  runId: z.string().guid('Invalid uuid').optional()
 });
 
 const exportParamsSchema = z.object({
@@ -202,7 +202,7 @@ const exportParamsSchema = z.object({
 });
 
 const runParamsSchema = z.object({
-  id: z.string().uuid()
+  id: z.string().guid('Invalid uuid')
 });
 
 const statusPayloadSchema = z.object({

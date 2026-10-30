@@ -87,7 +87,7 @@ const tabulatorBodySchema = z.object({
 });
 
 const idParamsSchema = z.object({
-  id: z.string().uuid()
+  id: z.string().guid('Invalid uuid')
 });
 
 function isSystemAdmin(actor: SessionUser | undefined): boolean {

@@ -523,13 +523,19 @@ con PostgreSQL efimero sintetico validados, incluidos recuperacion/idempotencia 
 disparo Scheduler. Inventarios GCS sin diferencias, scheduler pausado; recepcion
 de alerta email por confirmar. Ver `docs/auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`.
 PD-06 compatible local: audit 0 criticas/5 altas/9 moderadas/1 baja,
-API 306 aprobadas/15 omitidas, web 158/158, typecheck/build OK. No se cambio Zod a 4
-ni Firebase de mayor; riesgo restante no aceptado automaticamente. Ver
+API 306 aprobadas/15 omitidas, web 158/158, typecheck/build OK (primera correccion).
+Seguimiento posterior aprobado: Zod 4.6.7, gRPC 1.14.7 y npm 10.9.4 fijado;
+audit actual 0 criticas/0 altas/9 moderadas/1 baja. API 325 mas 7 opt-in Docker,
+web 158, integracion efimera 167 aprobadas; typecheck/build e imagen Linux OK.
+Compatibilidad de UUID legacy conservada sin cambiar H01 ni reglas. Firebase JS
+11.10.0/Admin 13.10.0 permanecen; no se aceptan automaticamente riesgos restantes.
+Ver `docs/auditoria/H24_PD06_Zod_Grpc_Regresion_Aislada.md` y
 `docs/auditoria/H24_PD06_Correccion_Compatible_Dependencias.md`. Sin cambios H01,
 Cloud SQL o deploy productivo; H24 mantiene NO-GO hasta completar gates.
 Ver `docs/auditoria/H24_Ajuste_Expediente_Fiscal_Constancia.md`. Sin deploy.
-Audit npm F4: 0 criticas, 15 altas, 12 moderadas, 1 baja (arbol local completo;
-no inventario de imagen productiva). No se aplicaron fixes ni excepciones.
+Audit npm F4 inicial: 0 criticas, 15 altas, 12 moderadas, 1 baja (evidencia historica;
+no inventario de imagen productiva). Los fixes posteriores son solo locales,
+sin excepciones productivas aceptadas.
 
 Fuentes: `docs/specs/SPEC_H24_Expediente_Completo_Docentes.md`,
 `docs/diseno/DISENO_TECNICO_H24_Expediente_Completo_Docentes.md` y

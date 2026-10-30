@@ -2,8 +2,10 @@ FROM node:24-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc
 RUN apt-get update && apt-get install -y --no-install-recommends postgresql-15 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY package.json package-lock.json ./
+RUN npm install --global npm@10.9.4 --no-audit --no-fund
+COPY package.json package-lock.json .npmrc ./
 COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
 RUN npm ci --workspace apps/api --include-workspace-root --ignore-scripts --no-audit --no-fund
 COPY apps/api/dist ./apps/api/dist
 COPY database/016_h24_teacher_dossier.sql ./database/

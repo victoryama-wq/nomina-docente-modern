@@ -1,9 +1,12 @@
 **
 !package.json
 !package-lock.json
+!.npmrc
 !apps/
 !apps/api/
 !apps/api/package.json
+!apps/web/
+!apps/web/package.json
 !apps/api/dist/
 !apps/api/dist/**
 !database/

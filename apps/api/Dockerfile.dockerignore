@@ -1,0 +1,12 @@
+**
+!package.json
+!package-lock.json
+!.npmrc
+!apps/
+!apps/api/
+!apps/api/package.json
+!apps/api/tsconfig.json
+!apps/api/src/
+!apps/api/src/**
+!apps/web/
+!apps/web/package.json

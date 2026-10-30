@@ -100,7 +100,7 @@ interface CategoryHoursRow {
   coordinationBreakdown: string;
 }
 
-const uuidField = z.string().uuid();
+const uuidField = z.string().guid('Invalid uuid');
 
 const baseExtraQuerySchema = z.object({
   cycleId: uuidField,

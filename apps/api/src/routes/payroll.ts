@@ -317,11 +317,11 @@ interface PayrollCalendarConfigRow {
 }
 
 const contextQuerySchema = z.object({
-  cycleId: z.string().uuid().optional()
+  cycleId: z.string().guid('Invalid uuid').optional()
 });
 
 const runParamsSchema = z.object({
-  id: z.string().uuid()
+  id: z.string().guid('Invalid uuid')
 });
 
 const exportParamsSchema = runParamsSchema.extend({
@@ -339,7 +339,7 @@ const optionalUuidSchema = z.preprocess((value) => {
   if (typeof value !== 'string') return value;
   const trimmed = value.trim();
   return trimmed || undefined;
-}, z.string().uuid().optional());
+}, z.string().guid('Invalid uuid').optional());
 
 const payrollBodySchema = z
   .object({

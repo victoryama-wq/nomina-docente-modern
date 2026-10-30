@@ -3,6 +3,13 @@
 Fecha: 2026-10-29. Base Git: `ab3f5c3`.
 Estado: **correccion parcial local validada; PD-06 no cerrado**.
 
+Seguimiento posterior autorizado el mismo dia: ver
+[Zod/gRPC y regresion aislada](H24_PD06_Zod_Grpc_Regresion_Aislada.md).
+Zod 4.6.7 y gRPC 1.14.7 ya validados localmente, con npm 10.9.4 fijado;
+audit actual 0 criticas/0 altas/9 moderadas/1 baja. Las restricciones, resultados
+y referencias a Zod/gRPC pendientes que siguen abajo describen la primera
+correccion compatible, no el estado posterior. PD-06 global sigue abierto.
+
 ## Autorizacion y alcance
 
 El usuario autorizo actualizaciones puntuales compatibles, condicionadas a no

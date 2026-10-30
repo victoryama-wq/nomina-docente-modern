@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const DOSSIER_MAX_BYTES = 7.5 * 1024 * 1024;
 const type = z.enum(['CURP', 'ACTA_NACIMIENTO', 'CEDULA_PROFESIONAL', 'TITULO', 'OTRO']);
 const text = z.string().trim().min(1).max(180).refine((s) => !/[\x00-\x1f\x7f]/.test(s));
-const uuid = z.string().uuid().transform((value) => value.toLowerCase());
+const uuid = z.string().guid('Invalid uuid').transform((value) => value.toLowerCase());
 export const dossierParams = z.object({ teacherId: uuid, documentId: uuid.optional(), operationId: uuid.optional() });
 export const operationFields = { operationId: uuid };
 export const metadataFields = { documentType: type, title: text };

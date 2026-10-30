@@ -118,27 +118,27 @@ interface LoadRow {
 }
 
 const scheduleParamsSchema = z.object({
-  id: z.string().uuid()
+  id: z.string().guid('Invalid uuid')
 });
 
 const contextQuerySchema = z.object({
-  cycleId: z.string().uuid().optional()
+  cycleId: z.string().guid('Invalid uuid').optional()
 });
 
 const scheduleBodySchema = z.object({
-  cycleId: z.string().uuid().optional(),
-  teacherId: z.string().uuid(),
-  responsibleUserId: z.string().uuid().optional().nullable(),
-  coordinationId: z.string().uuid().optional().nullable(),
+  cycleId: z.string().guid('Invalid uuid').optional(),
+  teacherId: z.string().guid('Invalid uuid'),
+  responsibleUserId: z.string().guid('Invalid uuid').optional().nullable(),
+  coordinationId: z.string().guid('Invalid uuid').optional().nullable(),
   coordinationName: z.string().trim().max(120).optional().default(''),
-  subjectId: z.string().uuid(),
+  subjectId: z.string().guid('Invalid uuid'),
   groupCode: z
     .string()
     .trim()
     .min(1)
     .max(60)
     .transform((value) => normalizeUpper(value)),
-  tabulatorId: z.preprocess((value) => (value === '' ? undefined : value), z.string().uuid().optional()),
+  tabulatorId: z.preprocess((value) => (value === '' ? undefined : value), z.string().guid('Invalid uuid').optional()),
   tabulatorName: z.string().trim().min(1).max(120),
   tabulatorAmount: z
     .union([z.string(), z.number()])

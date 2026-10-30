@@ -30,10 +30,13 @@
     "legacy:extras-to-sql": "node tools/legacy-extras-csv-to-sql.mjs"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22",
+    "npm": "10.9.4"
   },
+  "packageManager": "npm@10.9.4",
   "overrides": {
     "vue": "3.5.44",
-    "@vue/server-renderer": "3.5.44"
+    "@vue/server-renderer": "3.5.44",
+    "@grpc/grpc-js": "1.14.7"
   }
 }

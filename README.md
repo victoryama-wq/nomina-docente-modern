@@ -104,8 +104,16 @@ Documentos de estado relevantes:
 
 ## Comandos útiles
 
+PD-06 fija npm **10.9.4** para respetar los overrides entre workspaces. Usar la
+misma versión en local y CI; `.npmrc` rechaza instalaciones con otra versión.
+No se cambió Node (>=22). No ejecutar audit fix ni regenerar el lock con npm 11.
+La construcción API instala esa versión y usa `npm ci`; no hay un workflow de
+CI remoto en este repositorio. Estos comandos no autorizan un deploy.
+
 ```powershell
-npm install
+npm install --global npm@10.9.4
+npm --version
+npm ci
 npm run typecheck
 npm run build
 firebase deploy --only hosting --project nomina-docente-prod
