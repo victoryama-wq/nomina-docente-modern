@@ -34,6 +34,20 @@ frente a hasta 230 s admitidos por el cliente antivirus cloud. No es fallo
 reproducido ni prueba de capacidad. Ensayo local acotado y migracion/restauracion
 conjunta 016/017 propuestos; sin ejecucion ni autorizacion productiva.
 
+Ensayos locales posteriormente autorizados y ejecutados el 2026-10-30:
+[PD-07 capacidad y hallazgos](H24_PD07_Capacidad_Local_Resultados.md) y
+[PD-08 H05/backup/restauracion](H24_PD08_Ensayo_Local_Migraciones_016_017.md).
+PD-07 no aprobado: Base64 causa RangeError con archivos de 4/7.5 MiB; el lote
+20 archivos completo 19 antes de agotamiento de PIDs del scanner de laboratorio;
+500 paginas excedieron MaxFiles AV. No se corrigio codigo ni se relajaron limites.
+Timeout simulado 60 s, reintento sin duplicacion, recuperacion de reemplazo,
+pipeline JPG/PNG y 45 pruebas frontend aprobados en sus alcances.
+PD-08 local satisfactorio: 016/017 aplicadas solo en BD efimera; 20 registradas,
+pending=0/mismatch=0, backups pre/post restaurados y datos sinteticos preservados.
+Compatibilidad de codigo anterior solo parcial; artefacto exacto/destino real
+pendientes. Laboratorio retirado, BD habitual y produccion sin acceso/cambios.
+**H24 sigue NO-GO**; corregir/diagnosticar PD07-B01/B02/B03 antes de repetir capacidad.
+
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
 de validacion entre constancias y PDF adicionales, falta de analisis antimalware,

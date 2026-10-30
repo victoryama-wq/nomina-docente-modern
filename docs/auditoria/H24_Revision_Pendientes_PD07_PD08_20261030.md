@@ -3,7 +3,23 @@
 Fecha: 2026-10-30, America/Cancun.
 Base: `0121161`; rama `feature/h02-h03-user-coordinations-permissions` limpia al iniciar.
 Alcance: lectura de codigo/configuracion y actas, sin ejecutar nuevas pruebas.
-Resultado: **H24 mantiene NO-GO; propuesta de ensayos pendiente de autorizacion**.
+Resultado de la revision inicial: **H24 mantiene NO-GO; propuesta de ensayos entonces pendiente de autorizacion**.
+
+## Seguimiento posterior autorizado, 2026-10-30
+
+El usuario autorizo los ensayos Docker y 016/017 exclusivamente en BD efimera.
+La propuesta y tabla siguientes se conservan como antecedente, no como estado
+de ejecucion vigente. Resultados:
+
+- [PD-07](H24_PD07_Capacidad_Local_Resultados.md): no aprobado. Defecto Base64
+  reproducido con 4/7.5 MiB; capacidad concurrente incompleta y limite AV en PDF
+  de 500 paginas. Timeout/reintento/recuperacion y pipeline de imagenes aprobados
+  en sus alcances. Correcciones funcionales no ejecutadas ni autorizadas implicitamente.
+- [PD-08](H24_PD08_Ensayo_Local_Migraciones_016_017.md): ensayo conjunto H05 y
+  restauracion pre/post satisfactorio; 20 registradas, pending=0/mismatch=0.
+  Compatibilidad del codigo previo parcial; imagen exacta y destino real pendientes.
+- Entorno efimero retirado, sin alterar BD habitual, produccion ni hacer deploy.
+  PD-03/04/05/06 y sus decisiones pendientes no se cierran por estos ensayos.
 
 ## 1. Estado reconciliado
 
