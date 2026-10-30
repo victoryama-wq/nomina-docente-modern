@@ -27,6 +27,13 @@ esbuild. Se proponen ensayo UUID 11.1.1 y actualizacion puntual tsx con regresio
 efimera, o excepciones temporales explicitas si no son compatibles. No se
 actualizaron paquetes ni se aceptaron riesgos; H24 sigue NO-GO.
 
+Revision de pendientes 2026-10-30:
+[preparacion PD-07/PD-08 y estado reconciliado](H24_Revision_Pendientes_PD07_PD08_20261030.md).
+Se identifico un presupuesto end-to-end por validar: Hosting limita a 60 s,
+frente a hasta 230 s admitidos por el cliente antivirus cloud. No es fallo
+reproducido ni prueba de capacidad. Ensayo local acotado y migracion/restauracion
+conjunta 016/017 propuestos; sin ejecucion ni autorizacion productiva.
+
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
 de validacion entre constancias y PDF adicionales, falta de analisis antimalware,
