@@ -4,6 +4,11 @@ Fecha: 2026-10-30, America/Cancun. Base: `ecdf7d6`.
 Rama: `feature/h02-h03-user-coordinations-permissions`, limpia al inicio.
 Resultado: **PD-07 NO aprobado; H24 mantiene NO-GO**.
 
+Seguimiento posterior 2026-10-30: [correccion autorizada PD07-B01](H24_PD07_B01_Correccion_Base64_Archivos_Grandes.md).
+Decoder corregido localmente; 84/84 pruebas enfocadas en Windows y Linux.
+Se preserva abajo la evidencia inicial. PD07-B02/B03 y repeticion end-to-end
+con artefacto final siguen pendientes; PD-07/H24 no quedan aprobados.
+
 ## 1. Autorizacion y laboratorio
 
 Usuario autorizo Docker local, almacenamiento sintetico y BD efimera, sin alterar

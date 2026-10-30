@@ -48,6 +48,13 @@ Compatibilidad de codigo anterior solo parcial; artefacto exacto/destino real
 pendientes. Laboratorio retirado, BD habitual y produccion sin acceso/cambios.
 **H24 sigue NO-GO**; corregir/diagnosticar PD07-B01/B02/B03 antes de repetir capacidad.
 
+Correccion posterior autorizada 2026-10-30:
+[PD07-B01 Base64 grande](H24_PD07_B01_Correccion_Base64_Archivos_Grandes.md).
+Validacion iterativa sin agotamiento de pila, conservando limites/canonicalidad;
+84/84 pruebas enfocadas Windows/Linux, API 379 aprobadas (15 opt-in omitidas),
+web 158/158, typecheck/build OK. Sin BD/nube/deploy. B01 corregido localmente;
+B02/B03 y capacidad end-to-end final pendientes. **H24 mantiene NO-GO**.
+
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
 de validacion entre constancias y PDF adicionales, falta de analisis antimalware,

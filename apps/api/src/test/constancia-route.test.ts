@@ -24,10 +24,44 @@ beforeEach(async () => {
   vi.resetAllMocks();
   mocks.actor = { ...adminActor(), isProtectedSuperAdmin: false };
   mocks.replace.mockResolvedValue({ documentId: 'new', teacher: { id: 'test' }, cleanupPending: false });
-  app = Fastify(); await registerTeacherRoutes(app);
+  app = Fastify({ bodyLimit: 12 * 1024 * 1024 }); await registerTeacherRoutes(app);
 });
 afterEach(async () => { await app.close(); });
 describe('constancia replacement API guards and response', () => {
+  it.each([1, 2, 4, 7.5].flatMap(mib => [
+    { mib, mimeType: 'application/pdf', extension: 'pdf' },
+    { mib, mimeType: 'image/jpeg', extension: 'jpg' },
+    { mib, mimeType: 'image/png', extension: 'png' }
+  ]))('passes exact $mib MiB $mimeType bytes to the replacement/security boundary', async ({ mib, mimeType, extension }) => {
+    // Encoding fixtures only: the replacement/security boundary is mocked, not a parser verdict.
+    const bytes = Buffer.alloc(mib * 1024 * 1024, 0xfb);
+    const response = await app.inject({ method: 'POST', url, payload: {
+      fileName: `synthetic.${extension}`, mimeType, base64Data: bytes.toString('base64')
+    } });
+    expect(response.statusCode).toBe(200);
+    expect(mocks.replace).toHaveBeenCalledOnce();
+    const received = mocks.replace.mock.calls[0][0];
+    expect(received.mimeType).toBe(mimeType);
+    expect(received.bytes.length).toBe(bytes.length);
+    expect(received.bytes.equals(bytes)).toBe(true);
+  });
+
+  it('rejects malformed large Base64 before replacing the existing constancia', async () => {
+    const encoded = Buffer.alloc(7.5 * 1024 * 1024).toString('base64');
+    const response = await app.inject({ method: 'POST', url, payload: { ...payload, base64Data: `${encoded.slice(0, -1)}!` } });
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error).toBe('INVALID_PDF');
+    expect(mocks.replace).not.toHaveBeenCalled();
+  });
+
+  it('retains the constancia schema size limit without invoking replacement', async () => {
+    const response = await app.inject({ method: 'POST', url, payload: {
+      ...payload, base64Data: Buffer.alloc(7.5 * 1024 * 1024 + 1).toString('base64')
+    } });
+    expect(response.statusCode).toBe(400);
+    expect(mocks.replace).not.toHaveBeenCalled();
+  });
+
   it('serves only approved current bytes with private headers and an escaped filename', async () => {
     const bytes = Buffer.from('%PDF-1.7\nsynthetic');
     mocks.query.mockResolvedValueOnce([{ id: 'file', storageBucket: 'synthetic', storageObject: 'key', originalFileName: 'Constancia Á.pdf', mimeType: 'application/pdf' }])
