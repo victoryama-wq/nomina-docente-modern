@@ -21,6 +21,12 @@ Audit actual 0 criticas/0 altas/9 moderadas/1 baja; API, web, integracion efimer
 typecheck/build e imagen API Linux validados. No equivale a aceptar los hallazgos
 restantes ni autorizar produccion. Se conserva NO-GO y el objetivo condicionado al sabado 31.
 
+Triage residual 2026-10-30: [UUID/esbuild y autorizaciones pendientes](H24_PD06_Triage_Residual_UUID_Esbuild.md).
+Audit online mantiene 0/0/9/1; los nueve moderados derivan de UUID, el bajo de
+esbuild. Se proponen ensayo UUID 11.1.1 y actualizacion puntual tsx con regresion
+efimera, o excepciones temporales explicitas si no son compatibles. No se
+actualizaron paquetes ni se aceptaron riesgos; H24 sigue NO-GO.
+
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
 de validacion entre constancias y PDF adicionales, falta de analisis antimalware,
