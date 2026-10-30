@@ -55,6 +55,15 @@ Validacion iterativa sin agotamiento de pila, conservando limites/canonicalidad;
 web 158/158, typecheck/build OK. Sin BD/nube/deploy. B01 corregido localmente;
 B02/B03 y capacidad end-to-end final pendientes. **H24 mantiene NO-GO**.
 
+Seguimiento posterior autorizado PD07-B02:
+[scanner con recoleccion de procesos y carga local](H24_PD07_B02_Correccion_Procesos_Scanner.md).
+Tini como PID 1, sin paquetes nuevos ni mayor limite de PIDs. Carga real del
+scanner 20/20 archivos, 61/61 analisis, PIDs estables y cero zombis; 6/6 pruebas
+de procesos/servidor. Primer harness fallo por baseline frio; evidencia preservada
+y repeticion completa aprobada. Sin BD/GCS/cloud/deploy; 429 reintentados por el
+harness no equivalen a una cola API. B02 corregido localmente, B03 y repeticion
+end-to-end con artefacto final pendientes. **H24 mantiene NO-GO**.
+
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
 de validacion entre constancias y PDF adicionales, falta de analisis antimalware,

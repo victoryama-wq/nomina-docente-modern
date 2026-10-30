@@ -13,6 +13,10 @@ database contents, bucket objects or credentials into production.
   sharp decoder. Runs non-root with a separate temporary directory per request.
 - `Dockerfile.scanner`: pinned ClamAV base, non-root, official signature updates
   before scans and every six hours of use; the existing signature-age gate remains.
+  Uses the pinned base's `/sbin/tini` as PID 1 to reap orphan BusyBox timeout
+  watchdogs. Do not override the image entrypoint with Node alone: under repeated
+  scans, unreaped zombies exhaust the process limit. No process-limit increase is
+  required by this correction. Application process-group deadlines remain in place.
 - `rehearsal.mjs` / `Dockerfile.rehearsal`: TEST ONLY. Creates loopback PostgreSQL
   and synthetic `nomina_docente_test` inside a job, exercises the real recovery
   worker and removes its database and tracked synthetic GCS objects. Not the
@@ -37,6 +41,39 @@ docker build -f services/document-security/Dockerfile.rehearsal -t h24-cloud-rec
 API `dist` must be freshly built from the reviewed source. Never interpret an old
 image as evidence for a newer lockfile. `smoke-local.mjs` expects disposable named
 containers at loopback ports 5261/5262; it uses synthetic files only.
+
+### Scanner process regression (PD07-B02)
+
+Build the scanner locally, then run the opt-in Linux lifecycle regression with
+an immutable local image ID. This uses `desktop-linux`, no network, no DB and
+no signature volume; it reproduces the old Node-PID-1 leak as a negative control
+and checks 100 successful commands plus deadline exits under tini, at 64 PIDs.
+A separate isolated container verifies the shipped entrypoint's health endpoint
+and clean SIGTERM shutdown without starting a scan.
+
+```powershell
+$env:RUN_H24_SCANNER_LIFECYCLE='true'
+$env:H24_SCANNER_LIFECYCLE_IMAGE=(docker --context desktop-linux image inspect h24-cloud-scanner:pd07-b02-local-20261030 --format '{{.Id}}')
+node --test services/document-security/process-lifecycle.test.mjs
+```
+
+`scanner-load-local.mjs` is a separate, explicit scanner-only rehearsal. It
+requires the disposable container `h24-pd07-b02-scanner`, label
+`purpose=h24-pd07-b02`, port `127.0.0.1:5262`, 64 PIDs and 4 GiB. The actual image
+entrypoint and runner must be used. Use a private disposable COPY of signatures,
+never mount a shared signature volume writable. Freshclam needs its normal
+official update connectivity; do not remove it or weaken the age gate.
+
+```powershell
+$env:RUN_H24_SCANNER_LOAD='true'
+node services/document-security/scanner-load-local.mjs
+```
+
+The bounded workload is two clients, ten synthetic PDFs each, three AV checks
+per PDF plus warmup. Explicit harness 429 retries are NOT an API queue or a
+promise that the end-to-end application batch will succeed. Evidence is written
+under `.cache/pd07-b02-20261030`; remove only the labelled disposable container
+and its private volume after verifying results. This does not deploy anything.
 
 ## Transport contract
 

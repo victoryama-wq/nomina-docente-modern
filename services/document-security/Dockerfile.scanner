@@ -5,4 +5,5 @@ COPY services/document-security/server.mjs services/document-security/freshclam.
 ENV DOCUMENT_CHECK_MODE=scanner
 USER 100:101
 HEALTHCHECK NONE
-ENTRYPOINT ["/usr/bin/node", "/opt/h24/server.mjs"]
+# BusyBox timeout leaves orphan watchdogs; the pinned base already provides tini.
+ENTRYPOINT ["/sbin/tini", "--", "/usr/bin/node", "/opt/h24/server.mjs"]

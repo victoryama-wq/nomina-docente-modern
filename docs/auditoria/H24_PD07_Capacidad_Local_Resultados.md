@@ -9,6 +9,14 @@ Decoder corregido localmente; 84/84 pruebas enfocadas en Windows y Linux.
 Se preserva abajo la evidencia inicial. PD07-B02/B03 y repeticion end-to-end
 con artefacto final siguen pendientes; PD-07/H24 no quedan aprobados.
 
+Seguimiento posterior PD07-B02: [correccion del scanner y carga local](H24_PD07_B02_Correccion_Procesos_Scanner.md).
+Confirmados watchdogs timeout zombis bajo Node PID 1; la imagen usa tini ya
+incluido en su base. Carga scanner-only: 20/20 PDF, 61 analisis, PIDs estables,
+cero zombis, sin elevar limites ni reiniciar. Pruebas de procesos/HTTP 6/6.
+Se conserva el primer resultado fallido por comparar contra proceso frio y la
+repeticion completa aprobada. B02 corregido localmente; B03 y capacidad
+end-to-end final siguen pendientes, H24 NO-GO.
+
 ## 1. Autorizacion y laboratorio
 
 Usuario autorizo Docker local, almacenamiento sintetico y BD efimera, sin alterar
