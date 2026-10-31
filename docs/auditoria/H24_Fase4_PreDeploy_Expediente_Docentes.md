@@ -7,6 +7,20 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
+Preparacion posterior a `d0ae6d3`, 2026-10-31:
+[plan de capacidad end-to-end B01/B02/B03](H24_PD07_Plan_Capacidad_EndToEnd_B01_B02_B03.md).
+Los puntos 1 y 2 fueron autorizados y ejecutados exclusivamente en laboratorio
+local: [resultados integrados](H24_PD07_Capacidad_EndToEnd_B01_B02_B03_Resultados.md).
+Reanudacion: 4 PASS, 1 FAIL, 2 SKIP. B03, recuperacion delete, JPG/PNG y cuerpos
+lentos aprobados; integridad final de 22 tablas preservada y cero huerfanos.
+Lotes sin asistencia: 5/10 con una sesion y 5/20 con dos; 429/503 reproducidos.
+Nuevo **PD07-B04**: coordinacion de concurrencia API/analizadores por resolver,
+sin correccion funcional autorizada. Intentos/harness fallidos documentados;
+proxy y UI real no acreditados. H05 solo efimero: 20 registradas, 0 pendientes,
+0 mismatch. Laboratorio retirado. Auth/GCS/Hosting reales siguen separados;
+no se ha hecho deploy. Constancia/adicionales no comparten idempotencia.
+**Se mantiene NO-GO**; no confundir integridad con capacidad operativa aprobada.
+
 Seguimiento PD07-B03 2026-10-31: [mensaje de limites PDF](H24_PD07_B03_Mensaje_Limites_Analisis_PDF.md)
 implementado en scanner/API/UI local, manteniendo rechazo seguro. No se aumenta
 MaxFiles ni se equipara diagnostico claro con capacidad suficiente. No se ha

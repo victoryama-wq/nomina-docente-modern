@@ -1,0 +1,5 @@
+{
+  "extends": "../../../apps/api/tsconfig.json",
+  "compilerOptions": { "rootDir": "../../..", "noEmit": true },
+  "include": ["flow.test.ts", "../../../apps/api/src/types/**/*.d.ts"]
+}

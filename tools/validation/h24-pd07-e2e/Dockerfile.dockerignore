@@ -1,0 +1,17 @@
+**
+!apps/
+!apps/api/
+!apps/api/src/
+!apps/api/src/**
+!apps/api/tsconfig.json
+!apps/api/vitest.config.ts
+!apps/web/
+!apps/web/src/
+!apps/web/src/**
+!tools/
+!tools/migrate-db.ts
+!tools/validation/
+!tools/validation/h24-pd07-e2e/
+!tools/validation/h24-pd07-e2e/**
+!database/
+!database/*.sql
