@@ -5,11 +5,14 @@ import { cloudDocumentSecuritySettings, createCloudDocumentRunner } from './docu
 export const DOCUMENT_MAX_BYTES = 7.5 * 1024 * 1024;
 export type DocumentMime = 'application/pdf' | 'image/png' | 'image/jpeg';
 export class DocumentSecurityError extends Error {
-  constructor(readonly code: 'DOCUMENT_INVALID' | 'DOCUMENT_REJECTED' | 'DOCUMENT_SECURITY_UNAVAILABLE' | 'DOCUMENT_SECURITY_BUSY') {
+  constructor(readonly code: 'DOCUMENT_INVALID' | 'DOCUMENT_REJECTED' | 'DOCUMENT_SCAN_LIMIT_EXCEEDED' | 'DOCUMENT_SECURITY_UNAVAILABLE' | 'DOCUMENT_SECURITY_BUSY') {
     super(code);
   }
   get statusCode() { return this.code === 'DOCUMENT_SECURITY_BUSY' ? 429 : this.code === 'DOCUMENT_SECURITY_UNAVAILABLE' ? 503 : 422; }
-  get publicMessage() { return this.statusCode === 422 ? 'El documento no es valido o no esta permitido.' : 'La validacion documental no esta disponible. Intenta mas tarde.'; }
+  get publicMessage() {
+    if (this.code === 'DOCUMENT_SCAN_LIMIT_EXCEEDED') return 'El PDF excede los limites de analisis de seguridad. Usa un archivo menos complejo o divide el PDF en documentos mas pequenos. No se pudo completar su validacion.';
+    return this.statusCode === 422 ? 'El documento no es valido o no esta permitido.' : 'La validacion documental no esta disponible. Intenta mas tarde.';
+  }
 }
 const unavailable = () => new DocumentSecurityError('DOCUMENT_SECURITY_UNAVAILABLE');
 export function validateDocumentName(name: string, mime: string): void {
@@ -86,6 +89,12 @@ export function createDocumentValidator(run: DocumentRunner) {
     for (const kind of [parser, 'av'] as DocumentCheck[]) {
       let result: Result;
       try { result = await run(kind, bytes); } catch { throw unavailable(); }
+      if (result.code === 40) {
+        if (kind === 'av' && mime === 'application/pdf' && !result.stderr.trim() && result.stdout.trim() === `H24_SCAN_LIMIT ${hash}`) {
+          throw new DocumentSecurityError('DOCUMENT_SCAN_LIMIT_EXCEEDED');
+        }
+        throw unavailable();
+      }
       if (result.code === 10 && result.stdout.trim() === 'H24_INVALID') throw new DocumentSecurityError('DOCUMENT_INVALID');
       if (result.code === 20 && result.stdout.trim() === 'H24_REJECTED') throw new DocumentSecurityError('DOCUMENT_REJECTED');
       const protocol = kind === 'av' ? 'H24_AV' : `H24_POLICY_V1_${kind.toUpperCase()}`;

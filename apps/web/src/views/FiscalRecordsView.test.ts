@@ -1,7 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchTeachers, fetchTeacherConstanciaBlob, updateTeacherFiscal, uploadTeacherConstancia, type SessionUser } from '../api';
+import { ApiRequestError, fetchTeachers, fetchTeacherConstanciaBlob, updateTeacherFiscal, uploadTeacherConstancia, type SessionUser } from '../api';
+import { DOCUMENT_SCAN_LIMIT_MESSAGE } from '../composables/useDossierOperations';
 import { useAuthStore } from '../stores/auth';
 import { createSessionUser } from '../test/fixtures/session-users';
 import FiscalRecordsView from './FiscalRecordsView.vue';
@@ -60,6 +61,15 @@ describe('H24 constancia preview lifecycle', () => {
     expect(wrapper.find('iframe').exists()).toBe(false);
     wrapper.unmount();
   });
+  it('shows the complexity message without rendering blocked constancia content', async () => {
+    const wrapper = await ready();
+    vi.mocked(fetchTeacherConstanciaBlob).mockRejectedValue(new ApiRequestError(DOCUMENT_SCAN_LIMIT_MESSAGE, 422, 'DOCUMENT_SCAN_LIMIT_EXCEEDED'));
+    await wrapper.findAll('button').find(b => b.text() === 'Vista previa')!.trigger('click'); await flushPromises();
+    expect(wrapper.text()).toContain(DOCUMENT_SCAN_LIMIT_MESSAGE);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(wrapper.find('iframe').exists()).toBe(false);
+    wrapper.unmount();
+  });
 });
 
 function open(role: SessionUser['role']) {
@@ -69,6 +79,19 @@ function open(role: SessionUser['role']) {
 }
 
 describe('H24 fiscal module entry and regression', () => {
+  it('keeps the constancia dialog open and shows the safe complexity message on rejected replacement', async () => {
+    vi.mocked(uploadTeacherConstancia).mockRejectedValue(new ApiRequestError(DOCUMENT_SCAN_LIMIT_MESSAGE, 422, 'DOCUMENT_SCAN_LIMIT_EXCEEDED'));
+    const wrapper = open('admin'); await flushPromises();
+    await wrapper.findAll('button').find(b => b.text() === 'Actualizar constancia')!.trigger('click');
+    const form = wrapper.get('form'); const file = form.get('input[type=file]');
+    Object.defineProperty(file.element, 'files', { value: [new File(['%PDF'], 'blocked.pdf', { type: 'application/pdf' })] });
+    await file.trigger('change'); await form.trigger('submit');
+    await vi.waitFor(() => expect(wrapper.text()).toContain(DOCUMENT_SCAN_LIMIT_MESSAGE));
+    expect(wrapper.find('form').exists()).toBe(true);
+    expect(uploadTeacherConstancia).toHaveBeenCalledTimes(1);
+    expect(updateTeacherFiscal).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
   it('keeps the constancia modal file-only and never calls the fiscal patch', async () => {
     const wrapper = open('admin'); await flushPromises();
     await wrapper.findAll('button').find(b => b.text() === 'Actualizar constancia')!.trigger('click');

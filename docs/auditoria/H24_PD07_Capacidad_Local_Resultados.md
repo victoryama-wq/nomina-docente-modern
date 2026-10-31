@@ -1,5 +1,11 @@
 # H24 PD-07 - Capacidad local, limites y recuperacion
 
+Seguimiento 2026-10-31: [PD07-B03, mensaje por limite de analisis](H24_PD07_B03_Mensaje_Limites_Analisis_PDF.md).
+Constancias y PDF adicionales distinguen localmente un limite estatico confirmado
+con 422 DOCUMENT_SCAN_LIMIT_EXCEEDED. No se elevan limites ni se aceptan archivos
+sin analisis completo. Timeouts/errores ambiguos siguen en 503. La capacidad
+end-to-end final y los demas gates permanecen pendientes; H24 mantiene NO-GO.
+
 Fecha: 2026-10-30, America/Cancun. Base: `ecdf7d6`.
 Rama: `feature/h02-h03-user-coordinations-permissions`, limpia al inicio.
 Resultado: **PD-07 NO aprobado; H24 mantiene NO-GO**.

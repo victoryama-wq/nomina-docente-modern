@@ -13,8 +13,11 @@ export interface DossierTask {
   action?: DossierMutation['action'];
 }
 
+export const DOCUMENT_SCAN_LIMIT_MESSAGE = 'El PDF excede los limites de analisis de seguridad. Usa un archivo menos complejo o divide el PDF en documentos mas pequenos. No se pudo completar su validacion.';
+
 export function dossierError(error: unknown): string {
   if (error instanceof ApiRequestError) {
+    if (error.status === 422 && error.code === 'DOCUMENT_SCAN_LIMIT_EXCEEDED') return DOCUMENT_SCAN_LIMIT_MESSAGE;
     if (error.status === 401 || error.status === 403) return 'El acceso cambió. Vuelve a iniciar sesión o consulta al administrador.';
     if (error.status === 409) return 'El expediente cambió. Recarga y revisa los datos antes de volver a guardar.';
     if (error.status === 429) return 'Hay otras cargas en curso. Espera unos segundos y reintenta.';
@@ -40,7 +43,8 @@ export function useDossierOperations(teacherId: string, settled: (mutation?: Dos
     if (disposed || accessDenied || task.state === 'complete' || task.state === 'failed') return;
     if (result.state === 'COMPLETE' || result.state === 'FAILED') {
       task.state = result.state === 'COMPLETE' ? 'complete' : 'failed';
-      task.message = result.state === 'COMPLETE' ? 'Completado' : 'No se completó. Revisa el expediente antes de iniciar un nuevo intento.';
+      task.message = result.state === 'COMPLETE' ? 'Completado' : result.errorCode === 'DOCUMENT_SCAN_LIMIT_EXCEEDED'
+        ? DOCUMENT_SCAN_LIMIT_MESSAGE : 'No se completó. Revisa el expediente antes de iniciar un nuevo intento.';
       const mutation = task.mutation;
       task.mutation = undefined;
       if (result.state === 'COMPLETE' || task.action !== 'upload') {

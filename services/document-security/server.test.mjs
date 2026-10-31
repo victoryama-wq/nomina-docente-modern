@@ -51,3 +51,16 @@ test('bounded concurrency, failure sanitized and capacity restored', async () =>
     assert.equal(result.status, 503); assert.equal((await result.text()).includes('private'), false);
   });
 });
+
+test('scanner transports a bounded limit verdict without logging document identity', async () => {
+  const verdict = { code: 40, stdout: `H24_SCAN_LIMIT ${'a'.repeat(64)}`, stderr: '' };
+  await harness(async kind => { assert.equal(kind, 'av'); return verdict; }, async (url, logs) => {
+    const h = headers();
+    const response = await fetch(url + '/v1/check/av', { method: 'POST', headers: h, body: 'synthetic' });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { requestId: h['x-h24-request-id'], ...verdict });
+    assert.equal(logs[0].code, 40);
+    assert.equal(JSON.stringify(logs).includes(verdict.stdout), false);
+    assert.equal(JSON.stringify(logs).includes(h['x-h24-request-id']), false);
+  }, 'scanner');
+});

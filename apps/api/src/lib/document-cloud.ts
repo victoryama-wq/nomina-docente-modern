@@ -54,7 +54,7 @@ export function createCloudDocumentRunner(settings: CloudSettings,
     });
     if (response.status !== 200 || !response.headers.get('content-type')?.startsWith('application/json')) throw fail();
     const result = JSON.parse(await boundedText(response, 1024));
-    if (result.requestId !== requestId || ![0, 10, 20, 30].includes(result.code) ||
+    if (result.requestId !== requestId || ![0, 10, 20, 30, 40].includes(result.code) ||
         typeof result.stdout !== 'string' || result.stdout.length > 160 || result.stderr !== '') throw fail();
     return { code: result.code, stdout: result.stdout, stderr: '' };
   };

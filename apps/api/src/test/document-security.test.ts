@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import { createDocumentValidator, localDocumentSecuritySettings, validateDocumentEnvelope, validateDocumentName } from '../lib/document-security.js';
+import { DocumentSecurityError, createDocumentValidator, localDocumentSecuritySettings, validateDocumentEnvelope, validateDocumentName } from '../lib/document-security.js';
 
 const pdf = Buffer.from('%PDF-1.7\nsynthetic\n%%EOF\n');
 const digest = createHash('sha256').update(pdf).digest('hex');
@@ -9,6 +9,28 @@ const env = { NODE_ENV: 'test', DB_NAME: 'nomina_docente_test', DB_HOST: '127.0.
   DOCUMENT_SECURITY_PARSER_IMAGE: `sha256:${'a'.repeat(64)}`, DOCUMENT_SECURITY_SCANNER_IMAGE: `sha256:${'b'.repeat(64)}`,
   DOCUMENT_SECURITY_SIGNATURE_VOLUME: 'h24-pd03-signatures-test' };
 describe('H24 document security contract without external services', () => {
+  it('reports a hash-bound scanner limit for PDF without claiming malware or success', async () => {
+    const run = vi.fn().mockResolvedValueOnce({ code: 0, stdout: `H24_POLICY_V1_PDF_OK ${digest}`, stderr: '' })
+      .mockResolvedValueOnce({ code: 40, stdout: `H24_SCAN_LIMIT ${digest}`, stderr: '' });
+    await expect(createDocumentValidator(run)(pdf, 'application/pdf')).rejects.toMatchObject({ code: 'DOCUMENT_SCAN_LIMIT_EXCEEDED', statusCode: 422 });
+    expect(new DocumentSecurityError('DOCUMENT_SCAN_LIMIT_EXCEEDED').publicMessage).toContain('limites de analisis');
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+  it.each(['hash', 'stderr', 'parser', 'malformed', 'old-protocol', 'timeout'])('keeps %s unavailable instead of inventing a complexity verdict', async mode => {
+    const result = { code: mode === 'timeout' ? 30 : mode === 'old-protocol' ? 0 : 40,
+      stdout: mode === 'timeout' ? 'H24_UNAVAILABLE' : mode === 'malformed' ? 'H24_SCAN_LIMIT' : `H24_SCAN_LIMIT ${mode === 'hash' ? '0'.repeat(64) : digest}`,
+      stderr: mode === 'stderr' ? 'private diagnostic' : '' };
+    const run = mode === 'parser' ? vi.fn().mockResolvedValue(result)
+      : vi.fn().mockResolvedValueOnce({ code: 0, stdout: `H24_POLICY_V1_PDF_OK ${digest}`, stderr: '' }).mockResolvedValueOnce(result);
+    await expect(createDocumentValidator(run)(pdf, 'application/pdf')).rejects.toMatchObject({ code: 'DOCUMENT_SECURITY_UNAVAILABLE', statusCode: 503 });
+  });
+  it.each(['png', 'jpeg'] as const)('does not report a PDF-specific limit for %s', async kind => {
+    const bytes = kind === 'png' ? Buffer.from([137,80,78,71,13,10,26,10]) : Buffer.from([255,216,255,0,255,217]);
+    const hash = createHash('sha256').update(bytes).digest('hex');
+    const run = vi.fn().mockResolvedValueOnce({ code: 0, stdout: `H24_POLICY_V1_${kind.toUpperCase()}_OK ${hash}`, stderr: '' })
+      .mockResolvedValueOnce({ code: 40, stdout: `H24_SCAN_LIMIT ${hash}`, stderr: '' });
+    await expect(createDocumentValidator(run)(bytes, `image/${kind}`)).rejects.toMatchObject({ code: 'DOCUMENT_SECURITY_UNAVAILABLE' });
+  });
   it('requires both isolated checks on identical content', async () => {
     const run = vi.fn(async (kind: string) => ({ code: 0, stdout: `${kind === 'av' ? 'H24_AV' : 'H24_POLICY_V1_PDF'}_OK ${digest}\n`, stderr: '' }));
     await createDocumentValidator(run)(pdf, 'application/pdf');

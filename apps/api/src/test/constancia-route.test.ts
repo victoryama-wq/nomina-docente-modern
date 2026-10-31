@@ -76,12 +76,13 @@ describe('constancia replacement API guards and response', () => {
     expect(response.headers['content-security-policy']).toBe("sandbox; default-src 'none'");
     expect(response.headers['content-disposition']).toContain("filename*=UTF-8''Constancia%20%C3%81.pdf");
   });
-  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SECURITY_UNAVAILABLE'] as const)('does not deliver historical content on %s', async code => {
+  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SCAN_LIMIT_EXCEEDED', 'DOCUMENT_SECURITY_UNAVAILABLE'] as const)('does not deliver historical content on %s', async code => {
     mocks.query.mockResolvedValue([{ id: 'file', mimeType: 'application/pdf' }]);
     mocks.download.mockResolvedValue([Buffer.from('synthetic blocked')]);
     mocks.validate.mockRejectedValue(new DocumentSecurityError(code));
     const response = await app.inject({ method: 'GET', url: url.replace('/constancia', '/current') });
-    expect(response.statusCode).toBe(code === 'DOCUMENT_REJECTED' ? 422 : 503);
+    expect(response.statusCode).toBe(code === 'DOCUMENT_SECURITY_UNAVAILABLE' ? 503 : 422);
+    if (code === 'DOCUMENT_SCAN_LIMIT_EXCEEDED') expect(response.json().message).toContain('limites de analisis');
     expect(response.body).not.toContain('synthetic blocked');
     expect(mocks.query).toHaveBeenCalledTimes(1);
   });
@@ -92,7 +93,7 @@ describe('constancia replacement API guards and response', () => {
     expect(response.statusCode).toBe(409);
     expect(response.body).not.toContain('synthetic retired');
   });
-  it.each([['DOCUMENT_REJECTED', 422], ['DOCUMENT_SECURITY_UNAVAILABLE', 503], ['DOCUMENT_SECURITY_BUSY', 429]] as const)(
+  it.each([['DOCUMENT_REJECTED', 422], ['DOCUMENT_SCAN_LIMIT_EXCEEDED', 422], ['DOCUMENT_SECURITY_UNAVAILABLE', 503], ['DOCUMENT_SECURITY_BUSY', 429]] as const)(
     'returns a safe %s verdict', async (code, status) => {
       mocks.replace.mockRejectedValue(new DocumentSecurityError(code));
       const response = await app.inject({ method: 'POST', url, payload });

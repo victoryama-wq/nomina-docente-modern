@@ -147,6 +147,23 @@ identity/access tokens or commit temporary Docker login configuration.
 
 ## Limits and release gates
 
+PD07-B03 local protocol: an unambiguous completed static-limit verdict
+(MaxFiles, MaxScanSize, MaxFileSize or MaxRecursion) returns exit 40 and
+`H24_SCAN_LIMIT <sha256>`. The API binds the hash to the PDF and returns
+422 `DOCUMENT_SCAN_LIMIT_EXCEEDED`; uploads/replacements remain blocked and
+reads do not return document bytes. MaxScanTime, errors, mixed or unknown
+diagnostics remain unavailable (30/503). Non-PDF code 40 remains unavailable.
+MaxFiles stays 100; no capacity, freshness, encryption or timeout guard changes.
+
+`scanner-limit-protocol.test.mjs` is an opt-in Docker classifier test with
+synthetic clamscan output. Set `RUN_H24_LIMIT_PROTOCOL=true` and immutable
+`H24_LIMIT_PROTOCOL_IMAGE` to the locally built scanner. Only this synthetic
+stub test needs an executable tmpfs; real scans retain noexec and network none.
+The API opt-in test `document-scan-limit.docker.test.ts` uses real inspector/AV
+containers with mocked persistence/auth. See
+`docs/auditoria/H24_PD07_B03_Mensaje_Limites_Analisis_PDF.md` for commands,
+evidence boundaries and release limitations. Neither test is cloud acceptance.
+
 Private IAM is not an egress firewall. Cloud containers are not claimed equivalent
 to local `--network none` or read-only-root isolation. Review egress, parser attack
 surface, signature freshness monitoring, capacity and native PDF viewer residual

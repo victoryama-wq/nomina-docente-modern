@@ -1,5 +1,10 @@
 # H24 PD07-B03 - Revision de MaxFiles en PDF de muchas paginas
 
+Seguimiento posterior 2026-10-31: [mensaje especifico implementado y validacion local](H24_PD07_B03_Mensaje_Limites_Analisis_PDF.md).
+El nuevo contrato distingue limites estaticos confirmados; MaxFiles permanece
+en 100. La evidencia de este diagnostico previo se conserva a continuacion.
+No constituye aceptacion universal de 500 paginas ni cierre productivo de PD-07.
+
 Fecha: 2026-10-31, America/Cancun. Base: `ac1df1a`.
 Rama: `feature/h02-h03-user-coordinations-permissions`, limpia al inicio.
 Alcance autorizado: diagnostico, propuesta y validacion Docker local.

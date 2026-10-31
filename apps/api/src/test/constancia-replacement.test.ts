@@ -37,7 +37,7 @@ function fixture() {
 }
 
 describe('constancia replacement without losing the current document', () => {
-  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SECURITY_UNAVAILABLE'])('preserves all records and current bytes on %s', async code => {
+  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SCAN_LIMIT_EXCEEDED', 'DOCUMENT_SECURITY_UNAVAILABLE'])('preserves all records and current bytes on %s', async code => {
     const f = fixture(); f.options.validateContent.mockRejectedValue(new Error(code));
     await expect(replaceConstancia(f.options)).rejects.toThrow(code);
     expect(f.rows()).toHaveLength(2);

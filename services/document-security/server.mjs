@@ -38,6 +38,7 @@ export function createProcessRunner(mode) {
         ? await command('/bin/sh', ['/opt/h24/scan-stdin.sh'], { input: bytes, timeout: 120_000, env })
         : await command('/usr/local/bin/node', ['/opt/h24/inspect-stdin.mjs', kind], { input: bytes, timeout: 35_000, env });
       const allowed = /^(?:H24_(?:INVALID|REJECTED|UNAVAILABLE)|H24_(?:AV|POLICY_V1_(?:PDF|PNG|JPEG))_OK [a-f0-9]{64})$/;
+      if (result.code === 40) return mode === 'scanner' && !result.stderr && /^H24_SCAN_LIMIT [a-f0-9]{64}$/.test(result.stdout) ? result : unavailable;
       return [0, 10, 20, 30].includes(result.code) && !result.stderr && allowed.test(result.stdout) ? result : unavailable;
     } catch { return unavailable; }
     finally { if (directory) await rm(directory, { recursive: true, force: true }); }

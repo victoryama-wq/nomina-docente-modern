@@ -7,6 +7,12 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
+Seguimiento PD07-B03 2026-10-31: [mensaje de limites PDF](H24_PD07_B03_Mensaje_Limites_Analisis_PDF.md)
+implementado en scanner/API/UI local, manteniendo rechazo seguro. No se aumenta
+MaxFiles ni se equipara diagnostico claro con capacidad suficiente. No se ha
+desplegado; siguen pendientes capacidad final, recorrido cloud/Hosting y los
+restantes gates documentados. Se conserva NO-GO.
+
 Seguimiento 2026-10-29, posterior a la evidencia siguiente:
 [cloud aislado PD-03/PD-04](H24_PD03_PD04_Arquitectura_Cloud_Aislada.md).
 Servicios privados y job efimero autorizados y probados con datos sinteticos;

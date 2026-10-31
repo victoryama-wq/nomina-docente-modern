@@ -14,6 +14,15 @@ describe('H24 private Cloud Run transport', () => {
     expect(cloudDocumentSecuritySettings(env)).toEqual({ parser, scanner });
     expect(cloudDocumentSecuritySettings({ ...env, K_SERVICE: '', CLOUD_RUN_JOB: 'worker' })).toEqual({ parser, scanner });
   });
+  it('transports code 40 without losing request binding and the PDF-specific error', async () => {
+    const http = vi.fn(async (url: unknown, options?: RequestInit) => Response.json({
+      requestId: (options!.headers as Record<string, string>)['X-H24-Request-Id'],
+      code: String(url).endsWith('/av') ? 40 : 0,
+      stdout: String(url).endsWith('/av') ? `H24_SCAN_LIMIT ${hash}` : `H24_POLICY_V1_PDF_OK ${hash}`, stderr: ''
+    }));
+    await expect(createDocumentValidator(createCloudDocumentRunner({ parser, scanner }, async () => 'test', http))(bytes, 'application/pdf'))
+      .rejects.toMatchObject({ code: 'DOCUMENT_SCAN_LIMIT_EXCEEDED', statusCode: 422 });
+  });
   it.each(['http://localhost', 'https://example.com', parser + '/x', parser + '?secret=x',
     parser + ':443', 'https://user@h24.run.app', 'https://h24.run.app.evil.test'])('rejects endpoint %s', url => {
     expect(() => cloudDocumentSecuritySettings({ ...env, DOCUMENT_SECURITY_PARSER_URL: url })).toThrow();

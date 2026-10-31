@@ -1379,7 +1379,7 @@ export async function fetchTeacherConstanciaBlob(teacherId: string): Promise<{
     } catch {
       body = {};
     }
-    throw new Error(body.message || 'No fue posible obtener la constancia.');
+    throw new ApiRequestError(body.message || 'No fue posible obtener la constancia.', response.status, body.code || body.error || 'ERROR');
   }
 
   const disposition = response.headers.get('Content-Disposition') || '';

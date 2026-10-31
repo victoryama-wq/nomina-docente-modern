@@ -18,12 +18,30 @@ timeout -s KILL 115 clamscan --database=/var/lib/clamav --official-db-only=yes \
   --max-scantime=10000 --tempdir="$root" "$root/input" > "$root/result" 2>&1
 rc=$?
 set -e
+# Only an unambiguous, completed static-limit verdict gets the specific protocol.
+# Timeouts/MaxScanTime, mixed detections and scanner errors remain unavailable.
+static_limit=false
+if [ "$rc" -eq 1 ] && grep -q '^Scanned files: 1$' "$root/result" &&
+   grep -q '^Infected files: 1$' "$root/result"; then
+  for limit in MaxFiles MaxScanSize MaxFileSize MaxRecursion; do
+    verdict="$root/input: Heuristics.Limits.Exceeded.$limit FOUND"
+    if [ "$(grep -Fxc "$verdict" "$root/result")" -eq 1 ] &&
+       ! grep -Fxv "$verdict" "$root/result" | grep -Ei 'warning|error|limit|skip|time.*exceed|timed out|FOUND|: OK$' > /dev/null; then
+      static_limit=true
+      break
+    fi
+  done
+fi
 # Exit 0 alone is insufficient: reject diagnostics/skips and require one completed scan.
 if [ "$rc" -eq 0 ] && grep -q "^$root/input: OK$" "$root/result" &&
    grep -q '^Scanned files: 1$' "$root/result" && grep -q '^Infected files: 0$' "$root/result" &&
    ! grep -Ei 'warning|error|limit|skip|time.*exceed|timed out|FOUND' "$root/result" > /dev/null; then
   hash=$(sha256sum "$root/input" | awk '{print $1}')
   echo "H24_AV_OK $hash"
+elif [ "$static_limit" = true ]; then
+  hash=$(sha256sum "$root/input" | awk '{print $1}')
+  echo "H24_SCAN_LIMIT $hash"
+  exit 40
 elif [ "$rc" -eq 1 ] && grep -q ' FOUND$' "$root/result" &&
      ! grep -Ei 'error|limit|skip|time.*exceed|timed out' "$root/result" > /dev/null; then
   echo H24_REJECTED

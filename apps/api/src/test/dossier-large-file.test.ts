@@ -65,11 +65,12 @@ describe('PD07-B01 additional document upload and replacement encoding', () => {
     expect(db.transaction).not.toHaveBeenCalled();
   });
 
-  it.each(paths.flatMap(path => ['DOCUMENT_REJECTED', 'DOCUMENT_SECURITY_UNAVAILABLE'].map(code => ({ ...path, code }))))(
+  it.each(paths.flatMap(path => ['DOCUMENT_REJECTED', 'DOCUMENT_SCAN_LIMIT_EXCEEDED', 'DOCUMENT_SECURITY_UNAVAILABLE'].map(code => ({ ...path, code }))))(
     '$method does not bypass $code for a valid large encoding', async ({ method, url, extra, code }) => {
-      validate.mockRejectedValue(new DocumentSecurityError(code as 'DOCUMENT_REJECTED' | 'DOCUMENT_SECURITY_UNAVAILABLE'));
+      validate.mockRejectedValue(new DocumentSecurityError(code as 'DOCUMENT_REJECTED' | 'DOCUMENT_SCAN_LIMIT_EXCEEDED' | 'DOCUMENT_SECURITY_UNAVAILABLE'));
       const response = await app.inject({ method, url, payload: payload(extra, Buffer.alloc(7.5 * 1024 * 1024).toString('base64')) });
-      expect(response.statusCode).toBe(code === 'DOCUMENT_REJECTED' ? 422 : 503);
+      expect(response.statusCode).toBe(code === 'DOCUMENT_SECURITY_UNAVAILABLE' ? 503 : 422);
+      if (code === 'DOCUMENT_SCAN_LIMIT_EXCEEDED') expect(response.json().message).toContain('limites de analisis');
       expect(response.json().error).toBe(code);
       expect(validate).toHaveBeenCalledOnce();
       expect(db.transaction).not.toHaveBeenCalled();

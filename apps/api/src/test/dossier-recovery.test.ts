@@ -56,15 +56,15 @@ beforeEach(() => {
 });
 
 describe('H24 dossier worker connection recovery without a database', () => {
-  it('revalidates recovered bytes and removes only the rejected replacement', async () => {
+  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SCAN_LIMIT_EXCEEDED'] as const)('revalidates recovered bytes and removes only the rejected replacement on %s', async code => {
     const { service, storage, validator } = fixture();
     const bytes = Buffer.from('synthetic candidate');
     const op = { ...operation(), action: 'REPLACE', old_key: 'previous', old_generation: '1',
       new_generation: '2', payload: { contentHash: createHash('sha256').update(bytes).digest('hex') } };
-    const aborted = { ...op, state: 'ABORTING', error_code: 'DOCUMENT_REJECTED' };
+    const aborted = { ...op, state: 'ABORTING', error_code: code };
     storage.stat.mockResolvedValueOnce({ key: op.new_key, generation: '2' }).mockResolvedValue(null);
     storage.read.mockResolvedValue(bytes);
-    validator.mockRejectedValue(new DocumentSecurityError('DOCUMENT_REJECTED'));
+    validator.mockRejectedValue(new DocumentSecurityError(code));
     let reads = 0;
     db.clientQuery.mockImplementation(async (sql: string) => {
       if (sql.includes('pg_try_advisory_lock')) return { rows: [{ locked: true }] };
@@ -72,7 +72,7 @@ describe('H24 dossier worker connection recovery without a database', () => {
       return { rows: [], rowCount: 1 };
     });
     db.query.mockResolvedValue([{ ...aborted, state: 'FAILED' }]);
-    await expect(service.process(operationId)).resolves.toMatchObject({ state: 'FAILED', errorCode: 'DOCUMENT_REJECTED' });
+    await expect(service.process(operationId)).resolves.toMatchObject({ state: 'FAILED', errorCode: code });
     expect(validator).toHaveBeenCalledExactlyOnceWith(bytes);
     expect(storage.remove).toHaveBeenCalledExactlyOnceWith({ key: op.new_key, generation: '2' });
     expect(db.clientQuery).toHaveBeenCalledWith(expect.stringContaining("state='AVAILABLE' WHERE id=$1 AND state='REPLACING'"), [op.document_id]);
@@ -96,7 +96,7 @@ describe('H24 dossier worker connection recovery without a database', () => {
     expect(storage.put).not.toHaveBeenCalled();
   });
 
-  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SECURITY_UNAVAILABLE'] as const)('never serves existing bytes on %s and does not delete the object', async code => {
+  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SCAN_LIMIT_EXCEEDED', 'DOCUMENT_SECURITY_UNAVAILABLE'] as const)('never serves existing bytes on %s and does not delete the object', async code => {
     const { service, storage, validator } = fixture();
     db.query.mockResolvedValue([{ storage_namespace: namespace, storage_key: 'old', storage_generation: '1' }]);
     storage.read.mockResolvedValue(Buffer.from('legacy synthetic'));

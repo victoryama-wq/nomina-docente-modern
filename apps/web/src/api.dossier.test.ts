@@ -9,6 +9,13 @@ beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('H24 authenticated API contracts', () => {
+  it.each(['constancia', 'dossier'] as const)('preserves the complexity error and never consumes PDF bytes for %s', async kind => {
+    const blob = vi.fn();
+    fetchMock.mockResolvedValue({ ok: false, status: 422, json: async () => ({ error: 'DOCUMENT_SCAN_LIMIT_EXCEEDED', message: 'Limite de analisis.' }), blob });
+    await expect(kind === 'constancia' ? fetchTeacherConstanciaBlob('teacher') : fetchDossierDocumentBlob('teacher', 'doc'))
+      .rejects.toMatchObject({ status: 422, code: 'DOCUMENT_SCAN_LIMIT_EXCEEDED', message: 'Limite de analisis.' });
+    expect(blob).not.toHaveBeenCalled();
+  });
   it('checks constancia bytes/MIME and prevents caching', async () => {
     fetchMock.mockResolvedValue({ ok: true, headers: new Headers({ 'Content-Type': 'application/pdf' }), blob: async () => new NodeBlob(['%PDF-1.7 synthetic']) });
     expect((await fetchTeacherConstanciaBlob('teacher')).mimeType).toBe('application/pdf');

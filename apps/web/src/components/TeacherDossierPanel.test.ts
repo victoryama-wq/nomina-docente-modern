@@ -2,6 +2,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiRequestError, fetchDossierDocumentBlob, fetchDossierOperation, fetchTeacherDossier, mutateTeacherDossier, updateTeacherFiscal, type Teacher, type TeacherDossier } from '../api';
 import TeacherDossierPanel from './TeacherDossierPanel.vue';
+import { DOCUMENT_SCAN_LIMIT_MESSAGE } from '../composables/useDossierOperations';
 
 vi.mock('../api', async importOriginal => ({
   ...await importOriginal<typeof import('../api')>(),
@@ -199,6 +200,30 @@ describe('H24 dossier panel', () => {
     expect(wrapper.text()).toContain('No se completó');
     expect(wrapper.text()).not.toContain('Completado');
     expect(wrapper.text()).not.toContain('STORAGE_FAILURE');
+  });
+  it.each(['upload', 'replace', 'recovered'] as const)('shows the safe complexity message for %s without retrying automatically', async mode => {
+    if (mode === 'recovered') vi.mocked(mutateTeacherDossier).mockResolvedValue({ ...complete, state: 'FAILED', errorCode: 'DOCUMENT_SCAN_LIMIT_EXCEEDED' });
+    else vi.mocked(mutateTeacherDossier).mockRejectedValue(new ApiRequestError('private diagnostic must not render', 422, 'DOCUMENT_SCAN_LIMIT_EXCEEDED'));
+    await open();
+    if (mode === 'replace') {
+      await wrapper.get('[aria-label="Reemplazar Identidad"]').trigger('click');
+      await select([pdf()], '[aria-label="PDF de reemplazo"]');
+    } else {
+      await select([pdf()]); await button('Cargar archivos válidos').trigger('click');
+    }
+    await flushPromises();
+    expect(wrapper.text()).toContain(DOCUMENT_SCAN_LIMIT_MESSAGE);
+    expect(wrapper.text()).not.toContain('private diagnostic');
+    expect(wrapper.text()).not.toContain('Completado');
+    expect(mutateTeacherDossier).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).not.toContain('Reintentar misma operación');
+  });
+  it('does not create a preview URL for a complexity-blocked existing PDF', async () => {
+    vi.mocked(fetchDossierDocumentBlob).mockRejectedValue(new ApiRequestError('internal', 422, 'DOCUMENT_SCAN_LIMIT_EXCEEDED'));
+    await open(); await wrapper.get('[aria-label="Ver Identidad"]').trigger('click'); await flushPromises();
+    expect(wrapper.get('[role=alert]').text()).toContain(DOCUMENT_SCAN_LIMIT_MESSAGE);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(wrapper.find('iframe').exists()).toBe(false);
   });
   it('starts a new id only for a terminal failed upload, leaving successful files alone', async () => {
     vi.mocked(mutateTeacherDossier).mockResolvedValueOnce(complete).mockResolvedValueOnce({ ...complete, state: 'FAILED' }).mockResolvedValue(complete);
