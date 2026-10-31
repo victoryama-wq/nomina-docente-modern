@@ -17,6 +17,13 @@ Se conserva el primer resultado fallido por comparar contra proceso frio y la
 repeticion completa aprobada. B02 corregido localmente; B03 y capacidad
 end-to-end final siguen pendientes, H24 NO-GO.
 
+Revision posterior 2026-10-31: [PD07-B03 MaxFiles y complejidad PDF](H24_PD07_B03_Revision_MaxFiles_ClamAV.md).
+Se reproduce MaxFiles=100 y se comparan candidatos acotados solo en Docker local.
+Las paginas no equivalen a extracciones; tambien se observa MaxScanTime con
+contenido mas complejo. La propuesta no modifica el wrapper operativo ni
+garantiza aceptar todo PDF de 500 paginas. H24 mantiene NO-GO; ver resultados y
+pendientes exactos en el documento enlazado, sin alterar la evidencia inicial.
+
 ## 1. Autorizacion y laboratorio
 
 Usuario autorizo Docker local, almacenamiento sintetico y BD efimera, sin alterar

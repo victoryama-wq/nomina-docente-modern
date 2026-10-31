@@ -75,6 +75,34 @@ promise that the end-to-end application batch will succeed. Evidence is written
 under `.cache/pd07-b02-20261030`; remove only the labelled disposable container
 and its private volume after verifying results. This does not deploy anything.
 
+### MaxFiles policy experiment (PD07-B03)
+
+`scanner-maxfiles-local.mjs` is an opt-in, synthetic, Docker-only comparison of
+MaxFiles 100/1000/2000. It does not edit the runtime wrapper or deploy an image.
+Use immutable existing local scanner (with tini) and inspector image IDs:
+
+```powershell
+$env:RUN_H24_MAXFILES_LAB='true'
+$env:H24_MAXFILES_IMAGE=(docker --context desktop-linux image inspect h24-cloud-scanner:pd07-b02-local-20261030 --format '{{.Id}}')
+$env:H24_MAXFILES_INSPECTOR_IMAGE=(docker --context desktop-linux image inspect h24-cloud-inspector:20261029 --format '{{.Id}}')
+node services/document-security/scanner-maxfiles-local.mjs
+```
+
+Requires the existing local `h24-pd03-signatures-20261028` volume. It creates a
+private copy, refreshes only that copy using official freshclam connectivity,
+then runs all parser/AV checks without networking. No credentials, DB or
+institutional files are used. EICAR is generated only in container tmpfs.
+The copy bootstrap alone uses CHOWN/DAC_OVERRIDE; analyses run non-root with all
+capabilities dropped. Containers/volume are removed with identity/label guards.
+
+Evidence is written under a unique `.cache/pd07-b03/<uuid>` directory. Successful
+safety assertions do NOT mean every 500-page PDF was accepted: the report records
+clean and bounded/unavailable outcomes separately. More extracted streams may
+hit MaxScanTime even after increasing MaxFiles. Never remove scan/time/size
+limits to make a fixture pass. See
+`docs/auditoria/H24_PD07_B03_Revision_MaxFiles_ClamAV.md` for the proposal,
+failed exploratory runs and remaining implementation/release decisions.
+
 ## Transport contract
 
 Private `GET /health`; private `POST /v1/check/pdf|png|jpeg` for inspector and

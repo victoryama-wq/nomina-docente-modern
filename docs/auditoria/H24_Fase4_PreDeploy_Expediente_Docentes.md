@@ -64,6 +64,17 @@ y repeticion completa aprobada. Sin BD/GCS/cloud/deploy; 429 reintentados por el
 harness no equivalen a una cola API. B02 corregido localmente, B03 y repeticion
 end-to-end con artefacto final pendientes. **H24 mantiene NO-GO**.
 
+Revision posterior 2026-10-31, PD07-B03:
+[MaxFiles, paginas y complejidad PDF](H24_PD07_B03_Revision_MaxFiles_ClamAV.md).
+Diagnostico/propuesta probados exclusivamente con corpus sintetico en Docker;
+MaxFiles=100 se reproduce y el aumento acotado no evita todos los limites de
+tiempo. Wrapper operativo sin cambios, sin BD/cloud/deploy. No es cierre de
+capacidad end-to-end ni aprobacion de todo PDF de 500 paginas. La aplicacion de
+la propuesta y sus contratos operativos permanece separada. Matriz final:
+12 comprobaciones de seguridad satisfactorias, no 12 cargas aceptadas; algunas
+muestras siguen bloqueadas con 1000/2000. EICAR rechazado, cero OOM/zombis,
+laboratorio retirado. No aprobar el aumento aislado como solucion. **H24 NO-GO**.
+
 Seguimiento PD-03 (2026-10-28): [revision de seguridad PDF y vista previa](H24_PD03_Revision_Seguridad_PDF_Vista_Previa.md)
 completada en codigo, sin ensayos nuevos ni cambios tecnicos. Identifica diferencia
 de validacion entre constancias y PDF adicionales, falta de analisis antimalware,
