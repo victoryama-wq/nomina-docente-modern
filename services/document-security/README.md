@@ -107,7 +107,13 @@ failed exploratory runs and remaining implementation/release decisions.
 
 Private `GET /health`; private `POST /v1/check/pdf|png|jpeg` for inspector and
 `POST /v1/check/av` for scanner. Binary octet-stream, request UUID, no compression,
-7.5 MiB maximum, one active request per instance. No filenames, tokens or document
+7.5 MiB maximum per body, at most two admitted bodies per instance, one running
+analysis and one complete body waiting at most 20 seconds. A third request or an
+expired wait returns 429 with `{requestId, error: 'BUSY'}` and `Retry-After: 2`.
+Disconnected waiters are removed without analysis. No durable queue or automatic
+retry. `document_admission` logs queue/grant/cancel/expiry/rejection timing without
+identities. API only propagates BUSY when the response binds the request UUID;
+invalid responses remain unavailable. No filenames, tokens or document
 contents in normal service logs. Synthetic job object manifests are test-only.
 
 API configuration is explicit: `DOCUMENT_SECURITY_MODE=cloud-run`,
@@ -120,6 +126,12 @@ documents. Hash, policy verdict, AV verdict and correlation are all verified.
 Inspector client timeout 40 s; scanner 230 s (signature refresh up to 100 s, scan
 up to 120 s). Response <=1024 bytes. Server body timeout 15 s; child deadlines and
 process-group termination bound execution. Cloud service timeout 45/240 s.
+
+PD07-B04 is local only; the isolated cloud configuration below was NOT changed.
+See `tools/validation/h24-pd07-b04/README.md` for the bounded Docker probe. It is
+not API/DB capacity acceptance. Cloud Run scheduling with concurrency 1 differs
+from the local HTTP wrapper and needs a separate authorized validation. Existing
+deadlines plus waiting do not guarantee completion within Hosting's budget.
 
 ## Isolated cloud resources and cost controls
 

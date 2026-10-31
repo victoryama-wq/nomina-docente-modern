@@ -49,6 +49,26 @@ describe('H24 private Cloud Run transport', () => {
     const http = vi.fn(async () => new Response('', { status }));
     await expect(createCloudDocumentRunner({ parser, scanner }, async () => 'token', http)('pdf', bytes)).rejects.toThrow();
   });
+  it.each(['pdf', 'av'] as const)('preserves bound %s BUSY as 429, without retry or a success verdict', async kind => {
+    const http = vi.fn(async (url: unknown, options?: RequestInit) => {
+      const requestId = (options!.headers as Record<string, string>)['X-H24-Request-Id'];
+      if (String(url).endsWith(`/${kind}`)) return Response.json({ requestId, error: 'BUSY' }, { status: 429 });
+      return Response.json({ requestId, code: 0, stdout: `H24_POLICY_V1_PDF_OK ${hash}`, stderr: '' });
+    });
+    await expect(createDocumentValidator(createCloudDocumentRunner({ parser, scanner }, async () => 'test', http))(bytes, 'application/pdf'))
+      .rejects.toMatchObject({ code: 'DOCUMENT_SECURITY_BUSY', statusCode: 429 });
+    expect(http).toHaveBeenCalledTimes(kind === 'pdf' ? 1 : 2);
+  });
+  it.each(['wrong-id', 'wrong-error', 'huge', 'invalid-json'])('does not trust malformed BUSY: %s', async mode => {
+    const http = vi.fn(async (_: unknown, options?: RequestInit) => {
+      const requestId = (options!.headers as Record<string, string>)['X-H24-Request-Id'];
+      if (mode === 'huge' || mode === 'invalid-json') return new Response(mode === 'huge' ? 'x'.repeat(1025) : '{', { status: 429, headers: { 'content-type': 'application/json' } });
+      return Response.json({ requestId: mode === 'wrong-id' ? 'other' : requestId, error: mode === 'wrong-error' ? 'OTHER' : 'BUSY' }, { status: 429 });
+    });
+    await expect(createDocumentValidator(createCloudDocumentRunner({ parser, scanner }, async () => 'test', http))(bytes, 'application/pdf'))
+      .rejects.toMatchObject({ code: 'DOCUMENT_SECURITY_UNAVAILABLE', statusCode: 503 });
+    expect(http).toHaveBeenCalledTimes(1);
+  });
   it.each(['id', 'size', 'type', 'diagnostic', 'malformed'])('rejects bad response %s', async mode => {
     const http = vi.fn(async (_: unknown, options?: RequestInit) => {
       const id = (options!.headers as Record<string, string>)['X-H24-Request-Id'];

@@ -14,12 +14,20 @@ local: [resultados integrados](H24_PD07_Capacidad_EndToEnd_B01_B02_B03_Resultado
 Reanudacion: 4 PASS, 1 FAIL, 2 SKIP. B03, recuperacion delete, JPG/PNG y cuerpos
 lentos aprobados; integridad final de 22 tablas preservada y cero huerfanos.
 Lotes sin asistencia: 5/10 con una sesion y 5/20 con dos; 429/503 reproducidos.
-Nuevo **PD07-B04**: coordinacion de concurrencia API/analizadores por resolver,
-sin correccion funcional autorizada. Intentos/harness fallidos documentados;
+En ese ensayo se abrio **PD07-B04**: coordinacion de concurrencia API/analizadores,
+entonces sin correccion funcional autorizada. Intentos/harness fallidos documentados;
 proxy y UI real no acreditados. H05 solo efimero: 20 registradas, 0 pendientes,
 0 mismatch. Laboratorio retirado. Auth/GCS/Hosting reales siguen separados;
 no se ha hecho deploy. Constancia/adicionales no comparten idempotencia.
 **Se mantiene NO-GO**; no confundir integridad con capacidad operativa aprobada.
+
+Seguimiento autorizado 2026-10-31: [correccion local instrumentada PD07-B04](H24_PD07_B04_Correccion_Concurrencia_Analizadores.md).
+Un analisis activo y una espera acotada por instancia; BUSY correlacionado conserva
+429 y la UI envia un archivo por panel, pausando el lote ante reintento pendiente.
+Probe Docker sin BD: ambos clientes completan doble validacion en 26.7/35.6 s,
+12 requests internos 200 sin reintentos. API 407 PASS/21 SKIP, web 169 PASS;
+typecheck/build OK. No se repitio capacidad API/BD ni se probo Hosting/Auth/GCS.
+**B04 corregido localmente; capacidad y H24 permanecen NO-GO.**
 
 Seguimiento PD07-B03 2026-10-31: [mensaje de limites PDF](H24_PD07_B03_Mensaje_Limites_Analisis_PDF.md)
 implementado en scanner/API/UI local, manteniendo rechazo seguro. No se aumenta

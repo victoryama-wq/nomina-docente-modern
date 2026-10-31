@@ -84,8 +84,12 @@ export function useDossierOperations(teacherId: string, settled: (mutation?: Dos
 
   function pump() {
     if (disposed || accessDenied) return;
+    // Backpressure or an unknown outcome requires an explicit retry of that
+    // operation, not a burst of the remaining files or a new operation ID.
+    if (tasks.value.some(task => task.state === 'retry' || task.state === 'uncertain')) return;
     for (const task of tasks.value) {
-      if (inFlight.value >= 2) break;
+      // Keep a multi-file selection, but do not monopolize both API admission slots.
+      if (inFlight.value >= 1) break;
       if (task.state === 'ready') void run(task);
     }
   }

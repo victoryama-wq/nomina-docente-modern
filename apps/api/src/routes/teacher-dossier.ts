@@ -25,7 +25,10 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
 async function respond(reply: FastifyReply, work: () => Promise<unknown>) {
   try { return await work(); }
   catch (error) {
-    if (error instanceof DocumentSecurityError) return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
+    if (error instanceof DocumentSecurityError) {
+      if (error.statusCode === 429) reply.header('Retry-After', '2');
+      return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
+    }
     if (error instanceof DossierError) return reply.code(error.statusCode).send({ error: error.code, message: error.message });
     if (error instanceof DossierStorageError) {
       const status = error.code === 'DOSSIER_PDF_INVALID' ? 422 : error.code === 'DOSSIER_PDF_TOO_LARGE' ? 413 : 503;

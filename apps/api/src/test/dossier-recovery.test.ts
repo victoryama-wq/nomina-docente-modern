@@ -80,13 +80,13 @@ describe('H24 dossier worker connection recovery without a database', () => {
     expect(storage.put).not.toHaveBeenCalled();
   });
 
-  it('keeps recovered replacement pending without publishing or deleting when the scanner is unavailable', async () => {
+  it.each(['DOCUMENT_SECURITY_UNAVAILABLE', 'DOCUMENT_SECURITY_BUSY'] as const)('keeps recovered replacement pending without publishing or deleting on %s', async code => {
     const { service, storage, validator } = fixture();
     const bytes = Buffer.from('synthetic candidate');
     const op = { ...operation(), payload: { contentHash: createHash('sha256').update(bytes).digest('hex') } };
     storage.stat.mockResolvedValue({ key: op.new_key, generation: '2' });
     storage.read.mockResolvedValue(bytes);
-    validator.mockRejectedValue(new DocumentSecurityError('DOCUMENT_SECURITY_UNAVAILABLE'));
+    validator.mockRejectedValue(new DocumentSecurityError(code));
     db.clientQuery.mockImplementation(async (sql: string) => ({ rows: sql.includes('pg_try_advisory_lock') ? [{ locked: true }]
       : sql.startsWith('SELECT *') ? [op] : [], rowCount: 1 }));
     db.query.mockResolvedValue([{ ...op, error_code: 'DOSSIER_RETRY_REQUIRED' }]);
@@ -96,7 +96,7 @@ describe('H24 dossier worker connection recovery without a database', () => {
     expect(storage.put).not.toHaveBeenCalled();
   });
 
-  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SCAN_LIMIT_EXCEEDED', 'DOCUMENT_SECURITY_UNAVAILABLE'] as const)('never serves existing bytes on %s and does not delete the object', async code => {
+  it.each(['DOCUMENT_REJECTED', 'DOCUMENT_SCAN_LIMIT_EXCEEDED', 'DOCUMENT_SECURITY_UNAVAILABLE', 'DOCUMENT_SECURITY_BUSY'] as const)('never serves existing bytes on %s and does not delete the object', async code => {
     const { service, storage, validator } = fixture();
     db.query.mockResolvedValue([{ storage_namespace: namespace, storage_key: 'old', storage_generation: '1' }]);
     storage.read.mockResolvedValue(Buffer.from('legacy synthetic'));

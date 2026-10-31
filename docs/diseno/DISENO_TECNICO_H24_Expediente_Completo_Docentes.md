@@ -2,6 +2,18 @@
 
 Fecha: 2026-10-27.
 
+Seguimiento local PD07-B04, 2026-10-31: sustituye la propuesta anterior de dos
+transferencias UI por una por panel; la admision API conserva su limite de dos.
+Cada instancia inspector/scanner admite hasta dos cuerpos acotados y ejecuta
+un solo proceso; el segundo cuerpo completo espera hasta 20 s. No hay cola durable
+ni reintentos automaticos. Saturacion/expiracion devuelve 429 BUSY con requestId
+correlacionado y Retry-After: 2; respuesta invalida sigue siendo 503 fail-closed.
+El cliente conserva deadlines de 40/230 s, no una garantia de terminar antes
+del limite Hosting. La UI pausa pendientes ante retry/uncertain y reutiliza el
+operationId al reintentar explicitamente. No altera recuperacion PREPARED existente.
+[Diagnostico, regresion y alcance](../auditoria/H24_PD07_B04_Correccion_Concurrencia_Analizadores.md).
+No desplegado; prueba completa de capacidad pendiente, H24 NO-GO.
+
 Estado: **Diseno aprobado; F1/F2 implementadas y F3 validada en integracion local con observaciones. PD-02 GCS aislado cerrado tecnicamente; PD-05 real parcialmente validado; despliegue pendiente.**
 
 F4: [revision predeploy](../auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md)

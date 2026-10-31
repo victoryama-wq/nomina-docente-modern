@@ -149,18 +149,21 @@ describe('H24 dossier panel', () => {
     expect(wrapper.text()).toContain('No tienes permiso para consultar documentos');
     expect(wrapper.find('input[multiple]').exists()).toBe(false);
   });
-  it('sends same-type files separately, at most two in flight, without duplicating successful files', async () => {
+  it('keeps multi-file selection but sends one at a time without duplicating successful files', async () => {
     const resolve: ((value: typeof complete) => void)[] = [];
     vi.mocked(mutateTeacherDossier).mockImplementation(() => new Promise(done => resolve.push(done)));
     await open();
     await select([pdf('uno.pdf'), pdf('dos.pdf'), pdf('tres.pdf')]);
     await button('Cargar archivos válidos').trigger('click');
     await flushPromises();
-    expect(mutateTeacherDossier).toHaveBeenCalledTimes(2);
+    expect(mutateTeacherDossier).toHaveBeenCalledTimes(1);
     resolve[0](complete);
     await flushPromises();
+    expect(mutateTeacherDossier).toHaveBeenCalledTimes(2);
+    resolve[1](complete);
+    await flushPromises();
     expect(mutateTeacherDossier).toHaveBeenCalledTimes(3);
-    resolve[1](complete); resolve[2](complete);
+    resolve[2](complete);
     await flushPromises();
     expect(new Set(vi.mocked(mutateTeacherDossier).mock.calls.map(c => c[1])).size).toBe(3);
     expect(vi.mocked(mutateTeacherDossier).mock.calls.every(c => c[2].action === 'upload' && c[2].payload.documentType === 'OTRO')).toBe(true);
@@ -192,6 +195,27 @@ describe('H24 dossier panel', () => {
     const first = vi.mocked(mutateTeacherDossier).mock.calls[0];
     await button('Reintentar misma operación').trigger('click'); await flushPromises();
     expect(vi.mocked(mutateTeacherDossier).mock.calls[1]).toEqual(first);
+    expect(wrapper.text()).toContain('Completado');
+  });
+  it.each([429, 503])('pauses remaining files on %s until explicit same-operation retry', async status => {
+    vi.mocked(mutateTeacherDossier).mockRejectedValueOnce(new ApiRequestError('synthetic', status, status === 429 ? 'DOCUMENT_SECURITY_BUSY' : 'DOCUMENT_SECURITY_UNAVAILABLE'));
+    await open(); await select([pdf('first.pdf'), pdf('second.pdf')]);
+    await button('Cargar archivos válidos').trigger('click'); await flushPromises();
+    const first = vi.mocked(mutateTeacherDossier).mock.calls[0];
+    expect(mutateTeacherDossier).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).toContain(status === 429 ? 'otras cargas' : 'no está disponible');
+    await button('Reintentar misma operación').trigger('click'); await flushPromises();
+    expect(mutateTeacherDossier).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(mutateTeacherDossier).mock.calls[1]).toEqual(first);
+    expect(vi.mocked(mutateTeacherDossier).mock.calls[2][1]).not.toBe(first[1]);
+  });
+  it('continues with the next file after a definitive 422 rejection without replaying the rejected file', async () => {
+    vi.mocked(mutateTeacherDossier).mockRejectedValueOnce(new ApiRequestError('synthetic', 422, 'DOCUMENT_SCAN_LIMIT_EXCEEDED'));
+    await open(); await select([pdf('complex.pdf'), pdf('simple.pdf')]);
+    await button('Cargar archivos válidos').trigger('click'); await flushPromises();
+    expect(mutateTeacherDossier).toHaveBeenCalledTimes(2);
+    expect(new Set(vi.mocked(mutateTeacherDossier).mock.calls.map(c => c[1])).size).toBe(2);
+    expect(wrapper.text()).toContain(DOCUMENT_SCAN_LIMIT_MESSAGE);
     expect(wrapper.text()).toContain('Completado');
   });
   it('treats HTTP200 FAILED as failure, not success', async () => {
@@ -262,7 +286,7 @@ describe('H24 dossier panel', () => {
     await open(); await select([pdf('one.pdf'), pdf('two.pdf'), pdf('three.pdf')]);
     await button('Cargar archivos válidos').trigger('click'); await flushPromises();
     wrapper.unmount(); resolve.forEach(done => done(complete)); await flushPromises();
-    expect(mutateTeacherDossier).toHaveBeenCalledTimes(2);
+    expect(mutateTeacherDossier).toHaveBeenCalledTimes(1);
   });
   it('requires delete confirmation and keeps cleanup pending until read-only status completes', async () => {
     vi.mocked(mutateTeacherDossier).mockResolvedValue({ ...complete, state: 'CLEANUP' });

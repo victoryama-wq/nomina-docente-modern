@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto';
 import type { DocumentRunner } from './document-security.js';
 
 type CloudSettings = { parser: string; scanner: string };
+export class DocumentAnalyzerBusyError extends Error {
+  constructor() { super('DOCUMENT_SECURITY_BUSY'); }
+}
 const fail = () => new Error('DOCUMENT_SECURITY_UNAVAILABLE');
 export function cloudDocumentSecuritySettings(env: NodeJS.ProcessEnv = process.env): CloudSettings {
   if (env.DOCUMENT_SECURITY_MODE !== 'cloud-run' || !(env.K_SERVICE || env.CLOUD_RUN_JOB)) throw fail();
@@ -52,7 +55,13 @@ export function createCloudDocumentRunner(settings: CloudSettings,
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/octet-stream',
         'X-H24-Request-Id': requestId }, body: new Uint8Array(bytes)
     });
-    if (response.status !== 200 || !response.headers.get('content-type')?.startsWith('application/json')) throw fail();
+    if (!response.headers.get('content-type')?.startsWith('application/json')) throw fail();
+    if (response.status === 429) {
+      const result = JSON.parse(await boundedText(response, 1024));
+      if (result.requestId === requestId && result.error === 'BUSY') throw new DocumentAnalyzerBusyError();
+      throw fail();
+    }
+    if (response.status !== 200) throw fail();
     const result = JSON.parse(await boundedText(response, 1024));
     if (result.requestId !== requestId || ![0, 10, 20, 30, 40].includes(result.code) ||
         typeof result.stdout !== 'string' || result.stdout.length > 160 || result.stderr !== '') throw fail();

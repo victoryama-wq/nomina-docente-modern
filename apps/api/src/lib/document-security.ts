@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { cloudDocumentSecuritySettings, createCloudDocumentRunner } from './document-cloud.js';
+import { cloudDocumentSecuritySettings, createCloudDocumentRunner, DocumentAnalyzerBusyError } from './document-cloud.js';
 
 export const DOCUMENT_MAX_BYTES = 7.5 * 1024 * 1024;
 export type DocumentMime = 'application/pdf' | 'image/png' | 'image/jpeg';
@@ -88,7 +88,11 @@ export function createDocumentValidator(run: DocumentRunner) {
     const parser: DocumentCheck = mime === 'application/pdf' ? 'pdf' : mime === 'image/png' ? 'png' : 'jpeg';
     for (const kind of [parser, 'av'] as DocumentCheck[]) {
       let result: Result;
-      try { result = await run(kind, bytes); } catch { throw unavailable(); }
+      try { result = await run(kind, bytes); }
+      catch (error) {
+        if (error instanceof DocumentAnalyzerBusyError) throw new DocumentSecurityError('DOCUMENT_SECURITY_BUSY');
+        throw unavailable();
+      }
       if (result.code === 40) {
         if (kind === 'av' && mime === 'application/pdf' && !result.stderr.trim() && result.stdout.trim() === `H24_SCAN_LIMIT ${hash}`) {
           throw new DocumentSecurityError('DOCUMENT_SCAN_LIMIT_EXCEEDED');

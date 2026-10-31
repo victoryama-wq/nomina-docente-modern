@@ -1209,7 +1209,10 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           ? 'Constancia guardada. La eliminación del archivo anterior está pendiente de recuperación; no vuelvas a cargarla.'
           : 'Constancia fiscal guardada; cualquier archivo sustituido fue eliminado.' };
       } catch (error) {
-        if (error instanceof DocumentSecurityError) return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
+        if (error instanceof DocumentSecurityError) {
+          if (error.statusCode === 429) reply.header('Retry-After', '2');
+          return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
+        }
         if (error instanceof DossierError) return reply.code(error.statusCode).send({ error: error.code, message: 'El archivo no es valido.' });
         if (!(error instanceof ConstanciaStorageError)) throw error;
         return reply.code(503).send({ error: 'CONSTANCIA_STORAGE_UNAVAILABLE', message: error.message });
@@ -1262,7 +1265,10 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const [buffer] = await file.download();
       try { await validateDocumentContent(buffer, doc.mimeType); }
       catch (error) {
-        if (error instanceof DocumentSecurityError) return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
+        if (error instanceof DocumentSecurityError) {
+          if (error.statusCode === 429) reply.header('Retry-After', '2');
+          return reply.code(error.statusCode).send({ error: error.code, message: error.publicMessage });
+        }
         return reply.code(503).send({ error: 'DOCUMENT_SECURITY_UNAVAILABLE', message: 'La validacion documental no esta disponible.' });
       }
       const current = await query('SELECT id FROM teacher_documents WHERE id=$1 AND is_current=true', [doc.id]);

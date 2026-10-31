@@ -2,6 +2,16 @@
 
 Fecha: 2026-10-27.
 
+Actualizacion local 2026-10-31, PD07-B04: se conserva seleccion multiple, con
+una transferencia en vuelo por panel. Ante 429/503 o resultado incierto se pausa
+el lote hasta reintento explicito de la misma operacion; no hay replay automatico.
+Un rechazo definitivo permite continuar los demas archivos. El analizador mantiene
+un proceso activo y admite una espera maxima de 20 s; saturacion sigue bloqueando
+publicacion/lectura. No cambia roles, limites de archivos ni veredictos de seguridad.
+[Evidencia y limites](../auditoria/H24_PD07_B04_Correccion_Concurrencia_Analizadores.md).
+Esto sustituye el paralelismo local anterior de dos transferencias por panel;
+no acredita capacidad end-to-end ni autoriza deploy. H24 sigue NO-GO.
+
 Estado: **H24-F1/F2 implementadas; H24-F3 integracion local validada con observaciones. PD-02 GCS aislado cerrado tecnicamente; autenticacion real y gates productivos pendientes. No cerrado operativo.**
 
 H24-F4: preparacion predeploy completada, **NO-GO para deploy/habilitacion**.
