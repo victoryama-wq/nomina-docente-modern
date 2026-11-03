@@ -194,6 +194,7 @@ export class TeacherDossierService {
     if (completed) return completed;
     await this.storage.assertSafe();
     await this.validatePdf(bytes);
+    const validation = { operationId: input.operationId, contentHash, checkedAt: Date.now() };
     const op = await withTransaction(async (client) => {
       const previous = await this.existing(client, actor, input.operationId, requestHash);
       if (previous) return previous;
@@ -217,7 +218,7 @@ export class TeacherDossierService {
           `${teacherId}/${id}/${input.operationId}`, before?.storage_key || null, before?.storage_generation || null,
           JSON.stringify(payload)])).rows[0];
     });
-    return terminal(op) ? publicOperation(op) : this.process(op.id, bytes);
+    return terminal(op) ? publicOperation(op) : this.processOperation(op.id, bytes, validation);
   }
 
   async remove(actor: SessionUser, teacherId: string, documentId: string, input: z.infer<typeof deleteSchema>) {
@@ -263,6 +264,12 @@ export class TeacherDossierService {
   // Session advisory lock survives short SQL transactions but releases on worker crash.
   // No SQL transaction remains open while transferring bytes.
   async process(operationId: string, bytes?: Buffer) {
+    // Workers/retries never inherit a validation result from another request.
+    return this.processOperation(operationId, bytes);
+  }
+
+  private async processOperation(operationId: string, bytes?: Buffer,
+    validation?: { operationId: string; contentHash: string; checkedAt: number }) {
     const client = await pool.connect();
     let locked = false;
     let op: Operation | undefined;
@@ -285,7 +292,12 @@ export class TeacherDossierService {
           // Recovered objects are checked against the intent, not trusted by path alone.
           const recovered = await this.storage.read(object);
           if (createHash('sha256').update(recovered).digest('hex') !== op.payload.contentHash) throw conflict();
-          try { await this.validatePdf(recovered); }
+          // Only this request's completed analysis may cover identical bytes just
+          // read back from storage. No persistent/global cache or client verdict.
+          const age = validation ? Date.now() - validation.checkedAt : -1;
+          const alreadyValidated = validation?.operationId === op.id &&
+            validation.contentHash === op.payload.contentHash && age >= 0 && age <= 30_000;
+          try { if (!alreadyValidated) await this.validatePdf(recovered); }
           catch (error) {
             if (!(error instanceof DocumentSecurityError) || error.statusCode !== 422) throw error;
             // Retire only the rejected candidate, never the previous current document.

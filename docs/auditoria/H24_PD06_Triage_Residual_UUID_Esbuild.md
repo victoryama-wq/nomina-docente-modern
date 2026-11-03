@@ -6,6 +6,28 @@ Rama: `feature/h02-h03-user-coordinations-permissions`, inicialmente limpia.
 Estado: **propuesta; sin correcciones ni excepciones aprobadas en esta revision**.
 H24 conserva NO-GO hasta resolver los gates pendientes; esto no autoriza deploy.
 
+## Seguimiento read-only 2026-11-03
+
+Durante la repeticion PD-07 se consulto otra vez `npm audit --json --offline=false`
+con npm 10.9.4, mismo lockfile. Resultado vigente: **0 criticas, 0 altas,
+20 moderadas y 1 baja**, exit 1. Las cifras 9/1 siguientes son evidencia del
+30 de octubre, no el resultado actual. No se ejecutaron audit fix, instalaciones,
+overrides ni cambios de dependencias durante capacidad.
+
+Se agregan dos advisories frente al triage anterior:
+- [minimatch GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249):
+  npm reporta versiones <11.0.1; la descripcion identifica amplificacion de patrones
+  con optimizationLevel >=2. Propaga a tooling Vue y cadena archiver/ExcelJS.
+- [glob GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4):
+  cancelacion de recorrido asincrono, rango >=9 hasta14.0.1, parche14.0.2.
+
+No aplicar overrides globales ciegos: las ramas antiguas de glob/archiver-utils
+usan APIs CommonJS diferentes de las modernas. Las propuestas automaticas del
+audit incluyen cambios mayores de vue-tsc/Firebase Admin y retroceso de ExcelJS;
+no se aprueban ni ejecutan por esta consulta. Conservar el artefacto de capacidad
+identificable, ensayar remediacion por consumidor y repetir regresion si cambia.
+No hay excepcion de riesgo aprobada ni se declara PD-06 cerrado.
+
 ## 1. Alcance y resultado
 
 Revision de lock, paquetes instalados, consumidores, Dockerfile, avisos upstream

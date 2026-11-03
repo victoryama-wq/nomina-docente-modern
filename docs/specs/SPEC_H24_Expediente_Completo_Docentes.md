@@ -12,6 +12,19 @@ publicacion/lectura. No cambia roles, limites de archivos ni veredictos de segur
 Esto sustituye el paralelismo local anterior de dos transferencias por panel;
 no acredita capacidad end-to-end ni autoriza deploy. H24 sigue NO-GO.
 
+Adecuacion local posterior 2026-11-03: cada instancia de analisis mantiene un solo
+proceso y una espera acotada, ahora hasta 30 s por el arranque frio observado.
+Adicionales pueden reutilizar el analisis positivo de ESA solicitud al verificar
+por SHA-256 los bytes releidos de almacenamiento para la MISMA operacion durante
+un maximo de 30 s. No es cache compartido/persistente ni acepta veredictos del
+cliente. Recuperacion, lecturas posteriores, hash distinto, operacion distinta,
+reloj retrocedido o plazo vencido no habilitan esa reutilizacion; el mismatch
+bloquea publicacion, y los demas casos requieren analisis completo. Sin cambios
+a permisos, limites AV, constancias, H01 ni snapshots.
+[Repeticion local](../auditoria/H24_PD07_Revalidacion_EndToEnd_B01_B04_20261103.md):
+7/7 y 30/30 archivos aprobados, sin reintentos; no equivale a Hosting/GCS reales,
+cambio desplegado ni cierre automatico de H24.
+
 Estado: **H24-F1/F2 implementadas; H24-F3 integracion local validada con observaciones. PD-02 GCS aislado cerrado tecnicamente; autenticacion real y gates productivos pendientes. No cerrado operativo.**
 
 H24-F4: preparacion predeploy completada, **NO-GO para deploy/habilitacion**.

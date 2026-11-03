@@ -7,6 +7,32 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
+## Estado actualizado 2026-11-03
+
+[Revalidacion end-to-end B01 a B04](H24_PD07_Revalidacion_EndToEnd_B01_B04_20261103.md):
+el primer recorrido completo reproduce un 202 pendiente y una carga de 57.7 s;
+se conserva como fallo. Se corrige la doble validacion inmediata de bytes
+identicos con comprobante privado por solicitud/hash, sin omitir relectura,
+autorizacion, validacion del worker o lecturas posteriores. Cola acotada 30 s,
+sin elevar recursos ni limites de seguridad. Repeticion completa: **7/7 y 30/30
+archivos al primer intento**, maximo 41.218 s; integridad de 22 tablas, cero
+operaciones/archivos adicionales pendientes y laboratorio retirado. No trasladar
+resultado local a Hosting/GCS/Auth reales. La primera regresion general agoto el
+tmpfs de la BD de capacidad; repetida en otro contenedor efimero con espacio
+suficiente: **167/167 PASS**, misma imagen, sin modificar logica funcional.
+API 417 PASS/21 SKIP, web 169 PASS, typecheck/build y pdfinfo Linux 12/12 OK.
+
+El usuario confirma recepcion del email sintetico PD-04: entrega acreditada;
+no cierra cadencias/ausencia de ejecucion. Audit read-only actualizado PD-06:
+**0 criticas / 0 altas / 20 moderadas / 1 baja**, incluyendo nuevos avisos
+glob/minimatch, sin cambios de dependencias ni excepcion humana de riesgo.
+PD-05 conserva los cuatro casos de identidades pendientes por decision humana.
+PD-08 conserva pendientes artefacto exacto de rollback y validacion del destino.
+**NO-GO**. Los seguimientos fechados debajo son cronologia, no sustituyen este
+estado ni autorizan desplegar. Sin produccion, BD habitual ni operaciones cloud.
+
+## Cronologia de evidencias
+
 Preparacion posterior a `d0ae6d3`, 2026-10-31:
 [plan de capacidad end-to-end B01/B02/B03](H24_PD07_Plan_Capacidad_EndToEnd_B01_B02_B03.md).
 Los puntos 1 y 2 fueron autorizados y ejecutados exclusivamente en laboratorio

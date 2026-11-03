@@ -13,7 +13,9 @@ const docker = args => execFileSync('docker', ['--context', 'desktop-linux', ...
 const save = (n, v) => writeFileSync(path.join(evidence, n), typeof v === 'string' ? v : JSON.stringify(v, null, 2));
 const sha = f => createHash('sha256').update(readFileSync(path.join(repo, f))).digest('hex');
 const manifest = { id, started: new Date().toISOString(), base: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
-  hashes: Object.fromEntries(['package-lock.json', 'apps/api/src/lib/dossier-contract.ts', 'services/document-security/server.mjs', 'tools/validation/h24-pd03/scan-stdin.sh'].map(f => [f, sha(f)])), evidence };
+  hashes: Object.fromEntries(['package-lock.json', 'apps/api/src/lib/dossier-contract.ts', 'apps/api/src/lib/teacher-dossier.ts',
+    'apps/web/src/composables/useDossierOperations.ts', 'services/document-security/server.mjs',
+    'tools/validation/h24-pd03/scan-stdin.sh', 'tools/validation/h24-pd07-e2e/flow.test.ts'].map(f => [f, sha(f)])), evidence };
 console.log(`Evidence: ${evidence}`); save('manifest.json', manifest);
 async function command(args, file, timeout = 1800000) {
   return new Promise((resolve, reject) => {
@@ -77,6 +79,13 @@ try {
   const metrics = []; timer = setInterval(() => { try { metrics.push({ time: new Date().toISOString(), stats: docker(['stats', '--no-stream', '--format', '{{json .}}', api, `${prefix}-scanner`, `${prefix}-inspector`, pg]) }); save('metrics.json', metrics); } catch {} }, 5000);
   const result = await command(['exec', api, 'node', 'node_modules/vitest/vitest.mjs', 'run', '--configLoader', 'native', '--config', 'tools/validation/h24-pd07-e2e/vitest.config.mjs'], 'flow.log', 2 * 60 * 60_000);
   manifest.testExit = result; save('manifest.json', manifest); if (result !== 0) process.exitCode = 1;
+  if (result === 0 && process.env.H24_PD07_REGRESSION === 'true') {
+    // General regression repeatedly rebuilds schemas/WAL. Give it a separate
+    // disposable database; capacity's 256 MiB data limit remains unchanged.
+    const { runRegression } = await import('./regression.mjs');
+    const regression = await runRegression(path.join(evidence, 'manifest.json'));
+    manifest.integrationExit = regression; save('manifest.json', manifest); if (regression !== 0) process.exitCode = 1;
+  }
 } catch (e) { save('failure.json', { error: String(e) }); console.error(e); process.exitCode = 1; }
 finally {
   clearInterval(timer);
@@ -85,7 +94,7 @@ finally {
     try {
       const state = JSON.parse(docker(['inspect', name]))[0]; assert.equal(state.Config.Labels.purpose, 'h24-pd07-e2e');
       save(`${name}-state.json`, { state: state.State, image: state.Image }); save(`${name}.log`, docker(['logs', name]));
-      try { save(`${name}-processes.log`, docker(['exec', name, 'sh', '-c', 'ps -eo pid,ppid,stat,comm; cat /sys/fs/cgroup/memory.peak; cat /sys/fs/cgroup/pids.current'])); } catch {}
+      try { save(`${name}-processes.log`, docker(['exec', name, 'sh', '-c', 'if command -v ps >/dev/null; then ps -eo pid,ppid,stat,comm; fi; cat /sys/fs/cgroup/memory.peak /sys/fs/cgroup/memory.events /sys/fs/cgroup/pids.current'])); } catch {}
       docker(['stop', '--time', '10', name]); docker(['rm', name]); cleanup.push({ name, removed: true });
     } catch (e) { cleanup.push({ name, error: String(e) }); process.exitCode = 1; }
   }

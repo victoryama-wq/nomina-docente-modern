@@ -14,6 +14,18 @@ operationId al reintentar explicitamente. No altera recuperacion PREPARED existe
 [Diagnostico, regresion y alcance](../auditoria/H24_PD07_B04_Correccion_Concurrencia_Analizadores.md).
 No desplegado; prueba completa de capacidad pendiente, H24 NO-GO.
 
+Revision local 2026-11-03: espera por instancia ajustada a 30 s (no se eleva el
+numero de procesos, tamano o tiempo de analisis). `stageFile` genera una evidencia
+efimera interna solo tras completar parser/politica/AV; vincula operationId, hash
+y hora. `processOperation` verifica siempre hash de lectura y autorizacion antes
+de publicar; reutiliza esa evidencia solamente por 0..30000 ms y mismo id/hash.
+La llamada publica `process`, worker/reinicio y lecturas no reciben evidencia y
+reanalizan el contenido. No cambia SQL/contrato HTTP ni persiste una marca de
+archivo confiable. Esto evita doble analisis de los mismos bytes en la solicitud
+inicial, sin omitir la validacion del objeto recuperado en otra solicitud.
+[Repeticion end-to-end local](../auditoria/H24_PD07_Revalidacion_EndToEnd_B01_B04_20261103.md):
+7/7 casos y 30/30 archivos al primer intento, maximo 41.218 s. No es cierre cloud.
+
 Estado: **Diseno aprobado; F1/F2 implementadas y F3 validada en integracion local con observaciones. PD-02 GCS aislado cerrado tecnicamente; PD-05 real parcialmente validado; despliegue pendiente.**
 
 F4: [revision predeploy](../auditoria/H24_Fase4_PreDeploy_Expediente_Docentes.md)

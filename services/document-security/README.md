@@ -108,7 +108,7 @@ failed exploratory runs and remaining implementation/release decisions.
 Private `GET /health`; private `POST /v1/check/pdf|png|jpeg` for inspector and
 `POST /v1/check/av` for scanner. Binary octet-stream, request UUID, no compression,
 7.5 MiB maximum per body, at most two admitted bodies per instance, one running
-analysis and one complete body waiting at most 20 seconds. A third request or an
+analysis and one complete body waiting at most 30 seconds. A third request or an
 expired wait returns 429 with `{requestId, error: 'BUSY'}` and `Retry-After: 2`.
 Disconnected waiters are removed without analysis. No durable queue or automatic
 retry. `document_admission` logs queue/grant/cancel/expiry/rejection timing without

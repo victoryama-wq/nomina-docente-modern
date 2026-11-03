@@ -98,8 +98,12 @@ Scheduler queda PAUSED, sin ejecuciones periodicas; cron anual placeholder, retr
 Evento ERROR sintetico `h24_recovery_test_alert` emitido a 18:30:18.129817Z.
 Politica limitada a servicios/job H24, rate limit de notificacion 3600 s y
 autocierre 1800 s. Canal configurado hacia el correo institucional autorizado.
-**Recepcion externa pendiente de confirmacion del usuario**: configurar canal,
-generar log y crear politica NO prueban entrega al buzon. No leer correo privado.
+Al cerrar el ensayo del 29 de octubre, la recepcion externa quedo pendiente:
+configurar canal, generar log y crear politica NO probaban entrega al buzon.
+**Confirmacion humana recibida el 2026-11-03:** el usuario confirma que recibio
+la alerta `H24 isolated document security and recovery errors` del 29 de octubre
+en el correo institucional designado. Se acredita entrega de esa alerta sintetica,
+no multiples cadencias ni alerta por ausencia. No se leyo su correo privado.
 
 Inventario con generaciones/CRC/tamano antes/despues y metadatos de buckets:
 **sin diferencias**. Dossier: 0 objetos. Constancias: 1 objeto previo conservado.
@@ -119,13 +123,16 @@ pasaron los dos ensayos. Los ERROR anteriores pueden disparar la misma alerta.
 
 ## 8. Pendientes y siguiente ventana
 
-- PD-04: confirmar recepcion externa, cadencia/alerta de ausencia de ejecucion,
+- PD-04: recepcion externa confirmada el 2026-11-03; faltan cadencia/alerta de ausencia de ejecucion,
   parametros y conectividad del destino final. El job efimero NO es productivo.
 - PD-03: Cloud Run privado no equivale a red denegada/read-only-root del laboratorio
   Docker; falta resolver/aceptar aislamiento de salida y riesgo residual del visor.
-- PD-06: correccion compatible parcial; Zod y cadena gRPC/Firebase pendientes.
-- PD-07: carga multiple, archivos maximos, latencia, memoria y concurrencia reales.
-- PD-08: ensayo completo H05 016/017 y restauracion; este fixture no lo sustituye.
+- PD-06: Zod/gRPC corregidos posteriormente en local (acta de regresion aislada).
+  Audit del 03/11: 0 criticas/0 altas/20 moderadas/1 baja; residual sin aceptar.
+- PD-07: [repeticion local posterior](H24_PD07_Revalidacion_EndToEnd_B01_B04_20261103.md);
+  no sustituye carga multiple y tiempos en Hosting/GCS/runtime cloud reales.
+- PD-08: [H05/restauracion locales aprobados posteriormente](H24_PD08_Ensayo_Local_Migraciones_016_017.md);
+  artefacto exacto de rollback/destino final pendientes, no acreditados por este job.
 - PD-05: cuentas complementarias siguen pendientes por decision humana, no
   aceptadas automaticamente como excepcion productiva.
 

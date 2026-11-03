@@ -108,9 +108,11 @@ test('disconnect removes a waiter without running it or blocking later requests'
 });
 
 test('queue wait cannot be configured beyond its hard limit', () => {
-  for (const queueWaitMs of [0, -1, 20001, Infinity, 1.5]) {
+  for (const queueWaitMs of [0, -1, 30001, Infinity, 1.5]) {
     assert.throws(() => createCheckServer({ mode: 'scanner', run: () => {}, queueWaitMs }), /QUEUE_WAIT_INVALID/);
   }
+  const server = createCheckServer({ mode: 'scanner', run: () => {}, queueWaitMs: 30000 });
+  server.close();
 });
 
 test('scanner transports a bounded limit verdict without logging document identity', async () => {

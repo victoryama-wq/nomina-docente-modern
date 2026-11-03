@@ -26,7 +26,7 @@ vi.mock('../../../apps/api/src/firebase.js', () => ({
   }) }) }
 }));
 
-const report: any = { cases: [], requests: [], scans: [], corpus: [], boundaries: ['synthetic test actors', 'local files not GCS', 'synthetic identity to loopback analyzers', 'local proxy not Hosting'], passed: false };
+const report: any = { cases: [], requests: [], scans: [], analyzerRequests: [], corpus: [], boundaries: ['synthetic test actors', 'local files not GCS', 'synthetic identity to loopback analyzers', 'local proxy not Hosting'], passed: false };
 const hash = (b: Buffer | string) => createHash('sha256').update(b).digest('hex');
 let root: string, additional: LocalDossierStorage, app: Awaited<ReturnType<typeof buildApp>>, service: TeacherDossierService;
 let teachers: string[], tokens: string[], before: any, proxy: http.Server;
@@ -104,7 +104,15 @@ beforeAll(async () => {
   assert.equal((await query<{ n: string }>('select current_database() n'))[0].n, 'nomina_docente_test');
   root = await mkdtemp('/tmp/pd07-e2e-'); await mkdir(path.join(root, 'additional'), { mode: 0o700 }); await mkdir(path.join(root, 'constancia'), { mode: 0o700 });
   additional = new LocalDossierStorage(path.join(root, 'additional'));
-  const raw = createCloudDocumentRunner({ parser: 'http://127.0.0.1:58081', scanner: 'http://127.0.0.1:58082' }, async () => 'synthetic-no-cloud-token');
+  const measuredFetch: typeof fetch = async (url, options) => {
+    const address = new URL(String(url));
+    assert.equal(address.hostname, '127.0.0.1'); assert(['58081', '58082'].includes(address.port));
+    const entry = { service: address.port === '58081' ? 'inspector' : 'scanner', kind: address.pathname.split('/').at(-1), status: 0, ms: 0 };
+    report.analyzerRequests.push(entry); const began = Date.now();
+    try { const response = await fetch(url, options); entry.status = response.status; return response; }
+    finally { entry.ms = Date.now() - began; }
+  };
+  const raw = createCloudDocumentRunner({ parser: 'http://127.0.0.1:58081', scanner: 'http://127.0.0.1:58082' }, async () => 'synthetic-no-cloud-token', measuredFetch);
   const real = createDocumentValidator(async (kind, bytes) => {
     if (kind === 'av') assert(++scans <= 300);
     const t = Date.now(); const r = await raw(kind, bytes); report.scans.push({ kind, code: r.code, ms: Date.now() - t, bytes: bytes.length }); return r;
@@ -163,30 +171,26 @@ it('B03 rejected replacements preserve files and database publication', async ()
 
 async function runBatch() { return record('bounded-batches', async () => {
   const outcomes: any[] = [];
-  // Each wave matches two in-flight slots per session. No automatic first-pass retry.
+  // B04: one in-flight file per panel; independent clients refill their own slot.
+  // Mixed sizes exercise overlap, without retrying or masking first-pass failures.
   for (const sessions of [1, 2]) {
-    for (let n = 0; n < 10; n += 2) {
-      const jobs = Array.from({ length: sessions * 2 }, (_, i) => ({ actor: Math.floor(i / 2), p: payload(files.get('small')!) }));
-      const initial = await Promise.all(jobs.map(j => request('POST', `${base(j.actor)}/dossier/documents`, j.p, j.actor)));
-      for (let i = 0; i < jobs.length; i++) {
-        const j = jobs[i], r = initial[i];
-        outcomes.push({ sessions, actor: j.actor, payload: j.p, statuses: [r.status], complete: r.status === 200 && r.json().state === 'COMPLETE' });
-        if (outcomes.at(-1).complete) await remove(r.json(), j.actor);
+    await Promise.all(Array.from({ length: sessions }, async (_, actor) => {
+      for (let n = 0; n < 10; n++) {
+        const fixture = ['small', '1MiB', '4MiB', '7.5MiB'][n % 4];
+        const r = await request('POST', `${base(actor)}/dossier/documents`, payload(files.get(fixture)!), actor);
+        const outcome = { sessions, actor, fixture, ms: r.ms, statuses: [r.status], complete: r.status === 200 && r.json().state === 'COMPLETE' };
+        outcomes.push(outcome);
+        if (outcome.complete) await remove(r.json(), actor);
+        await writeFile(`/evidence/batch-progress-${sessions}-${actor}.json`, JSON.stringify(outcomes.filter(o => o.sessions === sessions && o.actor === actor), null, 2));
+        if (!outcome.complete) break; // Strict first-pass gate, including pending 202; no assisted retry.
       }
-      await writeFile('/evidence/batch-progress.json', JSON.stringify(outcomes.map(({ payload: _p, ...o }) => o), null, 2));
-    }
+    }));
   }
-  // Assisted recovery is measured separately, bounded by the global send budget.
-  for (const o of outcomes.filter(o => !o.complete)) {
-    for (let attempt = 0; attempt < 2 && !o.complete && sends < sendBudget && [429, 503].includes(o.statuses.at(-1)); attempt++) {
-      await wait(10000); const r = await request('POST', `${base(o.actor)}/dossier/documents`, o.payload, o.actor); o.statuses.push(r.status);
-      o.complete = r.status === 200 && r.json().state === 'COMPLETE'; if (o.complete) await remove(r.json(), o.actor);
-    }
-  }
-  report.batch = outcomes.map(({ payload: _p, ...o }) => o);
-  report.unassistedBatchPassed = outcomes.every(o => o.statuses.length === 1);
-  assert(outcomes.every(o => o.complete), 'Some batch files did not complete within assisted retry budget');
-  return { completed: outcomes.filter(o => o.complete).length, initialFailures: outcomes.filter(o => o.statuses[0] !== 200).length, noAutomaticRetryClaim: true };
+  report.batch = outcomes;
+  report.unassistedBatchPassed = outcomes.length === 30 && outcomes.every(o => o.complete);
+  assert(report.unassistedBatchPassed, 'Expected 30 complete files without assisted retries');
+  assert(outcomes.every(o => o.ms < 55000), 'Normal batch exceeds the local 55s latency budget');
+  return { completed: outcomes.length, initialFailures: 0, retries: 0, maxMs: Math.max(...outcomes.map(o => o.ms)) };
 }); }
 
 it.skipIf(followup)('local proxy 60s and operation replay preserve one additional document', async () => record('proxy60-additional', async () => {
@@ -199,7 +203,7 @@ it.skipIf(followup)('local proxy 60s and operation replay preserve one additiona
     upstream.on('close', () => clearTimeout(timer)); req.pipe(upstream);
   });
   await new Promise<void>(r => proxy.listen(58084, '127.0.0.1', r));
-  const p = payload(files.get('small')!); delay = 31000;
+  const p = payload(files.get('small')!); delay = 61000;
   try {
     const timed = await request('POST', `${base()}/dossier/documents`, p, 0, 58084); assert.equal(timed.status, 504);
     let op: any;
@@ -271,4 +275,5 @@ afterAll(async () => {
     await writeFile('/evidence/results.json', JSON.stringify(report, null, 2));
     if (app) await app.close(); await pool.end(); if (root) await rm(root, { recursive: true, force: true });
   }
+  assert.equal(report.passed, true, 'Overall capacity/integrity gate failed; inspect results.json');
 });

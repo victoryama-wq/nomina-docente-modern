@@ -45,9 +45,9 @@ export function createProcessRunner(mode) {
   };
 }
 
-export function createCheckServer({ mode, run, log = event => console.log(JSON.stringify(event)), queueWaitMs = 20_000 }) {
+export function createCheckServer({ mode, run, log = event => console.log(JSON.stringify(event)), queueWaitMs = 30_000 }) {
   if (!['inspector', 'scanner'].includes(mode)) throw Error('MODE_REQUIRED');
-  if (!Number.isInteger(queueWaitMs) || queueWaitMs < 1 || queueWaitMs > 20_000) throw Error('QUEUE_WAIT_INVALID');
+  if (!Number.isInteger(queueWaitMs) || queueWaitMs < 1 || queueWaitMs > 30_000) throw Error('QUEUE_WAIT_INVALID');
   let active = false;
   let admitted = 0;
   let waiting;

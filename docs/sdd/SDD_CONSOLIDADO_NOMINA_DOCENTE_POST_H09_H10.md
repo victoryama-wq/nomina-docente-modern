@@ -521,7 +521,18 @@ Ver `docs/auditoria/H24_PD04_Validacion_Worker_Recuperacion_Alertas.md`.
 Seguimiento posterior 2026-10-29: servicios privados inspector/ClamAV H24 y job
 con PostgreSQL efimero sintetico validados, incluidos recuperacion/idempotencia y
 disparo Scheduler. Inventarios GCS sin diferencias, scheduler pausado; recepcion
-de alerta email por confirmar. Ver `docs/auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`.
+de alerta email entonces por confirmar. El usuario confirmo su recepcion el
+2026-11-03; esto no acredita multiples cadencias ni alerta por ausencia.
+Ver `docs/auditoria/H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`.
+Revalidacion local posterior 2026-11-03: ver
+`docs/auditoria/H24_PD07_Revalidacion_EndToEnd_B01_B04_20261103.md`.
+El ensayo inicial conserva fallo de capacidad; correccion acotada elimina analisis
+duplicado inmediato con comprobante interno ligado a hash/operacion (30 s), sin
+omitir relectura ni validacion de recuperacion/lecturas. Repeticion local aprobada:
+7/7 casos, 30/30 archivos al primer intento, maximo 41.218 s, integridad de 22
+tablas conservada y cero pendientes adicionales. Sin despliegue ni cierre H24.
+PD-06 actualizado: 0 criticas/0 altas/20 moderadas/1 baja;
+no interpretar los conteos historicos siguientes como audit vigente.
 PD-06 compatible local: audit 0 criticas/5 altas/9 moderadas/1 baja,
 API 306 aprobadas/15 omitidas, web 158/158, typecheck/build OK (primera correccion).
 Seguimiento posterior aprobado: Zod 4.6.7, gRPC 1.14.7 y npm 10.9.4 fijado;

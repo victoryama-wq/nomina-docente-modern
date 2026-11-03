@@ -5,6 +5,7 @@
 !apps/api/src/**
 !apps/api/tsconfig.json
 !apps/api/vitest.config.ts
+!apps/api/vitest.integration.config.ts
 !apps/web/
 !apps/web/src/
 !apps/web/src/**

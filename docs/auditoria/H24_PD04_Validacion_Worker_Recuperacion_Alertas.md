@@ -158,6 +158,12 @@ el entorno conservado para revision. Los dos tests ejecutados no usan ese reset.
 
 ## 8. Resultado de release
 
+Actualizacion documental 2026-11-03: el usuario confirmo recepcion de la alerta
+cloud sintetica del 29 de octubre en el buzon institucional designado. Ver
+[acta cloud](H24_PD03_PD04_Arquitectura_Cloud_Aislada.md). Esto cierra solo la
+comprobacion de entrega; no acredita cadencias multiples, alerta por ausencia
+ni configuracion productiva. No se ejecuto ningun cambio cloud en esta confirmacion.
+
 PD-04: **parcial, recuperacion y scheduler local aprobados; cloud/alerta externa pendientes**.
 H24 permanece NO-GO. Los tres commits previos fueron publicados antes de iniciar
 PD-04. Este cambio versiona el worker, sus pruebas y las seis piezas documentales

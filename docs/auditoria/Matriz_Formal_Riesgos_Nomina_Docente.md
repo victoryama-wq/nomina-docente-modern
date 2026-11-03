@@ -265,7 +265,16 @@ PD-06 sigue abierto por hallazgos restantes, sin excepcion productiva ni deploy.
 Ver `H24_PD06_Correccion_Compatible_Dependencias.md` y
 `H24_PD06_Zod_Grpc_Regresion_Aislada.md`.
 Cloud PD-03/PD-04 autorizado y ensayado: servicios privados, worker efimero y
-Scheduler exitosos, GCS restituido; recepcion email pendiente, Scheduler pausado.
+Scheduler exitosos, GCS restituido; recepcion email entonces pendiente, Scheduler pausado.
+El 2026-11-03 el usuario confirmo recepcion de la alerta sintetica del 29 de octubre.
+Quedan cadencias multiples, alerta por ausencia y configuracion del destino final.
+Audit read-only del 2026-11-03: 0 criticas/0 altas/20 moderadas/1 baja, por nuevos
+avisos glob/minimatch ademas del residual UUID/esbuild; sin excepcion aceptada.
+Las cifras previas corresponden a sus fechas, no al audit actual.
+Capacidad repetida localmente 2026-11-03: primer ensayo fallido conservado;
+repeticion corregida 7/7 y lotes 30/30 al primer intento, maximo 41.218 s;
+integridad local aprobada. No cierra PD-07 cloud ni H24. Ver
+`H24_PD07_Revalidacion_EndToEnd_B01_B04_20261103.md` para limites y gates restantes.
 Ver `H24_PD03_PD04_Arquitectura_Cloud_Aislada.md`. No cierra aislamiento, capacidad,
 H05/rollback ni autorizacion de release. H24 conserva NO-GO.
 AUTH-01 registro verificacion Firebase sin checkRevoked; el seguimiento autorizado
