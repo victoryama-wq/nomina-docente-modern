@@ -17,7 +17,7 @@ release. PD-03 y PD-05 tienen aceptaciones temporales, no riesgos eliminados.
 transicion a cero dias de este acta describen exclusivamente `eb24250`.
 No ejecutar esa transicion para constancias. La decision vigente conserva siete
 dias en GCS exclusivamente para constancias sustituidas. [Adecuacion y evidencia
-pendiente](H24_PD_DEST_01_Constancias_Recuperables.md). La ventana anterior
+del ensayo independiente con 3284a12](H24_PD_DEST_01_Constancias_Recuperables.md). La ventana anterior
 no valida el nuevo binario ni autoriza una nueva ventana.
 
 - Imagen API exacta de PD-06: `sha256:39842256ac4ebc3fc67c71aa452ca9daba4913d8f0346a7ae1f47455d87b6f75`.

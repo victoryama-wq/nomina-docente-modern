@@ -1,6 +1,7 @@
 # H24 / PD-DEST-01: reemplazo de constancia con siete días recuperables
 
-**2026-11-05. Candidata local validada; PD-DEST-01 abierto. Sin GO productivo.**
+**2026-11-05. PD-DEST-01 verificado y cerrado en GCS aislado para la candidata
+`3284a12af189baeaff51335401d13e9923d9d51d`. No es un GO productivo.**
 Punto de partida limpio: rama `feature/h02-h03-user-coordinations-permissions`,
 candidato anterior `eb24250` y cierre documental `cb19e50`. La [ventana
 anterior](H24_Ventana_Aislada_PreDeploy_20261105.md) terminó. Su rechazo de
@@ -49,25 +50,68 @@ SHA-256 de los PDF sintéticos de referencia (comparados con los bytes HTTP en l
 | Web | 169/169 aprobadas con el nuevo mensaje; la aserción anterior exigía borrado definitivo |
 | Typecheck y build de API/web | Ambos correctos |
 
-## Criterio pendiente para cerrar PD-DEST-01
+## Ventana GCS autorizada: resultado
 
-Solicitar **nueva ventana H24** para ejecutar la candidata identificada por SHA
-e imagen, con PDFs sintéticos y un bucket de constancias privado con siete días;
-mantener separado el bucket de adicionales. Autorizar el coste temporal de los
-objetos recuperables y la inspección de metadata por una identidad de auditoría.
-No otorgar restauración al runtime para esta prueba.
+Ventana independiente el 2026-11-05, desde el precheck 19:59 UTC hasta la
+retirada de recursos a las 20:08 UTC; límite autorizado: dos horas y US$10
+estimados. Dos objetos STANDARD (2531 bytes en total) durante siete días y
+operaciones puntuales de GCS; estimación inferior a US$1, no importe facturado.
+Sin cómputo cloud desplegado. El commit de los 14 archivos ya existía y el
+árbol estaba limpio. Se compiló ese SHA en local, sin crear otro commit funcional.
 
-1. Registrar metadata del bucket, generar A/B con hashes conocidos y cargar A
-   por Nómina; registrar clave y generación exactas de A.
-2. Sustituir por B, verificar una única vigente, descargar por Nómina y comparar
-   SHA-256. Completar limpieza y verificar que B sigue disponible.
-3. Acreditar que A no tiene versión viva **y**, de forma independiente, que el
-   listado GCS con `softDeleted=true` contiene la misma clave y generación,
-   con `softDeleteTime` y `hardDeleteTime` separados por 604800 segundos.
-   Un 404 ordinario, una política de bucket o un inventario vacío por sí solos
-   no prueban recuperabilidad. Sin evidencia positiva, el bloqueo sigue abierto.
-4. Retirar recursos según la nueva autorización, registrando la retención
-   residual de los sintéticos; no bajar la política a cero para limpiarlos.
+**Destino comprobado antes de cargar:** proyecto `nomina-h24-test-20261027`
+(`234692275301`), bucket exclusivo `nomina-h24-test-234692275301-cert7-3284a12-4b800383`,
+US-CENTRAL1; inventario inicial vacío. Metadata: UBLA activo, PAP enforced,
+sin miembros públicos directos en IAM, versionado omitido, soft delete
+`604800`, sin retentionPolicy, objectRetention ni hold predeterminado.
+Al runtime H24 se le concedió solo su rol `h24DossierRuntime` en el bucket
+(leer metadata, crear, leer y borrar objetos; sin restauración).
+
+**Recorrido:** Fastify local con inyección HTTP sobre las rutas registradas,
+actor Admin sintético por el mecanismo de test (no login interactivo),
+PostgreSQL 18 efímero en loopback con esquema de prueba preexistente,
+inspector y ClamAV reales en Docker, adaptador candidato y GCS real. Un único
+docente ficticio: `6f724182-14d3-4c6e-9edc-ebcbd9c480c9`. Ningún PDF real.
+Los dos POST a `/api/teachers/:id/documents/constancia` respondieron 200
+con `cleanupPending=false`. Antes del segundo POST se registraron clave y
+generación de A y se descargó A por `GET /api/teachers/:id/documents/current`.
+
+| PDF | Nombre de objeto dentro del bucket | Generación | Bytes |
+|---|---|---|---:|
+| A | `constancias/6f724182-14d3-4c6e-9edc-ebcbd9c480c9/98698247-9413-477f-9502-1be29c715a49` | `1793909248172839` | 1265 |
+| B | `constancias/6f724182-14d3-4c6e-9edc-ebcbd9c480c9/9fed396e-70d5-4e0c-8c8e-bfbd57cad945` | `1793909268598911` | 1266 |
+
+Tras el reemplazo, A quedó no vigente (`CONSTANCIA_FISCAL_DELETED`) y B fue
+la única `CONSTANCIA_FISCAL` vigente en PostgreSQL. El GET ordinario de A en
+GCS devolvió 404 y `versions=true` no mostró ninguna generación de su clave.
+**Prueba positiva:** `objects.list(softDeleted=true)` devolvió exactamente
+la clave y generación de A registradas antes del reemplazo:
+
+| Generación de A | softDeleteTime (UTC) | hardDeleteTime (UTC) | Diferencia |
+|---|---|---|---:|
+| `1793909248172839` | `2026-11-05T20:07:49.086Z` | `2026-11-12T20:07:49.086Z` | **604800 s** |
+
+El inventario vivo contenía únicamente B. Los dos GET de Nómina posteriores
+al reemplazo (uno después de verificar A en GCS) devolvieron 200, nombre
+`B.pdf` y SHA-256 `877860b4885b05169c1278c9e69baed6b609c46122cf7e5384b47551d55c17d2`,
+idéntico al original. El SHA de la descarga previa de A también coincidió con
+el original indicado arriba. No se restauró A ni se esperó al vencimiento.
+
+**Incidencias previas, sin escrituras documentales:** el precheck local rechazó
+firmas AV antiguas antes de crear un bucket. Se actualizó una copia temporal
+con freshclam (daily 28174). En otro precheck, una cabecera local de proyecto
+de cuota produjo 403; se retiró ese bucket vacío (sufijo `20ad3141`) y se
+corrigió la configuración del cliente sin ampliar los permisos del proyecto.
+
+**Retirada:** solo tras verificar B se retiró su generación exacta. GCS la
+listó como recuperable desde `2026-11-05T20:08:11.350Z` hasta
+`2026-11-12T20:08:11.350Z`. Antes de retirar el bucket había cero objetos
+vivos y dos generaciones recuperables: A y B. Se conservó la política en
+ambos buckets temporales. Su retirada devolvió 204; la consulta ordinaria
+posterior devolvió 404 y el listado de buckets recuperables confirmó ambos.
+Los sintéticos quedan sujetos a expiración normal, no a purga anticipada.
+Se retiraron PostgreSQL efímero, contenedores de análisis y volumen temporal
+de firmas. No se cambiaron los buckets H24 habituales ni su política.
 
 ## Requisitos distintos para producción
 
@@ -75,5 +119,5 @@ Tras el ensayo, aún se requiere autorización independiente, fijar SHA/digests
 API/web/worker y rollback; revalidar metadata, IAM y destinos separados, capacidad,
 analizadores privados, job y alertas. Completar H13, backup Cloud SQL SUCCESSFUL,
 H05 (solo 016/017 pendientes, sin discrepancias) y smoke del release en su ventana.
-Esta adecuación no consulta expedientes reales, no cambia buckets ni ejecuta
+Esta adecuación no consulta expedientes reales, no cambia buckets productivos ni ejecuta
 migraciones productivas, deploy o merge a main.

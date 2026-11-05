@@ -513,7 +513,8 @@ solo gestiona archivo. La decision original de borrado fisico del 2026-10-28
 queda sustituida para constancias: solo la nueva se muestra y descarga; desde
 la limpieza la anterior es recuperable siete dias en GCS por personal autorizado,
 no desde Nomina. Los PDF adicionales mantienen borrado definitivo. Sin purga historica.
-PD-DEST-01 pendiente de prueba GCS con la candidata ajustada, no desplegada.
+PD-DEST-01 verificado con GCS real exclusivamente en H24 para 3284a12.
+Sin despliegue ni autorizacion productiva.
 Seguimiento 2026-10-28: GCS de constancias verificado con prueba manual A/B y
 recuperacion PD-04. Dos disparos programados locales, fallos controlados e
 idempotencia aprobados; fingerprints test restituidos, constancia B preservada.

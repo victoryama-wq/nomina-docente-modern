@@ -280,9 +280,9 @@ aceptacion compensatoria con igual revision, no PASS literal. Se observo 429 de
 sesion con concurrencia HTTP 2; perfil 8 con el mismo limite documental: 30/30
 cargas y 56/56 lecturas HTTP 200 bajo carga. No cambiar estado productivo por
 la publicacion en un canal de prueba. El acta distingue ensayo y GO de ventana.
-PD-DEST-01 abierto. Los siete dias y versioning omitido eran incompatibles
-con eb24250. La nueva guarda de constancias acepta esa metadata; falta probar
-la generacion recuperable A en GCS aislado con la nueva candidata. NO-GO,
+PD-DEST-01 verificado en GCS aislado con 3284a12: generacion retirada
+recuperable 604800 segundos y unica vigente B integra. La incompatibilidad
+de eb24250 se conserva como evidencia historica. Produccion sigue sin GO,
 sin desactivar soft delete en el destino. Adicionales mantienen borrado definitivo.
 Ver [acta de seguimiento](H24_PD_DEST_01_Constancias_Recuperables.md).
 Capacidad repetida localmente 2026-11-03: primer ensayo fallido conservado;

@@ -15,10 +15,9 @@ PD-06 de abajo; la publicacion alli no actualiza produccion. Antes del release
 productivo comprobar el destino y sus politicas reales, backup SUCCESSFUL e
 inspect exacto H05 de 016/017. Ningun recurso efimero H24 es destino productivo.
 
-**PD-DEST-01 abierto; NO-GO.** El candidato anterior rechazaba los siete dias
-y el versionado omitido del destino documentado. La nueva guarda de constancias
-acepta esa configuracion sin cambiar el bucket. Falta demostrar en otra ventana
-H24 que la generacion retirada es recuperable siete dias; un 404 no basta.
+**PD-DEST-01 cerrado en GCS aislado para 3284a12; sin GO productivo.**
+La generacion exacta de A figura como recuperable siete dias y B siguio siendo
+la unica constancia descargable, con hash verificado. No se cambio el destino productivo.
 [Evidencia y requisitos para liberar](H24_PD_DEST_01_Constancias_Recuperables.md).
 Las pruebas historicas de borrado definitivo no acreditan esa propiedad.
 
