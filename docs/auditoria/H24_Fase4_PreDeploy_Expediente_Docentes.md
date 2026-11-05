@@ -15,12 +15,12 @@ PD-06 de abajo; la publicacion alli no actualiza produccion. Antes del release
 productivo comprobar el destino y sus politicas reales, backup SUCCESSFUL e
 inspect exacto H05 de 016/017. Ningun recurso efimero H24 es destino productivo.
 
-**PD-DEST-01: NO-GO con el destino actual.** El precheck autorizado de metadata
-encontro 7 dias de soft delete en constancias y sin versioning.enabled=false
-explicito. El adaptador lo rechaza. La regla de no conservar constancias borradas
-fue confirmada y la transicion se probo en H24; no se modifico produccion. Antes
-de habilitar escrituras se requiere ventana/aprobacion para la configuracion
-exacta y su verificacion. No omitir esta guarda ni usar otro bucket como atajo.
+**PD-DEST-01 abierto; NO-GO.** El candidato anterior rechazaba los siete dias
+y el versionado omitido del destino documentado. La nueva guarda de constancias
+acepta esa configuracion sin cambiar el bucket. Falta demostrar en otra ventana
+H24 que la generacion retirada es recuperable siete dias; un 404 no basta.
+[Evidencia y requisitos para liberar](H24_PD_DEST_01_Constancias_Recuperables.md).
+Las pruebas historicas de borrado definitivo no acreditan esa propiedad.
 
 [PD-06 cerrado para el candidato local](H24_PD06_Cierre_Residual_Npm_20261105.md):
 audit npm 0 en arbol completo, API sin dev e inspector. Regresion API 417 PASS/21
@@ -378,7 +378,7 @@ Usar Brave con login normal de usuarios autorizados de prueba, sin compartir tok
 en chat, logs, capturas o documentos. Registrar rol, entorno, HTTP y evidencia
 sanitizada. No cambiar permisos productivos para hacer pasar las pruebas.
 
-## 4. Almacenamiento y eliminacion definitiva
+## 4. Almacenamiento y eliminacion definitiva de documentos adicionales
 
 Propuesta pendiente de aprobacion: bucket dedicado de prueba y luego uno dedicado
 para H24 productivo. Nombres/proyecto de prueba **por definir**, no se inventa un

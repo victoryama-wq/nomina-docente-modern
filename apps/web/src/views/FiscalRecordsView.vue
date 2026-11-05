@@ -604,7 +604,7 @@ onUnmounted(() => {
 
         <div class="security-box fiscal-edit-note">
           <ShieldCheck :size="18" />
-          <span>Al sustituir la constancia se elimina definitivamente el archivo anterior después de guardar la nueva. Los datos fiscales se editan en Expediente.</span>
+          <span>Al reemplazarla, solo la nueva constancia queda disponible en Nómina. Durante siete días desde el borrado de la anterior, solo personal autorizado puede recuperarla en Cloud Storage. Los datos fiscales se editan en Expediente.</span>
         </div>
 
         <div class="modal-actions">

@@ -509,8 +509,11 @@ identidades complementarias; no es aceptacion de cobertura limitada ni cierre PD
 Ver `docs/auditoria/H24_PD05_Resultado_Persistencia_Inactividad.md`.
 Sesion QA local retenida a solicitud del usuario. Ajuste UX implementado localmente:
 RFC, correo, tipo de pago y banco dentro de Expediente junto al telefono; Constancia
-solo gestiona archivo. Borrado fisico de constancia sustituida aprobado el
-2026-10-28; implementacion local con estados durables, sin purga historica.
+solo gestiona archivo. La decision original de borrado fisico del 2026-10-28
+queda sustituida para constancias: solo la nueva se muestra y descarga; desde
+la limpieza la anterior es recuperable siete dias en GCS por personal autorizado,
+no desde Nomina. Los PDF adicionales mantienen borrado definitivo. Sin purga historica.
+PD-DEST-01 pendiente de prueba GCS con la candidata ajustada, no desplegada.
 Seguimiento 2026-10-28: GCS de constancias verificado con prueba manual A/B y
 recuperacion PD-04. Dos disparos programados locales, fallos controlados e
 idempotencia aprobados; fingerprints test restituidos, constancia B preservada.

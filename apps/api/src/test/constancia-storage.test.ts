@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ bucketMetadata: vi.fn(), fileMetadata: vi.fn(), save: vi.fn(), remove: vi.fn(), file: vi.fn() }));
 vi.mock('../firebase.js', () => ({ firebaseAdmin: { storage: () => ({ bucket: () => ({ getMetadata: mocks.bucketMetadata, file: mocks.file }) }) } }));
 import { constanciaStorage } from '../lib/constancia-storage.js';
-const safeMetadata = () => ({ name: 'constancias-test', versioning: { enabled: false }, softDeletePolicy: { retentionDurationSeconds: '0' }, iamConfiguration: { uniformBucketLevelAccess: { enabled: true }, publicAccessPrevention: 'enforced' } });
+const safeMetadata = () => ({ name: 'constancias-test', softDeletePolicy: { retentionDurationSeconds: '604800' }, iamConfiguration: { uniformBucketLevelAccess: { enabled: true }, publicAccessPrevention: 'enforced' } });
 const object = { bucket: 'constancias-test', key: 'constancias/00000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000002' };
 beforeEach(() => {
   vi.resetAllMocks();
@@ -10,8 +10,11 @@ beforeEach(() => {
   mocks.fileMetadata.mockResolvedValue([{ generation: '123' }]);
   mocks.file.mockReturnValue({ getMetadata: mocks.fileMetadata, save: mocks.save, delete: mocks.remove });
 });
-describe('constancia physical deletion policy', () => {
-  it('uploads create-only with private caching and deletes the exact observed generation', async () => {
+describe('constancia seven-day soft deletion policy', () => {
+  it.each([{}, {versioning: {enabled: false}}].flatMap(versioning =>
+    [604800, '604800'].map(retentionDurationSeconds => ({ ...versioning, softDeletePolicy: {retentionDurationSeconds} }))
+  ))('uploads privately and deletes only the exact generation with %j', async policy => {
+    mocks.bucketMetadata.mockResolvedValue([{ ...safeMetadata(), ...policy }]);
     const storage = constanciaStorage('constancias-test');
     await storage.put(object, Buffer.from('%PDF'), 'application/pdf');
     expect(mocks.save).toHaveBeenCalledWith(expect.any(Buffer), expect.objectContaining({ preconditionOpts: { ifGenerationMatch: 0 }, metadata: { contentType: 'application/pdf', cacheControl: 'private, no-store' } }));
@@ -19,13 +22,15 @@ describe('constancia physical deletion policy', () => {
     expect(mocks.remove).toHaveBeenCalledWith({ ifGenerationMatch: '123' });
   });
   it.each([
-    { versioning: { enabled: true } }, { versioning: undefined },
-    { softDeletePolicy: { retentionDurationSeconds: '604800' } }, { softDeletePolicy: undefined },
+    { versioning: { enabled: true } }, { versioning: { enabled: 'false' } }, { versioning: {} }, { versioning: null },
+    { name: 'wrong-bucket' }, { softDeletePolicy: undefined }, { softDeletePolicy: null }, { softDeletePolicy: {} },
+    ...[0, '0', 604801, '0604800', '604800.0', true].map(retentionDurationSeconds => ({ softDeletePolicy: { retentionDurationSeconds } })),
     { retentionPolicy: { retentionPeriod: '1' } }, { defaultEventBasedHold: true },
     { objectRetention: {} }, { iamConfiguration: {} }
-  ])('rejects a bucket that cannot guarantee private physical deletion (%j)', async override => {
+  ])('rejects unexpected policy before writing or deleting (%j)', async override => {
     mocks.bucketMetadata.mockResolvedValue([{ ...safeMetadata(), ...override }]);
     await expect(constanciaStorage('constancias-test').put(object, Buffer.from('x'), 'application/pdf')).rejects.toThrow();
+    await expect(constanciaStorage('constancias-test').remove(object)).rejects.toThrow();
     expect(mocks.save).not.toHaveBeenCalled();
     expect(mocks.remove).not.toHaveBeenCalled();
   });

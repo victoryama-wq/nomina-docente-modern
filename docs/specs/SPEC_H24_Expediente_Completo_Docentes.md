@@ -116,8 +116,11 @@ importaciones. Implementacion local/test con migracion aditiva 017, sin modifica
 Actualizacion local del 2026-10-28, posterior a F0/F2: el usuario aprobo reunir
 RFC, correo fiscal, tipo de pago y banco/cuenta/CLABE dentro de Expediente, junto
 con telefono y documentos adicionales. Constancia conserva solo acciones de
-archivo: cargar/sustituir, vista previa y descarga. Tambien aprobo **borrar
-fisicamente la constancia sustituida**, una vez publicada correctamente la nueva.
+archivo: cargar/sustituir, vista previa y descarga. Publicada la nueva, solo ella
+es consultable. La limpieza retira la generacion anterior en GCS; queda recuperable
+durante siete dias desde su borrado solo para personal con permisos en Google Cloud.
+No hay restauracion desde Nomina. Un fallo anterior a la publicacion conserva la
+vigente; un fallo posterior de limpieza se reintenta sin retirar la nueva.
 No se autoriza purgar constancias historicas que ya eran no vigentes antes del
 nuevo flujo. La decision no permite tocar produccion ni desplegar.
 Ver [ajuste local y validaciones](../auditoria/H24_Ajuste_Expediente_Fiscal_Constancia.md).
@@ -131,7 +134,7 @@ Ver [ajuste local y validaciones](../auditoria/H24_Ajuste_Expediente_Fiscal_Cons
 | Tipos iniciales | CURP, Acta de nacimiento, Cedula profesional, Titulo y Otro |
 | Consulta | Vista previa al hacer clic y descarga desde esa vista |
 | Actualizacion | Reemplazar un archivo y actualizar su clasificacion/nombre descriptivo |
-| Retiro | Eliminar el archivo definitivamente; no conservar versiones documentales retiradas |
+| Retiro de PDF adicionales | Eliminar el archivo definitivamente; no conservar versiones documentales retiradas |
 | Constancia | Mantener columna y flujo separados de los PDF adicionales |
 | Entrada al expediente | Nueva columna con boton de ojo, nombre accesible y tooltip |
 | Telefono | Editar `teachers.phone` solo con edicion fiscal vigente y dentro del alcance autorizado |
@@ -189,7 +192,7 @@ El resultado se refleja en Directorio al volver a consultar/actualizar su listad
 
 Validar 1440x900, 768x1024 y 390x844: filtros/acciones uniformes, tabla con scroll interno, modal utilizable sin overflow general, botones accesibles por teclado, foco visible y restaurado al cerrar, labels y mensajes legibles. El ojo debe tener nombre accesible, no depender solo del icono o color.
 
-## 6. Eliminacion definitiva y reemplazo
+## 6. Eliminacion definitiva y reemplazo de documentos adicionales
 
 La decision de negocio es eliminar los PDF adicionales retirados, no solo ocultarlos ni archivarlos. Conservar un evento de auditoria minimo sin contenido del PDF ni copia del archivo.
 

@@ -1206,8 +1206,8 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           }
         });
         return { ...uploaded, message: uploaded.cleanupPending
-          ? 'Constancia guardada. La eliminación del archivo anterior está pendiente de recuperación; no vuelvas a cargarla.'
-          : 'Constancia fiscal guardada; cualquier archivo sustituido fue eliminado.' };
+          ? 'La nueva constancia está vigente. La limpieza del archivo anterior está pendiente; no vuelvas a cargarla.'
+          : 'Constancia fiscal guardada. Solo la vigente se puede descargar desde Nómina.' };
       } catch (error) {
         if (error instanceof DocumentSecurityError) {
           if (error.statusCode === 429) reply.header('Retry-After', '2');

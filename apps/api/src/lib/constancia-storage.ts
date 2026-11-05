@@ -9,9 +9,10 @@ export function constanciaStorage(bucketName: string): ConstanciaStorage {
   async function bucket() {
     const result = firebaseAdmin.storage().bucket(bucketName);
     const [metadata] = await result.getMetadata();
-    // Physical deletion cannot be promised with retained versions, holds or soft deletion.
-    if (metadata.name !== bucketName || metadata.versioning?.enabled !== false ||
-        ![0, '0'].includes(metadata.softDeletePolicy?.retentionDurationSeconds as string | number) ||
+    // GCS can omit versioning entirely when it is disabled.
+    const retentionSeconds: unknown = metadata.softDeletePolicy?.retentionDurationSeconds;
+    if (metadata.name !== bucketName || (metadata.versioning !== undefined && metadata.versioning?.enabled !== false) ||
+        (retentionSeconds !== 604800 && retentionSeconds !== '604800') ||
         metadata.retentionPolicy != null || metadata.defaultEventBasedHold === true || metadata.objectRetention != null ||
         metadata.iamConfiguration?.uniformBucketLevelAccess?.enabled !== true ||
         metadata.iamConfiguration?.publicAccessPrevention !== 'enforced') throw new ConstanciaStorageError();

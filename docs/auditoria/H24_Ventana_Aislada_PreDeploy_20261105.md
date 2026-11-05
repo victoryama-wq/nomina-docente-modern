@@ -13,6 +13,13 @@ release. PD-03 y PD-05 tienen aceptaciones temporales, no riesgos eliminados.
 
 ## Ambiente y limites
 
+**Adenda posterior al cierre cb19e50:** el ensayo y las instrucciones de
+transicion a cero dias de este acta describen exclusivamente `eb24250`.
+No ejecutar esa transicion para constancias. La decision vigente conserva siete
+dias en GCS exclusivamente para constancias sustituidas. [Adecuacion y evidencia
+pendiente](H24_PD_DEST_01_Constancias_Recuperables.md). La ventana anterior
+no valida el nuevo binario ni autoriza una nueva ventana.
+
 - Imagen API exacta de PD-06: `sha256:39842256ac4ebc3fc67c71aa452ca9daba4913d8f0346a7ae1f47455d87b6f75`.
   Frontend Vite del checkout con variables exclusivamente H24, 61 archivos.
   Se sustituyeron las tres URLs sociales estaticas en el HTML generado de prueba;
@@ -170,7 +177,7 @@ de limpieza; no hacer DROP ni prometer restauracion de documentos ya borrados.
 
 ## Decision
 
-### PD-DEST-01: incompatibilidad comprobada de almacenamiento
+### PD-DEST-01: incompatibilidad comprobada de eb24250 (historico)
 
 Precheck productivo **solo GET de metadatos**, autorizado separadamente, 19:00 UTC.
 Cloud Run vigente `nomina-api-00057-c7d` recibe 100%, con el digest exacto probado
@@ -196,7 +203,8 @@ rechazo de borrado de otro bucket. No se probo una escritura contra produccion.
 Cambiar unicamente CONSTANCIAS_BUCKET podria publicar B pero dejar pendiente
 la eliminacion de A en el bucket anterior.
 
-Decision funcional confirmada: **no se requiere conservar constancias una vez
+Decision de aquella ventana (sustituida; **no ejecutar** el cambio siguiente):
+**no se requiere conservar constancias una vez
 eliminadas**. No es permiso para purgar registros ni para cambiar hoy la politica
 productiva. En una ventana autorizada, la alternativa preparada es conservar
 el nombre del bucket y modificar unicamente softDeletePolicy.retentionDurationSeconds

@@ -1,6 +1,8 @@
 # H24 - Ficha unificada y sustitucion de constancia
 
 Fecha: 2026-10-28.
+Nota posterior: este acta conserva evidencia historica del borrado fisico.
+La politica vigente solo para constancias es [siete dias recuperables en GCS](H24_PD_DEST_01_Constancias_Recuperables.md).
 Rama: `feature/h02-h03-user-coordinations-permissions`.
 Base de trabajo: `158bce9`; habia cambios AUTH-01 pendientes, conservados.
 Estado: implementacion y pruebas locales; **no desplegado, H24 sigue NO-GO**.

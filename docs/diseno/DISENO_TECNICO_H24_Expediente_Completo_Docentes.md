@@ -135,7 +135,7 @@ estados internos nuevos siempre no vigentes: `CONSTANCIA_FISCAL_STAGING`,
 vigente mantiene `CONSTANCIA_FISCAL` y `is_current=true`, compatible con joins
 existentes. Esta extension de valores implementa el ajuste posterior al diseno
 F0, sin nueva columna ni migracion. La metadata permanece para trazabilidad;
-los bytes retirados se eliminan. No se recorre ni borra el historial previo.
+la generacion retirada deja de estar vigente en GCS. No se recorre ni borra el historial previo.
 
 Admision persistida antes de GCS; objeto UUID create-only; bloqueo de staging
 durante upload; publicacion transaccional bajo bloqueo del docente con auditoria;
@@ -145,8 +145,12 @@ explicita al usuario. El worker one-shot existente tambien procesa estos estados
 maximo 25 por invocacion, y staging abandonado de mas de 24 horas. No se programa
 ni ejecuta worker productivo en esta fase. No se borran referencias vigentes.
 
-El adaptador exige bucket privado sin versionado, soft delete, retencion ni holds;
-borra condicionando la generacion observada. Configuracion insegura/desconocida
+Solo en constancias se exige soft delete de 604800 segundos (numero o cadena
+decimal exacta), versionado ausente o enabled=false, bucket privado autorizado
+sin otras retenciones ni holds. La limpieza borra condicionando la generacion
+observada; DELETED indica limpieza, no purga inmediata. Solo personal autorizado
+en Google Cloud puede restaurar durante siete dias desde el borrado; Nomina
+solo descarga la referencia vigente. Configuracion insegura/desconocida
 produce error controlado, no relajacion de la politica ni cambios automaticos.
 **Seguimiento 2026-10-28:** bucket aislado de constancias creado y ensayo manual
 A/B verificado: A borrada fisicamente, B vigente. PD-04 agrega fallos controlados,

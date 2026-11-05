@@ -280,9 +280,11 @@ aceptacion compensatoria con igual revision, no PASS literal. Se observo 429 de
 sesion con concurrencia HTTP 2; perfil 8 con el mismo limite documental: 30/30
 cargas y 56/56 lecturas HTTP 200 bajo carga. No cambiar estado productivo por
 la publicacion en un canal de prueba. El acta distingue ensayo y GO de ventana.
-PD-DEST-01 confirmado con metadatos: retencion soft delete de siete dias en
-constancias productivas y versioning omitido, incompatibles con la guarda de
-borrado. Transicion probada solo en H24; NO-GO con politicas actuales.
+PD-DEST-01 abierto. Los siete dias y versioning omitido eran incompatibles
+con eb24250. La nueva guarda de constancias acepta esa metadata; falta probar
+la generacion recuperable A en GCS aislado con la nueva candidata. NO-GO,
+sin desactivar soft delete en el destino. Adicionales mantienen borrado definitivo.
+Ver [acta de seguimiento](H24_PD_DEST_01_Constancias_Recuperables.md).
 Capacidad repetida localmente 2026-11-03: primer ensayo fallido conservado;
 repeticion corregida 7/7 y lotes 30/30 al primer intento, maximo 41.218 s;
 integridad local aprobada. No cierra PD-07 cloud ni H24. Ver

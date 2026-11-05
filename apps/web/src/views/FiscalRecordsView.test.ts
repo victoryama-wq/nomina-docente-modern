@@ -98,7 +98,9 @@ describe('H24 fiscal module entry and regression', () => {
     const form = wrapper.get('form');
     expect(form.find('input[type=email]').exists()).toBe(false);
     expect(form.find('select').exists()).toBe(false);
-    expect(form.text()).toContain('elimina definitivamente');
+    expect(form.text()).toContain('solo la nueva constancia queda disponible en Nómina');
+    expect(form.text()).toContain('siete días desde el borrado');
+    expect(form.text()).not.toContain('elimina definitivamente');
     const file = form.get('input[type=file]');
     Object.defineProperty(file.element, 'files', { value: [new File(['%PDF'], 'test.pdf', { type: 'application/pdf' })] });
     await file.trigger('change');
