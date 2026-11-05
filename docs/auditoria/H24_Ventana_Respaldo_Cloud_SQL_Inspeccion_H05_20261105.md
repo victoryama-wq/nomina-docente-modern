@@ -57,3 +57,35 @@ de IAM o buckets, infraestructura nueva, merge, deploy ni habilitación H24.
 Para completar el dictamen falta una ejecución por un canal DBA autorizado de
 **solo inspect**, conservando la trazabilidad de este respaldo. No duplicar
 el respaldo por el fallo de lanzamiento del comando.
+
+## Reintento autorizado y entrega al DBA
+
+2026-11-05, 16:22 de Cancún (21:22 UTC). Se reconfirmaron por metadata el
+destino, estado RUNNABLE, horario 06:50–22:00 y respaldo existente
+`1793913186499` SUCCESSFUL. No se solicitó otro respaldo. Los 20 archivos
+SQL locales coincidieron byte a byte con `3284a12`; sin diferencias en el
+runner ni en la definición del comando.
+
+El único intento de lanzamiento por el mismo canal fue rechazado por la
+política del entorno (`CreateProcess: blocked by policy`). No arrancaron
+el proxy ni npm; **código de salida H05: no disponible**. No hubo consultas
+a PostgreSQL, advertencias emitidas por el runner ni un resultado de checksum.
+La tabla anterior sigue vigente. No se intentó otro canal.
+
+**Entrega al DBA:** desde la candidata `3284a12`, dentro del horario indicado
+y con el perfil DBA productivo de solo lectura para `nomina_docente`, ejecutar
+únicamente `npm run db:migrate:inspect`. Referenciar el respaldo ya creado.
+Devolver las dos presencias de tabla, los conteos, el detalle por identificador,
+las advertencias y el código de salida; omitir credenciales y datos de conexión.
+Contrastar por separado ambas versiones de cada prefijo:
+
+| Prefijo | Identificadores distintos en la candidata |
+|---|---|
+| 007 | `007_direction_hr_roles`, `007_incidence_period_locking` |
+| 008 | `008_direction_live_payroll`, `008_payroll_status_workflow` |
+| 009 | `009_access_windows`, `009_payroll_correction_flow` |
+
+No interpretar un código 0 por sí solo como conformidad. Si falta una tabla,
+hay un identificador inesperado, una discrepancia de checksum u otra diferencia,
+registrarla y terminar sin corregir. No seguir recomendaciones de dry-run del
+runner. Hasta contar con salida productiva, el dictamen queda **pendiente del DBA**.
