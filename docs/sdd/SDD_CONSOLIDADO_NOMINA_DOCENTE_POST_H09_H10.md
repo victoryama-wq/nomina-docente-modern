@@ -535,6 +535,13 @@ PD-06 al 03/11: 0 criticas/0 altas/20 moderadas/1 baja. El 05/11 se cerro
 la remediacion npm local: audit 0, regresion 167/167, sin cambios de modulos o
 reglas. Ver `docs/auditoria/H24_PD06_Cierre_Residual_Npm_20261105.md`.
 Los conteos siguientes son historicos; no hay autorizacion de deploy.
+Prueba posterior del candidato eb24250 en el proyecto H24, no en produccion:
+[acta de la ventana aislada](../auditoria/H24_Ventana_Aislada_PreDeploy_20261105.md).
+La API de ensayo con dos slots HTTP no daba margen a la navegacion; con 8 HTTP
+y el mismo limite de dos analisis se verificaron 30/30 cargas y 56/56 lecturas
+concurrentes. Rectoria comunico aceptacion temporal de los riesgos residuales
+del visor/salida de red y de la prueba compensatoria de audiencia (revision
+2027-02-01). No es prueba con segundo emisor real ni habilitacion productiva.
 PD-06 compatible local: audit 0 criticas/5 altas/9 moderadas/1 baja,
 API 306 aprobadas/15 omitidas, web 158/158, typecheck/build OK (primera correccion).
 Seguimiento posterior aprobado: Zod 4.6.7, gRPC 1.14.7 y npm 10.9.4 fijado;

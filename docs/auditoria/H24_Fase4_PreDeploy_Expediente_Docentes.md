@@ -9,6 +9,19 @@ H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprob
 
 ## Estado actualizado 2026-11-05
 
+Seguimiento posterior: [ventana H24 aislada del candidato eb24250](H24_Ventana_Aislada_PreDeploy_20261105.md).
+Este es el registro de resultados y excepciones posteriores a la revision local
+PD-06 de abajo; la publicacion alli no actualiza produccion. Antes del release
+productivo comprobar el destino y sus politicas reales, backup SUCCESSFUL e
+inspect exacto H05 de 016/017. Ningun recurso efimero H24 es destino productivo.
+
+**PD-DEST-01: NO-GO con el destino actual.** El precheck autorizado de metadata
+encontro 7 dias de soft delete en constancias y sin versioning.enabled=false
+explicito. El adaptador lo rechaza. La regla de no conservar constancias borradas
+fue confirmada y la transicion se probo en H24; no se modifico produccion. Antes
+de habilitar escrituras se requiere ventana/aprobacion para la configuracion
+exacta y su verificacion. No omitir esta guarda ni usar otro bucket como atajo.
+
 [PD-06 cerrado para el candidato local](H24_PD06_Cierre_Residual_Npm_20261105.md):
 audit npm 0 en arbol completo, API sin dev e inspector. Regresion API 417 PASS/21
 SKIP, web 169 PASS, PostgreSQL efimero 167/167, typecheck/build y compatibilidad
@@ -499,15 +512,17 @@ de `apps/web/src/config.ts`. No se solicitan ni crean cuentas/recursos ahora.
 016 es aditiva: dos tablas, indices/FK/checks, sin backfill, sin modificar teachers
 ni constancias/roles/snapshots. SHA-256 local del archivo revisado:
 `419cc93af11b82d72116587f53510725b440f1be8547ecb420bb4fcddd03d685`.
-H13 documenta historicamente 18 migraciones registradas hasta 015; no se verifico
-Cloud SQL en F4. Frente a las 19 del filesystem, se espera **solo 016 pendiente**
-antes de migrar, no exigir pending=0 antes de aplicar la nueva migracion.
-Despues se espera 19 registradas, pending=0, mismatch=0; son expectativas futuras.
+017 agrega C.P. fiscal y CURP opcionales con constraints. Frente al digest
+anterior Finanzas, el candidato eb24250 agrega exclusivamente los SQL 016 y 017
+al directorio de migraciones (20 archivos en total). H13 registro historicamente
+18 hasta 015: antes de aplicar se esperan **exactamente 016 y 017 pendientes**,
+cero checksum mismatch. Despues: 20 registradas, pending=0, mismatch=0.
+Son precondicion y postcondicion a verificar, no observaciones productivas de hoy.
 
 F3 dejo H05 test vacio tras reset: no ejecutar apply general alli sin reconstruir
 el estado administrativo de ensayo correctamente. Para probar H05, preparar test
-con esquema/registro hasta 015 y ejecutar 016 por runner, con autorizacion local
-separada. No copiar ese estado ni los datos sinteticos hacia produccion.
+con esquema/registro hasta 015. El [ensayo 016/017](H24_PD08_Ensayo_Local_Migraciones_016_017.md)
+ya cubre ambas mediante el runner. No copiar ese estado ni datos sinteticos a produccion.
 
 Orden propuesto **NO ejecutado**:
 1. Conservar evidencia PD-01 y PD-02 cerrados en sus alcances locales; cerrar PD-03 a PD-08 y AUTH-01, aprobar estrategia PDF/infraestructura y registrar
@@ -516,9 +531,10 @@ Orden propuesto **NO ejecutado**:
    revision/Hosting anteriores por consulta autorizada durante ventana, no por
    asumir que los valores historicos del SDD siguen vigentes.
 3. Backup Cloud SQL SUCCESSFUL y restaurabilidad; inspect H05 autorizado: solo
-   016 pendiente y cero mismatch. apply recorre todos los pendientes
+   016/017 pendientes y cero mismatch. apply recorre todos los pendientes
    (`tools/migrate-db.ts:478`): abortar si aparece otro. No baseline historico.
-4. Aplicar exclusivamente 016 mediante H05 con confirmaciones y ventana aprobadas.
+4. Aplicar exclusivamente 016 y 017, en orden mediante H05 con confirmaciones
+   y ventana productiva independiente aprobada. Ante estado distinto detener.
    Verificar schema/registro y ausencia de cambios a datos funcionales. dry-run
    puede escribir registro administrativo; no llamarlo read-only.
 5. Habilitar infraestructura aprobada y worker, desplegar API antes de Hosting;

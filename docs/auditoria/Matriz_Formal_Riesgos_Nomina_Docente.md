@@ -273,6 +273,16 @@ avisos glob/minimatch ademas del residual UUID/esbuild; sin excepcion aceptada.
 El 05/11 PD-06 queda cerrado para el lock probado: audit completo/API 0, sin
 excepcion, regresion PostgreSQL 167/167. Ver `H24_PD06_Cierre_Residual_Npm_20261105.md`.
 Las cifras previas corresponden a sus fechas. H24 conserva los demas pendientes.
+Seguimiento del candidato eb24250 en H24: [pruebas, excepciones y condiciones de release](H24_Ventana_Aislada_PreDeploy_20261105.md).
+PD-03: Rectoria acepta riesgo residual de salida de red y visor nativo hasta la
+revision 2027-02-01; no se relajan IAM/AV. PD-05: segundo emisor no disponible;
+aceptacion compensatoria con igual revision, no PASS literal. Se observo 429 de
+sesion con concurrencia HTTP 2; perfil 8 con el mismo limite documental: 30/30
+cargas y 56/56 lecturas HTTP 200 bajo carga. No cambiar estado productivo por
+la publicacion en un canal de prueba. El acta distingue ensayo y GO de ventana.
+PD-DEST-01 confirmado con metadatos: retencion soft delete de siete dias en
+constancias productivas y versioning omitido, incompatibles con la guarda de
+borrado. Transicion probada solo en H24; NO-GO con politicas actuales.
 Capacidad repetida localmente 2026-11-03: primer ensayo fallido conservado;
 repeticion corregida 7/7 y lotes 30/30 al primer intento, maximo 41.218 s;
 integridad local aprobada. No cierra PD-07 cloud ni H24. Ver
