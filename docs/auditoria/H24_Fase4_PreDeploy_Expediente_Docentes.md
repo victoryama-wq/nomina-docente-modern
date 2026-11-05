@@ -7,7 +7,15 @@ Rama: `feature/h02-h03-user-coordinations-permissions`.
 **Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
 H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
 
-## Estado actualizado 2026-11-03
+## Estado actualizado 2026-11-05
+
+[PD-06 cerrado para el candidato local](H24_PD06_Cierre_Residual_Npm_20261105.md):
+audit npm 0 en arbol completo, API sin dev e inspector. Regresion API 417 PASS/21
+SKIP, web 169 PASS, PostgreSQL efimero 167/167, typecheck/build y compatibilidad
+XLSX/SDK OK. Sin cambios de reglas ni modulos. La imagen nueva no se publico;
+se conserva NO-GO por los otros pendientes, incluida validacion cloud final.
+
+## Estado al 2026-11-03
 
 [Revalidacion end-to-end B01 a B04](H24_PD07_Revalidacion_EndToEnd_B01_B04_20261103.md):
 el primer recorrido completo reproduce un 202 pendiente y una carga de 57.7 s;

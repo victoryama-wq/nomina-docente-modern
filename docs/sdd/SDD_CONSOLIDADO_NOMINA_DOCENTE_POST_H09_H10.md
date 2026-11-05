@@ -531,8 +531,10 @@ duplicado inmediato con comprobante interno ligado a hash/operacion (30 s), sin
 omitir relectura ni validacion de recuperacion/lecturas. Repeticion local aprobada:
 7/7 casos, 30/30 archivos al primer intento, maximo 41.218 s, integridad de 22
 tablas conservada y cero pendientes adicionales. Sin despliegue ni cierre H24.
-PD-06 actualizado: 0 criticas/0 altas/20 moderadas/1 baja;
-no interpretar los conteos historicos siguientes como audit vigente.
+PD-06 al 03/11: 0 criticas/0 altas/20 moderadas/1 baja. El 05/11 se cerro
+la remediacion npm local: audit 0, regresion 167/167, sin cambios de modulos o
+reglas. Ver `docs/auditoria/H24_PD06_Cierre_Residual_Npm_20261105.md`.
+Los conteos siguientes son historicos; no hay autorizacion de deploy.
 PD-06 compatible local: audit 0 criticas/5 altas/9 moderadas/1 baja,
 API 306 aprobadas/15 omitidas, web 158/158, typecheck/build OK (primera correccion).
 Seguimiento posterior aprobado: Zod 4.6.7, gRPC 1.14.7 y npm 10.9.4 fijado;

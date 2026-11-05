@@ -37,6 +37,10 @@
   "overrides": {
     "vue": "3.5.44",
     "@vue/server-renderer": "3.5.44",
-    "@grpc/grpc-js": "1.14.7"
+    "@grpc/grpc-js": "1.14.7",
+    "uuid": "11.1.1",
+    "js-beautify@1.15.4": { "glob": "14.0.2" },
+    "editorconfig@1.0.7": { "minimatch": "11.0.1" },
+    "@vue/language-core@2.2.12": { "minimatch": "11.0.1" }
   }
 }

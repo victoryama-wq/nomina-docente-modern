@@ -270,7 +270,9 @@ El 2026-11-03 el usuario confirmo recepcion de la alerta sintetica del 29 de oct
 Quedan cadencias multiples, alerta por ausencia y configuracion del destino final.
 Audit read-only del 2026-11-03: 0 criticas/0 altas/20 moderadas/1 baja, por nuevos
 avisos glob/minimatch ademas del residual UUID/esbuild; sin excepcion aceptada.
-Las cifras previas corresponden a sus fechas, no al audit actual.
+El 05/11 PD-06 queda cerrado para el lock probado: audit completo/API 0, sin
+excepcion, regresion PostgreSQL 167/167. Ver `H24_PD06_Cierre_Residual_Npm_20261105.md`.
+Las cifras previas corresponden a sus fechas. H24 conserva los demas pendientes.
 Capacidad repetida localmente 2026-11-03: primer ensayo fallido conservado;
 repeticion corregida 7/7 y lotes 30/30 al primer intento, maximo 41.218 s;
 integridad local aprobada. No cierra PD-07 cloud ni H24. Ver

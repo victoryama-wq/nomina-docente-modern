@@ -8,6 +8,9 @@ H24 conserva NO-GO hasta resolver los gates pendientes; esto no autoriza deploy.
 
 ## Seguimiento read-only 2026-11-03
 
+**Resultado posterior, 2026-11-05:** [remediacion y regresion del lock final](H24_PD06_Cierre_Residual_Npm_20261105.md).
+PD-06 aprobado localmente, audit 0; los conteos y propuestas siguientes son historicos.
+
 Durante la repeticion PD-07 se consulto otra vez `npm audit --json --offline=false`
 con npm 10.9.4, mismo lockfile. Resultado vigente: **0 criticas, 0 altas,
 20 moderadas y 1 baja**, exit 1. Las cifras 9/1 siguientes son evidencia del
