@@ -1,5 +1,12 @@
 # H24: precheck productivo de solo lectura
 
+Seguimiento documental 2026-11-09: el [acta de respaldo e inspección H05](H24_Ventana_Respaldo_Cloud_SQL_Inspeccion_H05_20261105.md)
+registra cierre favorable aportado desde Cloud Shell: 20 archivos, 18 registradas,
+solo 016/017 pendientes y mismatch 0. El backup 1793913186499 continúa SUCCESSFUL,
+con restauración no ensayada. El [plan de infraestructura](H24_Plan_Infraestructura_Productiva_20261109.md)
+separa los siguientes permisos y ventanas. La tabla siguiente conserva la
+observación del **5 de noviembre**, no una inspección actual ni un GO de release.
+
 2026-11-05, 21:06–21:08 UTC. Proyecto activo `nomina-docente-prod` (`443985127112`).
 Candidata funcional: `3284a12af189baeaff51335401d13e9923d9d51d`.
 [Cierre de PD-DEST-01 en GCS aislado](H24_PD_DEST_01_Constancias_Recuperables.md):

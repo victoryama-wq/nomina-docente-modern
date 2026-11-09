@@ -20,6 +20,12 @@ dias en GCS exclusivamente para constancias sustituidas. [Adecuacion y evidencia
 del ensayo independiente con 3284a12](H24_PD_DEST_01_Constancias_Recuperables.md). La ventana anterior
 no valida el nuevo binario ni autoriza una nueva ventana.
 
+Seguimiento 2026-11-09, fuera del ensayo: [H05 productivo favorable aportado](H24_Ventana_Respaldo_Cloud_SQL_Inspeccion_H05_20261105.md)
+para 3284a12 (20 archivos/18 registradas/solo 016 y 017 pendientes/mismatch 0).
+No sustituye la evidencia histórica de eb24250 ni aplica migraciones.
+El [plan de infraestructura](H24_Plan_Infraestructura_Productiva_20261109.md)
+requiere otra autorización; el backup existente no se restauró en una prueba.
+
 - Imagen API exacta de PD-06: `sha256:39842256ac4ebc3fc67c71aa452ca9daba4913d8f0346a7ae1f47455d87b6f75`.
   Frontend Vite del checkout con variables exclusivamente H24, 61 archivos.
   Se sustituyeron las tres URLs sociales estaticas en el HTML generado de prueba;

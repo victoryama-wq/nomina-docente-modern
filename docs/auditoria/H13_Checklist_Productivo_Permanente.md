@@ -276,11 +276,19 @@ Ver `H24_Fase4_Correccion_Parser_Pdfinfo.md`, seccion 8, para ID e inventario.
 Revalidar artefacto si se reconstruye; estrategia PDF y demas gates siguen
 pendientes. Esto no autoriza migracion, infraestructura cloud ni deploy.
 
-H05 esperado para esa ventana: 18 registradas hasta 015 y **solo 016 pendiente**,
-checksum mismatch=0; despues de aplicacion autorizada, 19 registradas y pending=0.
-Son expectativas, no nueva consulta a produccion. El runner aplica todos los
-pendientes; detenerse si no son exactamente los aprobados. No hacer baseline
-productivo nuevo ni usar el registro vacio del harness de test como evidencia H05.
+Actualización H24 del 2026-11-09: la expectativa inicial de solo 016 quedó
+superada por el alcance de identidad fiscal 017. [H05 favorable aportado por el
+usuario](H24_Ventana_Respaldo_Cloud_SQL_Inspeccion_H05_20261105.md): 20 archivos,
+18 registradas hasta 015, 15 baseline/3 aplicadas, **solo 016 y 017 pendientes**,
+checksum mismatch=0, tablas presentes y exit 0. No es autorización de apply.
+Después de aplicar ambas en una futura ventana autorizada se espera 20
+registradas y pending=0/mismatch=0; todavía no es un resultado productivo.
+El runner aplica todos los pendientes: detenerse si no son exactamente los
+aprobados. No hacer baseline productivo nuevo ni usar el registro vacío del
+harness de test como evidencia H05. Backup 1793913186499 SUCCESSFUL según
+reconfirmación aportada; restauración no ensayada. Revisar vigencia y obtener
+el respaldo preventivo que corresponda antes de migrar, no en esta fase.
+Infraestructura, responsables y controles de reversión en el [plan propuesto](H24_Plan_Infraestructura_Productiva_20261109.md).
 
 Un GET autenticado puede actualizar last_login_at/firebase_uid; no afirmar cero
 escrituras para una sesion Firebase real. Las pruebas F4 no inician sesion productiva.

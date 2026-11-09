@@ -1,7 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-10-27
+Ultima actualizacion: 2026-11-09 (cierre H05 aportado y plan H24, sin nueva inspeccion cloud)
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -26,7 +26,7 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true`, en monitoreo |
-| Control H05 productivo | 18 registradas: 15 baseline y `013`/`014`/`015` aplicadas; `pending=0`; `checksum mismatch=0` |
+| Control H05 productivo | Inspección del 2026-11-09 aportada por el usuario para candidata 3284a12: 20 archivos, 18 registradas (15 baseline y `013`/`014`/`015` aplicadas), solo `016`/`017` pendientes; checksum mismatch=0; exit 0. No autoriza apply. |
 
 Estado por H:
 
@@ -36,7 +36,7 @@ Estado por H:
 | H02 | Cerrado operativo; `user_coordinations` existe, pero el fallback legacy sigue activo en monitoreo. |
 | H03 | Cerrado operativo, incluido el ajuste de comprobante consolidado y nombre docente desplegado en `nomina-api-00057-c7d` y Hosting live. Healthchecks OK; smoke autenticado del PDF y nombres por rol aprobado por el usuario. Ver `docs/auditoria/H03_Deploy_Finanzas_Comprobantes_Consolidados.md`. |
 | H04 | Implementado hasta Fase 5; H04-F6 Playwright queda opcional posterior. |
-| H05 | Cerrado con tablas de control; produccion conserva 15 baseline y migraciones `013`/`014`/`015` aplicadas, `pending=0` y `checksum mismatch=0`. |
+| H05 | Control formal vigente; dictamen favorable del 2026-11-09 para 3284a12, dos tablas presentes, 18 registradas y solo 016/017 pendientes; checksum mismatch=0. H24 aún no migrado ni autorizado para release. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
@@ -255,7 +255,8 @@ Estado vigente:
 - Produccion tiene baseline de 15 migraciones:
   - `001_initial_schema.sql` a `012_h05_schema_migrations.sql`
   - Baseline: 15
-  - Pendientes: 0
+  - Aplicadas adicionales: 013, 014 y 015 (18 registradas en total).
+  - Pendientes contra 3284a12: 016 y 017 (20 archivos); inspección aportada del 2026-11-09.
   - Checksum mismatch: 0
 - H05 usa como `version` el nombre completo del archivo sin extension.
 - Duplicados historicos de prefijo `007`, `008` y `009` estan aceptados y documentados.
@@ -404,6 +405,15 @@ Codex debe leer primero este SDD, la matriz y los documentos especificos de la f
 La regla de precedencia de esta seccion se aplica tambien a los documentos historicos listados arriba.
 
 ## 7. Riesgos pendientes
+
+Seguimiento H24 del 2026-11-09: [cierre H05](../auditoria/H24_Ventana_Respaldo_Cloud_SQL_Inspeccion_H05_20261105.md)
+basado en la transcripción de Cloud Shell aportada por el usuario, no nueva
+ejecución del agente. Backup 1793913186499 SUCCESSFUL reconfirmado; restauración
+no ensayada. Quedan IAM efectivo sin restauración en runtime, bucket separado
+de adicionales, analizadores privados, limpieza programada, alertas y capacidad
+productiva. [Plan de infraestructura y autorización siguiente](../auditoria/H24_Plan_Infraestructura_Productiva_20261109.md).
+Las referencias cloud anteriores siguen fechadas al precheck 2026-11-05;
+reconfirmar rollback 00057-c7d / Hosting 3f9ebc88c835a143. H24 no cerrado operativo.
 
 | Riesgo | Estado consolidado | Proxima accion recomendada |
 |---|---|---|

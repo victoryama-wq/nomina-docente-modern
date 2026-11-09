@@ -1,6 +1,6 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-10-27
+Actualizacion: 2026-11-09 (seguimiento documental H24/H05)
 
 ## 1. Contexto
 
@@ -142,7 +142,8 @@ Cerrado:
 - Tablas `schema_migrations` y `schema_migration_runs` creadas.
 - `tools/migrate-db.ts` disponible con `inspect`, `status`, `dry-run`, `baseline` y `apply`.
 - Produccion tiene 18 migraciones registradas: 15 baseline (001 a 012) y
-  `013`/`014`/`015` aplicadas; `pending=0` y no existe checksum mismatch.
+  `013`/`014`/`015` aplicadas. Inspección aportada del 2026-11-09 contra los
+  20 archivos de 3284a12: solo 016/017 pendientes, checksum mismatch=0.
 - Duplicados historicos `007`, `008`, `009` aceptados; desde `013` no se repiten prefijos.
 
 ### H09/H10
@@ -207,6 +208,17 @@ Pendientes reales despues de H02/H03:
 ## 7. Recomendacion final
 
 ### Seguimiento H24 - Expediente completo
+
+**Actualización 2026-11-09:** H05 favorable para 3284a12 según evidencia de
+Cloud Shell aportada por el usuario: tablas de control presentes, 20 archivos,
+18 registradas (15 baseline/3 aplicadas), solo 016/017 pendientes, checksum
+mismatch 0 y exit 0. No se reejecutó inspección. Se conserva el antecedente
+de intentos bloqueados del 5 de noviembre en el [acta H05](H24_Ventana_Respaldo_Cloud_SQL_Inspeccion_H05_20261105.md).
+Backup 1793913186499 SUCCESSFUL reconfirmado; restauración no ensayada. No
+confundir este cierre con GO de release: siguen pendientes IAM efectivo,
+bucket de adicionales, analizadores, worker/Scheduler, alertas y autorización
+de 016/017 y despliegue. [Plan propuesto](H24_Plan_Infraestructura_Productiva_20261109.md).
+Los seguimientos previos se conservan como cronología, no reabren H05.
 
 Ampliacion local 2026-10-28: C.P. fiscal y CURP opcionales, con validacion de formato
 y permisos fiscales del expediente. 017 agrega dos columnas sin backfill; H05 test
