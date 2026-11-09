@@ -2,6 +2,12 @@
 
 Actualizado: 2026-11-09. **Preparacion cloud parcial; H24 sin GO productivo.**
 
+Ultimo seguimiento: [ventana backup/DBA](H24_Ventana_Respaldo_Migraciones_Worker_20261109.md).
+Respaldo1794261106620 SUCCESSFUL, sin restauracion ensayada. Falta credencial
+DBA: inspect/apply no ejecutados; tampoco usuario/secreto/worker/Scheduler.
+No tomar el H05 historico como dictamen actual de57c565a. Canal sin verificacion
+acreditada; formulario bloqueado por el entorno, sin intentar otra via.
+
 Estado posterior verificado: [acta de ventana de infraestructura](H24_Ventana_Preparacion_Infraestructura_20261109.md).
 Imagen57c565a publicada sin deploy; bucket adicional, SA, roles, metrica y alertas
 disabled creados. No worker/Scheduler: falta credencial SQL dedicada. API conserva

@@ -9,6 +9,11 @@ H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprob
 
 ## Estado actualizado 2026-11-09
 
+[Ventana posterior backup/DBA](H24_Ventana_Respaldo_Migraciones_Worker_20261109.md):
+backup1794261106620 SUCCESSFUL; inspeccion y migraciones detenidas antes de
+conectar por falta de credencial DBA. Worker/Scheduler siguen NO CREADOS; canal
+pendiente y alertas disabled. No se actualiza H05 productivo con evidencia local.
+
 Preparacion cloud posterior: [acta de infraestructura](H24_Ventana_Preparacion_Infraestructura_20261109.md).
 Imagen57c565a publicada, bucket adicional/identidades/roles preparados y alertas
 creadas disabled; API/Hosting sin cambios. Pendientes: credencial SQL dedicada

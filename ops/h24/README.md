@@ -3,6 +3,11 @@
 Preparado 2026-11-09. Ventana parcial autorizada sobre 57c565a: ver
 [acta de infraestructura](../../docs/auditoria/H24_Ventana_Preparacion_Infraestructura_20261109.md).
 La autorizacion no incluye SQL, migraciones, ejecucion del worker ni release.
+Ventana posterior autorizada para backup/inspect/apply condicionado/usuario SQL:
+[resultado parcial del 9 de noviembre](../../docs/auditoria/H24_Ventana_Respaldo_Migraciones_Worker_20261109.md).
+Backup1794261106620 SUCCESSFUL; faltaba credencial DBA, por lo que no hubo SQL,
+secreto, worker ni Scheduler. No repetir el backup por ese bloqueo. La ventana
+termino; antes de reanudar confirmar acceso DBA, vigencia/margen y autorizacion.
 Base funcional b3d0681618cd5013031b8c1f7c03b9982e56dbce mas el commit que contiene
 este paquete. No usar la imagen anterior para el worker nuevo. No contiene
 servicios, IAM, imagenes ni alertas de Inspector/ClamAV. Archivos NOT_SCANNED.
@@ -106,7 +111,7 @@ New-Item -ItemType Directory -Path $Source | Out-Null
 $Archive = Join-Path $Source 'candidate.tar'
 $Context = Join-Path $Source 'context'
 New-Item -ItemType Directory -Path $Context | Out-Null
-git archive --format=tar --output=$Archive $ApprovedSha .npmrc package.json package-lock.json apps/api/Dockerfile apps/api/package.json apps/api/tsconfig.json apps/api/src apps/web/package.json
+git -c core.autocrlf=false archive --format=tar --output=$Archive $ApprovedSha .npmrc package.json package-lock.json apps/api/Dockerfile apps/api/package.json apps/api/tsconfig.json apps/api/src apps/web/package.json
 Check-Exit
 tar -xf $Archive -C $Context
 Check-Exit
@@ -173,6 +178,15 @@ sin membresias/herencia que amplien acceso. La provision de credenciales y su
 secreto se hace por canal DBA, nunca en Git ni linea de comandos. No utilizar
 app_nomina/postgres como sustitutos. Revisar permisos PUBLIC antes de aprobar:
 no alterar grants PUBLIC compartidos como efecto colateral de H24.
+
+Comprobar acceso DBA antes de iniciar la siguiente ventana: la identidad de
+Google Cloud no es una credencial PostgreSQL. No restablecer cuentas ni extraer
+secretos de la aplicacion implicitamente. Inspect debe usar sesion read-only y
+apply otra sesion autorizada, nunca continuar por un dictamen historico. Los20
+SQL y runner deben coincidir byte a byte con la candidata; usar archive con
+core.autocrlf=false para evitar CRLF por configuracion local. No editar SQL ni
+checksums para resolver la conversion. El runner registra skipped para archivos
+ya registrados; ante fallo entre DDL y ledger, inspeccionar, no repetir a ciegas.
 
 Propuesta revisable, **no ejecutada**; el DBA debe contrastar privilegios
 efectivos/propietarios/secuencias/RLS y probar este usuario en aislado:

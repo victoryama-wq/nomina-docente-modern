@@ -3,6 +3,11 @@
 Fecha de consolidacion: 2026-06-02
 Ultima actualizacion: 2026-11-09 (H24 preparacion cloud parcial; sin deploy ni migraciones productivas)
 
+[Seguimiento backup/DBA H24](../auditoria/H24_Ventana_Respaldo_Migraciones_Worker_20261109.md):
+respaldo1794261106620 SUCCESSFUL; sin credencial DBA, inspect/apply no ejecutados.
+No se crearon usuario SQL, secreto, worker ni Scheduler. H05 historico permanece
+separado; H24 sin habilitarse, API/Hosting intactos.
+
 [Ventana de infraestructura H24](../auditoria/H24_Ventana_Preparacion_Infraestructura_20261109.md):
 imagen57c565a publicada, bucket adicional/SA/roles preparados y alertas disabled.
 Worker/Scheduler no creados por falta de credencial dedicada; pendiente retirar

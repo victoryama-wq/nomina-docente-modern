@@ -2,6 +2,11 @@
 
 Actualizacion: 2026-11-09 (seguimiento documental H24/H05)
 
+[Seguimiento backup/DBA H24](H24_Ventana_Respaldo_Migraciones_Worker_20261109.md):
+backup1794261106620 SUCCESSFUL, restauracion no ensayada. Falta acceso DBA;
+inspect y016/017 no ejecutados, sin usuario/secreto/worker/Scheduler. El bloqueo
+no se resuelve con el login cloud ni con el dictamen H05 anterior. NO-GO vigente.
+
 [Ventana de infraestructura H24](H24_Ventana_Preparacion_Infraestructura_20261109.md):
 bucket adicional/identidades/roles y alertas disabled preparados; imagen57c565a
 publicada sin deploy. NO-GO persiste: API conserva storage.objects.restore por
