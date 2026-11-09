@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const child = vi.hoisted(() => ({ exec: vi.fn(), input: vi.fn() }));
 vi.mock('node:child_process', () => ({ execFile: child.exec }));
-import { createLocalDocumentRunner } from '../lib/document-security.js';
+import { createLocalDocumentRunner } from '../lib/document-analyzers-legacy.js';
 const settings = { parser: `sha256:${'a'.repeat(64)}`, scanner: `sha256:${'b'.repeat(64)}`, signatures: 'h24-pd03-signatures-test' };
 
 beforeEach(() => {

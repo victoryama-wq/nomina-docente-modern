@@ -1,7 +1,9 @@
 import PDFDocument from 'pdfkit';
 import { execFileSync } from 'node:child_process';
 import { describe, it, expect } from 'vitest';
-import { validateDocumentContent } from '../lib/document-security.js';
+import { createDocumentValidator, createLocalDocumentRunner, localDocumentSecuritySettings } from '../lib/document-analyzers-legacy.js';
+// Historical scanner/inspector replay, not the current H24 admission policy.
+const validateDocumentContent = (bytes: Buffer, mime: string) => createDocumentValidator(createLocalDocumentRunner(localDocumentSecuritySettings()))(bytes, mime);
 
 // Explicit opt-in only; no DB/Firebase/GCS modules or real documents are imported.
 const enabled = process.env.RUN_H24_DOCUMENT_SECURITY_DOCKER === 'true';

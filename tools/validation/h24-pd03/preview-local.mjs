@@ -16,7 +16,7 @@ assert.ok(path.isAbsolute(process.env.H24_PLAYWRIGHT_MODULE || ''));
 assert.ok(path.isAbsolute(process.env.H24_BROWSER_PATH || ''));
 const { chromium } = createRequire(import.meta.url)(process.env.H24_PLAYWRIGHT_MODULE);
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const evidence = path.join(repo, '.cache/h24-pd03-policy-preview');
+const evidence = path.join(repo, '.cache/h24-basic-download-preview-20261109');
 await mkdir(evidence, { recursive: true });
 const envDir = await mkdtemp(path.join(tmpdir(), 'h24-policy-ui-'));
 const bytes = await new Promise(resolve => {
@@ -26,7 +26,7 @@ const bytes = await new Promise(resolve => {
   document.text('Synthetic HTTPS link', { link: 'https://example.invalid/h24' }); document.end();
 });
 await validateDocumentContent(bytes, 'application/pdf');
-const report = { synthetic: true, db: false, firebase: false, cloud: false, pipelineApproved: true,
+const report = { synthetic: true, db: false, firebase: false, cloud: false, analysisStatus: 'NOT_SCANNED',
   externalAttempts: [], errors: [], checks: [], screenshots: [], passed: false };
 const teacher = { id: 'synthetic-teacher', fullName: 'Docente QA Sintetico', status: 'ACTIVO', phone: '',
   rfc: '', email: '', bankDetail: '', paymentType: 'E', documentId: 'synthetic-document', documentName: 'synthetic.pdf' };
@@ -83,14 +83,15 @@ try {
     if (url.pathname === '/api/teachers') return json({ teachers: [teacher], summary: { total: 1, active: 1, inactive: 0, withRfc: 0, withBank: 0, withConstancia: 1, fiscalReady: 0 } });
     if (url.pathname.endsWith('/dossier')) return json({ teacher: { ...teacher, version: 'synthetic' }, documents: [doc], capabilities: { readDocuments: true, manageDocuments: true, editPhone: true } });
     if (url.pathname.endsWith('/documents/current') || url.pathname.endsWith('/content')) return route.fulfill({ status: 200, body: bytes,
-      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="synthetic.pdf"', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' } });
+      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="synthetic.pdf"', 'X-Document-Analysis': 'NOT_SCANNED', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' } });
     throw new Error(`Unexpected synthetic request: ${url.pathname}`);
   });
   const page = await context.newPage(); page.setDefaultTimeout(15_000);
   page.on('pageerror', error => report.errors.push(error.message));
   await page.goto('http://127.0.0.1:5196/__h24_policy');
   await page.getByRole('button', { name: 'Vista previa', exact: true }).click();
-  await page.locator('.fiscal-preview-modal iframe').waitFor();
+  await page.locator('.fiscal-preview-modal').getByText('Archivo no analizado', { exact: false }).waitFor();
+  assert.equal(await page.locator('.fiscal-preview-modal iframe, .fiscal-preview-modal img, .fiscal-preview-modal object, .fiscal-preview-modal embed').count(), 0);
   await page.waitForTimeout(1000);
   for (const [width, height] of [[1440,900],[768,1024],[390,844]]) {
     await page.setViewportSize({ width, height });
@@ -102,12 +103,13 @@ try {
   await page.getByRole('button', { name: 'Descargar constancia', exact: true }).click();
   const download = await downloadEvent; const downloadedPath = path.join(evidence, 'synthetic-download.pdf'); await download.saveAs(downloadedPath);
   assert.equal(createHash('sha256').update(await readFile(downloadedPath)).digest('hex'), createHash('sha256').update(bytes).digest('hex'));
-  report.checks.push('constancia preview/download bytes and responsive');
+  report.checks.push('constancia information-only modal, download hash and responsive');
   await page.locator('.fiscal-preview-modal button[title="Cerrar"]').click();
   await page.waitForFunction(() => window.__h24Urls.size === 0, undefined, { timeout: 40_000 });
   await page.getByRole('button', { name: 'Abrir expediente de Docente QA Sintetico' }).click();
   await page.getByRole('button', { name: 'Ver PDF sintetico', exact: true }).click();
-  await page.locator('.dossier-preview iframe').waitFor();
+  await page.locator('.dossier-preview').getByText('Archivo no analizado', { exact: false }).waitFor();
+  assert.equal(await page.locator('.dossier-preview iframe, .dossier-preview img, .dossier-preview object, .dossier-preview embed').count(), 0);
   await page.waitForTimeout(1000);
   for (const [width, height] of [[1440,900],[768,1024],[390,844]]) {
     await page.setViewportSize({ width, height });
@@ -126,7 +128,7 @@ try {
   await page.waitForFunction(() => window.__h24Urls.size === 0);
   await page.getByRole('button', { name: 'Cerrar expediente', exact: true }).click();
   await page.getByRole('button', { name: 'Vista previa', exact: true }).click();
-  await page.locator('.fiscal-preview-modal iframe').waitFor();
+  await page.locator('.fiscal-preview-modal').getByText('Archivo no analizado', { exact: false }).waitFor();
   await page.evaluate(() => { window.__h24Auth.session = null; });
   await page.waitForFunction(() => window.__h24Urls.size === 0 && document.querySelectorAll('iframe').length === 0);
   assert.equal(await page.evaluate(() => window.__h24Parent), 'unchanged');

@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import PDFDocument from 'pdfkit';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDocumentValidator, createLocalDocumentRunner, localDocumentSecuritySettings } from '../lib/document-security.js';
+import { createDocumentValidator, createLocalDocumentRunner, localDocumentSecuritySettings } from '../lib/document-analyzers-legacy.js';
 import { registerTeacherRoutes } from '../routes/teachers.js';
 import { registerDossierRoutes } from '../routes/teacher-dossier.js';
 import { TeacherDossierService } from '../lib/teacher-dossier.js';

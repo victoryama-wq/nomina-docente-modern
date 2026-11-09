@@ -18,16 +18,9 @@ FROM node:24-slim AS runtime
 RUN npm install --global npm@10.9.4 --no-audit --no-fund
 WORKDIR /app
 ENV NODE_ENV=production
-ENV DOSSIER_PDFINFO_PATH=/usr/bin/pdfinfo
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends poppler-utils \
-    && rm -rf /var/lib/apt/lists/* \
-    && test -x "$DOSSIER_PDFINFO_PATH" \
-    && "$DOSSIER_PDFINFO_PATH" -v
 COPY package.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
-# Fail the image build if the installed parser cannot validate synthetic PDFs.
-RUN node apps/api/dist/test/dossier-pdfinfo.smoke.js
+# Only basic envelope validation is part of the current document flow.
 CMD ["node", "apps/api/dist/server.js"]

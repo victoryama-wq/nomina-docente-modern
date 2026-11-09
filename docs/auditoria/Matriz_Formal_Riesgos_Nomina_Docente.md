@@ -209,6 +209,19 @@ Pendientes reales despues de H02/H03:
 
 ### Seguimiento H24 - Expediente completo
 
+Decision vigente 2026-11-09: el usuario retira Inspector/ClamAV por costo.
+Riesgo residual de malware/estructura hostil **alto**, no eliminado por login
+institucional ni firma/MIME. Controles basicos y descarga attachment sin visor
+incrustado reducen exposicion dentro de Nomina; apertura local sigue bajo riesgo.
+NOT_SCANNED honesto; no heredar las aceptaciones antiguas como resultado AV.
+Responsable operativo debe difundir manejo seguro e incidentes antes de habilitar.
+[Acta de retirada y regresion](H24_Retirada_Analizadores_20261109.md).
+No cambia privacidad/autorizacion/integridad ni almacenamiento; sin esquema nuevo.
+Retirados del plan servicios/imagenes/IAM/alertas/costos exclusivos de analisis.
+Siguen pendientes IAM minimo sin restore, bucket adicional, worker, proteccion
+horaria, Scheduler/alertas de limpieza y ventanas productivas. H24 sigue NO-GO.
+Los resultados inferiores de AV/Inspector permanecen historicos por candidato.
+
 **Actualización 2026-11-09:** H05 favorable para 3284a12 según evidencia de
 Cloud Shell aportada por el usuario: tablas de control presentes, 20 archivos,
 18 registradas (15 baseline/3 aplicadas), solo 016/017 pendientes, checksum

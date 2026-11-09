@@ -35,7 +35,7 @@ import { replaceConstancia } from '../lib/constancia-replacement.js';
 import { constanciaStorage, ConstanciaStorageError } from '../lib/constancia-storage.js';
 import { documentAdmission } from '../lib/document-admission.js';
 import { decodeDossierPdf, DossierError } from '../lib/dossier-contract.js';
-import { DocumentSecurityError, validateDocumentContent, validateDocumentName } from '../lib/document-security.js';
+import { DOCUMENT_ANALYSIS_STATUS, DocumentSecurityError, validateDocumentContent, validateDocumentName } from '../lib/document-security.js';
 
 type TeacherStatus = 'ACTIVO' | 'INACTIVO';
 
@@ -1205,7 +1205,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
             return after;
           }
         });
-        return { ...uploaded, message: uploaded.cleanupPending
+        return { ...uploaded, analysisStatus: DOCUMENT_ANALYSIS_STATUS, message: uploaded.cleanupPending
           ? 'La nueva constancia está vigente. La limpieza del archivo anterior está pendiente; no vuelvas a cargarla.'
           : 'Constancia fiscal guardada. Solo la vigente se puede descargar desde Nómina.' };
       } catch (error) {
@@ -1276,11 +1276,12 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
       const safeName = doc.originalFileName.replace(/[^a-zA-Z0-9._-]/g, '_');
       reply
         .header('Content-Type', doc.mimeType || 'application/octet-stream')
-        .header('Content-Disposition', `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(doc.originalFileName).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`)
+        .header('Content-Disposition', `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(doc.originalFileName).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`)
+        .header('X-Document-Analysis', DOCUMENT_ANALYSIS_STATUS)
         .header('Cache-Control', 'private, no-store')
         .header('X-Content-Type-Options', 'nosniff')
         .header('Content-Security-Policy', "sandbox; default-src 'none'")
-        .header('Access-Control-Expose-Headers', 'Content-Disposition')
+        .header('Access-Control-Expose-Headers', 'Content-Disposition, X-Document-Analysis')
         .send(buffer);
     }
   );

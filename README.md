@@ -4,6 +4,17 @@
 
 Nueva plataforma para Nómina Docente.
 
+### H24: candidata local, no desplegada (2026-11-09)
+
+Por decisión de costo aprobada se retiran Inspector/ClamAV del flujo y del plan
+productivo. Los archivos tienen controles básicos, **no análisis antivirus ni
+estructural**; se entregan como descarga autorizada con aviso, sin visor de
+contenido incrustado. Se mantienen roles, integridad, constancias recuperables
+siete días y borrado definitivo de adicionales. H24 mantiene NO-GO productivo.
+Ver [acta](docs/auditoria/H24_Retirada_Analizadores_20261109.md) y
+[plan vigente](docs/auditoria/H24_Plan_Infraestructura_Productiva_20261109.md).
+No usar servicios/scripts históricos de análisis para aprovisionar esta candidata.
+
 Stack inicial:
 
 - Frontend: Vue 3 + Vite + TypeScript.

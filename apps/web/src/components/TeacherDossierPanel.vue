@@ -343,6 +343,7 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
           <section v-if="canManage" class="dossier-section">
             <h4>Cargar PDF</h4>
             <p class="dossier-hint">Hasta 10 archivos por lote, 7.5 MiB por archivo. Se admiten varios documentos del mismo tipo.</p>
+            <p class="dossier-hint">Los archivos no se analizan con antivirus. Carga únicamente documentos de procedencia confiable.</p>
             <div class="dossier-upload-controls">
               <label>Tipo para la selección<select v-model="commonType" :disabled="unsettled"><option v-for="type in types" :key="type.value" :value="type.value">{{ type.label }}</option></select></label>
               <label>Seleccionar PDF<input type="file" multiple accept="application/pdf,.pdf" :disabled="unsettled" @change="chooseFiles" /></label>
@@ -369,8 +370,7 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
         </section>
         <section v-if="preview" ref="previewSection" class="dossier-section dossier-preview" aria-label="Vista previa PDF">
           <div class="dossier-preview-header"><h4>{{ preview.fileName }}</h4><div class="dossier-actions"><button class="secondary-action" :disabled="previewBusy" @click="downloadPreview"><Download :size="17" /> Descargar</button><button ref="previewClose" class="icon-button" aria-label="Cerrar vista previa" title="Cerrar vista previa" @click="closePreview"><X :size="18" /></button></div></div>
-          <!-- Native PDF viewers reject sandboxed frames. Only verified PDF blobs reach this frame; never HTML or remote URLs. -->
-          <iframe :src="preview.url" title="Vista previa del documento PDF" referrerpolicy="no-referrer"></iframe>
+          <p role="note">Archivo no analizado por antivirus ni por un inspector de estructura. La vista previa del contenido no está disponible. Descárgalo solo si confías en su procedencia y revísalo con las herramientas de seguridad de tu equipo.</p>
         </section>
       </template>
     </section>
@@ -406,7 +406,6 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
 .dossier-hint { color: #526176; font-size: 14px; }
 .dossier-hidden { display: none; }
 .dossier-preview-header { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.dossier-preview iframe { display: block; width: 100%; height: min(65dvh, 620px); min-height: 250px; border: 1px solid #bac9d8; margin-top: 12px; }
 .dossier-confirm { padding: 20px 0; }
 @media (max-width: 700px) {
   .dossier-contact, .dossier-fiscal-fields, .dossier-edit, .dossier-upload-controls, .dossier-selection .dossier-edit { grid-template-columns: minmax(0, 1fr); }

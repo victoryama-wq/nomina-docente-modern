@@ -72,6 +72,8 @@ describe('constancia replacement API guards and response', () => {
     expect(response.rawPayload).toEqual(bytes);
     expect(mocks.validate).toHaveBeenCalledExactlyOnceWith(bytes, 'application/pdf');
     expect(response.headers['cache-control']).toBe('private, no-store');
+    expect(response.headers['content-disposition']).toMatch(/^attachment;/);
+    expect(response.headers['x-document-analysis']).toBe('NOT_SCANNED');
     expect(response.headers['x-content-type-options']).toBe('nosniff');
     expect(response.headers['content-security-policy']).toBe("sandbox; default-src 'none'");
     expect(response.headers['content-disposition']).toContain("filename*=UTF-8''Constancia%20%C3%81.pdf");

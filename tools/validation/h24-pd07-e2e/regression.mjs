@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 export async function runRegression(manifestPath) {
+  throw new Error('Archived analyzer regression harness; use the historical candidate for isolated replay.');
   assert.equal(process.env.H24_PD07_APPROVED, 'true');
   const resolved = path.resolve(manifestPath);
   const relative = path.relative(path.join(repo, '.cache/pd07-e2e'), resolved);

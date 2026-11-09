@@ -9,6 +9,16 @@ H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprob
 
 ## Estado actualizado 2026-11-09
 
+Decision posterior de costo: [retirada local de Inspector/ClamAV](H24_Retirada_Analizadores_20261109.md).
+No se ejecuta ni simula analisis especializado; NOT_SCANNED, controles basicos
+y descarga autorizada sin renderizar el contenido en Nomina. PD-01 y controles
+AV de PD-03 se retiran del requisito de infraestructura, no se declaran PASS
+de esta politica. Los ensayos anteriores conservan sus resultados y SHA.
+Riesgo residual de archivos maliciosos/estructura invalida expresamente abierto;
+el usuario aprobo retirar el control por costo. NO-GO productivo por IAM, bucket
+adicional, worker, guarda horaria, Scheduler, alertas y autorizaciones pendientes.
+No migraciones ni operaciones cloud en esta adecuacion.
+
 [H05 favorable según evidencia aportada de Cloud Shell](H24_Ventana_Respaldo_Cloud_SQL_Inspeccion_H05_20261105.md):
 20 archivos de 3284a12, 18 registradas (15 baseline/3 aplicadas), solo 016/017
 pendientes, mismatch 0 y exit 0. Backup 1793913186499 SUCCESSFUL reconfirmado por

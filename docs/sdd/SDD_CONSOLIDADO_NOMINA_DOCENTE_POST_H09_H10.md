@@ -1,7 +1,7 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-11-09 (cierre H05 aportado y plan H24, sin nueva inspeccion cloud)
+Ultima actualizacion: 2026-11-09 (H24 sin analizadores por decision de costo; sin nueva inspeccion cloud)
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 
@@ -436,6 +436,18 @@ reconfirmar rollback 00057-c7d / Hosting 3f9ebc88c835a143. H24 no cerrado operat
 ## 8. Reglas para futuras fases Codex
 
 ### H24 - Expediente completo (local, no productivo)
+
+**Alcance vigente 2026-11-09:** retirados Inspector/ClamAV y Poppler del runtime
+y plan productivo por aprobacion del usuario. Solo controles basicos de firma,
+tipo/tamano, permisos, buckets privados e integridad; NOT_SCANNED sin veredicto
+de limpio. Vista de informacion y descarga, sin contenido PDF/imagen incrustado.
+Constancias: 604800 s recuperables; adicionales: borrado definitivo separado.
+Sin cambios de esquema, H01 ni politica de acceso. Regresion/evidencia y riesgos:
+[acta de retirada](../auditoria/H24_Retirada_Analizadores_20261109.md).
+Siguen pendientes IAM, bucket adicional, worker/horario/Scheduler/alertas y
+ventanas autorizadas de migraciones/deploy. H24 no cerrado operativo.
+Los parrafos inferiores son cronologia: sus analizadores/visor no son requisitos
+vigentes ni evidencia de seguridad del archivo en la candidata nueva.
 
 Ampliacion aprobada 2026-10-28: C.P. fiscal y CURP opcionales en Datos fiscales del
 panel, sin OCR ni nuevos requisitos de pago. Datos compartidos en teachers mediante

@@ -2,6 +2,31 @@
 
 Fecha: 2026-10-27.
 
+## Alcance vigente aprobado: 2026-11-09
+
+Se retiran Inspector, Poppler y ClamAV por decision funcional de costo. La
+API aplica solo BASIC_ENVELOPE_V1: autenticacion/permisos, extension/MIME,
+firma basica, limite 7.5 MiB, nombres del servidor, privacidad e integridad.
+No hay antivirus, decodificacion completa ni validacion estructural PDF.
+El estado de analisis entregado es NOT_SCANNED, nunca limpio. La vista previa
+de contenido se sustituye por informacion, advertencia y descarga autorizada;
+sin iframe, object, embed ni imagen del archivo desde el origen de Nomina.
+Abrir el archivo descargado sigue teniendo riesgo en el equipo del usuario.
+
+Se conservan roles Admin/Finanzas/RH y sus permisos; carga multiple secuencial,
+telefono y datos fiscales, A->B, idempotencia y cleanup. Constancias conservan
+604800 segundos recuperables; adicionales mantienen bucket separado y borrado
+definitivo. No hay restauracion UI, cambio de esquema ni migraciones nuevas.
+El despliegue sigue pendiente por IAM/bucket adicional/worker/horario/Scheduler/
+alertas/ventanas de datos y release. [Acta y pruebas](../auditoria/H24_Retirada_Analizadores_20261109.md).
+
+## Antecedentes anteriores a la retirada
+
+Los requisitos de parser/AV, MaxFiles, limites de pixeles y visor nativo que
+siguen abajo documentan el diseno y ensayos anteriores; quedan sustituidos
+exclusivamente en esos aspectos por el alcance vigente de arriba. Sus PASS
+no acreditan analisis de archivos bajo la candidata nueva.
+
 Actualizacion local 2026-10-31, PD07-B04: se conserva seleccion multiple, con
 una transferencia en vuelo por panel. Ante 429/503 o resultado incierto se pausa
 el lote hasta reintento explicito de la misma operacion; no hay replay automatico.

@@ -7,7 +7,7 @@ import PDFDocument from 'pdfkit';
 import { beforeAll, afterAll, it, vi } from 'vitest';
 import { buildApp } from '../../../apps/api/src/app.js';
 import { query, pool, withTransaction } from '../../../apps/api/src/db.js';
-import { createDocumentValidator } from '../../../apps/api/src/lib/document-security.js';
+import { createDocumentValidator } from '../../../apps/api/src/lib/document-analyzers-legacy.js';
 import { createCloudDocumentRunner } from '../../../apps/api/src/lib/document-cloud.js';
 import { TeacherDossierService } from '../../../apps/api/src/lib/teacher-dossier.js';
 import { LocalDossierStorage } from '../../../apps/api/src/lib/dossier-storage.js';

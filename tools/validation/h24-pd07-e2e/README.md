@@ -1,5 +1,12 @@
 # H24 PD-07: laboratorio integrado local
 
+> Historical analyzer laboratory, archived 2026-11-09. Not a deployment or
+> validation recipe for current BASIC_ENVELOPE_V1. Replay the historical SHA
+> only with separate isolated authorization. Current results and policy:
+> docs/auditoria/H24_Retirada_Analizadores_20261109.md.
+> The updated preview-local.mjs alone validates the current information-only
+> view and authorized downloads, without Firebase, DB, cloud or analyzers.
+
 Harness opt-in, exclusivamente para un laboratorio desechable autorizado.
 No es un script de despliegue ni una prueba contra la BD habitual.
 

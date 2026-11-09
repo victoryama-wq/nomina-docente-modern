@@ -600,6 +600,7 @@ onUnmounted(() => {
             <span>{{ selectedConstancia?.name || editingRecord.teacher.documentName || 'Selecciona PDF, JPG o PNG para cargar o reemplazar' }}</span>
           </div>
           <input type="file" accept="application/pdf,image/jpeg,image/png" :disabled="fiscalSaving" @change="onConstanciaSelected" />
+          <p>Los archivos no se analizan con antivirus. Carga únicamente documentos de procedencia confiable.</p>
         </div>
 
         <div class="security-box fiscal-edit-note">
@@ -631,17 +632,11 @@ onUnmounted(() => {
         </div>
 
         <div class="fiscal-preview-frame">
-          <iframe
-            v-if="constanciaPreview.mimeType.includes('pdf')"
-            :src="constanciaPreview.url"
-            title="Vista previa de constancia fiscal"
-            referrerpolicy="no-referrer"
-          ></iframe>
-          <img v-else-if="constanciaPreview.mimeType.startsWith('image/')" :src="constanciaPreview.url" alt="Constancia fiscal" />
-          <div v-else class="fiscal-preview-empty">
+          <div class="fiscal-preview-empty">
             <FileText :size="28" />
             <strong>Vista previa no disponible</strong>
             <span>{{ constanciaPreview.mimeType }}</span>
+            <p role="note">Archivo no analizado por antivirus ni por un inspector de estructura. Descárgalo solo si confías en su procedencia y revísalo con las herramientas de seguridad de tu equipo.</p>
           </div>
         </div>
 
@@ -656,3 +651,9 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.fiscal-preview-modal .fiscal-preview-frame { min-height: 0; height: auto; }
+.fiscal-preview-modal .fiscal-preview-empty { min-height: 0; padding: 24px; box-sizing: border-box; }
+.fiscal-preview-empty p { max-width: 64ch; margin-bottom: 0; overflow-wrap: anywhere; }
+</style>

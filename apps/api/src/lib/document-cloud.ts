@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { DocumentRunner } from './document-security.js';
+import type { DocumentRunner } from './document-analyzers-legacy.js';
 
 type CloudSettings = { parser: string; scanner: string };
 export class DocumentAnalyzerBusyError extends Error {

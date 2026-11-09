@@ -2,6 +2,34 @@
 
 Fecha: 2026-10-27.
 
+## Diseno vigente 2026-11-09: sin analizadores externos
+
+La decision de costo sustituye los requisitos tecnicos de parser/AV descritos
+en los antecedentes inferiores. document-security.ts valida solo el sobre
+(extension/MIME, firma y tamano); no importa procesos, red ni adaptadores de
+analisis. Dossier, constancias, lecturas y recuperacion usan ese nucleo.
+document-analyzers-legacy.ts y document-cloud.ts conservan el laboratorio
+historico sin enlace desde el runtime activo. API Docker ya no instala Poppler.
+
+Las tablas 016/017 no tienen un veredicto antivirus persistido: sus estados
+son del ciclo de operacion. Se conservan sin alteraciones. Las nuevas intenciones
+documentales agregan validationMode=BASIC_ENVELOPE_V1/analysisStatus=NOT_SCANNED
+en el payload JSON existente; la purga normal conserva su comportamiento.
+No se reescribe evidencia anterior. DTO y cabecera X-Document-Analysis indican
+NOT_SCANNED como politica de entrega, no como reinterpretacion de ensayos antiguos.
+
+GET mantiene autenticacion/reautorizacion y devuelve attachment incluso para
+download=false, mas CSP sandbox/default-src none, nosniff y private no-store.
+El frontend no renderiza bytes descargados: solo informacion y descarga con
+nombre seguro; revoca URLs Blob al cerrar/logout y reautoriza cada descarga.
+No se convierte contenido a HTML ni se abre una pestaña Blob desde Nomina.
+Hash, generaciones exactas, roles y transacciones A->B permanecen intactos.
+
+[Acta y riesgos actuales](../auditoria/H24_Retirada_Analizadores_20261109.md).
+[Infraestructura sin analizadores](../auditoria/H24_Plan_Infraestructura_Productiva_20261109.md).
+No se modifican buckets ni esquema en esta fase. Los siguientes apartados son
+antecedentes en lo relativo a analisis especializado y visor incrustado.
+
 Seguimiento local PD07-B04, 2026-10-31: sustituye la propuesta anterior de dos
 transferencias UI por una por panel; la admision API conserva su limite de dos.
 Cada instancia inspector/scanner admite hasta dos cuerpos acotados y ejecuta

@@ -1,5 +1,12 @@
 # PD07-B04 bounded concurrency probe
 
+> Historical analyzer laboratory, archived 2026-11-09. Not a deployment or
+> validation recipe for current BASIC_ENVELOPE_V1. Replay the historical SHA
+> only with separate isolated authorization. Current results and policy:
+> docs/auditoria/H24_Retirada_Analizadores_20261109.md.
+> The updated preview-local.mjs alone validates the current information-only
+> view and authorized downloads, without Firebase, DB, cloud or analyzers.
+
 Local diagnostic only: no DB, GCS, Firebase, Cloud Run deploy or credentials.
 Run from the repository root with existing dependencies and Docker desktop-linux:
 

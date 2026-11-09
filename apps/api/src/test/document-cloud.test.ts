@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { cloudDocumentSecuritySettings, createCloudDocumentRunner, documentIdentityToken } from '../lib/document-cloud.js';
-import { createDocumentValidator } from '../lib/document-security.js';
+import { createDocumentValidator } from '../lib/document-analyzers-legacy.js';
 
 const parser = 'https://h24-inspector-234692275301.us-central1.run.app';
 const scanner = 'https://h24-scanner-234692275301.us-central1.run.app';

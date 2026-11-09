@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import { DocumentSecurityError, createDocumentValidator, localDocumentSecuritySettings, validateDocumentEnvelope, validateDocumentName } from '../lib/document-security.js';
+import { DocumentSecurityError, validateDocumentEnvelope, validateDocumentName } from '../lib/document-security.js';
+import { createDocumentValidator, localDocumentSecuritySettings } from '../lib/document-analyzers-legacy.js';
 
 const pdf = Buffer.from('%PDF-1.7\nsynthetic\n%%EOF\n');
 const digest = createHash('sha256').update(pdf).digest('hex');

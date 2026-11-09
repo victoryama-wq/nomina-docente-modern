@@ -53,6 +53,8 @@ describe('H24 constancia preview lifecycle', () => {
     await buttons[0].trigger('click'); await buttons[1].trigger('click');
     newer.resolve(file); await flushPromises();
     expect(wrapper.get('.fiscal-preview-modal').text()).toContain('Docente QB');
+      expect(wrapper.get('.fiscal-preview-modal').text()).toContain('Archivo no analizado por antivirus');
+      expect(wrapper.find('.fiscal-preview-modal iframe, .fiscal-preview-modal img, .fiscal-preview-modal object, .fiscal-preview-modal embed').exists()).toBe(false);
     older.resolve(file); await flushPromises();
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
     expect(wrapper.get('.fiscal-preview-modal').text()).toContain('Docente QB');

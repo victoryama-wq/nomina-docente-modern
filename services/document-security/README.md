@@ -1,5 +1,17 @@
 # H24 isolated document security services
 
+> ARCHIVED 2026-11-09. Inspector and ClamAV are excluded from the current H24
+> production plan by the approved cost decision. Commands below describe earlier
+> trials, not deployment instructions. Builds now fail unless explicitly passed
+> `--build-arg H24_HISTORICAL_ANALYZER_REPLAY=approved-isolated`; this is only for
+> authorized historical laboratory replay. The old recovery rehearsal entrypoint
+> refuses execution on this candidate. Do not grant its analyzer IAM roles or copy
+> its environment settings into the API or the current cleanup worker.
+>
+> Current policy: `docs/auditoria/H24_Retirada_Analizadores_20261109.md`.
+> No cloud resources are deleted by this source change. Existing test resources
+> and their charges, if any, require a separately authorized inventory/retirement.
+
 Test deployment only: `nomina-h24-test-20261027`, `us-central1`.
 Production provisioning and release require separate approval. Do not copy test
 database contents, bucket objects or credentials into production.

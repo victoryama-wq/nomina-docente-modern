@@ -264,6 +264,16 @@ Antes de cualquier deploy productivo:
 
 ### Condicion adicional H24 (predeploy 2026-10-27, no ejecutado)
 
+**Sustitucion vigente 2026-11-09:** por decision de costo no construir ni
+aprovisionar Inspector/ClamAV, imagenes/cuentas/Invoker ni alertas exclusivos.
+No exigir pdfinfo en API. [Acta nueva](H24_Retirada_Analizadores_20261109.md) y
+[plan restante](H24_Plan_Infraestructura_Productiva_20261109.md) prevalecen sobre
+los antecedentes de parser que siguen. Verificar NOT_SCANNED, attachment,
+ausencia de contenido incrustado y controles basicos; no tratarlos como antivirus.
+Mantener gates IAM, privacidad diferenciada 604800 vs 0, worker/horario/Scheduler,
+alertas de limpieza, capacidad candidata y autorizacion de migraciones/release.
+No trasladar resultados de analizadores retirados como PASS del nuevo alcance.
+
 H24-F4 prepara el release, pero mantiene **NO-GO**. Antes de aplicar 016 o habilitar
 el expediente, revisar `H24_Fase4_PreDeploy_Expediente_Docentes.md` y cerrar sus
 bloqueantes: autenticacion real en test, bucket dedicado privado y borrado sin

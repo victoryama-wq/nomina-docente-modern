@@ -29,6 +29,7 @@ interface OperationResult {
 }
 
 interface DocumentDto {
+  analysisStatus: 'NOT_SCANNED';
   id: string;
   documentType: string;
   title: string;
@@ -123,7 +124,7 @@ describeIfDb('H24 dossier: PostgreSQL, authenticated routes and local PDF storag
   let query: typeof import('../db.js').query;
   let Service: typeof import('../lib/teacher-dossier.js').TeacherDossierService;
   let LocalStorage: typeof import('../lib/dossier-storage.js').LocalDossierStorage;
-  let validatePdf: typeof import('../lib/dossier-storage.js').validateDossierPdf;
+  let validatePdf: (bytes: Buffer) => Promise<void>;
   let pdf: Buffer;
   let replacementPdf: Buffer;
 
@@ -136,7 +137,6 @@ describeIfDb('H24 dossier: PostgreSQL, authenticated routes and local PDF storag
     // Check the host before the existing helper performs its destructive test-schema reset.
     expect(['localhost', '127.0.0.1', '::1']).toContain(getTestDbConfig().host);
     expect(getTestDbConfig().database).toBe('nomina_docente_test');
-    expect(path.isAbsolute(process.env.DOSSIER_PDFINFO_PATH ?? ''), 'Parent must supply an absolute DOSSIER_PDFINFO_PATH').toBe(true);
     applyTestDbEnvironment();
     vi.stubEnv('DOSSIER_STORAGE_MODE', 'disabled');
     vi.stubEnv('FIREBASE_PROJECT_ID', 'demo-nomina-h24-test');
@@ -145,7 +145,9 @@ describeIfDb('H24 dossier: PostgreSQL, authenticated routes and local PDF storag
     // No runtime db/auth/config imports may precede applyTestDbEnvironment.
     ({ query } = await import('../db.js'));
     ({ TeacherDossierService: Service } = await import('../lib/teacher-dossier.js'));
-    ({ LocalDossierStorage: LocalStorage, validateDossierPdf: validatePdf } = await import('../lib/dossier-storage.js'));
+    ({ LocalDossierStorage: LocalStorage } = await import('../lib/dossier-storage.js'));
+    const { validateDocumentContent } = await import('../lib/document-security.js');
+    validatePdf = bytes => validateDocumentContent(bytes, 'application/pdf');
     const { registerDossierRoutes } = await import('../routes/teacher-dossier.js');
     expect(await query('SELECT current_database() AS name')).toEqual([{ name: 'nomina_docente_test' }]);
     root = await mkdtemp(path.join(tmpdir(), 'nomina-h24-integration-'));
@@ -275,6 +277,21 @@ describeIfDb('H24 dossier: PostgreSQL, authenticated routes and local PDF storag
     expect(await readdir(root!)).toHaveLength(1);
   });
 
+  it('does not certify structure or malware and serves unscanned bytes only as an attachment', async () => {
+    const unparsed = Buffer.from('%PDF-1.7\n/OpenAction /JavaScript /JS (synthetic marker; not executed)');
+    const { doc } = await upload(admin(), teacherId, uploadBody({ base64Data: unparsed.toString('base64') }));
+    expect(doc.analysisStatus).toBe('NOT_SCANNED');
+    for (const suffix of ['', '?download=false', '?download=true']) {
+      const response = await request({ method: 'GET', url: `${base()}/documents/${doc.id}/content${suffix}` });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-disposition']).toMatch(/^attachment;/);
+      expect(response.headers['x-document-analysis']).toBe('NOT_SCANNED');
+      expect(response.headers['content-security-policy']).toContain('sandbox');
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.rawPayload).toEqual(unparsed);
+    }
+  });
+
   it('allows a non-protected admin with no persisted permissions through the complete document lifecycle', async () => {
     await query("DELETE FROM role_permissions WHERE role_id=(SELECT id FROM roles WHERE code='admin')");
     expect((await dossier()).capabilities).toEqual({ readDocuments: true, manageDocuments: true, editPhone: true });
@@ -380,7 +397,7 @@ describeIfDb('H24 dossier: PostgreSQL, authenticated routes and local PDF storag
     expect(Object.keys(listed.teacher).sort()).toEqual(['fullName', 'id', 'phone', 'version']);
     expect(listed.documents).toHaveLength(2);
     for (const doc of listed.documents) {
-      expect(Object.keys(doc).sort()).toEqual(['createdAt', 'documentType', 'fileName', 'id', 'mimeType', 'revision', 'sizeBytes', 'state', 'title', 'updatedAt']);
+      expect(Object.keys(doc).sort()).toEqual(['analysisStatus', 'createdAt', 'documentType', 'fileName', 'id', 'mimeType', 'revision', 'sizeBytes', 'state', 'title', 'updatedAt']);
       expect(doc).toMatchObject({ documentType: 'CURP', fileName: 'document.pdf', mimeType: 'application/pdf', sizeBytes: pdf.length });
     }
     const status = await request({ method: 'GET', url: `${base()}/operations/${first.operation.operationId}` });
@@ -394,12 +411,12 @@ describeIfDb('H24 dossier: PostgreSQL, authenticated routes and local PDF storag
   it('serves exact PDF bytes with safe preview/download headers, including a Unicode filename', async () => {
     const fileName = "T\u00edtulo O'Brien (QA).pdf";
     const { doc } = await upload(admin(), teacherId, uploadBody({ fileName }));
-    for (const [queryString, disposition] of [['', 'inline'], ['?download=false', 'inline'], ['?download=true', 'attachment']]) {
+    for (const [queryString, disposition] of [['', 'attachment'], ['?download=false', 'attachment'], ['?download=true', 'attachment']]) {
       const response = await request({ method: 'GET', url: `${base()}/documents/${doc.id}/content${queryString}` });
       expect(response.statusCode).toBe(200);
       expect(response.rawPayload).toEqual(pdf);
       expect(response.headers['content-type']).toBe('application/pdf');
-      expect(response.headers['access-control-expose-headers']).toBe('Content-Disposition');
+      expect(response.headers['access-control-expose-headers']).toBe('Content-Disposition, X-Document-Analysis');
       expect(response.headers['cache-control']).toBe('private, no-store');
       expect(response.headers['x-content-type-options']).toBe('nosniff');
       expect(response.headers['content-security-policy']).toBe("sandbox; default-src 'none'");
@@ -572,14 +589,12 @@ describeIfDb('H24 dossier: PostgreSQL, authenticated routes and local PDF storag
     expect(await readdir(root!)).toHaveLength(1);
   });
 
-  it('rejects malformed base64, spoofed/truncated/encrypted PDFs and oversized payloads before persistence', async () => {
+  it('rejects malformed base64, spoofed signatures and oversized payloads before persistence', async () => {
     const before = await snapshot();
     const audits = await auditRows();
-    const encrypted = await makePdf('H24 encrypted synthetic document', { userPassword: 'synthetic-password' });
     const invalidInputs = [
       '!!!!', Buffer.from('Not a PDF').toString('base64'),
-      Buffer.from('%PDF-1.7\nnot a valid document\n%%EOF\n').toString('base64'),
-      pdf.subarray(0, Math.floor(pdf.length / 2)).toString('base64'), encrypted.toString('base64')
+      Buffer.from('<html>not a PDF</html>').toString('base64')
     ];
     for (const base64Data of invalidInputs) {
       expectError(await request({ method: 'POST', url: `${base()}/documents`, payload: uploadBody({ base64Data }) }), 422);

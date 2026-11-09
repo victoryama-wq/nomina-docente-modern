@@ -50,7 +50,7 @@ export async function replaceConstancia<T>(options: {
 }): Promise<{ documentId: string; teacher: T; cleanupPending: boolean }> {
   const { transaction, storage, teacherId } = options;
   const bytes = Buffer.from(options.bytes);
-  // Authorize first, but never hold a SQL transaction during content analysis.
+  // Authorize first. Envelope checks do not constitute document analysis.
   await transaction(client => options.authorize(client));
   await (options.validateContent || validateDocumentContent)(bytes, options.mimeType);
   const documentId = randomUUID();

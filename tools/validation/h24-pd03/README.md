@@ -1,5 +1,12 @@
 # H24 PD-03: isolated local ClamAV laboratory
 
+> Historical analyzer laboratory, archived 2026-11-09. Not a deployment or
+> validation recipe for current BASIC_ENVELOPE_V1. Replay the historical SHA
+> only with separate isolated authorization. Current results and policy:
+> docs/auditoria/H24_Retirada_Analizadores_20261109.md.
+> The updated preview-local.mjs alone validates the current information-only
+> view and authorized downloads, without Firebase, DB, cloud or analyzers.
+
 Original harness: authorized scope A1/A2. A3 local adapters and tests are documented
 below separately. Neither recipe connects to a database, Firebase or GCS.
 Never deploy this image or add credentials, host mounts, Docker socket or public ports.

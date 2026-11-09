@@ -7,6 +7,7 @@ import { adminActor } from './fixtures/index.js';
 import { registerTeacherRoutes } from '../routes/teachers.js';
 import { getTestDbConfig, isTestDbExplicitlyConfigured } from './db/test-db-utils.js';
 import { replaceConstancia, reconcileConstancias, type ConstanciaStorage, type ConstanciaTransaction } from '../lib/constancia-replacement.js';
+import { validateDocumentContent } from '../lib/document-security.js';
 
 const local = isTestDbExplicitlyConfigured() ? describe : describe.skip;
 const io = vi.hoisted(() => ({ query: vi.fn(), download: vi.fn() }));
@@ -17,9 +18,6 @@ vi.mock('../firebase.js', () => ({ firebaseAdmin: { storage: () => ({
 vi.mock('../auth.js', () => ({
   authenticate: async (request: FastifyRequest) => { request.user = adminActor(); },
   requirePermission: () => async () => {}, requireAnyPermission: () => async () => {}
-}));
-vi.mock('../lib/document-security.js', async original => ({
-  ...await original<object>(), validateDocumentContent: vi.fn()
 }));
 async function pdf(label: string) {
   const document = new PDFDocument({ info: { CreationDate: new Date(0) } });
@@ -68,11 +66,7 @@ local('constancia replacement SQL on temporary tables only', () => {
       };
       const options = { transaction, storage, bucket: 'synthetic-test', teacherId, actorId,
         fileName: 'A.pdf', mimeType: 'application/pdf', bytes: await pdf('H24 synthetic A'),
-        // This test isolates SQL/cleanup; real parser/AV coverage lives in document-security.docker.test.ts.
-        validateContent: async (bytes: Buffer, mime: string) => {
-          expect(bytes.subarray(0, 4).toString()).toBe('%PDF');
-          expect(mime).toBe('application/pdf');
-        },
+        validateContent: validateDocumentContent,
         authorize: async () => {}, afterSwitch: async () => ({ id: teacherId }) };
       const first = await replaceConstancia(options);
       expect(first.cleanupPending).toBe(false);
@@ -80,6 +74,8 @@ local('constancia replacement SQL on temporary tables only', () => {
       const checkDownload = async (expected: typeof options) => {
         const response = await app.inject({ method: 'GET', url: `/teachers/${teacherId}/documents/current` });
         expect(response.statusCode).toBe(200);
+        expect(response.headers['content-disposition']).toMatch(/^attachment;/);
+        expect(response.headers['x-document-analysis']).toBe('NOT_SCANNED');
         expect(response.headers['content-disposition']).toContain(expected.fileName);
         const hash = (b: Buffer) => createHash('sha256').update(b).digest('hex');
         expect(hash(response.rawPayload)).toBe(hash(expected.bytes));

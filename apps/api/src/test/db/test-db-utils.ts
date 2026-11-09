@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from 'pg';
+import { createHash } from 'node:crypto';
 
 export const REQUIRED_TEST_DB_NAME = 'nomina_docente_test';
 
@@ -96,12 +97,32 @@ export function minimalSeedPath(): string {
 }
 
 export async function prepareTestDatabase(): Promise<void> {
+  // Explicit snapshot replay for phases forbidding migration execution. Never use a shared database.
+  const snapshotPath = process.env.H24_TEST_SCHEMA_SNAPSHOT;
+  if (process.env.H24_EPHEMERAL_SCHEMA_REPLAY && !snapshotPath) {
+    throw new Error('Synthetic schema snapshot is required; migrations are forbidden in this replay');
+  }
+  let snapshot: string | undefined;
+  if (snapshotPath) {
+    const config = getTestDbConfig();
+    if (process.env.H24_EPHEMERAL_SCHEMA_REPLAY !== 'approved' || config.host !== '127.0.0.1' ||
+        config.port !== 55479 || config.database !== REQUIRED_TEST_DB_NAME || config.user !== 'h24_basic_test') {
+      throw new Error('Isolated H24 snapshot replay required');
+    }
+    const bytes = await readFile(snapshotPath);
+    if (createHash('sha256').update(bytes).digest('hex') !== '3f6b00d306dc80637126a048ba3fe1b2668aa5dd9501b3f4ff88e3589bfb3eac') {
+      throw new Error('Unexpected synthetic schema snapshot');
+    }
+    snapshot = bytes.toString('utf8').split(/\r?\n/).filter(line => !/^\\(?:un)?restrict\b/.test(line)).join('\n');
+  }
   const client = await connectTestDb();
   try {
     await resetTestDbSchema(client);
-    for (const file of await migrationFiles()) {
-      await applySqlFile(client, file);
+    if (snapshot) {
+      await client.query(snapshot);
+      await client.query('SET search_path TO public');
     }
+    else for (const file of await migrationFiles()) await applySqlFile(client, file);
     await applySqlFile(client, minimalSeedPath());
   } finally {
     await client.end();

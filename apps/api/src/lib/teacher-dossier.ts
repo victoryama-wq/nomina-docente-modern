@@ -6,7 +6,7 @@ import type { SessionUser } from '../types.js';
 import { canUseDossier, type DossierAction } from './dossier-policy.js';
 import { DossierError, decodeDossierPdf, type uploadSchema, type replaceSchema, type metadataSchema, type contactSchema, type deleteSchema } from './dossier-contract.js';
 import type { DossierStorage } from './dossier-storage.js';
-import { DocumentSecurityError } from './document-security.js';
+import { DOCUMENT_ANALYSIS_STATUS, DocumentSecurityError } from './document-security.js';
 
 interface Operation {
   id: string;
@@ -46,7 +46,7 @@ interface DocumentRow {
 function publicDocument(d: DocumentRow) {
   return { id: d.id, documentType: d.document_type, title: d.title, fileName: d.original_file_name,
     mimeType: d.mime_type, sizeBytes: d.size_bytes, state: d.state, revision: d.revision,
-    createdAt: d.created_at, updatedAt: d.updated_at };
+    createdAt: d.created_at, updatedAt: d.updated_at, analysisStatus: DOCUMENT_ANALYSIS_STATUS };
 }
 
 function publicOperation(op: Operation) {
@@ -210,7 +210,8 @@ export class TeacherDossierService {
           VALUES ($1,$2,$3,$4,$5,$6,$7,'UPLOADING',$8,$8)`,
           [id, teacherId, input.documentType, input.title, input.fileName, bytes.length, this.namespace, actor.id]);
       } else throw conflict();
-      const payload = { fileName: input.fileName, sizeBytes: bytes.length, contentHash };
+      const payload = { fileName: input.fileName, sizeBytes: bytes.length, contentHash,
+        validationMode: 'BASIC_ENVELOPE_V1', analysisStatus: DOCUMENT_ANALYSIS_STATUS };
       return (await client.query<Operation>(`INSERT INTO teacher_dossier_operations
         (id,actor_id,teacher_id,document_id,action,request_hash,state,storage_namespace,new_key,old_key,old_generation,payload)
         VALUES ($1,$2,$3,$4,$5,$6,'PREPARED',$7,$8,$9,$10,$11::jsonb) RETURNING *`,
@@ -251,7 +252,7 @@ export class TeacherDossierService {
     if (doc.storage_namespace !== this.namespace) throw conflict();
     await this.storage.assertSafe();
     const bytes = await this.storage.read({ key: doc.storage_key, generation: doc.storage_generation });
-    // Legacy objects have no stored security verdict: validate without rewriting/deleting them.
+    // Basic signature/size checks do not certify legacy or current objects as malware-free.
     await this.validatePdf(bytes);
     // A deletion/replacement committed during the read must not disclose a retired document.
     const current = await query(`SELECT 1 FROM teacher_dossier_documents WHERE id=$1 AND teacher_id=$2
@@ -292,7 +293,7 @@ export class TeacherDossierService {
           // Recovered objects are checked against the intent, not trusted by path alone.
           const recovered = await this.storage.read(object);
           if (createHash('sha256').update(recovered).digest('hex') !== op.payload.contentHash) throw conflict();
-          // Only this request's completed analysis may cover identical bytes just
+          // Only this request's completed envelope check may cover identical bytes just
           // read back from storage. No persistent/global cache or client verdict.
           const age = validation ? Date.now() - validation.checkedAt : -1;
           const alreadyValidated = validation?.operationId === op.id &&

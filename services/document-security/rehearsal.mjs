@@ -1,4 +1,5 @@
 // Test job only. Never an entrypoint for the production recovery worker.
+throw new Error('Archived analyzer rehearsal: use the historical candidate in an explicitly authorized isolated window, not the current H24 runtime.');
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';

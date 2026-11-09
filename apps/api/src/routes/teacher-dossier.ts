@@ -6,7 +6,7 @@ import { DossierError, dossierParams, uploadSchema, replaceSchema, metadataSchem
 import type { TeacherDossierService } from '../lib/teacher-dossier.js';
 import { DossierStorageError } from '../lib/dossier-storage.js';
 import { documentAdmission as fileAdmission } from '../lib/document-admission.js';
-import { DocumentSecurityError } from '../lib/document-security.js';
+import { DOCUMENT_ANALYSIS_STATUS, DocumentSecurityError } from '../lib/document-security.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const parsed = schema.safeParse(value);
@@ -74,13 +74,14 @@ export async function registerDossierRoutes(app: FastifyInstance, injected?: Tea
   }));
   app.get(`${base}/documents/:documentId/content`, { preHandler: requireDossier('read') }, (request, reply) => respond(reply, async () => {
     const { teacherId, documentId } = parse(dossierParams, request.params);
-    const { download } = parse(z.object({ download: z.enum(['true', 'false']).optional() }).strict(), request.query);
+    parse(z.object({ download: z.enum(['true', 'false']).optional() }).strict(), request.query);
     const file = await service().content(request.user!, teacherId, documentId!);
     const asciiName = file.fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const encodedName = encodeURIComponent(file.fileName).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
     return reply.header('Content-Type', 'application/pdf')
-      .header('Content-Disposition', `${download === 'true' ? 'attachment' : 'inline'}; filename="${asciiName}"; filename*=UTF-8''${encodedName}`)
-      .header('Access-Control-Expose-Headers', 'Content-Disposition')
+      .header('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`)
+      .header('X-Document-Analysis', DOCUMENT_ANALYSIS_STATUS)
+      .header('Access-Control-Expose-Headers', 'Content-Disposition, X-Document-Analysis')
       .header('Cache-Control', 'private, no-store').header('X-Content-Type-Options', 'nosniff')
       .header('Content-Security-Policy', "sandbox; default-src 'none'").send(file.bytes);
   }));

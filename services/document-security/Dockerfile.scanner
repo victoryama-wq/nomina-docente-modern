@@ -1,5 +1,7 @@
 FROM clamav/clamav@sha256:bda39705e291105049c3936e2803ac90b955172af8030f94f05dce1252df6c6d
 USER root
+ARG H24_HISTORICAL_ANALYZER_REPLAY=disabled
+RUN test "$H24_HISTORICAL_ANALYZER_REPLAY" = "approved-isolated"
 RUN apk add --no-cache nodejs
 COPY services/document-security/server.mjs services/document-security/freshclam.conf tools/validation/h24-pd03/scan-stdin.sh /opt/h24/
 ENV DOCUMENT_CHECK_MODE=scanner

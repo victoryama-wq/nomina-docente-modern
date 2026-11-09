@@ -1419,7 +1419,7 @@ export async function downloadTeacherConstancia(teacherId: string): Promise<void
 export async function uploadTeacherConstancia(
   teacherId: string,
   payload: { fileName: string; mimeType: string; base64Data: string }
-): Promise<{ teacher: Teacher; message: string; cleanupPending?: boolean }> {
+): Promise<{ teacher: Teacher; message: string; cleanupPending?: boolean; analysisStatus?: 'NOT_SCANNED' }> {
   return request(`/teachers/${teacherId}/documents/constancia`, {
     method: 'POST',
     body: JSON.stringify(payload)
@@ -1428,6 +1428,7 @@ export async function uploadTeacherConstancia(
 
 export type DossierDocumentType = 'CURP' | 'ACTA_NACIMIENTO' | 'CEDULA_PROFESIONAL' | 'TITULO' | 'OTRO';
 export interface DossierDocument {
+  analysisStatus?: 'NOT_SCANNED';
   id: string;
   documentType: DossierDocumentType;
   title: string;
@@ -1509,10 +1510,8 @@ export async function fetchDossierDocumentBlob(teacherId: string, documentId: st
 }
 
 export async function openTeacherConstancia(teacherId: string): Promise<void> {
-  const { blob } = await fetchTeacherConstanciaBlob(teacherId);
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank', 'noopener,noreferrer');
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  // Unscanned content must not be opened in an application-origin browser context.
+  await downloadTeacherConstancia(teacherId);
 }
 
 export async function fetchCatalogsContext(): Promise<{

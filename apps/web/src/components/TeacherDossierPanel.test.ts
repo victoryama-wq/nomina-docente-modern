@@ -315,8 +315,8 @@ describe('H24 dossier panel', () => {
   it('uses authenticated preview/download and revokes the object URL on close', async () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     await open(); await wrapper.get('[aria-label="Ver Identidad"]').trigger('click'); await flushPromises();
-    expect(wrapper.get('iframe').attributes('src')).toBe('blob:synthetic');
-    expect(wrapper.get('iframe').attributes('referrerpolicy')).toBe('no-referrer');
+    expect(wrapper.find('iframe, object, embed, img').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Archivo no analizado por antivirus');
     await button('Descargar').trigger('click'); await flushPromises();
     expect(fetchDossierDocumentBlob).toHaveBeenLastCalledWith('teacher-1', 'doc-1', true);
     await wrapper.get('[aria-label="Cerrar vista previa"]').trigger('click');

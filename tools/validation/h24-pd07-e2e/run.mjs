@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+throw new Error('Archived analyzer capacity harness: not valid for H24 BASIC_ENVELOPE_V1. Use the historical candidate for separately authorized replay.');
 import { execFileSync, spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';

@@ -6,7 +6,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import PDFDocument from 'pdfkit';
 import { createCloudDocumentRunner } from '../../../apps/api/src/lib/document-cloud.ts';
-import { createDocumentValidator } from '../../../apps/api/src/lib/document-security.ts';
+import { createDocumentValidator } from '../../../apps/api/src/lib/document-analyzers-legacy.ts';
+
+throw new Error('Archived analyzer probe: replay the historical candidate only in a separately authorized isolated laboratory.');
 
 assert.equal(process.env.H24_PD07_B04_APPROVED, 'true');
 const phase = process.argv[2]; assert(['baseline', 'candidate'].includes(phase));
