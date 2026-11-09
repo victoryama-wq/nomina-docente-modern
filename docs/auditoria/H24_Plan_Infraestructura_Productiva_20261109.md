@@ -2,6 +2,11 @@
 
 Actualizado: 2026-11-09. **NO ejecutado; H24 sin GO productivo.**
 
+Preparacion posterior sobre b3d0681: [acta de PostgreSQL/worker](H24_Preparacion_Worker_Infraestructura_20261109.md)
+y [paquete ejecutable por etapas bajo autorizacion futura](../../ops/h24/README.md).
+La guarda horaria y exclusion ya estan implementadas/probadas localmente.
+No confundir esta preparacion con provisionamiento cloud ni con H05 productivo.
+
 ## 1. Cambio de alcance vigente
 
 Por decision expresa del usuario se retiran Inspector, Poppler y ClamAV del
@@ -30,7 +35,9 @@ La decision de costo de esta fase acepta retirar el control, no elimina el riesg
 - Metadata productiva observada el 2026-11-05, **no reconfirmada hoy**.
 - PD-DEST-01: siete dias acreditados en GCS aislado para 3284a12.
   Se conserva su evidencia; no se repitio GCS en esta adecuacion.
-- No se modifican 016/017 ni se ejecuta ningun comando H05 en esta fase.
+- No se modifican 016/017 ni se ejecuta H05 productivo. La preparacion posterior
+  autorizada si ejecuto los 20 SQL originales, incluida 017, exclusivamente en
+  PostgreSQL efimero sintetico; no cambia el historial productivo anterior.
 
 ## 3. Inventario restante y pendientes
 
@@ -39,9 +46,9 @@ La decision de costo de esta fase acepta retirar el control, no elimina el riesg
 | API | Imagen candidata, sin procesos/URL de analizadores ni Poppler | Digest, capacidad, configuracion efectiva y ventana de release |
 | Inspector / scanner | Excluidos: cero servicios/imagenes/cuentas/Invoker/alertas exclusivos nuevos | No aprovisionar. Inventario y retiro de recursos de ensayo antiguos requieren otra autorizacion |
 | Constancias | nomina-docente-prod-constancias; privado; softDelete 604800; versioning ausente o false | Reconfirmar metadata, IAM efectivo, holds y retenciones |
-| Adicionales | Bucket separado privado; versioning false y softDelete 0 explicitos | Designar nombre/propietario y provisionar con aprobacion |
-| Worker | Imagen API, node apps/api/dist/dossier-reconcile.js, una tarea, sin analizadores | Identidad, privilegios SQL/secretos, digest, horario y ejecucion aprobados |
-| Scheduler | Disparo OAuth al job; retry 0 | Programacion y guarda horaria; mantener pausado hasta resolver |
+| Adicionales | Propuesto nomina-docente-prod-h24-expedientes; privado; versioning false y softDelete 0 explicitos | Aprobar nombre/propietario, disponibilidad global y provisionar |
+| Worker | Propuesto nomina-h24-dossier-reconcile; imagen API, una tarea, sin analizadores; guarda y exclusion locales probadas | Provisionar identidad, verificar privilegios SQL/secretos, digest y ejecucion autorizada |
+| Scheduler | Propuesto nomina-h24-dossier-reconcile-10m; OAuth; retry 0; guarda del worker implementada | Provisionar pausado tras crear worker desarmado; validar efectivamente antes de habilitar |
 | Alertas de limpieza | Errores, backlog y ausencia de ejecucion exitosa | Canal/receptor/guardia, reglas, pruebas y recepcion productiva |
 | Seguridad residual | Archivos no analizados; descarga attachment, sin visor incrustado | Procedimiento institucional para abrir archivos y gestion de incidentes |
 | Release | H24 no habilitado | Migraciones 016/017, backup oportuno, rollback, smoke y autorizaciones separados |
@@ -98,16 +105,26 @@ PostgreSQL sidecar historico como worker productivo.
 Horario SQL antecedente: 06:50-22:00 America/Cancun. Propuesta Scheduler
 `*/10 7-20 * * *`, 84 disparos/dia, ultimo 20:50. Confirmar con operacion
 latencia nocturna. Una tarea no impide dos ejecuciones solapadas.
-**Guarda horaria/admisión y control de solapamiento pendientes**: el entrypoint
-actual no los acredita. No activar Scheduler sin resolver o usar ejecucion
-supervisada autorizada. No cambiar horario SQL ni abrir ventanas automaticamente.
+Guarda implementada en la candidata posterior a b3d0681: admision real
+07:00 inclusive a 21:50 exclusiva, revalidada tras adquirir conexion/lock;
+presupuesto monotono 230 s y watchdog a las 21:55. El timeout Cloud Run propuesto
+es 240 s, tambien protege frente a bloqueo del event loop. No admitir despues
+del corte aunque el Scheduler haya programado antes. Conexion PostgreSQL dedicada
+con pg_try_advisory_lock(4731444,1), sin espera: otro worker omite la ejecucion.
+Heartbeat y perdida de lease terminan el proceso; locks por operacion siguen.
+No cambiar horario SQL ni abrir ventanas automaticamente. Falta comprobar esta
+imagen/configuracion efectivas en cloud autorizado, no implementar otra guarda.
 
 Alertas restantes: dossier_reconcile ERROR/exitCode, DOCUMENT_FAILED,
 CERTIFICATE_PENDING, BACKLOG_AGE_EXCEEDED, WORKER_START_FAILED; sin contenido,
-nombres ni tokens. Ausencia de completed_execution_count result=succeeded >25 min
-durante horario operativo, despues de un positivo inicial. Mute nocturno de
-ausencia debe definirse/probarse, no suprimir ERROR nocturno. Confirmar receptor,
-recepcion y resolucion. Se retiran alertas AV/Inspector/firmas/MaxFiles exclusivas.
+nombres ni tokens. Ausencia de exito REAL mediante metrica de log
+outcome=COMPLETED, cleanupSucceeded=true, exitCode=0; nunca contar
+SKIPPED_HOURS/SKIPPED_OVERLAP ni usar completed_execution_count como sustituto.
+Propuesta PromQL: 25 min sin exito, sostenidos 5 min, solo07:30-21:10 Cancun;
+contempla cero y serie ausente aun sin positivo inicial. ERROR permanece24h.
+JSON/configuracion y conversion horaria probados offline; compilacion/series,
+canal, recepcion y resolucion requieren ventana cloud. Alertas se crean disabled.
+Se retiran alertas AV/Inspector/firmas/MaxFiles exclusivas.
 
 ## 7. Costos restantes: ejemplo, no cotizacion ni gasto autorizado
 
@@ -122,8 +139,9 @@ descuentos, impuestos ni conversion monetaria. No son mediciones de consumo.
 | GCS Standard | 10 GiB medios, incluyendo bytes recuperables, 720 h | USD 0.197/30 dias |
 | Subtotal ilustrativo | Solo los tres conceptos anteriores | Aproximadamente USD 3.32/mes |
 
-Worker: 151200 s x (0.000018 CPU + 0.000002 RAM). Si tarda 240 s cada ejecucion,
-serian USD 12.096/30 dias solo worker. El minimo facturable por ejecucion es 60 s.
+Worker: 151200 s x (0.000018 CPU + 0.000002 RAM). Si consume 230 s cada ejecucion,
+serian USD 11.592/30 dias solo worker; a 240 s de techo de plataforma, USD 12.096.
+El minimo facturable por ejecucion es 60 s. Scheduler pausado sigue siendo facturable.
 Storage: 10 x 720 x 0.000027397; no supone volumen real de expedientes.
 Soft-deleted bytes tambien se facturan hasta expirar. API incremental, operaciones
 GCS, trafico, builds, Artifact Registry, secretos, Monitoring/logs, backups y

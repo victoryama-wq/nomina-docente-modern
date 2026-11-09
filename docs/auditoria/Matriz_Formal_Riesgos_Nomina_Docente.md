@@ -2,6 +2,15 @@
 
 Actualizacion: 2026-11-09 (seguimiento documental H24/H05)
 
+Seguimiento H24 posterior a b3d0681:
+[acta de preparacion PostgreSQL/worker/infraestructura](H24_Preparacion_Worker_Infraestructura_20261109.md).
+Riesgo de solapamiento/apagado mitigado localmente con lease PostgreSQL,
+admision 07:00-21:50 Cancun, presupuesto 230 s y corte 21:55. Regresion completa
+PostgreSQL 171 PASS, incluida 017 sin modificar SQL historico. Riesgo productivo
+permanece abierto hasta verificar IAM/buckets/job/Scheduler/alertas y autorizacion
+de migraciones/release. NOT_SCANNED y descarga restringida siguen vigentes;
+no se reintroducen Inspector/ClamAV ni se declara eliminada la amenaza documental.
+
 ## 1. Contexto
 
 Esta matriz formaliza el estado de riesgos del proyecto Nomina Docente despues de:

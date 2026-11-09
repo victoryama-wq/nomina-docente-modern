@@ -1,0 +1,17 @@
+{
+  "displayName": "H24 document cleanup failure",
+  "enabled": false,
+  "combiner": "OR",
+  "notificationChannels": ["REPLACE_WITH_APPROVED_CHANNEL_RESOURCE"],
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "Inspect sanitized worker events and backlog. Do not log object contents or credentials. Errors are not silenced at night. Pause Scheduler and keep the worker disarmed if privacy/integrity fails; do not delete buckets or restore old certificates."
+  },
+  "conditions": [{
+    "displayName": "Worker ERROR",
+    "conditionMatchedLog": {
+      "filter": "resource.type=\"cloud_run_job\" AND resource.labels.project_id=\"nomina-docente-prod\" AND resource.labels.job_name=\"nomina-h24-dossier-reconcile\" AND resource.labels.location=\"us-central1\" AND jsonPayload.event=\"dossier_reconcile\" AND severity>=ERROR"
+    }
+  }],
+  "alertStrategy": { "notificationRateLimit": { "period": "300s" }, "autoClose": "86400s" }
+}

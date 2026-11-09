@@ -1,0 +1,11 @@
+NODE_ENV: production
+GCP_PROJECT_ID: nomina-docente-prod
+FIREBASE_PROJECT_ID: nomina-docente-prod
+DB_NAME: nomina_docente
+DB_USER: h24_dossier_worker
+DB_PORT: "5432"
+INSTANCE_CONNECTION_NAME: nomina-docente-prod:us-central1:nomina-docente-web
+CONSTANCIAS_BUCKET: nomina-docente-prod-constancias
+DOSSIER_STORAGE_MODE: gcs
+DOSSIER_BUCKET: nomina-docente-prod-h24-expedientes
+ALLOW_DOSSIER_RECONCILE: "false"

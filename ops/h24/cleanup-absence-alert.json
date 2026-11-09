@@ -1,0 +1,19 @@
+{
+  "displayName": "H24 no successful cleanup during operating hours",
+  "enabled": false,
+  "combiner": "OR",
+  "notificationChannels": ["REPLACE_WITH_APPROVED_CHANNEL_RESOURCE"],
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "No actual successful cleanup in 25 minutes, sustained 5 minutes, evaluated only 07:30-21:10 America/Cancun (UTC-05). Covers zero-valued and missing metric series. SKIPPED_HOURS/SKIPPED_OVERLAP never count as success. Confirm real alert receipt and recovery before enabling unattended operation. Reassess UTC conversion if timezone law changes."
+  },
+  "conditions": [{
+    "displayName": "25 minute gap during Cancun operating hours",
+    "conditionPrometheusQueryLanguage": {
+      "query": "((sum(sum_over_time(logging_googleapis_com:user_h24_dossier_cleanup_success{monitored_resource=\"cloud_run_job\",project_id=\"nomina-docente-prod\",job_name=\"nomina-h24-dossier-reconcile\",location=\"us-central1\"}[25m])) == 0) or absent_over_time(logging_googleapis_com:user_h24_dossier_cleanup_success{monitored_resource=\"cloud_run_job\",project_id=\"nomina-docente-prod\",job_name=\"nomina-h24-dossier-reconcile\",location=\"us-central1\"}[25m])) and on() ((vector(time() % 86400) >= 45000) or (vector(time() % 86400) < 7800))",
+      "duration": "300s",
+      "evaluationInterval": "60s"
+    }
+  }],
+  "alertStrategy": { "autoClose": "86400s" }
+}

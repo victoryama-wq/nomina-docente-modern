@@ -3,6 +3,16 @@
 Fecha: 2026-06-03
 Ultima actualizacion de estado productivo: 2026-10-27
 
+Preparacion local H24 2026-11-09, sin cambio productivo:
+[acta PostgreSQL/worker](H24_Preparacion_Worker_Infraestructura_20261109.md) y
+[runbook de infraestructura revisable](../../ops/h24/README.md).
+Antes de habilitar, verificar imagen candidata con guarda America/Cancun,
+lease PostgreSQL, timeout240s/retry0, worker inicialmente desarmado y Scheduler
+pausado. Exito de proceso omitido no equivale a limpieza; Monitoring debe usar
+outcome=COMPLETED/cleanupSucceeded=true. Confirmar canal, horario real,
+IAM/SQL minimo y buckets separados; no aprovisionar analizadores retirados.
+20 archivos SQL aplicados en pruebas efimeras no equivalen a H05 productivo.
+
 ## 1. Resumen ejecutivo
 
 H13 cierra como control documental y operativo permanente para despliegues productivos de Nomina Docente.

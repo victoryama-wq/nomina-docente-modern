@@ -1,7 +1,14 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-11-09 (H24 sin analizadores por decision de costo; sin nueva inspeccion cloud)
+Ultima actualizacion: 2026-11-09 (H24 sin analizadores; PostgreSQL efimero y worker protegidos; sin nueva inspeccion cloud)
+
+Preparacion local posterior a b3d0681: [acta de integracion y worker H24](../auditoria/H24_Preparacion_Worker_Infraestructura_20261109.md).
+Integracion completa: 171 PASS incluida 017; migraciones originales sin cambios.
+Worker: America/Cancun 07:00-21:50 admision, 230 s maximo, corte 21:55,
+lock global de sesion PostgreSQL y logs que distinguen limpieza de omision.
+[Runbook/configuracion propuesta](../../ops/h24/README.md), no recursos existentes.
+H24 mantiene NO-GO productivo; no se modifica H01 ni el historial H05 productivo.
 
 Este documento consolida el estado vigente del sistema Nomina Docente despues del cierre operativo de H01, H02/H03, H04-F5, H05, H06/H14 y H09/H10. A partir de H11, Codex debe usar este documento como primera fuente documental, junto con la matriz formal de riesgos y los documentos especificos de la fase en curso.
 

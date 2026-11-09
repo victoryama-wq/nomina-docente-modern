@@ -1,0 +1,6 @@
+{
+  "title": "H24 API document objects",
+  "description": "Bucket-scoped basic document storage. No restore, listing or policy administration.",
+  "stage": "GA",
+  "includedPermissions": ["storage.buckets.get", "storage.objects.get", "storage.objects.create", "storage.objects.delete"]
+}

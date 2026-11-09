@@ -1,0 +1,6 @@
+{
+  "title": "H24 recovery document objects",
+  "description": "Bucket-scoped recovery of existing intents. No create, restore, listing or policy administration.",
+  "stage": "GA",
+  "includedPermissions": ["storage.buckets.get", "storage.objects.get", "storage.objects.delete"]
+}

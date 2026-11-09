@@ -1,0 +1,6 @@
+{
+  "name": "h24_dossier_cleanup_success",
+  "description": "Actual successful cleanup only; skipped hours/overlap and process success alone never count.",
+  "filter": "resource.type=\"cloud_run_job\" AND resource.labels.project_id=\"nomina-docente-prod\" AND resource.labels.job_name=\"nomina-h24-dossier-reconcile\" AND resource.labels.location=\"us-central1\" AND jsonPayload.event=\"dossier_reconcile\" AND jsonPayload.outcome=\"COMPLETED\" AND jsonPayload.cleanupSucceeded=true AND jsonPayload.exitCode=0",
+  "metricDescriptor": { "metricKind": "DELTA", "valueType": "INT64", "unit": "1" }
+}
