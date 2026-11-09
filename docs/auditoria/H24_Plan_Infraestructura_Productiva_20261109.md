@@ -1,11 +1,19 @@
 # H24 - Plan revisable de infraestructura productiva
 
-Actualizado: 2026-11-09. **NO ejecutado; H24 sin GO productivo.**
+Actualizado: 2026-11-09. **Preparacion cloud parcial; H24 sin GO productivo.**
+
+Estado posterior verificado: [acta de ventana de infraestructura](H24_Ventana_Preparacion_Infraestructura_20261109.md).
+Imagen57c565a publicada sin deploy; bucket adicional, SA, roles, metrica y alertas
+disabled creados. No worker/Scheduler: falta credencial SQL dedicada. API conserva
+restore por objectAdmin; IAM pendiente antes del release. Canal creado, correo
+de verificacion recibido, verificacion/alerta operativa aun no acreditadas.
+Las secciones de antecedente y costos ilustrativos conservan su alcance original.
 
 Preparacion posterior sobre b3d0681: [acta de PostgreSQL/worker](H24_Preparacion_Worker_Infraestructura_20261109.md)
-y [paquete ejecutable por etapas bajo autorizacion futura](../../ops/h24/README.md).
+y [paquete revisable por etapas](../../ops/h24/README.md).
 La guarda horaria y exclusion ya estan implementadas/probadas localmente.
-No confundir esta preparacion con provisionamiento cloud ni con H05 productivo.
+La preparacion local anterior no era provisionamiento ni H05 productivo;
+la ventana parcial posterior queda diferenciada en el acta enlazada arriba.
 
 ## 1. Cambio de alcance vigente
 
@@ -23,7 +31,7 @@ Las aceptaciones previas de Rectoria para red/visor y segundo emisor se revisan
 el 2027-02-01; no se reinterpretan como prueba antivirus de archivos nuevos.
 La decision de costo de esta fase acepta retirar el control, no elimina el riesgo.
 
-## 2. Antecedentes, no nuevas consultas cloud
+## 2. Antecedentes previos a la ventana cloud parcial
 
 - H05 favorable aportado por el usuario el 2026-11-09, 14:39:31 UTC para 3284a12:
   dos tablas, 20 archivos, 18 registradas (15 baseline/3 aplicadas),
@@ -32,7 +40,8 @@ La decision de costo de esta fase acepta retirar el control, no elimina el riesg
 - Referencia API/rollback: nomina-api-00057-c7d, digest
   sha256:a7d0de2196c5552d50cd75b8f01e15238dc90f701941b8656613bf6d1789196b.
 - Hosting: release 1793121624438000 / version 3f9ebc88c835a143.
-- Metadata productiva observada el 2026-11-05, **no reconfirmada hoy**.
+- Metadata observada inicialmente el 2026-11-05; reconfirmada por la ventana
+  parcial del 2026-11-09 en el acta, sin repetir inspeccion SQL.
 - PD-DEST-01: siete dias acreditados en GCS aislado para 3284a12.
   Se conserva su evidencia; no se repitio GCS en esta adecuacion.
 - No se modifican 016/017 ni se ejecuta H05 productivo. La preparacion posterior
@@ -43,19 +52,19 @@ La decision de costo de esta fase acepta retirar el control, no elimina el riesg
 
 | Recurso/control | Plan vigente | Pendiente productivo |
 |---|---|---|
-| API | Imagen candidata, sin procesos/URL de analizadores ni Poppler | Digest, capacidad, configuracion efectiva y ventana de release |
+| API | Imagen57c565a publicada por digest; API vigente no cambiada | Capacidad/configuracion H24 y ventana de release |
 | Inspector / scanner | Excluidos: cero servicios/imagenes/cuentas/Invoker/alertas exclusivos nuevos | No aprovisionar. Inventario y retiro de recursos de ensayo antiguos requieren otra autorizacion |
-| Constancias | nomina-docente-prod-constancias; privado; softDelete 604800; versioning ausente o false | Reconfirmar metadata, IAM efectivo, holds y retenciones |
-| Adicionales | Propuesto nomina-docente-prod-h24-expedientes; privado; versioning false y softDelete 0 explicitos | Aprobar nombre/propietario, disponibilidad global y provisionar |
-| Worker | Propuesto nomina-h24-dossier-reconcile; imagen API, una tarea, sin analizadores; guarda y exclusion locales probadas | Provisionar identidad, verificar privilegios SQL/secretos, digest y ejecucion autorizada |
+| Constancias | Metadata reconfirmada: privado,604800,versioning ausente; politica no cambiada | Sustituir objectAdmin/restore de API bajo autorizacion y validar runtime IAM |
+| Adicionales | Creado nomina-docente-prod-h24-expedientes; privado,versioning false,softDelete 0 | Validar acceso runtime en futura ventana, no se operaron objetos |
+| Worker | Propuesto nomina-h24-dossier-reconcile; SA/roles preparados, imagen publicada; guarda y exclusion locales probadas | Credencial dedicada, permisos SQL/secreto, crear desarmado y validar ejecucion autorizada |
 | Scheduler | Propuesto nomina-h24-dossier-reconcile-10m; OAuth; retry 0; guarda del worker implementada | Provisionar pausado tras crear worker desarmado; validar efectivamente antes de habilitar |
-| Alertas de limpieza | Errores, backlog y ausencia de ejecucion exitosa | Canal/receptor/guardia, reglas, pruebas y recepcion productiva |
+| Alertas de limpieza | Canal, metrica y politicas fallo/ausencia creados disabled; sintaxis aceptada | Verificacion canal, series runtime, pruebas/recepcion y recuperacion productiva |
 | Seguridad residual | Archivos no analizados; descarga attachment, sin visor incrustado | Procedimiento institucional para abrir archivos y gestion de incidentes |
 | Release | H24 no habilitado | Migraciones 016/017, backup oportuno, rollback, smoke y autorizaciones separados |
 
 No hay retiro automatico de cloud en el codigo ni permisos para hacerlo aqui.
-No se promete ahorro en la factura actual: no se inspeccionaron ni eliminaron
-servicios existentes.
+No se promete ahorro en la factura actual: la ventana inspecciono metadata y no
+elimino servicios existentes. Costos observados/estimados separados en el acta.
 
 ## 4. IAM y configuracion
 
@@ -122,8 +131,9 @@ outcome=COMPLETED, cleanupSucceeded=true, exitCode=0; nunca contar
 SKIPPED_HOURS/SKIPPED_OVERLAP ni usar completed_execution_count como sustituto.
 Propuesta PromQL: 25 min sin exito, sostenidos 5 min, solo07:30-21:10 Cancun;
 contempla cero y serie ausente aun sin positivo inicial. ERROR permanece24h.
-JSON/configuracion y conversion horaria probados offline; compilacion/series,
-canal, recepcion y resolucion requieren ventana cloud. Alertas se crean disabled.
+JSON/configuracion y conversion horaria probados offline; Monitoring acepto
+las politicas disabled. Series, verificacion de canal, recepcion y resolucion
+siguen pendientes de otra ventana. No se generan alertas reales en esta fase.
 Se retiran alertas AV/Inspector/firmas/MaxFiles exclusivas.
 
 ## 7. Costos restantes: ejemplo, no cotizacion ni gasto autorizado
@@ -147,7 +157,8 @@ Soft-deleted bytes tambien se facturan hasta expirar. API incremental, operacion
 GCS, trafico, builds, Artifact Registry, secretos, Monitoring/logs, backups y
 Cloud SQL quedan fuera del subtotal: requieren volumen/retencion y configuracion.
 No confundir este subtotal con costo total o tope automatico. Presupuesto/ventana
-productivos necesitan nueva autorizacion; no heredar los US$10 del ensayo cerrado.
+de operacion necesitan autorizacion; la ventana parcial tuvo USD10 de objetivo
+solo para su intervencion, no hereda ni renueva limites de ensayos anteriores.
 
 Fuentes: [Cloud Run](https://cloud.google.com/run/pricing),
 [Scheduler](https://cloud.google.com/scheduler/pricing),
@@ -155,8 +166,9 @@ Fuentes: [Cloud Run](https://cloud.google.com/run/pricing),
 
 ## 8. Secuencia futura y rollback
 
-1. Aprobar responsables, bucket adicional, IAM efectivo, dimensionamiento, costos
-   y operacion/alertas/horario. Congelar candidata y artefactos.
+1. Partir del inventario ya creado del acta, sin duplicar bucket/canal/roles/SA.
+   Completar IAM efectivo, credencial DBA, dimensionamiento y operacion/alertas.
+   Conservar candidata57c565a y su digest; cualquier cambio exige revalidacion.
 2. Precheck de metadata/rollback/H05 en ventana autorizada; parar ante diferencias.
 3. Provisionar solo recursos restantes aprobados. No construir/desplegar
    Inspector/ClamAV. Scripts historicos archivados no son runbooks actuales.
@@ -171,5 +183,5 @@ Fuentes: [Cloud Run](https://cloud.google.com/run/pricing),
    elimina intenciones. Mantener worker compatible para cleanup comprometido.
    No restaurar un PDF antiguo como vigente ni restaurar toda la BD por defecto.
 
-**H24 mantiene NO-GO productivo.** La aprobacion de retirar analizadores no
-autoriza migraciones, recursos, merge ni deploy.
+**H24 mantiene NO-GO productivo.** La ventana separada autorizo los recursos
+parciales del acta, no migraciones, ejecucion worker, merge ni deploy.

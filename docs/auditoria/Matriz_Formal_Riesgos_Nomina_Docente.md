@@ -2,6 +2,14 @@
 
 Actualizacion: 2026-11-09 (seguimiento documental H24/H05)
 
+[Ventana de infraestructura H24](H24_Ventana_Preparacion_Infraestructura_20261109.md):
+bucket adicional/identidades/roles y alertas disabled preparados; imagen57c565a
+publicada sin deploy. NO-GO persiste: API conserva storage.objects.restore por
+objectAdmin, credencial SQL dedicada ausente (worker/Scheduler no creados), canal
+sin verificacion completada y sin alerta real productiva probada. Ninguna
+migracion, lectura de expedientes ni ejecucion cleanup. Riesgos historicos
+permanecen; provision parcial no es habilitacion ni cierre operativo.
+
 Seguimiento H24 posterior a b3d0681:
 [acta de preparacion PostgreSQL/worker/infraestructura](H24_Preparacion_Worker_Infraestructura_20261109.md).
 Riesgo de solapamiento/apagado mitigado localmente con lease PostgreSQL,

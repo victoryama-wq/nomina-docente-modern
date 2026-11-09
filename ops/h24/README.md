@@ -1,16 +1,24 @@
 # H24: paquete revisable para una ventana futura
 
-Preparado 2026-11-09. **NO ejecutado. No autoriza recursos ni release.**
+Preparado 2026-11-09. Ventana parcial autorizada sobre 57c565a: ver
+[acta de infraestructura](../../docs/auditoria/H24_Ventana_Preparacion_Infraestructura_20261109.md).
+La autorizacion no incluye SQL, migraciones, ejecucion del worker ni release.
 Base funcional b3d0681618cd5013031b8c1f7c03b9982e56dbce mas el commit que contiene
 este paquete. No usar la imagen anterior para el worker nuevo. No contiene
 servicios, IAM, imagenes ni alertas de Inspector/ClamAV. Archivos NOT_SCANNED.
 
-## Destinos propuestos, no inventario observado
+## Destinos del plan; inventario separado en el acta
+
+Al cierre del 2026-11-09 estan creados bucket adicional, SA, roles, metrica,
+canal y politicas disabled. Imagen 57c565a publicada sin desplegar. Worker y
+Scheduler NO creados por falta de credencial dedicada. Los comandos de creacion
+de abajo NO deben repetirse sobre esos recursos; consultar y comparar primero.
+IDs, digest e IAM efectivo se registran en el acta, no en placeholders.
 
 | Elemento | Propuesta |
 |---|---|
 | Proyecto / region | nomina-docente-prod / us-central1 |
-| Bucket adicional | nomina-docente-prod-h24-expedientes (disponibilidad global por verificar) |
+| Bucket adicional | nomina-docente-prod-h24-expedientes (creado; verificar metadata antes de uso) |
 | Worker / SA | nomina-h24-dossier-reconcile / nomina-h24-recovery@nomina-docente-prod.iam.gserviceaccount.com |
 | Scheduler / SA | nomina-h24-dossier-reconcile-10m / nomina-h24-scheduler@nomina-docente-prod.iam.gserviceaccount.com |
 | Usuario SQL / secreto | h24_dossier_worker / h24-dossier-worker-db-password; version numerica por designar |
@@ -18,9 +26,9 @@ servicios, IAM, imagenes ni alertas de Inspector/ClamAV. Archivos NOT_SCANNED.
 | Metrica | h24_dossier_cleanup_success |
 | Alertas | H24 document cleanup failure / H24 no successful cleanup during operating hours |
 
-Constancias `nomina-docente-prod-constancias` y API SA `nomina-api-sa` son
-antecedentes a reconfirmar, no hallazgos de esta fase. SQL tiene antecedente
-06:50-22:00 Cancun. No cambiarlo. Bucket adicional separado, UBLA/PAP, sin
+Constancias `nomina-docente-prod-constancias`, API SA `nomina-api-sa` y horario
+SQL 06:50-22:00 Cancun fueron reconfirmados por metadata el 2026-11-09.
+No cambiarlo. Bucket adicional separado, UBLA/PAP, sin
 versionado, soft delete 0, sin holds/retenciones/lifecycle. Constancias conservan
 604800 segundos; **no hay comando para cambiar su politica** en este paquete.
 
@@ -28,8 +36,10 @@ versionado, soft delete 0, sin holds/retenciones/lifecycle. Constancias conserva
 
 Ejecutar bloques individualmente solo en una ventana expresamente autorizada.
 No pegar todo el documento en una terminal. Detenerse ante cualquier salida
-distinta de cero. No activar nuevas APIs, crear secretos, migrar, publicar una
-imagen, ejecutar un job o desplegar API/Hosting como efecto implicito del plan.
+distinta de cero en esa etapa, registrar y continuar solo etapas independientes.
+No activar nuevas APIs, crear secretos, migrar, ejecutar un job o desplegar
+API/Hosting como efecto implicito del plan. Publicar la imagen requiere
+autorizacion explicita (concedida para 57c565a en esta ventana).
 
 Variables en PowerShell; reemplazar solo despues de aprobar cada valor:
 
@@ -50,9 +60,6 @@ $SecretVersion = 'REQUIERE_VERSION_NUMERICA'
 $Channel = 'REQUIERE_CANAL_APROBADO'
 $ApprovedSha = 'REQUIERE_SHA_CANDIDATA'
 if ((git rev-parse HEAD) -ne $ApprovedSha -or (git status --porcelain)) { throw 'Candidata no congelada/limpia' }
-if ($Image -notmatch '^us-central1-docker\.pkg\.dev/nomina-docente-prod/[^@]+@sha256:[a-f0-9]{64}$') { throw 'Falta imagen candidata aprobada' }
-if ($SecretVersion -notmatch '^[1-9][0-9]*$') { throw 'Falta secreto del usuario SQL dedicado' }
-if ($Channel -notmatch '^projects/nomina-docente-prod/notificationChannels/[0-9]+$') { throw 'Falta canal verificado' }
 gcloud projects describe $P --format='value(projectId,lifecycleState)'
 Check-Exit
 gcloud sql instances describe nomina-docente-web --project=$P --format='yaml(name,region,state,settings.activationPolicy)'
@@ -68,7 +75,7 @@ Check-Exit
 ```
 
 Registrar antes de continuar: proyecto ACTIVE, SQL RUNNABLE/us-central1,
-horario confirmado con operacion, API/Hosting/rollback vigentes, digest candidato,
+horario confirmado con operacion, API/Hosting/rollback vigentes, SHA candidato,
 servicios Run/SQL/Storage/Scheduler/Logging/Monitoring/SecretManager habilitados.
 Falta de API o permisos no autoriza habilitarlos automaticamente. Revisar IAM
 heredado y condiciones: bindings locales minimos no eliminan privilegios amplios.
@@ -79,12 +86,52 @@ crear: si ya existen, detener y comparar, no hacer update ni duplicar. Un error
 403 no acredita inexistencia; solo NOT_FOUND verificado permite crear.
 No sobreescribir ficheros de evidencia existentes.
 
+Prerrequisitos por etapa, no globales: bucket/IAM requieren destino, identidad,
+APIs y ausencia/compatibilidad acreditada; imagen requiere fuente congelada y
+repositorio existente; metrica no requiere canal ni SQL; politicas requieren
+canal de identidad confirmada (registrar verificacion por separado); worker
+requiere digest y credencial dedicada validada; Scheduler requiere worker
+desarmado. Un bloqueo no autoriza inventar referencias ni usar app_nomina.
+
+## 0.1 Imagen desde contexto permitido (solo con autorizacion de publicacion)
+
+El SHA aprobado es fuente, no el HEAD documental posterior. Trabajar con fuente
+congelada y verificar identidad antes de publicar. No construir usando `.` de
+la copia de trabajo: no existe .dockerignore en la candidata. Este bloque no
+despliega, y tampoco debe repetir un tag ya publicado sin comparar su digest.
+
+```powershell
+$Source = Join-Path $env:LOCALAPPDATA ('NominaDocente/H24-image-' + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $Source | Out-Null
+$Archive = Join-Path $Source 'candidate.tar'
+$Context = Join-Path $Source 'context'
+New-Item -ItemType Directory -Path $Context | Out-Null
+git archive --format=tar --output=$Archive $ApprovedSha .npmrc package.json package-lock.json apps/api/Dockerfile apps/api/package.json apps/api/tsconfig.json apps/api/src apps/web/package.json
+Check-Exit
+tar -xf $Archive -C $Context
+Check-Exit
+Get-FileHash -LiteralPath $Archive -Algorithm SHA256
+# Revisar allowlist y contenido: sin credenciales, .env, datos reales ni dumps.
+$Tag = 'REQUIERE_TAG_NUEVO_APROBADO'
+if ($Tag -notmatch '^us-central1-docker\.pkg\.dev/nomina-docente-prod/nomina/nomina-api:[a-z0-9.-]+$') { throw 'Falta tag aprobado' }
+docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$ApprovedSha" -f "$Context/apps/api/Dockerfile" -t $Tag $Context
+Check-Exit
+# Antes del push: comprobar label/SHA, Linux, build y entrypoint desarmado sin red.
+gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+Check-Exit
+docker push $Tag
+Check-Exit
+gcloud artifacts docker images describe $Tag --project=$P --format=json
+Check-Exit
+# Registrar digest remoto; establecer $Image con la referencia inmutable comprobada.
+```
+
 ## 1. Bucket adicional e identidades (solo con aprobacion de infraestructura)
 
 ```powershell
-gcloud storage buckets create "gs://$Bucket" --project=$P --location=$R --uniform-bucket-level-access --public-access-prevention --soft-delete-duration=0 --default-storage-class=STANDARD --labels=purpose=h24-dossier
+gcloud storage buckets create "gs://$Bucket" --project=$P --location=$R --uniform-bucket-level-access --public-access-prevention --soft-delete-duration=0 --default-storage-class=STANDARD
 Check-Exit
-gcloud storage buckets update "gs://$Bucket" --project=$P --no-versioning
+gcloud storage buckets update "gs://$Bucket" --project=$P --no-versioning --update-labels=purpose=h24-dossier
 Check-Exit
 gcloud storage buckets describe "gs://$Bucket" --project=$P --format=json
 Check-Exit
@@ -102,9 +149,7 @@ foreach ($B in @($Cert, $Bucket)) {
   gcloud storage buckets add-iam-policy-binding "gs://$B" --project=$P --member="serviceAccount:$Api" --role="projects/$P/roles/h24DossierApiStorage"
   Check-Exit
 }
-gcloud projects add-iam-policy-binding $P --member="serviceAccount:$Worker" --role=roles/cloudsql.client
-Check-Exit
-gcloud secrets add-iam-policy-binding h24-dossier-worker-db-password --project=$P --member="serviceAccount:$Worker" --role=roles/secretmanager.secretAccessor
+gcloud projects add-iam-policy-binding $P --member="serviceAccount:$Worker" --role=roles/cloudsql.client --condition=None
 Check-Exit
 ```
 
@@ -116,6 +161,9 @@ para worker. `roles/cloudsql.client` es conectividad, no privilegios SQL.
 Worker no verifica tokens de usuario: revalida actor contra SQL. No necesita
 firebaseauth.users.get. API conserva su permiso Firebase existente y secretos
 ajenos; no modificar esos bindings en esta ventana.
+La verificacion final encontro roles/storage.objectAdmin preexistente para API
+en constancias, incluido storage.objects.restore. Sigue pendiente sustituirlo
+bajo autorizacion especifica antes del release: agregar el rol minimo no basta.
 
 ## 2. Privilegios SQL propuestos (ventana DBA separada, NO migracion)
 
@@ -150,11 +198,16 @@ de las rutas de reconciliacion con estos grants antes de uso no supervisado.
 
 ## 3. Worker desarmado y Scheduler pausado
 
-Solo imagen ya publicada bajo otra autorizacion y con SHA/digest verificados.
-Esta preparacion no construye ni publica imagenes. Cloud SQL connector y secreto
+Solo imagen ya publicada bajo autorizacion explicita y con SHA/digest verificados.
+La ventana actual permite construir/publicar la candidata, no desplegar API.
+Cloud SQL connector y secreto
 pueden requerir IAM incluso estando desarmado. No usar execute-now.
 
 ```powershell
+if ($Image -notmatch '^us-central1-docker\.pkg\.dev/nomina-docente-prod/[^@]+@sha256:[a-f0-9]{64}$') { throw 'Falta imagen candidata aprobada' }
+if ($SecretVersion -notmatch '^[1-9][0-9]*$') { throw 'Falta credencial SQL dedicada validada por DBA; omitir worker/Scheduler' }
+gcloud secrets add-iam-policy-binding h24-dossier-worker-db-password --project=$P --member="serviceAccount:$Worker" --role=roles/secretmanager.secretAccessor
+Check-Exit
 gcloud run jobs create $Job --project=$P --region=$R --image=$Image --service-account=$Worker --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=240s --cpu=1 --memory=1Gi --command=node --args=apps/api/dist/dossier-reconcile.js --env-vars-file=ops/h24/worker-env.yaml --set-cloudsql-instances=nomina-docente-prod:us-central1:nomina-docente-web --set-secrets="DB_PASSWORD=h24-dossier-worker-db-password:$SecretVersion"
 Check-Exit
 gcloud run jobs describe $Job --project=$P --region=$R --format=yaml
@@ -178,13 +231,17 @@ no dar TokenCreator global por comodidad.
 
 ## 4. Alertas preparadas, deshabilitadas hasta ventana supervisada
 
-Configurar receptor/guardia confirmado; propuesta victor.yama@tecplayacar.edu.mx,
-no asumir que un canal del ensayo equivale a canal productivo. Preparar copias
+Receptor autorizado victor.yama@tecplayacar.edu.mx; canal productivo creado en
+esta ventana, distinto del ensayo. Verificacion y alerta operativa recibida son
+pendientes separados (el usuario recibio solo correo con codigo). Preparar copias
 temporales de JSON, sustituir REPLACE_WITH_APPROVED_CHANNEL_RESOURCE con $Channel
 usando ConvertFrom-Json/ConvertTo-Json y mantener enabled=false. No versionar IDs
 privados ni contactos adicionales. No enviar tokens a archivos/logs.
 
 ```powershell
+gcloud logging metrics create h24_dossier_cleanup_success --project=$P --config-from-file=ops/h24/cleanup-success-metric.json
+Check-Exit
+if ($Channel -notmatch '^projects/nomina-docente-prod/notificationChannels/[0-9]+$') { throw 'Falta canal con receptor comprobado; metrica independiente ya preparada' }
 $Out = Join-Path $env:TEMP ('h24-monitoring-' + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $Out | Out-Null
 foreach ($Name in @('cleanup-failure-alert', 'cleanup-absence-alert')) {
@@ -192,8 +249,6 @@ foreach ($Name in @('cleanup-failure-alert', 'cleanup-absence-alert')) {
   $Policy.notificationChannels = @($Channel)
   $Policy | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $Out "$Name.json") -Encoding utf8
 }
-gcloud logging metrics create h24_dossier_cleanup_success --project=$P --config-from-file=ops/h24/cleanup-success-metric.json
-Check-Exit
 gcloud monitoring policies create --project=$P --policy-from-file="$Out/cleanup-failure-alert.json"
 Check-Exit
 gcloud monitoring policies create --project=$P --policy-from-file="$Out/cleanup-absence-alert.json"
@@ -210,7 +265,8 @@ progreso en horario; revisar tambien ejecuciones fallidas de plataforma.
 ## 5. Condiciones de parada y habilitacion posterior
 
 La ventana de preparacion termina con Scheduler PAUSED, worker false, alertas
-creadas disabled. No armar sobre esquema incompleto. Para otra ventana autorizada:
+creadas disabled; si falta credencial dedicada, worker/Scheduler quedan NO CREADOS.
+No armar sobre esquema incompleto. Para otra ventana autorizada:
 reconfirmar H05, backup, IAM/SQL, digest, metadata de ambos buckets, horario y
 canal; habilitar alertas e iniciar un smoke sintetico supervisado. Probar ERROR,
 ausencia y recuperacion recibidas, saltos horarios sin exito, solapamiento, A->B
@@ -251,5 +307,6 @@ Rollback API/Hosting y migraciones pertenecen a otra ventana.
 - https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/update
 - https://docs.cloud.google.com/monitoring/alerts/using-promql
 
-Los comandos y JSON se revisan localmente; no certifican recursos existentes,
-permisos efectivos ni aceptacion del control plane hasta la ventana autorizada.
+Los JSON fueron aceptados por Monitoring en esta ventana, con enabled=false.
+Eso no certifica series runtime, entrega, minimo privilegio integral ni release.
+Los comandos aqui son una guia por etapas, no un script para repetir en bloque.
