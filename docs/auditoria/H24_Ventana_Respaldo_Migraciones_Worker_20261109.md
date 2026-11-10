@@ -9,8 +9,10 @@ comprobo acceso con la credencial existente de app_nomina y permisos efectivos;
 H05 inspect de 57c565a termino con salida 0: 20 archivos, 18 registradas, solo
 016/017 pendientes y 0 mismatch. El bloqueo de acceso queda resuelto para esa ruta, sin restablecer
 contrasenas. Esta acta conserva los hechos del 9 de noviembre: no hubo apply ni
-usuario worker entonces ni en el diagnostico posterior. La ejecucion de 016/017
-requiere una nueva autorizacion; no se repitio el respaldo.
+usuario worker entonces ni en el diagnostico posterior. El alcance de 016/017
+ya estaba autorizado; su ejecucion conserva las condiciones y limites originales.
+No se repitio el respaldo. La seccion 9 registra el plazo vencido al reanudar,
+sin interpretar la autorizacion de alcance como un reinicio automatico del reloj.
 
 - Candidata funcional: `57c565a6a6ed3b4c2dca21292289893b94fc6a5d`.
 - Acta previa / HEAD inicial limpio: `6e91986c4350448b4ebd0c25d2f04bb84d11f998`.
@@ -196,3 +198,68 @@ no se repiten tests/build de la candidata para un cierre documental bloqueado.
 
 Esta acta no certifica migracion ni crea permisos nuevos. H24 conserva NO-GO.
 No H01, Nomina, snapshots ni datos fiscales modificados por esta intervencion.
+
+## 9. Reanudacion solicitada y limite temporal (2026-11-10)
+
+El usuario ratifico la ejecucion previamente autorizada, no solo su documentacion:
+respaldo cuando corresponda, H05, aplicacion condicionada de 016/017, usuario SQL
+dedicado, secreto, worker desarmado y Scheduler pausado. API/Hosting, trafico,
+politicas de almacenamiento e IAM actual de API permanecen fuera de cambios;
+no se autoriza ejecutar limpieza, habilitar alertas ni habilitar H24.
+
+La frase anterior que solicitaba nueva autorizacion para el alcance era
+imprecisa y queda aclarada. La autorizacion funcional existe. Sin embargo,
+la fuente original limita la intervencion a **dos horas desde el inicio de
+operaciones productivas**, no a dos horas acumuladas de comandos ni a dos horas
+por mensaje. No hay una pausa del reloj o ampliacion concedida; el usuario
+prohibe reiniciar limites automaticamente.
+
+| Condicion | Evidencia al reanudar | Resultado |
+|---|---|---|
+| Inicio original | 2026-11-09T21:50:59.543122Z / 16:50:59 America/Cancun | Conservado |
+| Limite original de dos horas | 2026-11-09T23:50:59.543122Z / 18:50:59 America/Cancun | Vencido |
+| Hora inicial de esta comprobacion | 2026-11-10T18:27:48Z / 13:27:48 America/Cancun | Dia posterior |
+| Tiempo restante de ventana | 0; vencida por mas de 18h36m | STOP antes de mutaciones |
+| Presupuesto objetivo original | USD10 para la intervencion | No reiniciado ni ampliado |
+| Gasto/remanente verificado | Sin liquidacion de facturacion consultada; el acta original estimaba menos de USD1, no gasto real certificado | No declarar USD9 disponibles ni asumir que el presupuesto renueva el plazo |
+| Instancia | nomina-docente-web, us-central1, RUNNABLE | PASS metadata |
+| Horario SQL | Encendido 50 6 * * *, apagado 0 22 * * *, ambos ENABLED, America/Cancun | Dentro de 06:50-22:00; no sustituye el limite de ventana |
+| Backup existente | 1794261106620, ON_DEMAND/SNAPSHOT, SUCCESSFUL | Reconfirmado sin crear otro |
+| Inicio/fin backup | 2026-11-09T21:51:46.627Z / 21:53:18.048Z | Aproximadamente 20h35m desde su finalizacion al revisar |
+| Recuperacion configurada | Backups automaticos, retencion 7 por conteo, PITR habilitado, logs 7 dias en CLOUD_STORAGE | Metadata disponible; restauracion no ensayada |
+| Candidata original | 57c565a6a6ed3b4c2dca21292289893b94fc6a5d | 20 SQL + runner + package.json: 22 archivos coinciden byte a byte |
+
+Comprobaciones cloud de esta reanudacion: solo describe del backup existente,
+instancia y dos Scheduler de encendido/apagado; todas terminaron con salida 0.
+No se leyeron datos de expedientes ni se abrio conexion PostgreSQL. La
+comprobacion local de los archivos termino a las 18:28:51.900Z con salida 0;
+los hashes 016/017 coinciden con los de la seccion 2.
+
+El respaldo sigue disponible y finalizado, pero no acredita por si solo
+frescura suficiente respecto de la actividad posterior. No se consultaron datos
+para estimar esa actividad ni se fijo un umbral nuevo de vigencia. Antes de una
+ejecucion efectiva se revisaran la recuperabilidad y frescura exigidas; no se
+crea un respaldo por el antiguo bloqueo de acceso.
+
+### Ejecutado y pendiente
+
+- Ejecutado: comprobacion del limite, metadata anterior, cotejo local de fuente,
+  aclaracion documental, validacion documental y publicacion de estos cambios.
+- H05 inmediato previo a apply: **no ejecutado en esta reanudacion** porque la
+  condicion temporal impide iniciar apply. El resultado de las 17:29 UTC del
+  10 de noviembre permanece valido como evidencia de aquel diagnostico, no
+  como sustituto de la inspeccion inmediatamente anterior a una futura escritura.
+- Apply 016/017, usuario SQL, grants, secreto, worker y Scheduler: **no ejecutados**
+  en esta reanudacion. No se consulto de nuevo su inventario; el ultimo estado
+  observado sigue identificado en las actas, sin certificar recursos nuevos.
+- No hubo fallos de mutaciones ni reintentos: ninguna mutacion se inicio.
+- No se alteraron API/Hosting, trafico, buckets, permisos API ni alertas. Tampoco
+  se creo otro respaldo, se ejecuto limpieza o se habilito H24.
+- No se abrieron proxies/conexiones ni se capturaron credenciales en esta tarea.
+
+**Impedimento exacto:** plazo de dos horas vencido. No es falta de permisos DBA
+ni falta de autorizacion funcional. Para ejecutar hace falta que el usuario
+establezca expresamente una ampliacion o nueva franja temporal y confirme como
+se conserva el presupuesto objetivo original. No se solicita autorizar de nuevo
+los pasos ya aprobados ni se considera reiniciado el contador por este mensaje.
+Hasta entonces los pasos dependientes quedan detenidos, sin aplicar 016/017.

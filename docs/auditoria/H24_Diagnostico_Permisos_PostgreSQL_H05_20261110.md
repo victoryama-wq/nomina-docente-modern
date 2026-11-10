@@ -4,6 +4,13 @@ Fecha: 2026-11-10. **Acceso existente verificado; H05 inspect favorable para
 57c565a. Solo lectura. 016/017 NO aplicadas; H24 no queda habilitado para uso
 productivo por este dictamen.**
 
+Aclaracion posterior del mismo dia: el alcance de respaldo, H05, aplicacion
+condicionada de 016/017, usuario dedicado, secreto, worker desarmado y Scheduler
+pausado **ya estaba autorizado** y fue ratificado por el usuario. Este diagnostico
+no revoca esa autorizacion. El requisito pendiente no es pedir nuevamente el
+alcance, sino disponer de plazo operativo vigente dentro de sus limites. Ver la
+[comprobacion de reanudacion](H24_Ventana_Respaldo_Migraciones_Worker_20261109.md#9-reanudacion-solicitada-y-limite-temporal-2026-11-10).
+
 ## 1. Alcance y trazabilidad
 
 - Candidata exacta: `57c565a6a6ed3b4c2dca21292289893b94fc6a5d`.
@@ -152,9 +159,10 @@ recomendacion: dry-run escribe eventos y quedaba fuera de la autorizacion.
 
 No se identifico un permiso faltante de app_nomina para estas operaciones
 previstas. No es necesario restablecer postgres para esta ruta. La autorizacion
-de diagnostico no habilita escrituras: 016/017 y usuario dedicado siguen
-pendientes de una ventana expresamente autorizada, con revision de vigencia del
-backup existente y margen horario. No duplicar el respaldo por el bloqueo ya
+de diagnostico no habilita escrituras por si misma. El alcance de 016/017 y
+usuario dedicado ya fue autorizado por separado; su ejecucion sigue condicionada
+a plazo operativo vigente, revision de vigencia del backup existente y margen
+horario. No duplicar el respaldo por el bloqueo ya
 resuelto. Su restauracion no se ensayo ni se declara probada.
 
 ## 7. Evidencia, cierre y separacion de alcance

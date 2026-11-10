@@ -15,9 +15,19 @@ verifico la ruta app_nomina con su credencial existente, CREATEROLE y autoridad
 de propietario heredada. Inspect de 57c565a: salida 0, 20 archivos, 18 registradas,
 solo 016/017 pendientes y 0 mismatch. No requiere reset de postgres; no se
 aplicaron migraciones ni se creo el usuario dedicado. Los permisos sobre las
-tablas nuevas deben comprobarse tras 016. Mantener la siguiente ventana de
-escritura sujeta a autorizacion, vigencia del backup y margen horario; este
+tablas nuevas deben comprobarse tras 016. El alcance de escritura ya fue
+autorizado; conservar sus limites, vigencia del backup y margen horario. Este
 dictamen no habilita H24 ni cambia el pendiente separado del canal de alertas.
+
+Reanudacion del 2026-11-10: la autorizacion de alcance fue ratificada, pero el
+plazo original de dos horas vencio el 2026-11-09 a las 18:50:59 America/Cancun.
+No reiniciar el reloj ni el presupuesto automaticamente. Backup1794261106620
+reconfirmado SUCCESSFUL y SQL RUNNABLE dentro del horario, sin nueva copia ni
+escrituras. **STOP por plazo vencido**, no por falta de autorizacion del alcance
+o de acceso PostgreSQL. Antes de aplicar, obtener solo la definicion expresa de
+una ampliacion/franja temporal y del tratamiento del presupuesto original,
+revisar vigencia del respaldo y repetir inspect inmediato; ver
+[evidencia y condiciones](../../docs/auditoria/H24_Ventana_Respaldo_Migraciones_Worker_20261109.md#9-reanudacion-solicitada-y-limite-temporal-2026-11-10).
 
 Base funcional b3d0681618cd5013031b8c1f7c03b9982e56dbce mas el commit que contiene
 este paquete. No usar la imagen anterior para el worker nuevo. No contiene
