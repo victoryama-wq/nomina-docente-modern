@@ -308,10 +308,16 @@ No se cambia capacidad ni trafico en esta ventana.
 | Buckets | Constancias604800/versionado ausente; adicionales0/versionado false; privacidad/retenciones/holds/lifecycle intactos |
 | Conexiones | Conexion propia cerrada y proxy detenido |
 
-La API de incidentes confirma CLOSED de ERROR pero no identifica por si sola
-si fue autocierre o cierre humano. Se solicito al operador el cierre por consola
-y despues precisar su intervencion. **No se acredita autocierre de ERROR solo
-por el timestamp**; la recuperacion del worker si esta acreditada por ejecuciones,
+La API de incidentes confirmo CLOSED de ERROR a 20:04:40Z (15:04:40 Cancun),
+sin identificar por si sola el mecanismo. En cb70eda se dejo esa distincion
+sin resolver y se solicito precisarla al operador. Confirmacion posterior del
+usuario, el 2026-11-10: las alertas estaban cerradas y el usuario no intervino.
+No hubo accion de cierre manual del usuario ni del agente. Con la evidencia
+previa de Monitoring y esta confirmacion, se registra **cierre automatico de
+ERROR**, no un cierre administrativo. No se deduce solo del timestamp ni se
+afirma que ocurrio exactamente al cumplir 30 min; se conserva la hora observada.
+Esta aclaracion es documental posterior a la ventana, sin nuevas consultas ni
+cambios cloud. La recuperacion del worker esta acreditada por ejecuciones,
 colas y metrica. LogMatch no exige ni soporta correo CLOSED en notificationPrompts.
 El cierre automatico y el correo de recuperacion de ausencia son comprobaciones
 separadas, satisfactorias y confirmadas por el usuario.

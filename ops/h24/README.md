@@ -23,9 +23,11 @@ Conservar el cierre seguro del acta: worker desarmado, Scheduler PAUSED, ninguna
 ejecucion activa y alertas disabled; no hay autorizacion permanente de limpieza.
 Cierre verificado15:08:27 America/Cancun: seis ejecuciones terminales, cola
 pendiente0, ambos incidentes CLOSED, health200 y auth anonima401. API00057 y
-Hosting1793121624438000/3f9ebc88c835a143 sin cambios. La API de incidentes no
-identifica por si sola el mecanismo de cierre de ERROR; no afirmar autocierre
-sin esa evidencia. El cierre automatico de ausencia y su correo si se validaron.
+Hosting1793121624438000/3f9ebc88c835a143 sin cambios. Confirmacion posterior
+del usuario: ERROR ya estaba cerrado y no lo cerro manualmente. Junto con el
+estado CLOSED observado a 15:04:40, se registra autocierre de ERROR; queda
+resuelta la distincion pendiente en cb70eda. El cierre automatico de ausencia
+y su correo tambien se validaron. Aclaracion documental, sin reabrir la ventana.
 
 ## Antecedente: cierre de preparacion del 2026-11-10 a las 13:47
 
