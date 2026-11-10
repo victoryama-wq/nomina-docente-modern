@@ -8,6 +8,17 @@ Ventana posterior autorizada para backup/inspect/apply condicionado/usuario SQL:
 Backup1794261106620 SUCCESSFUL; faltaba credencial DBA, por lo que no hubo SQL,
 secreto, worker ni Scheduler. No repetir el backup por ese bloqueo. La ventana
 termino; antes de reanudar confirmar acceso DBA, vigencia/margen y autorizacion.
+
+Actualizacion 2026-11-10: el
+[diagnostico PostgreSQL y H05](../../docs/auditoria/H24_Diagnostico_Permisos_PostgreSQL_H05_20261110.md)
+verifico la ruta app_nomina con su credencial existente, CREATEROLE y autoridad
+de propietario heredada. Inspect de 57c565a: salida 0, 20 archivos, 18 registradas,
+solo 016/017 pendientes y 0 mismatch. No requiere reset de postgres; no se
+aplicaron migraciones ni se creo el usuario dedicado. Los permisos sobre las
+tablas nuevas deben comprobarse tras 016. Mantener la siguiente ventana de
+escritura sujeta a autorizacion, vigencia del backup y margen horario; este
+dictamen no habilita H24 ni cambia el pendiente separado del canal de alertas.
+
 Base funcional b3d0681618cd5013031b8c1f7c03b9982e56dbce mas el commit que contiene
 este paquete. No usar la imagen anterior para el worker nuevo. No contiene
 servicios, IAM, imagenes ni alertas de Inspector/ClamAV. Archivos NOT_SCANNED.

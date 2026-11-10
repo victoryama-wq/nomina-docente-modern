@@ -3,6 +3,15 @@
 Fecha: 2026-11-09. **Resultado parcial: backup SUCCESSFUL; H05 y pasos dependientes
 NO ejecutados. H24 permanece NO-GO y sin habilitarse.**
 
+Actualizacion posterior, 2026-11-10: el
+[diagnostico autorizado de solo lectura](H24_Diagnostico_Permisos_PostgreSQL_H05_20261110.md)
+comprobo acceso con la credencial existente de app_nomina y permisos efectivos;
+H05 inspect de 57c565a termino con salida 0: 20 archivos, 18 registradas, solo
+016/017 pendientes y 0 mismatch. El bloqueo de acceso queda resuelto para esa ruta, sin restablecer
+contrasenas. Esta acta conserva los hechos del 9 de noviembre: no hubo apply ni
+usuario worker entonces ni en el diagnostico posterior. La ejecucion de 016/017
+requiere una nueva autorizacion; no se repitio el respaldo.
+
 - Candidata funcional: `57c565a6a6ed3b4c2dca21292289893b94fc6a5d`.
 - Acta previa / HEAD inicial limpio: `6e91986c4350448b4ebd0c25d2f04bb84d11f998`.
 - Rama: feature/h02-h03-user-coordinations-permissions.
