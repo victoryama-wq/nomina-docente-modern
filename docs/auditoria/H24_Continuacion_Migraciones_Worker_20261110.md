@@ -2,6 +2,13 @@
 
 Fecha: 2026-11-10. Resultado: **preparacion ejecutada; H24 no habilitado**.
 
+Seguimiento posterior: la
+[ventana supervisada del mismo dia](H24_Validacion_Operativa_Supervisada_20261110.md)
+registra IAM minimo de almacenamiento API, smoke sintetico del worker y
+entrega de alertas. Los estados y pendientes de esta acta se conservan como
+fotografia del cierre13:47:31; no deben confundirse con los resultados posteriores.
+No repetir migraciones, creacion del worker o respaldo a partir de este documento.
+
 ## 1. Autorizacion, fuente y ventana
 
 El alcance de respaldo preventivo, H05, apply condicionado 016/017, usuario SQL,

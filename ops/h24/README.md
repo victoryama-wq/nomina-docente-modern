@@ -1,6 +1,33 @@
 # H24: paquete revisable para una ventana futura
 
-## Estado vigente despues de la continuacion autorizada del 2026-11-10
+## Seguimiento operativo del 2026-11-10
+
+La [ventana supervisada](../../docs/auditoria/H24_Validacion_Operativa_Supervisada_20261110.md)
+es la referencia posterior al cierre de preparacion13:47. Registra retirada
+acotada de objectAdmin de la SA API en constancias, conservando el rol minimo;
+continuidad de carga/lectura/reemplazo/borrado con la revision vigente; entrega
+de ERROR/ausencia y correo de recuperacion; worker real con generacion exacta,
+reintento, idempotencia, solapamiento y borrado de fixtures. No implica release.
+
+Se detecto un requisito independiente antes del release: **firebaseauth.users.get
+no aparece entre los grants efectivos de nomina-api-sa**, pero57c565a utiliza
+verifyIdToken(token,true). Se propone h24FirebaseSessionRead con solo ese permiso,
+no creado ni concedido en esta ventana. No retirar checkRevoked ni sustituirlo
+por permisos Firebase Admin. La prueba de login de00057 no cubre esta diferencia.
+Dimensionamiento API sin analizadores sigue sujeto a validacion/aprobacion;
+1CPU/512Mi/concurrency80 vigente no es una certificacion de capacidad H24.
+
+Los bloques create y grants historicos no deben repetirse. 016/017, usuario,
+secreto, bucket adicional, job, Scheduler, canal y politicas **ya existen**.
+Conservar el cierre seguro del acta: worker desarmado, Scheduler PAUSED, ninguna
+ejecucion activa y alertas disabled; no hay autorizacion permanente de limpieza.
+Cierre verificado15:08:27 America/Cancun: seis ejecuciones terminales, cola
+pendiente0, ambos incidentes CLOSED, health200 y auth anonima401. API00057 y
+Hosting1793121624438000/3f9ebc88c835a143 sin cambios. La API de incidentes no
+identifica por si sola el mecanismo de cierre de ERROR; no afirmar autocierre
+sin esa evidencia. El cierre automatico de ausencia y su correo si se validaron.
+
+## Antecedente: cierre de preparacion del 2026-11-10 a las 13:47
 
 [Acta efectiva](../../docs/auditoria/H24_Continuacion_Migraciones_Worker_20261110.md):
 backup 1794335839733 SUCCESSFUL por frescura; 016/017 aplicadas desde 57c565a,
@@ -15,9 +42,65 @@ La ventana productiva termino 2026-11-10 a las 13:47:31 America/Cancun. No hay
 renovacion automatica. Los bloques create/GRANT de abajo son la receta historica
 revisada, **no comandos pendientes que deban repetirse**. Las frases anteriores
 de bloqueo/no creado describen el momento fechado de cada antecedente.
-Pendientes actuales: canal/entrega de alertas, minimo privilegio preexistente API,
+Pendientes a las13:47: canal/entrega de alertas, minimo privilegio preexistente API,
 smoke supervisado y autorizacion separada para armar/reanudar y release H24.
 No se habilito H24 ni se ejecuto limpieza; no desplegar desde este paquete.
+
+## Secuencia propuesta para release y rollback: no ejecutada
+
+Esta secuencia requiere otra autorizacion, nueva ventana y cierre de los dos
+requisitos anteriores. No es una orden de ejecucion ni habilita produccion.
+
+1. Congelar fuente57c565a y digest
+   sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303;
+   cotejar cualquier cambio posterior. Confirmar SQL/horario/backup por frescura,
+   H05 inspect20/0/0, IAM minimo, buckets604800/0, secretos y cola pendiente.
+   No repetir apply016/017 ni crear backups automaticamente. STOP ante drift.
+2. Autorizar y comprobar lectura Firebase de la SA API, sin ampliar SQL,
+   Storage ni impersonacion. Fijar CPU/RAM/concurrencia/max instances y presupuesto
+   de conexiones con regresion/capacidad de la candidata sin analizadores.
+   No reutilizar automaticamente resultados de la arquitectura AV retirada.
+3. Conservar snapshot de config API y rollback00057-c7d, Hosting release
+   1793121624438000/version3f9ebc88c835a143 y artefactos anteriores.
+   Publicar una revision API **sin trafico general**, con la imagen existente,
+   misma SA/conexion/secretos/CORS y solo nuevas variables DOSSIER_STORAGE_MODE=gcs,
+   DOSSIER_BUCKET=nomina-docente-prod-h24-expedientes. CONSTANCIAS_BUCKET intacto.
+   Usar `gcloud run deploy nomina-api --no-traffic --tag=h24-candidate` con
+   `--image` fijado por digest y `--update-env-vars`, no reemplazar todas las
+   variables/secretos. Los parametros de capacidad se fijaran tras el punto2.
+4. Probar la URL etiquetada con sesion autorizada/sintetica: health200,
+   anonimo401, Admin/Finanzas/RH segun alcance, denegaciones, revocacion,
+   A->B, fallo de B sin perder A, descarga/hash, vista previa restringida,
+   adicionales y telefono/C.P./CURP solo sinteticos. No manipular sesiones de
+   usuarios reales para probar revocacion. STOP ante403 de infraestructura,
+   5xx, fuga fiscal o incumplimiento de permisos/generaciones.
+5. Antes de transferir trafico o publicar UI H24, habilitar alertas aprobadas y
+   comprobar cola, armar worker y reanudar Scheduler **solo con autorizacion
+   expresa de operacion permanente**. Verificar una ejecucion programada real,
+   progreso y ausencia de fallos; no confundir exit0 de SKIPPED_OVERLAP/HOURS
+   con exito. La API anterior no produce intenciones H24. Si este control no
+   pasa, no exponer la candidata ni publicar Hosting.
+6. Tras aprobar, transferir trafico explicitamente con
+   `gcloud run services update-traffic nomina-api --to-revisions=REVISION_H24=100`
+   y verificar session/health de nuevo. Compilar web desde la misma fuente con
+   npm10.9.4 y perfil Firebase productivo existente, API por Hosting; desplegar
+   solo Hosting mediante `firebase deploy --only hosting --project nomina-docente-prod`.
+   No compilar el perfil Firebase de pruebas ni crear nuevas claves.
+   Hacer smoke por rol y responsive de la UI candidata; el ensayo actual no lo
+   sustituye. Comprobar nuevamente cola, limpieza y alertas tras esas operaciones.
+7. Rollback ante fallo critico: detener nuevas operaciones de expediente,
+   pausar Scheduler, desarmar worker y esperar/cotejar ejecuciones activas.
+   Volver Hosting a version3f9ebc88c835a143 desde su historial oficial; devolver
+   trafico API a00057-c7d con `--to-revisions=nomina-api-00057-c7d=100`.
+   Verificar health/session y no borrar intenciones ni objetos. No ejecutar
+   down migrations ni restaurar BD por rutina. Retener016/017, auditoria y cola;
+   conciliacion posterior exige alcance definido. El rol Storage minimo ya es
+   compatible con00057: no reponer objectAdmin salvo regresion acreditada y
+   autorizacion correspondiente. Retirar el tag candidato al cerrar la ventana
+   de rollback para no dejar otra via de uso H24.
+
+Al cierre de la siguiente ventana registrar revisiones/releases reales, smoke,
+estado de limpieza/alertas, excepciones y autorizacion. No adelantar aqui GO.
 
 ## Antecedentes y receta por etapas
 
