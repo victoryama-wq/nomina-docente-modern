@@ -39,13 +39,15 @@ interface ApiErrorBody {
   message?: string;
   error?: string;
   code?: string;
+  fieldErrors?: unknown;
 }
 
 export class ApiRequestError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly code: string
+    public readonly code: string,
+    public readonly fieldErrors?: unknown
   ) {
     super(message);
     this.name = 'ApiRequestError';
@@ -1221,7 +1223,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new ApiRequestError(
       body.message || body.error || 'No fue posible completar la solicitud.',
       response.status,
-      body.code || body.error || 'ERROR'
+      body.code || body.error || 'ERROR',
+      body.fieldErrors
     );
   }
 

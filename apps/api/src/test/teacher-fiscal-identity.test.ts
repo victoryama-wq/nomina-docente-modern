@@ -34,6 +34,24 @@ beforeEach(async () => {
 afterEach(async () => { await app.close(); clearTestActors(); });
 
 describe('H24 fiscal postal code and CURP', () => {
+  it.each(['POST', 'PATCH'] as const)('rejects coordinator payment writes even with fiscal.manage: %s', async method => {
+    for (const paymentType of ['E', '', '1', null]) {
+      const response = await injectAs(app, actor('coordinador', ['teachers.manage', 'fiscal.manage']), {
+        method, url: method === 'POST' ? '/teachers' : `/teachers/${id}`,
+        payload: { firstNames: 'Docente', paternalLastName: 'Sintetico', category: 'N', paymentType }
+      });
+      expect(response.statusCode, response.body).toBe(403);
+      expect(mocks.sql).not.toHaveBeenCalled();
+    }
+  });
+  it.each(['rfc', 'email', 'fiscalPostalCode', 'curp', 'paymentType', 'bankDetail'])('returns a safe field code for invalid %s', async field => {
+    const response = await injectAs(app, actor(), { method: 'PATCH', url,
+      payload: { paymentType: 'E', [field]: field === 'bankDetail' ? 'x'.repeat(141) : 'INVALIDO' } });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ error: 'VALIDATION_ERROR', fieldErrors: { [field]: 'INVALID_FORMAT' } });
+    expect(response.body).not.toContain('INVALIDO');
+    expect(mocks.sql).not.toHaveBeenCalled();
+  });
   it.each(['admin', 'finanzas', 'rh'] as const)('allows %s, normalizes CURP and audits field names without values', async role => {
     const response = await injectAs(app, actor(role), { method: 'PATCH', url,
       payload: { paymentType: 'E', fiscalPostalCode: ' 00123 ', curp: ' test020202hqrxxx09 ' } });

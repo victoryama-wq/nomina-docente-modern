@@ -1,0 +1,41 @@
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTeacher, fetchTeachers, updateTeacher, type Teacher } from '../api';
+import { useAuthStore } from '../stores/auth';
+import { createSessionUser } from '../test/fixtures/session-users';
+import TeacherModal from '../components/modals/TeacherModal.vue';
+import TeachersView from './TeachersView.vue';
+
+vi.mock('../api', async original => ({ ...await original<typeof import('../api')>(), fetchTeachers: vi.fn(), createTeacher: vi.fn(), updateTeacher: vi.fn() }));
+let wrapper: VueWrapper;
+const teacher = { id: 'teacher', firstNames: 'Docente', paternalLastName: 'Prueba', maternalLastName: 'QA', fullName: 'Docente Prueba QA', paymentType: '2', category: 'M', status: 'ACTIVO', phone: '9981112233', coordinationName: 'Idiomas', rfc: '', email: '', bankDetail: '' } as Teacher;
+beforeEach(() => { vi.clearAllMocks(); });
+afterEach(() => { wrapper?.unmount(); });
+describe('Directory payment write scope', () => {
+  it.each([false, true])('coordinator creates and edits without paymentType (fiscal.manage=%s)', async accidental => {
+    const pinia = createPinia(); setActivePinia(pinia);
+    const session = createSessionUser({ role: 'coordinador', permissions: ['teachers.manage', ...(accidental ? ['fiscal.manage'] : [])] });
+    useAuthStore().session = session;
+    const record = { ...teacher, createdById: session.id, createdByName: 'Responsable QA', createdByEmail: 'qa@example.invalid' };
+    vi.mocked(fetchTeachers).mockResolvedValue({ teachers: [record], summary: { total: 1, active: 1, inactive: 0, withRfc: 0, withBank: 0, withConstancia: 0, fiscalReady: 0 }, coordinations: [], actorCoordination: null });
+    vi.mocked(createTeacher).mockResolvedValue({ teacher: record, message: 'Creado' });
+    vi.mocked(updateTeacher).mockResolvedValue({ teacher: record, message: 'Guardado' });
+    wrapper = mount(TeachersView, { global: { plugins: [pinia] } }); await flushPromises();
+    await wrapper.findAll('button').find(b => b.text().includes('Nuevo docente'))!.trigger('click');
+    let modal = wrapper.getComponent(TeacherModal);
+    expect(modal.text()).not.toContain('Tipo de pago');
+    expect(modal.text()).toContain('Categoría');
+    modal.props('form').firstNames = 'Nuevo'; modal.props('form').paternalLastName = 'Sintetico';
+    await modal.get('form').trigger('submit'); await flushPromises();
+    expect(createTeacher).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(createTeacher).mock.calls[0][0]).not.toHaveProperty('paymentType');
+    await wrapper.get('button[title="Editar"]').trigger('click');
+    modal = wrapper.getComponent(TeacherModal);
+    expect(modal.text()).not.toContain('Tipo de pago');
+    modal.props('form').phone = '9982223344';
+    await modal.get('form').trigger('submit'); await flushPromises();
+    expect(updateTeacher).toHaveBeenCalledWith('teacher', expect.objectContaining({ phone: '9982223344', category: 'M' }));
+    expect(vi.mocked(updateTeacher).mock.calls[0][1]).not.toHaveProperty('paymentType');
+  });
+});

@@ -40,6 +40,7 @@ function mountTeacherModal(props: Partial<InstanceType<typeof TeacherModal>['$pr
       canChooseCoordination: false,
       currentCoordinatorName: 'Idiomas',
       canManageFiscal: false,
+      canManagePayment: false,
       canViewFiscalDocuments: false,
       canManageFiscalDocuments: false,
       selectedConstancia: null,
@@ -63,6 +64,7 @@ describe('TeacherModal permission visibility', () => {
   it('shows fiscal and financial fields to users with fiscal.manage', () => {
     const wrapper = mountTeacherModal({
       canManageFiscal: true,
+      canManagePayment: true,
       form: teacherForm({ paymentType: '1', email: 'qa.docente@tecplayacar.edu.mx' })
     });
     const text = wrapper.text();

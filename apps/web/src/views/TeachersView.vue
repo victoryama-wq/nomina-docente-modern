@@ -55,6 +55,7 @@ const pendingDeleteTeacher = ref<Teacher | null>(null);
 const deletingTeacher = ref(false);
 const canViewTeacherFiscal = computed(() => authStore.canViewFiscal);
 const canManageTeacherFiscal = computed(() => authStore.canManageFiscal);
+const canManageTeacherPayment = computed(() => authStore.session?.role !== 'coordinador' && canManageTeacherFiscal.value);
 const canViewTeacherDocuments = computed(() => authStore.canViewFiscalDocuments);
 const canManageTeacherDocuments = computed(() => authStore.canManageFiscalDocuments);
 const canChooseTeacherCoordination = computed(() => authStore.isAdmin);
@@ -67,7 +68,7 @@ const blankTeacher = (): TeacherPayload => ({
   paternalLastName: '',
   maternalLastName: '',
   degree: 'Licenciatura',
-  paymentType: canManageTeacherFiscal.value ? '1' : '',
+  paymentType: canManageTeacherPayment.value ? '1' : '',
   category: 'N',
   location: 'Local',
   comment: 'Docente activo',
@@ -196,7 +197,7 @@ function editTeacher(teacher: Teacher) {
     paternalLastName: teacher.paternalLastName,
     maternalLastName: teacher.maternalLastName,
     degree: teacher.degree || 'Licenciatura',
-    paymentType: canManageTeacherFiscal.value && (teacher.paymentType === 'E' || teacher.paymentType === '1' || teacher.paymentType === '2') ? teacher.paymentType : '',
+    paymentType: canManageTeacherPayment.value && (teacher.paymentType === 'E' || teacher.paymentType === '1' || teacher.paymentType === '2') ? teacher.paymentType : '',
     category: teacher.category === 'V' || teacher.category === 'M' || teacher.category === 'N' ? teacher.category : 'N',
     location: teacher.location || 'Local',
     comment: teacher.comment,
@@ -226,8 +227,8 @@ async function saveTeacher() {
       teacherForm.value.coordinationName = authStore.session?.displayName || '';
     }
     const payload: TeacherPayload = { ...teacherForm.value };
+    if (!canManageTeacherPayment.value) delete payload.paymentType;
     if (!canManageTeacherFiscal.value) {
-      delete payload.paymentType;
       delete payload.email;
       delete payload.rfc;
       delete payload.bankDetail;
@@ -503,6 +504,7 @@ onMounted(() => {
       :can-choose-coordination="canChooseTeacherCoordination"
       :current-coordinator-name="authStore.session?.displayName || 'Usuario capturador'"
       :can-manage-fiscal="canManageTeacherFiscal"
+      :can-manage-payment="canManageTeacherPayment"
       :can-view-fiscal-documents="canViewTeacherDocuments"
       :can-manage-fiscal-documents="canManageTeacherDocuments"
       :selected-constancia="selectedConstancia"

@@ -146,8 +146,8 @@ const teacherBodySchema = z.object({
 
 const teacherFiscalBodySchema = z.object({
   paymentType: z.enum(['E', '1', '2']),
-  email: z.string().trim().toLowerCase().max(160).optional().default(''),
-  rfc: z.string().trim().toUpperCase().max(20).optional().default(''),
+  email: z.string().trim().toLowerCase().max(160).refine(value => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)).optional().default(''),
+  rfc: z.string().trim().toUpperCase().max(20).refine(value => !value || /^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(value)).optional().default(''),
   bankDetail: z.string().trim().max(140).optional().default(''),
   fiscalPostalCode: z.string().trim().regex(/^$|^[0-9]{5}$/, 'El C.P. fiscal debe contener cinco dígitos.').optional(),
   curp: z.string().trim().toUpperCase().regex(/^$|^[A-Z]{4}[0-9]{6}[A-Z]{6}[A-Z0-9][0-9]$/, 'La CURP debe tener 18 caracteres con formato válido.').optional()
@@ -187,10 +187,30 @@ function validateTeacherBusinessRules(body: z.infer<typeof teacherBodySchema>): 
   return null;
 }
 
-function validateTeacherFiscalRules(body: z.infer<typeof teacherFiscalBodySchema>): string | null {
-  if (body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return 'El correo electrónico no tiene un formato válido.';
-  if (body.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(body.rfc)) return 'El RFC no tiene un formato válido.';
-  return null;
+const fiscalValidationMessages = {
+  rfc: 'RFC: escribe 12 o 13 caracteres, sin espacios: 3 o 4 letras, 6 dígitos y 3 caracteres alfanuméricos; o deja el campo vacío.',
+  email: 'Correo: escribe una dirección como nombre@dominio.mx, de hasta 160 caracteres; o deja el campo vacío.',
+  fiscalPostalCode: 'C.P. fiscal: escribe cinco dígitos, conservando los ceros iniciales; o deja el campo vacío.',
+  curp: 'CURP: escribe 18 caracteres: 4 letras, 6 dígitos, 6 letras, un carácter alfanumérico y un dígito; o deja el campo vacío.',
+  paymentType: 'Tipo de pago: selecciona Santander, Banorte o Efectivo.',
+  bankDetail: 'Banco / cuenta / CLABE: utiliza como máximo 140 caracteres; o deja el campo vacío.'
+} as const;
+
+function sendFiscalValidation(reply: FastifyReply, error: z.ZodError): void {
+  const fields = Object.keys(fiscalValidationMessages) as (keyof typeof fiscalValidationMessages)[];
+  const rejected = fields.filter(field => error.issues.some(issue => issue.path[0] === field));
+  void reply.code(400).send({
+    error: 'VALIDATION_ERROR',
+    message: rejected.map(field => fiscalValidationMessages[field]).join(' ') || 'Revisa los datos fiscales enviados.',
+    fieldErrors: Object.fromEntries(rejected.map(field => [field, 'INVALID_FORMAT']))
+  });
+}
+
+async function blockCoordinatorPayment(reply: FastifyReply, actor: SessionUser, payload: unknown): Promise<boolean> {
+  if (actor.role !== 'coordinador' || !payload || !Object.prototype.hasOwnProperty.call(payload, 'paymentType')) return false;
+  await reply.code(403).send({ error: 'FORBIDDEN', code: 'COORDINATOR_PAYMENT_FORBIDDEN',
+    message: 'Coordinador no puede establecer, modificar ni vaciar el tipo de pago en los datos fiscales.' });
+  return true;
 }
 
 function sendValidation(reply: FastifyReply, error: z.ZodError): void {
@@ -233,7 +253,7 @@ async function sendTeacherExternalIdentifierConflict(reply: FastifyReply): Promi
 async function requireTeacherImportAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   await authenticate(request, reply);
   if (reply.sent) return;
-  if (!request.user || !isSystemAdmin(request.user)) {
+  if (!request.user || request.user.role === 'coordinador' || !isSystemAdmin(request.user)) {
     await reply.code(403).send({
       error: 'FORBIDDEN',
       code: 'FORBIDDEN',
@@ -801,6 +821,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post('/teachers', { preHandler: requirePermission('teachers.manage') }, async (request, reply) => {
+    if (await blockCoordinatorPayment(reply, request.user!, request.body)) return;
     const parsed = teacherBodySchema.safeParse(request.body);
     if (!parsed.success) {
       sendValidation(reply, parsed.error);
@@ -910,6 +931,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.patch('/teachers/:id', { preHandler: requirePermission('teachers.manage') }, async (request, reply) => {
+    if (await blockCoordinatorPayment(reply, request.user!, request.body)) return;
     const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
     const parsed = teacherBodySchema.safeParse(request.body);
     if (!params.success) {
@@ -970,7 +992,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
             paternal_last_name = $6,
             maternal_last_name = $7,
             degree = $8,
-            payment_type = $9,
+            payment_type = CASE WHEN $23::boolean THEN $9 ELSE payment_type END,
             category = $10,
             location = $11,
             comment = $12,
@@ -1008,7 +1030,9 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
           fiscalValues.bankDetail,
           parsed.data.status,
           actor.id,
-          before.id
+          before.id,
+          actor.role !== 'coordinador' && canManageTeacherFiscal(actor)
+            && Object.prototype.hasOwnProperty.call(request.body, 'paymentType')
         ]
       );
 
@@ -1031,6 +1055,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
     '/teachers/:id/fiscal',
     { preHandler: requireDossier('contact') },
     async (request, reply) => {
+      if (await blockCoordinatorPayment(reply, request.user!, request.body)) return;
       const params = z.object({ id: z.string().guid('Invalid uuid') }).safeParse(request.params);
       const parsed = teacherFiscalBodySchema.safeParse(request.body);
       if (!params.success) {
@@ -1038,13 +1063,7 @@ export async function registerTeacherRoutes(app: FastifyInstance): Promise<void>
         return;
       }
       if (!parsed.success) {
-        sendValidation(reply, parsed.error);
-        return;
-      }
-
-      const businessError = validateTeacherFiscalRules(parsed.data);
-      if (businessError) {
-        await reply.code(400).send({ error: 'VALIDATION_ERROR', message: businessError });
+        sendFiscalValidation(reply, parsed.error);
         return;
       }
 

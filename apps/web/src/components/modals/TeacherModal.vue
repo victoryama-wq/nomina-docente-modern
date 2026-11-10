@@ -12,6 +12,7 @@ const props = defineProps<{
   canChooseCoordination: boolean;
   currentCoordinatorName: string;
   canManageFiscal: boolean;
+  canManagePayment: boolean;
   canViewFiscalDocuments: boolean;
   canManageFiscalDocuments: boolean;
   selectedConstancia: File | null;
@@ -60,7 +61,7 @@ defineEmits<{
           <span>Grado</span>
           <input v-model.trim="form.degree" />
         </label>
-        <label v-if="canManageFiscal">
+        <label v-if="canManagePayment">
           <span>Tipo de pago</span>
           <select v-model="form.paymentType" required>
             <option value="E">Efectivo</option>

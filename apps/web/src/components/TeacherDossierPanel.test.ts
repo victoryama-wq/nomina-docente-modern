@@ -93,6 +93,67 @@ describe('H24 dossier panel', () => {
     await wrapper.findAll('form')[0].trigger('submit');
     expect(updateTeacherFiscal).not.toHaveBeenCalled();
   });
+  it('identifies fields accessibly, focuses the first error, preserves input and clears errors on correction', async () => {
+    await open();
+    const teacher = { id: 'teacher-1', paymentType: 'E', fiscalPostalCode: '00123', rfc: '', email: '', bankDetail: '', curp: '' } as Teacher;
+    await wrapper.setProps({ fiscalTeacher: teacher, canEditFiscal: true });
+    await wrapper.get('input[name=rfc]').setValue('INVALIDO');
+    await wrapper.get('input[name=email]').setValue('mal-correo');
+    await wrapper.get('input[name=bankDetail]').setValue('Banco sintético');
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(updateTeacherFiscal).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(wrapper.get('input[name=rfc]').element);
+    for (const field of ['rfc', 'email']) {
+      const input = wrapper.get(`input[name=${field}]`);
+      expect(input.attributes('aria-invalid')).toBe('true');
+      expect(wrapper.get(`#${input.attributes('aria-describedby')}`).text()).not.toBe('');
+    }
+    expect(wrapper.get('input[name=bankDetail]').element).toHaveProperty('value', 'Banco sintético');
+    expect(wrapper.get('input[name=fiscalPostalCode]').element).toHaveProperty('value', '00123');
+    await wrapper.get('button[aria-label="Cerrar expediente"]').trigger('click');
+    expect(wrapper.get('[role=alertdialog]').text()).toContain('Hay cambios');
+    await button('Volver').trigger('click');
+    await wrapper.get('input[name=rfc]').setValue('TEST010101AAA');
+    await wrapper.get('input[name=email]').setValue('qa@example.invalid');
+    expect(wrapper.find('[aria-invalid=true]').exists()).toBe(false);
+    vi.mocked(updateTeacherFiscal).mockResolvedValue({ teacher: { ...teacher, rfc: 'TEST010101AAA', email: 'qa@example.invalid', bankDetail: 'Banco sintético' }, message: 'Guardado' });
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(wrapper.text()).toContain('Datos fiscales actualizados correctamente.');
+    expect(button('Guardar datos fiscales').attributes('disabled')).toBeDefined();
+    expect(wrapper.emitted('working')?.at(-1)).toEqual([false]);
+    await wrapper.get('button[aria-label="Cerrar expediente"]').trigger('click');
+    expect(wrapper.find('[role=alertdialog]').exists()).toBe(false);
+    expect(wrapper.emitted('close')).toHaveLength(1);
+  });
+  it('renders only known server validation codes, preserves values and succeeds after correction', async () => {
+    await open();
+    const teacher = { id: 'teacher-1', paymentType: 'E', fiscalPostalCode: '00123' } as Teacher;
+    await wrapper.setProps({ fiscalTeacher: teacher, canEditFiscal: true });
+    await wrapper.get('input[name=email]').setValue('qa@example.invalid');
+    vi.mocked(updateTeacherFiscal).mockRejectedValueOnce(new ApiRequestError('internal SQL or rejected fiscal value', 400, 'VALIDATION_ERROR', { email: 'INVALID_FORMAT', bankDetail: 'arbitrary server text', secret: 'INVALID_FORMAT' }));
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(wrapper.text()).toContain('Correo: escribe una dirección');
+    expect(wrapper.text()).not.toMatch(/internal SQL|arbitrary server text|secret/);
+    expect(document.activeElement).toBe(wrapper.get('input[name=email]').element);
+    expect(wrapper.get('input[name=email]').element).toHaveProperty('value', 'qa@example.invalid');
+    expect(wrapper.get('input[name=fiscalPostalCode]').element).toHaveProperty('value', '00123');
+    await wrapper.get('input[name=email]').setValue('corrected@example.invalid');
+    expect(wrapper.find('[aria-invalid=true]').exists()).toBe(false);
+    vi.mocked(updateTeacherFiscal).mockResolvedValueOnce({ teacher: { ...teacher, email: 'corrected@example.invalid' }, message: 'ok' });
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(wrapper.emitted('fiscalSaved')).toHaveLength(1);
+    expect(wrapper.emitted('working')?.at(-1)).toEqual([false]);
+  });
+  it.each([[409, 'El expediente cambió'], [500, 'No se pudo confirmar'], [503, 'No se pudo confirmar']])('distinguishes fiscal failure %s without exposing server text', async (status, message) => {
+    await open(); await wrapper.setProps({ fiscalTeacher: { id: 'teacher-1', paymentType: 'E' } as Teacher, canEditFiscal: true });
+    await wrapper.get('input[name=fiscalPostalCode]').setValue('00123');
+    vi.mocked(updateTeacherFiscal).mockRejectedValueOnce(new ApiRequestError('internal private detail', Number(status), 'ERROR'));
+    await wrapper.findAll('form')[0].trigger('submit'); await flushPromises();
+    expect(wrapper.text()).toContain(String(message));
+    expect(wrapper.text()).not.toContain('internal private detail');
+    expect(wrapper.get('input[name=fiscalPostalCode]').element).toHaveProperty('value', '00123');
+    expect(wrapper.emitted('working')?.at(-1)).toEqual([true]);
+  });
   it('loads optional fiscal identity, normalizes CURP, preserves leading zero and saves without document upload', async () => {
     await open();
     const teacher = { id: 'teacher-1', paymentType: 'E', fiscalPostalCode: '01234', curp: 'TEST010101HQRXXX09' } as Teacher;

@@ -17,6 +17,17 @@ descarga fuera del visor de Nomina; limite H24 de una instancia y presupuesto
 SQL acotado; restauracion del respaldo actual no ensayada. No declarar riesgo
 documental eliminado ni usar pruebas historicas AV para avalar esta candidata.
 
+### Candidata local de validacion fiscal y pago (posterior a da151b8)
+
+[Evidencia y plan de rollback](H24_Mejora_Validacion_Fiscal_Pago_Coordinador.md).
+Mensaje fiscal generico mitigado localmente con contrato por campo y foco.
+Riesgo de escritura paymentType por Coordinador con fiscal.manage accidental
+mitigado en la candidata mediante denegacion explicita y conservacion SQL del
+pago en ediciones operativas. No se afirma que ese permiso exista en produccion.
+API483/web194/PG175 PASS; visual local en tres resoluciones, sin ampliar alcance
+fiscal. Riesgo residual: despliegue y smoke autorizado pendientes. Produccion
+sigue en el release H24 anterior; no se declara aplicada aun esta mitigacion.
+
 ### Antecedentes de preparacion del 2026-11-09
 
 [Seguimiento backup/DBA H24](H24_Ventana_Respaldo_Migraciones_Worker_20261109.md):

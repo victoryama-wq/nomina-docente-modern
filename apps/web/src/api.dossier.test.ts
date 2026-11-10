@@ -1,6 +1,6 @@
 import { Blob as NodeBlob } from 'node:buffer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchTeacherConstanciaBlob, fetchDossierDocumentBlob, fetchDossierOperation, fetchTeacherDossier, mutateTeacherDossier, type DossierMutation } from './api';
+import { fetchTeacherConstanciaBlob, fetchDossierDocumentBlob, fetchDossierOperation, fetchTeacherDossier, mutateTeacherDossier, updateTeacherFiscal, type DossierMutation } from './api';
 
 vi.mock('./firebase', () => ({ auth: { currentUser: { getIdToken: async () => 'local-mocked-token' } } }));
 vi.mock('./config', () => ({ apiBaseUrl: 'http://localhost:8080' }));
@@ -9,6 +9,13 @@ beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('H24 authenticated API contracts', () => {
+  it('preserves optional fiscal field codes and text postal codes without changing the error envelope', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => ({ error: 'VALIDATION_ERROR', message: 'Revisa el correo.', fieldErrors: { email: 'INVALID_FORMAT' } }) });
+    await expect(updateTeacherFiscal('teacher', { paymentType: 'E', email: 'invalid', fiscalPostalCode: '00123', rfc: '', bankDetail: '' }))
+      .rejects.toMatchObject({ status: 400, code: 'VALIDATION_ERROR', fieldErrors: { email: 'INVALID_FORMAT' } });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).fiscalPostalCode).toBe('00123');
+    expect(fetchMock.mock.calls[0][1].method).toBe('PATCH');
+  });
   it.each(['constancia', 'dossier'] as const)('preserves the complexity error and never consumes PDF bytes for %s', async kind => {
     const blob = vi.fn();
     fetchMock.mockResolvedValue({ ok: false, status: 422, json: async () => ({ error: 'DOCUMENT_SCAN_LIMIT_EXCEEDED', message: 'Limite de analisis.' }), blob });

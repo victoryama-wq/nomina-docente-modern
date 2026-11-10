@@ -4,6 +4,7 @@ import { Download, Eye, FileText, Pencil, RefreshCw, Save, Trash2, Upload, X } f
 import { fetchTeacherDossier, fetchDossierDocumentBlob, updateTeacherFiscal, type Teacher, type DossierDocument, type DossierDocumentType, type TeacherDossier } from '../api';
 import { dossierError, useDossierOperations } from '../composables/useDossierOperations';
 import { dossierFilePayload, MAX_DOSSIER_SELECTION, validateDossierFile } from '../utils/dossierFiles';
+import { fiscalFields, fiscalRequestError, validateFiscalFields, type FiscalErrors } from '../utils/fiscalValidation';
 
 const props = defineProps<{ teacherId: string; teacherName: string; show: boolean; fiscalTeacher?: Teacher; canEditFiscal?: boolean }>();
 const emit = defineEmits<{ close: []; phoneSaved: [phone: string]; fiscalSaved: [teacher: Teacher]; refreshFiscal: []; working: [busy: boolean] }>();
@@ -17,22 +18,38 @@ const fiscalOriginal = ref(fiscalValues(props.fiscalTeacher));
 const fiscalForm = ref({ ...fiscalOriginal.value });
 const fiscalSaving = ref(false);
 const fiscalMessage = ref('');
+const fiscalError = ref('');
+const fiscalErrors = ref<FiscalErrors>({});
+const fiscalElement = ref<HTMLFormElement | null>(null);
+for (const field of fiscalFields) {
+  watch(() => fiscalForm.value[field], () => {
+    if (fiscalErrors.value[field]) fiscalErrors.value[field] = validateFiscalFields(fiscalForm.value)[field];
+    fiscalError.value = '';
+    fiscalMessage.value = '';
+  });
+}
+async function focusFiscalError() {
+  await nextTick();
+  fiscalElement.value?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+}
 const fiscalDirty = computed(() => JSON.stringify(fiscalForm.value) !== JSON.stringify(fiscalOriginal.value));
 watch(() => props.fiscalTeacher, teacher => {
   if (!fiscalDirty.value && !fiscalSaving.value) {
     fiscalOriginal.value = fiscalValues(teacher);
     fiscalForm.value = { ...fiscalOriginal.value };
+    fiscalErrors.value = {};
   }
 });
 
 async function saveFiscal() {
   if (!props.canEditFiscal || forbidden.value || loading.value || unsettled.value || fiscalSaving.value) return;
   const paymentType = fiscalForm.value.paymentType;
-  if (!['1', '2', 'E'].includes(paymentType)) { error.value = 'Selecciona el tipo de pago.'; return; }
+  fiscalMessage.value = '';
+  fiscalError.value = '';
+  fiscalErrors.value = validateFiscalFields(fiscalForm.value);
+  if (Object.keys(fiscalErrors.value).length) { await focusFiscalError(); return; }
   const fiscalPostalCode = fiscalForm.value.fiscalPostalCode.trim();
   const curp = fiscalForm.value.curp.trim().toUpperCase();
-  if (fiscalPostalCode && !/^[0-9]{5}$/.test(fiscalPostalCode)) { error.value = 'El C.P. fiscal debe contener cinco dígitos.'; return; }
-  if (curp && !/^[A-Z]{4}[0-9]{6}[A-Z]{6}[A-Z0-9][0-9]$/.test(curp)) { error.value = 'La CURP debe tener 18 caracteres con formato válido.'; return; }
   fiscalSaving.value = true;
   fiscalMessage.value = '';
   error.value = '';
@@ -44,12 +61,14 @@ async function saveFiscal() {
     emit('fiscalSaved', result.teacher);
     // Fiscal edits change the teacher version used by the independent phone mutation.
     await load();
-    fiscalMessage.value = result.message;
+    fiscalMessage.value = 'Datos fiscales actualizados correctamente.';
   } catch (err) {
     if (disposed) return;
-    error.value = dossierError(err);
-    if ([401, 403].includes((err as { status?: number }).status || 0)) deny();
-  } finally { fiscalSaving.value = false; }
+    const failure = fiscalRequestError(err);
+    fiscalError.value = failure.message;
+    fiscalErrors.value = failure.fields;
+    if ([401, 403].includes((err as { status?: number }).status || 0)) { error.value = failure.message; deny(); }
+  } finally { fiscalSaving.value = false; await focusFiscalError(); }
 }
 const panel = ref<HTMLElement | null>(null);
 const closeButton = ref<HTMLButtonElement | null>(null);
@@ -296,15 +315,17 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
         <p v-if="loading" role="status">Cargando expediente…</p>
         <div class="dossier-actions"><button class="secondary-action" :disabled="loading || inFlight > 0 || forbidden || fiscalSaving" @click="refreshPanel"><RefreshCw :size="16" /> Actualizar expediente</button></div>
         <template v-if="dossier && !forbidden">
-          <form v-if="fiscalTeacher" class="dossier-section" @submit.prevent="saveFiscal">
+          <p class="dossier-hint">Los datos fiscales y el teléfono se guardan con sus respectivos botones. Cada operación sobre documentos se guarda por separado.</p>
+          <form v-if="fiscalTeacher" ref="fiscalElement" class="dossier-section" novalidate @submit.prevent="saveFiscal">
             <h4>Datos fiscales</h4>
+            <p v-if="fiscalError" class="notice error" role="alert">{{ fiscalError }}</p>
             <fieldset class="dossier-fiscal-fields" :disabled="!canEditFiscal || fiscalSaving || loading || unsettled">
-              <label>RFC<input v-model.trim="fiscalForm.rfc" maxlength="20" placeholder="RFC del docente" /></label>
-              <label>Correo<input v-model.trim="fiscalForm.email" type="email" maxlength="160" placeholder="correo@dominio.mx" /></label>
-              <label>C.P. fiscal<input v-model.trim="fiscalForm.fiscalPostalCode" name="fiscalPostalCode" inputmode="numeric" maxlength="5" placeholder="Código postal de 5 dígitos" autocomplete="off" /></label>
-              <label>CURP<input v-model.trim="fiscalForm.curp" name="curp" maxlength="18" placeholder="CURP de 18 caracteres" autocomplete="off" autocapitalize="characters" :spellcheck="false" /></label>
-              <label>Tipo de pago<select v-model="fiscalForm.paymentType"><option disabled value="">Sin definir</option><option value="1">Santander</option><option value="2">Banorte</option><option value="E">Efectivo</option></select></label>
-              <label>Banco / cuenta / CLABE<input v-model.trim="fiscalForm.bankDetail" maxlength="140" placeholder="Datos bancarios para pago" /></label>
+              <label>RFC<input v-model.trim="fiscalForm.rfc" name="rfc" maxlength="20" placeholder="RFC del docente" :aria-invalid="!!fiscalErrors.rfc" :aria-describedby="fiscalErrors.rfc ? 'fiscal-rfc-error' : undefined" /><span v-if="fiscalErrors.rfc" id="fiscal-rfc-error" class="fiscal-field-error" role="alert">{{ fiscalErrors.rfc }}</span></label>
+              <label>Correo<input v-model.trim="fiscalForm.email" name="email" type="email" maxlength="160" placeholder="correo@dominio.mx" :aria-invalid="!!fiscalErrors.email" :aria-describedby="fiscalErrors.email ? 'fiscal-email-error' : undefined" /><span v-if="fiscalErrors.email" id="fiscal-email-error" class="fiscal-field-error" role="alert">{{ fiscalErrors.email }}</span></label>
+              <label>C.P. fiscal<input v-model.trim="fiscalForm.fiscalPostalCode" name="fiscalPostalCode" inputmode="numeric" maxlength="5" placeholder="Código postal de 5 dígitos" autocomplete="off" :aria-invalid="!!fiscalErrors.fiscalPostalCode" :aria-describedby="fiscalErrors.fiscalPostalCode ? 'fiscal-postal-error' : undefined" /><span v-if="fiscalErrors.fiscalPostalCode" id="fiscal-postal-error" class="fiscal-field-error" role="alert">{{ fiscalErrors.fiscalPostalCode }}</span></label>
+              <label>CURP<input v-model.trim="fiscalForm.curp" name="curp" maxlength="18" placeholder="CURP de 18 caracteres" autocomplete="off" autocapitalize="characters" :spellcheck="false" :aria-invalid="!!fiscalErrors.curp" :aria-describedby="fiscalErrors.curp ? 'fiscal-curp-error' : undefined" /><span v-if="fiscalErrors.curp" id="fiscal-curp-error" class="fiscal-field-error" role="alert">{{ fiscalErrors.curp }}</span></label>
+              <label>Tipo de pago<select v-model="fiscalForm.paymentType" name="paymentType" :aria-invalid="!!fiscalErrors.paymentType" :aria-describedby="fiscalErrors.paymentType ? 'fiscal-payment-error' : undefined"><option disabled value="">Sin definir</option><option value="1">Santander</option><option value="2">Banorte</option><option value="E">Efectivo</option></select><span v-if="fiscalErrors.paymentType" id="fiscal-payment-error" class="fiscal-field-error" role="alert">{{ fiscalErrors.paymentType }}</span></label>
+              <label>Banco / cuenta / CLABE<input v-model.trim="fiscalForm.bankDetail" name="bankDetail" maxlength="140" placeholder="Datos bancarios para pago" :aria-invalid="!!fiscalErrors.bankDetail" :aria-describedby="fiscalErrors.bankDetail ? 'fiscal-bank-error' : undefined" /><span v-if="fiscalErrors.bankDetail" id="fiscal-bank-error" class="fiscal-field-error" role="alert">{{ fiscalErrors.bankDetail }}</span></label>
             </fieldset>
             <p v-if="fiscalMessage" role="status">{{ fiscalMessage }}</p>
             <div class="dossier-actions"><button v-if="canEditFiscal" type="submit" class="primary-inline" :disabled="!fiscalDirty || fiscalSaving || loading || unsettled"><Save :size="16" /> {{ fiscalSaving ? 'Guardando...' : 'Guardar datos fiscales' }}</button></div>
@@ -388,6 +409,8 @@ onBeforeUnmount(() => { disposed = true; closePreview(); window.removeEventListe
 .dossier-panel input, .dossier-panel select { min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #bac9d8; border-radius: 6px; background: #fff; color: #18243a; font: inherit; font-weight: 400; box-sizing: border-box; }
 .dossier-panel input[type=file] { padding: 8px; }
 .dossier-panel :focus-visible { outline: 3px solid #167d9a; outline-offset: 2px; }
+.dossier-panel [aria-invalid=true] { border-color: #a62626; }
+.fiscal-field-error { color: #a62626; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; }
 .dossier-panel :disabled { opacity: .65; cursor: not-allowed; }
 .dossier-contact { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
 .dossier-fiscal-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; border: 0; margin: 0 0 16px; padding: 0; min-width: 0; }

@@ -12,6 +12,16 @@ H24 cerrado operativo, sin rollback; fixture retirado, cuenta restituida y
 ventana cerrada17:18:50 Cancun. Los bloques siguientes del9 de
 noviembre conservan el contexto historico, no pendientes actuales de creacion.
 
+### Candidata local posterior al cierre H24
+
+[Validacion fiscal y pago del Coordinador](../auditoria/H24_Mejora_Validacion_Fiscal_Pago_Coordinador.md),
+base documental da151b8: errores fiscales por campo, foco accesible y datos
+conservados; prohibicion explicita de paymentType para Coordinador en API/UI,
+incluso con fiscal.manage accidental. Categoria, H01 y permisos de otros roles
+sin cambios. Regresion API483 PASS, web194 PASS, PostgreSQL175 PASS; typecheck,
+build y tres resoluciones aprobados localmente. **No desplegada**; no cambia
+el estado productivo de la tabla siguiente ni la evidencia del release H24.
+
 ### Antecedentes de preparacion H24
 
 [Seguimiento backup/DBA H24](../auditoria/H24_Ventana_Respaldo_Migraciones_Worker_20261109.md):
