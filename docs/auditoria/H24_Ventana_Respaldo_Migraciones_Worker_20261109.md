@@ -263,3 +263,15 @@ establezca expresamente una ampliacion o nueva franja temporal y confirme como
 se conserva el presupuesto objetivo original. No se solicita autorizar de nuevo
 los pasos ya aprobados ni se considera reiniciado el contador por este mensaje.
 Hasta entonces los pasos dependientes quedan detenidos, sin aplicar 016/017.
+
+## 10. Continuacion posterior expresamente autorizada
+
+El usuario concedio una sola nueva ventana el 2026-11-10, manteniendo USD10
+como objetivo acumulado. El STOP temporal anterior se conserva como historia,
+no como estado actual. Ver el
+[acta de ejecucion efectiva](H24_Continuacion_Migraciones_Worker_20261110.md):
+13:35:55-13:47:31 America/Cancun, backup nuevo 1794335839733 SUCCESSFUL por
+frescura, 016/017 aplicadas mediante runner oficial, H05 20/0/0, usuario SQL
+dedicado y secreto version 1. Worker creado desarmado, Scheduler PAUSED y cero
+ejecuciones. Sin release API/Hosting, limpieza ni habilitacion de H24.
+No repetir el respaldo ni las mutaciones ya completadas por este antecedente.

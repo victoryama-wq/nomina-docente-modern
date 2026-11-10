@@ -1,5 +1,26 @@
 # H24: paquete revisable para una ventana futura
 
+## Estado vigente despues de la continuacion autorizada del 2026-11-10
+
+[Acta efectiva](../../docs/auditoria/H24_Continuacion_Migraciones_Worker_20261110.md):
+backup 1794335839733 SUCCESSFUL por frescura; 016/017 aplicadas desde 57c565a,
+H05 **20 registradas / 0 pendientes / 0 mismatch**. Usuario h24_dossier_worker
+creado con grants minimos y autenticacion verificada; secreto
+h24-dossier-worker-db-password **version 1**. Job nomina-h24-dossier-reconcile
+creado con imagen aprobada por digest y **ALLOW_DOSSIER_RECONCILE=false**;
+Scheduler nomina-h24-dossier-reconcile-10m **PAUSED**, cero ejecuciones.
+API/Hosting, IAM actual API y politicas de buckets sin cambios; alertas disabled.
+
+La ventana productiva termino 2026-11-10 a las 13:47:31 America/Cancun. No hay
+renovacion automatica. Los bloques create/GRANT de abajo son la receta historica
+revisada, **no comandos pendientes que deban repetirse**. Las frases anteriores
+de bloqueo/no creado describen el momento fechado de cada antecedente.
+Pendientes actuales: canal/entrega de alertas, minimo privilegio preexistente API,
+smoke supervisado y autorizacion separada para armar/reanudar y release H24.
+No se habilito H24 ni se ejecuto limpieza; no desplegar desde este paquete.
+
+## Antecedentes y receta por etapas
+
 Preparado 2026-11-09. Ventana parcial autorizada sobre 57c565a: ver
 [acta de infraestructura](../../docs/auditoria/H24_Ventana_Preparacion_Infraestructura_20261109.md).
 La autorizacion no incluye SQL, migraciones, ejecucion del worker ni release.
