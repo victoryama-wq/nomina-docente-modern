@@ -1,6 +1,23 @@
 # Matriz Formal de Riesgos - Nomina Docente
 
-Actualizacion: 2026-11-09 (seguimiento documental H24/H05)
+Actualizacion: 2026-11-10 (H24 cerrado operativo; riesgos residuales explicitos)
+
+## Estado H24 posterior a los antecedentes
+
+[Release condicionado](H24_Release_Condicionado_20261110.md): API00058-baw,
+Hosting1794347521818000/9aaf70a74e0005e7; H05 productivo20/0/0.
+IAM minimo, runtime GCS, revocacion/deshabilitacion y nuevo login aprobados;
+worker armado, Scheduler y alertas habilitados, ejecucion programada real con
+COMPLETED y metrica positiva. Smoke final UI por rol/responsive aprobado;
+H24 cerrado operativo, sin rollback, fixture retirado y cuenta restituida.
+Mensaje de validacion fiscal generico: mejora UX posterior, no perdida de datos
+ni fallo del guardado valido. No se cambio la candidata durante el release.
+Riesgos residuales: archivos NOT_SCANNED sin antivirus/analisis especializado,
+descarga fuera del visor de Nomina; limite H24 de una instancia y presupuesto
+SQL acotado; restauracion del respaldo actual no ensayada. No declarar riesgo
+documental eliminado ni usar pruebas historicas AV para avalar esta candidata.
+
+### Antecedentes de preparacion del 2026-11-09
 
 [Seguimiento backup/DBA H24](H24_Ventana_Respaldo_Migraciones_Worker_20261109.md):
 backup1794261106620 SUCCESSFUL, restauracion no ensayada. Falta acceso DBA;
@@ -240,8 +257,10 @@ Responsable operativo debe difundir manejo seguro e incidentes antes de habilita
 [Acta de retirada y regresion](H24_Retirada_Analizadores_20261109.md).
 No cambia privacidad/autorizacion/integridad ni almacenamiento; sin esquema nuevo.
 Retirados del plan servicios/imagenes/IAM/alertas/costos exclusivos de analisis.
-Siguen pendientes IAM minimo sin restore, bucket adicional, worker, proteccion
-horaria, Scheduler/alertas de limpieza y ventanas productivas. H24 sigue NO-GO.
+Estos controles de infraestructura estaban pendientes el9 de noviembre; el acta
+del10 acredita IAM minimo, buckets, worker, horario, Scheduler y alertas activos.
+Smoke UI final aprobado; no se traslada el NO-GO historico a recursos ya
+verificados ni se reduce a cero el riesgo residual de archivos sin analizar.
 Los resultados inferiores de AV/Inspector permanecen historicos por candidato.
 
 **Actualización 2026-11-09:** H05 favorable para 3284a12 según evidencia de

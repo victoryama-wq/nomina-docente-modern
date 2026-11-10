@@ -1,16 +1,22 @@
 # Nómina Docente Modern
 
-Última verificación documental e infraestructura: 2026-09-01.
+Última verificación documental e infraestructura: 2026-11-10.
 
 Nueva plataforma para Nómina Docente.
 
-### H24: candidata local, no desplegada (2026-11-09)
+### H24: cerrado operativo (2026-11-10)
 
 Por decisión de costo aprobada se retiran Inspector/ClamAV del flujo y del plan
 productivo. Los archivos tienen controles básicos, **no análisis antivirus ni
 estructural**; se entregan como descarga autorizada con aviso, sin visor de
 contenido incrustado. Se mantienen roles, integridad, constancias recuperables
-siete días y borrado definitivo de adicionales. H24 mantiene NO-GO productivo.
+siete días y borrado definitivo de adicionales. API y Hosting publicados; worker,
+Scheduler y alertas habilitados, ejecución programada real y smoke UI por rol/
+responsive aprobados. Sin rollback; fixture retirado y cuenta restituida.
+La advertencia de cierre correspondía a
+campos fiscales pendientes, no a archivos sin guardar; queda mejora futura del
+mensaje de validación genérico.
+Ver [acta del release](docs/auditoria/H24_Release_Condicionado_20261110.md).
 Ver [acta](docs/auditoria/H24_Retirada_Analizadores_20261109.md) y
 [plan vigente](docs/auditoria/H24_Plan_Infraestructura_Productiva_20261109.md).
 No usar servicios/scripts históricos de análisis para aprovisionar esta candidata.
@@ -47,21 +53,21 @@ API via Hosting: https://nomina-docente-prod.web.app/api/health
 
 Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` en Cloud Run.
 
-Estado productivo consolidado posterior a H23:
+Estado productivo consolidado posterior al release H24:
 
-- Cloud Run productivo: `nomina-api`, revision vigente documentada `nomina-api-00057-c7d`.
-- Imagen API vigente: `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:finance-b3f40ce`.
-- Digest vigente: `sha256:a7d0de2196c5552d50cd75b8f01e15238dc90f701941b8656613bf6d1789196b`.
-- Configuración Cloud Run verificada: CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, mínimo `0` y máximo `3` instancias.
-- Firebase Hosting live: release `1793121624438000`, version `3f9ebc88c835a143`.
+- Cloud Run productivo: `nomina-api`, revision `nomina-api-00058-baw`; rollback `nomina-api-00057-c7d`.
+- Imagen API: repositorio `nomina/nomina-api`, candidata `57c565a`, sin reconstruir.
+- Digest OCI vigente: `sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303`.
+- Capacidad: CPU `1`, memoria `1Gi`, concurrencia `8`, timeout `300 s`, mínimo `0`, servicio máximo `2` y revisión máxima `1`.
+- Firebase Hosting live: release `1794347521818000`, version `9aaf70a74e0005e7`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.
 - H01 precision monetaria: cerrado.
 - H02/H03 permisos/coordinacion: cerrado operativo, incluido el ajuste Finanzas desplegado el 2026-10-27; healthchecks OK y smoke autenticado del PDF consolidado y nombres por rol aprobado por el usuario. Ver `docs/auditoria/H03_Deploy_Finanzas_Comprobantes_Consolidados.md`.
 - H04 pruebas automatizadas: implementado hasta Fase 5; Playwright queda opcional.
-- H05 control formal de migraciones: 18 registros, 15 baseline y migraciones
-  013/014/015 aplicadas; `pending=0` y `checksum mismatch=0`.
+- H05 control formal: 20 registros, 15 baseline y 013/014/015/016/017 aplicadas;
+  `pending=0` y `checksum mismatch=0`, inspect del2026-11-10.
 - H09/H10 estados y cierre de ciclo: desplegado en produccion sin migracion 013.
 - H11 CSV UTF-8: desplegado y cerrado operativo con smoke autorizado.
 - H12 catalogos historicos: cerrado documental como politica operativa.

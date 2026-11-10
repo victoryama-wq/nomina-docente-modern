@@ -4,8 +4,19 @@ Fecha: 2026-10-27.
 Commit revisado: `9a5dd27 test(h24): validate local teacher dossier integration`.
 Rama: `feature/h02-h03-user-coordinations-permissions`.
 
-**Resultado: preparacion y revision local completadas; NO-GO para deploy/habilitacion.
-H24 no cerrado operativo. Los bloqueantes siguientes requieren evidencia y aprobacion.**
+## Actualizacion posterior: 2026-11-10
+
+[Release condicionado](H24_Release_Condicionado_20261110.md): candidata57c565a
+publicada en API00058-baw y Hosting1794347521818000/9aaf70a74e0005e7.
+H05 productivo20/0/0; Firebase users.get minimo concedido; gates autenticados y
+ejecucion Scheduler real aprobados. Worker/alertas/Scheduler habilitados.
+Smoke final productivo por rol/responsive aprobado; H24 cerrado operativo.
+Ventana cerrada17:18:50 Cancun, sin rollback; observacion UX no bloqueante del
+mensaje fiscal generico. No hay una nueva candidata ni cambios de codigo.
+Los NO-GO y pendientes fechados que siguen conservan la evidencia historica,
+no representan el estado actual de recursos ya provisionados y verificados.
+
+**Resultado historico F4: preparacion local completada; NO-GO en esa fecha.**
 
 ## Estado actualizado 2026-11-09
 

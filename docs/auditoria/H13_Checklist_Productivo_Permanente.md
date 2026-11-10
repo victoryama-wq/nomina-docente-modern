@@ -1,7 +1,14 @@
 # H13 - Checklist productivo permanente
 
 Fecha: 2026-06-03
-Ultima actualizacion de estado productivo: 2026-10-27
+Ultima actualizacion de estado productivo: 2026-11-10
+
+[Release H24](H24_Release_Condicionado_20261110.md): API/Hosting publicados,
+worker armado, Scheduler y alertas habilitados con autorizacion permanente.
+Ejecucion programada real verificada, H05 productivo20/0/0; smoke UI por rol y
+responsive aprobado. H24 cerrado operativo, sin rollback; ventana cerrada17:18:50.
+No repetir016/017 ni restaurar por rutina el estado desarmado de ensayos.
+Los requisitos locales previos siguientes se conservan como antecedentes.
 
 Preparacion local H24 2026-11-09, sin cambio productivo:
 [acta PostgreSQL/worker](H24_Preparacion_Worker_Infraestructura_20261109.md) y
@@ -42,16 +49,16 @@ Alcance de H13:
 | Cloud Run API | Servicio `nomina-api` |
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
-| Revision Cloud Run vigente documentada | `nomina-api-00057-c7d` |
-| Revision anterior / rollback inmediato | `nomina-api-00056-mll` |
-| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:finance-b3f40ce` |
-| Digest API vigente | `sha256:a7d0de2196c5552d50cd75b8f01e15238dc90f701941b8656613bf6d1789196b` |
-| CPU / memoria | `1` / `512Mi` |
-| Concurrencia / timeout | `80` / `300 s` |
-| Instancias min / max | `0` / `3` |
+| Revision Cloud Run vigente documentada | `nomina-api-00058-baw` |
+| Revision anterior / rollback inmediato | `nomina-api-00057-c7d` |
+| Imagen API vigente | Repositorio `nomina/nomina-api`, fuente57c565a, fijada por digest |
+| Digest API vigente (indice OCI) | `sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303` |
+| CPU / memoria | `1` / `1Gi` |
+| Concurrencia / timeout | `8` / `300 s` |
+| Instancias min / max | `0` / servicio `2`, revision H24 `1` |
 | Imagen API H11 documentada | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h11-prod-4e0c214` |
-| Firebase Hosting release vigente | `1793121624438000` |
-| Firebase Hosting version vigente | `3f9ebc88c835a143` |
+| Firebase Hosting release vigente | `1794347521818000` |
+| Firebase Hosting version vigente | `9aaf70a74e0005e7` |
 | Instancia Cloud SQL | `nomina-docente-web` |
 | Base productiva | `nomina_docente` |
 | Usuario DB aplicativo | `app_nomina` |
@@ -60,7 +67,11 @@ Alcance de H13:
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true` en monitoreo |
 
-La revision vigente debe confirmarse antes de cada deploy con Cloud Run. Este checklist conserva su origen H13 y actualiza el ultimo estado conocido despues del ajuste de Finanzas del 2026-10-27. Ver `H03_Deploy_Finanzas_Comprobantes_Consolidados.md`: ajuste cerrado operativo, healthchecks OK y smoke autenticado del PDF consolidado y nombres por rol aprobado por el usuario. El estado H05 indicado mas adelante es documental previo y no se consulto de nuevo durante este deploy sin migraciones.
+La revision vigente debe confirmarse antes de cada deploy. El ajuste de Finanzas
+del2026-10-27 conserva su cierre en H03_Deploy_Finanzas_Comprobantes_Consolidados.md.
+El release H24 del10/11 reconfirma inspect20/0/0, sin repetir migraciones.
+Rollback Hosting conservado: release1793121624438000/version3f9ebc88c835a143.
+H05 y revisiones anteriores citadas mas abajo son evidencia historica.
 
 ## 3. Variables no secretas Cloud Run
 
@@ -77,9 +88,16 @@ Estas variables pueden documentarse y revisarse en checklist, pero no deben camb
 | `DB_USER` | `app_nomina` | No secreta sensible operativa | Usuario aplicativo; permisos deben mantenerse restringidos. |
 | `INSTANCE_CONNECTION_NAME` | `nomina-docente-prod:us-central1:nomina-docente-web` | No secreta | Cloud SQL asociado a produccion. |
 | `CONSTANCIAS_BUCKET` | `nomina-docente-prod-constancias` | No secreta | Bucket fiscal/documental productivo. |
+| `DOSSIER_STORAGE_MODE` | `gcs` | No secreta | Adicionales H24, sin adaptador local productivo. |
+| `DOSSIER_BUCKET` | `nomina-docente-prod-h24-expedientes` | No secreta | Privado, separado de constancias, borrado definitivo. |
 | `LEGACY_COORDINATION_FALLBACK_ENABLED` | `true` | No secreta | Mantener mientras H02 siga en monitoreo; no retirar sin decision humana. |
 
 No documentar ni imprimir valores de `DB_PASSWORD` ni credenciales privadas.
+
+Worker separado: `ALLOW_DOSSIER_RECONCILE=true`, usuario SQL dedicado
+`h24_dossier_worker`, secreto referenciado `h24-dossier-worker-db-password:1`.
+No copiar su credencial a la API ni confundir su armado con una variable API.
+Mantener horario Cancun, exclusion mutua y alerta de ausencia de exito real.
 
 ## 4. Secretos y credenciales
 

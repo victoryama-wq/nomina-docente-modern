@@ -2,6 +2,16 @@
 
 Fecha: 2026-10-27.
 
+## Estado productivo 2026-11-10
+
+Fuente57c565a publicada en API `nomina-api-00058-baw` y Hosting
+release1794347521818000/version9aaf70a74e0005e7; operacion automatica habilitada
+con ejecucion programada real verificada. Smoke final UI por rol y responsive
+aprobado; H24 cerrado operativo. Mensaje fiscal generico queda como mejora UX,
+sin alterar la candidata ni presentar archivos NOT_SCANNED como seguros.
+Ver [acta de release](../auditoria/H24_Release_Condicionado_20261110.md).
+Los estados de preparacion/NO-GO anteriores se conservan como antecedentes.
+
 ## Alcance vigente aprobado: 2026-11-09
 
 Se retiran Inspector, Poppler y ClamAV por decision funcional de costo. La
@@ -17,8 +27,9 @@ Se conservan roles Admin/Finanzas/RH y sus permisos; carga multiple secuencial,
 telefono y datos fiscales, A->B, idempotencia y cleanup. Constancias conservan
 604800 segundos recuperables; adicionales mantienen bucket separado y borrado
 definitivo. No hay restauracion UI, cambio de esquema ni migraciones nuevas.
-El despliegue sigue pendiente por IAM/bucket adicional/worker/horario/Scheduler/
-alertas/ventanas de datos y release. [Acta y pruebas](../auditoria/H24_Retirada_Analizadores_20261109.md).
+El despliegue estuvo pendiente el9 de noviembre por IAM/bucket adicional/worker/
+horario/Scheduler/alertas. Ese antecedente no sustituye el estado del release
+del10 de noviembre. [Acta y pruebas locales](../auditoria/H24_Retirada_Analizadores_20261109.md).
 
 ## Antecedentes anteriores a la retirada
 

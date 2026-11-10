@@ -1,6 +1,20 @@
-# H24: paquete revisable para una ventana futura
+# H24: operacion y antecedentes de infraestructura
 
-## Seguimiento operativo del 2026-11-10
+## Estado del release 2026-11-10
+
+[Acta del release condicionado](../../docs/auditoria/H24_Release_Condicionado_20261110.md):
+API `nomina-api-00058-baw` al100%, Hosting release1794347521818000/version9aaf70a74e0005e7.
+Worker armado, Scheduler ENABLED y alertas habilitadas por autorizacion permanente.
+Ejecucion real programada fk7nr: COMPLETED/cleanupSucceeded=true, metrica positiva.
+H05 reconfirmado20/0/0; no repetir016/017 ni create/grants historicos.
+Permiso firebaseauth.users.get concedido a API; capacidad1CPU/1GiB/concurrency8,
+servicio max2 y revision max1, minimo0. Smoke final UI por rol/responsive aprobado;
+H24 cerrado operativo17:18:50 Cancun. Fixture retirado y cuenta restituida,
+sin rollback. Mejora futura del mensaje fiscal generico, no cambio de candidata.
+Los cierres desarmados/PAUSED de abajo son antecedentes de ensayos, no el estado
+actual ni instrucciones para desactivar la operacion despues de un release satisfactorio.
+
+## Antecedente: seguimiento operativo del 2026-11-10
 
 La [ventana supervisada](../../docs/auditoria/H24_Validacion_Operativa_Supervisada_20261110.md)
 es la referencia posterior al cierre de preparacion13:47. Registra retirada
@@ -48,10 +62,10 @@ Pendientes a las13:47: canal/entrega de alertas, minimo privilegio preexistente 
 smoke supervisado y autorizacion separada para armar/reanudar y release H24.
 No se habilito H24 ni se ejecuto limpieza; no desplegar desde este paquete.
 
-## Secuencia propuesta para release y rollback: no ejecutada
+## Antecedente: secuencia propuesta antes del release
 
-Esta secuencia requiere otra autorizacion, nueva ventana y cierre de los dos
-requisitos anteriores. No es una orden de ejecucion ni habilita produccion.
+Esta secuencia requirio la autorizacion posterior y la ventana del acta enlazada
+arriba. Se conserva como runbook revisable, no como orden de repetir el release.
 
 1. Congelar fuente57c565a y digest
    sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303;

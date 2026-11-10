@@ -1,7 +1,18 @@
 # SDD Consolidado Nomina Docente Post H09/H10
 
 Fecha de consolidacion: 2026-06-02
-Ultima actualizacion: 2026-11-09 (H24 preparacion cloud parcial; sin deploy ni migraciones productivas)
+Ultima actualizacion: 2026-11-10 (H24 cerrado operativo)
+
+[Acta H24 vigente](../auditoria/H24_Release_Condicionado_20261110.md): fuente57c565a,
+API00058-baw al100%, Hosting1794347521818000/9aaf70a74e0005e7; H0520/0/0.
+Worker armado, Scheduler y alertas habilitados con ejecucion real COMPLETED.
+Smoke final UI por rol/responsive aprobado: alerta de cierre explicada por
+cambios fiscales pendientes; queda mejora futura del mensaje generico.
+H24 cerrado operativo, sin rollback; fixture retirado, cuenta restituida y
+ventana cerrada17:18:50 Cancun. Los bloques siguientes del9 de
+noviembre conservan el contexto historico, no pendientes actuales de creacion.
+
+### Antecedentes de preparacion H24
 
 [Seguimiento backup/DBA H24](../auditoria/H24_Ventana_Respaldo_Migraciones_Worker_20261109.md):
 respaldo1794261106620 SUCCESSFUL; sin credencial DBA, inspect/apply no ejecutados.
@@ -32,19 +43,19 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00057-c7d` |
-| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00056-mll` |
-| Imagen API vigente | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:finance-b3f40ce` |
-| Digest API vigente | `sha256:a7d0de2196c5552d50cd75b8f01e15238dc90f701941b8656613bf6d1789196b` |
-| Recursos Cloud Run | CPU `1`, memoria `512Mi`, concurrencia `80`, timeout `300 s`, min `0`, max `3` |
+| Revision Cloud Run vigente documentada | `nomina-api-00058-baw` |
+| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00057-c7d` |
+| Imagen API vigente | Repositorio `nomina/nomina-api`, fuente `57c565a`, fijada por digest |
+| Digest API vigente (indice OCI) | `sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303` |
+| Recursos Cloud Run | CPU `1`, memoria `1Gi`, concurrencia `8`, timeout `300 s`, min `0`, servicio max `2`, revision max `1` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
-| Firebase Hosting release vigente | `1793121624438000` |
-| Firebase Hosting version vigente | `3f9ebc88c835a143` |
+| Firebase Hosting release vigente | `1794347521818000` |
+| Firebase Hosting version vigente | `9aaf70a74e0005e7` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |
 | Fallback H02 | `LEGACY_COORDINATION_FALLBACK_ENABLED=true`, en monitoreo |
-| Control H05 productivo | Inspección del 2026-11-09 aportada por el usuario para candidata 3284a12: 20 archivos, 18 registradas (15 baseline y `013`/`014`/`015` aplicadas), solo `016`/`017` pendientes; checksum mismatch=0; exit 0. No autoriza apply. |
+| Control H05 productivo | Inspect del2026-11-10 para57c565a: 20 registradas, 0 pendientes, 0 mismatch, exit0. 016/017 aplicadas en ventana anterior; no repetidas en este release. |
 
 Estado por H:
 
@@ -54,7 +65,7 @@ Estado por H:
 | H02 | Cerrado operativo; `user_coordinations` existe, pero el fallback legacy sigue activo en monitoreo. |
 | H03 | Cerrado operativo, incluido el ajuste de comprobante consolidado y nombre docente desplegado en `nomina-api-00057-c7d` y Hosting live. Healthchecks OK; smoke autenticado del PDF y nombres por rol aprobado por el usuario. Ver `docs/auditoria/H03_Deploy_Finanzas_Comprobantes_Consolidados.md`. |
 | H04 | Implementado hasta Fase 5; H04-F6 Playwright queda opcional posterior. |
-| H05 | Control formal vigente; dictamen favorable del 2026-11-09 para 3284a12, dos tablas presentes, 18 registradas y solo 016/017 pendientes; checksum mismatch=0. H24 aún no migrado ni autorizado para release. |
+| H05 | Control formal vigente; dos tablas presentes, 20 registradas, 0 pendientes y 0 mismatch; inspeccion read-only previa al release H24. |
 | H06/H14 | Cerrado; `Codigo.gs` e `index.html` fueron retirados del repositorio. |
 | H09/H10 | Desplegado en produccion el 2026-06-01; estados financieros seguros, `PLANEACION`, cierre controlado y frontend vigentes. |
 | H11 | Cerrado operativo; exportables CSV criticos backend/frontend estandarizados con BOM UTF-8 y validados en Excel institucional. |
@@ -68,6 +79,7 @@ Estado por H:
 | H21 | Cerrado operativo; migracion `013`, conciliacion de cinco pares/8 horarios, API/Hosting y smoke autenticado Catalogos/Horarios aprobados. CSV institucional definitivo no aplicado. |
 | H22 | Cerrado operativo; migracion `014`, API `nomina-api-00054-2ld`, Hosting live y smoke autenticado aprobados. Una ejecucion autorizada creo 14 docentes; HF1B muestra su responsable real desde `teachers.created_by` sin repetir Apply. |
 | H23 | Cerrado operativo; `015` aplicada mediante H05, ciclo `27-1` configurado `2026-08-31` a `2026-12-12`, API/Hosting desplegados y smoke productivo aprobado. H01, Extras independientes, snapshots e historicos permanecen intactos. |
+| H24 | Cerrado operativo; API/Hosting publicados, operacion automatica y smoke UI por rol/responsive aprobados. NOT_SCANNED y descarga sin visor incrustado; riesgo residual explicito. |
 | H07 | Pendiente opcional; evaluar `hd` de Google como mejora UX, no como control de seguridad principal. |
 | H08 | Pendiente; refactor gradual despues de preservar pruebas. |
 
@@ -424,14 +436,15 @@ La regla de precedencia de esta seccion se aplica tambien a los documentos histo
 
 ## 7. Riesgos pendientes
 
-Seguimiento H24 del 2026-11-09: [cierre H05](../auditoria/H24_Ventana_Respaldo_Cloud_SQL_Inspeccion_H05_20261105.md)
-basado en la transcripción de Cloud Shell aportada por el usuario, no nueva
-ejecución del agente. Backup 1793913186499 SUCCESSFUL reconfirmado; restauración
-no ensayada. Quedan IAM efectivo sin restauración en runtime, bucket separado
-de adicionales, analizadores privados, limpieza programada, alertas y capacidad
-productiva. [Plan de infraestructura y autorización siguiente](../auditoria/H24_Plan_Infraestructura_Productiva_20261109.md).
-Las referencias cloud anteriores siguen fechadas al precheck 2026-11-05;
-reconfirmar rollback 00057-c7d / Hosting 3f9ebc88c835a143. H24 no cerrado operativo.
+H24 cerrado operativo el2026-11-10: IAM minimo, buckets separados, limpieza,
+alertas y capacidad verificados en el [release](../auditoria/H24_Release_Condicionado_20261110.md).
+Persisten riesgo de archivos NOT_SCANNED, mejora del mensaje fiscal generico,
+monitoreo de capacidad y restauracion del respaldo actual no ensayada.
+No aprovisionar analizadores retirados por decision de costo.
+El [cierre H05 aportado anteriormente](../auditoria/H24_Ventana_Respaldo_Cloud_SQL_Inspeccion_H05_20261105.md)
+y el [plan previo](../auditoria/H24_Plan_Infraestructura_Productiva_20261109.md)
+se conservan como antecedentes; no sustituyen inspect20/0/0 del10 de noviembre.
+Rollback conservado: API00057-c7d / Hosting3f9ebc88c835a143, no aplicado.
 
 | Riesgo | Estado consolidado | Proxima accion recomendada |
 |---|---|---|
@@ -447,13 +460,18 @@ reconfirmar rollback 00057-c7d / Hosting 3f9ebc88c835a143. H24 no cerrado operat
 | H21 | Cerrado operativo | Mantener pruebas, H05 y preview previo a cualquier CSV institucional futuro; no aplicar archivos sin backup y autorizacion. |
 | H22 | Cerrado operativo | Admin exclusivo; `014`, API/Hosting, plantillas, Preview, permisos, responsive y responsable real desde `teachers.created_by` aprobados. Mantener Apply como operacion futura separada con backup y autorizacion. |
 | H23 | Cerrado operativo | Mantener pruebas de regresion, vigencia base por ciclo y paridad Preview/Guardar/Reporte vivo; la apertura de Extras propedeuticos sigue siendo una accion Admin separada. |
+| H24 | Cerrado operativo con riesgos residuales | Vigilar limpieza y capacidad; archivos sin analisis, descarga autorizada y manejo seguro; mejorar mensaje fiscal en fase separada. |
 | Fallback legacy H02 | En monitoreo | Revisar logs de `LEGACY_COORDINATION_FALLBACK_USED` y definir fecha de retiro cuando no haya uso indebido. |
 | H04-F6 | Opcional posterior | Playwright/e2e local si se requiere validar flujos visuales completos. |
 | Copias externas Apps Script | Pendiente externo | Confirmar si existen en Google Drive/respaldos y marcarlas historicas/no operativas. |
 
 ## 8. Reglas para futuras fases Codex
 
-### H24 - Expediente completo (local, no productivo)
+### H24 - Expediente completo (release condicionado y antecedentes)
+
+El estado vigente se encuentra en el acta del10/11/2026 enlazada al inicio.
+Los resultados locales/NO-GO de abajo describen sus respectivas candidatas y
+fechas; no sustituyen la evidencia runtime del release actual.
 
 **Alcance vigente 2026-11-09:** retirados Inspector/ClamAV y Poppler del runtime
 y plan productivo por aprobacion del usuario. Solo controles basicos de firma,
@@ -462,8 +480,9 @@ de limpio. Vista de informacion y descarga, sin contenido PDF/imagen incrustado.
 Constancias: 604800 s recuperables; adicionales: borrado definitivo separado.
 Sin cambios de esquema, H01 ni politica de acceso. Regresion/evidencia y riesgos:
 [acta de retirada](../auditoria/H24_Retirada_Analizadores_20261109.md).
-Siguen pendientes IAM, bucket adicional, worker/horario/Scheduler/alertas y
-ventanas autorizadas de migraciones/deploy. H24 no cerrado operativo.
+El9 de noviembre quedaron pendientes IAM, bucket adicional, worker/horario/
+Scheduler/alertas y ventanas autorizadas; se resolvieron en las actas del10.
+El smoke UI final fue aprobado y H24 quedo cerrado operativo, sin repetir provisiones.
 Los parrafos inferiores son cronologia: sus analizadores/visor no son requisitos
 vigentes ni evidencia de seguridad del archivo en la candidata nueva.
 
