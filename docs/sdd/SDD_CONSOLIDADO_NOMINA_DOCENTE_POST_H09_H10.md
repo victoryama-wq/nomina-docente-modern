@@ -3,24 +3,29 @@
 Fecha de consolidacion: 2026-06-02
 Ultima actualizacion: 2026-11-10 (H24 cerrado operativo)
 
-[Acta H24 vigente](../auditoria/H24_Release_Condicionado_20261110.md): fuente57c565a,
+[Cierre H24 inicial, antecedente](../auditoria/H24_Release_Condicionado_20261110.md): fuente57c565a,
 API00058-baw al100%, Hosting1794347521818000/9aaf70a74e0005e7; H0520/0/0.
 Worker armado, Scheduler y alertas habilitados con ejecucion real COMPLETED.
 Smoke final UI por rol/responsive aprobado: alerta de cierre explicada por
-cambios fiscales pendientes; queda mejora futura del mensaje generico.
+cambios fiscales pendientes; la mejora del mensaje se registra por separado abajo.
 H24 cerrado operativo, sin rollback; fixture retirado, cuenta restituida y
 ventana cerrada17:18:50 Cancun. Los bloques siguientes del9 de
 noviembre conservan el contexto historico, no pendientes actuales de creacion.
 
-### Candidata local posterior al cierre H24
+### Mejora posterior al cierre H24
 
 [Validacion fiscal y pago del Coordinador](../auditoria/H24_Mejora_Validacion_Fiscal_Pago_Coordinador.md),
 base documental da151b8: errores fiscales por campo, foco accesible y datos
 conservados; prohibicion explicita de paymentType para Coordinador en API/UI,
 incluso con fiscal.manage accidental. Categoria, H01 y permisos de otros roles
 sin cambios. Regresion API483 PASS, web194 PASS, PostgreSQL175 PASS; typecheck,
-build y tres resoluciones aprobados localmente. **No desplegada**; no cambia
-el estado productivo de la tabla siguiente ni la evidencia del release H24.
+build y tres resoluciones aprobados localmente. Release autorizado de7511717:
+API00061-xin al100%, Hosting1794355920347000/354df4645c244f3a; smoke API real
+aprobado en candidata y live. Smoke UI Admin/Coordinador y responsive aprobado;
+persistencia verificada. RELEASE COMPLETADO, ventana cerrada19:28:14 Cancun,
+tres fixtures retirados con auditoria conservada y sin rollback.
+Worker/Scheduler/alertas y configuracion API conservados. No se reescribe la
+evidencia del release inicial ni se repiten migraciones.
 
 ### Antecedentes de preparacion H24
 
@@ -53,14 +58,14 @@ Este documento consolida el estado vigente del sistema Nomina Docente despues de
 | API via Hosting | `https://nomina-docente-prod.web.app/api/health` |
 | Proyecto Firebase/GCP | `nomina-docente-prod` |
 | Cloud Run | Servicio `nomina-api`, region `us-central1` |
-| Revision Cloud Run vigente documentada | `nomina-api-00058-baw` |
-| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00057-c7d` |
-| Imagen API vigente | Repositorio `nomina/nomina-api`, fuente `57c565a`, fijada por digest |
-| Digest API vigente (indice OCI) | `sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303` |
+| Revision Cloud Run vigente documentada | `nomina-api-00061-xin` |
+| Revision Cloud Run anterior / rollback inmediato | `nomina-api-00058-baw` |
+| Imagen API vigente | Repositorio `nomina/nomina-api`, fuente `7511717`, fijada por digest |
+| Digest API vigente | `sha256:227fdd167cc3aa6107199466694482ea4ec916ef59f08a7548924588bf3127f2` |
 | Recursos Cloud Run | CPU `1`, memoria `1Gi`, concurrencia `8`, timeout `300 s`, min `0`, servicio max `2`, revision max `1` |
 | Firebase Hosting | Sitio `nomina-docente-prod`, canal `live` |
-| Firebase Hosting release vigente | `1794347521818000` |
-| Firebase Hosting version vigente | `9aaf70a74e0005e7` |
+| Firebase Hosting release vigente | `1794355920347000` |
+| Firebase Hosting version vigente | `354df4645c244f3a` |
 | Base activa | Cloud SQL PostgreSQL, base `nomina_docente` |
 | Bucket constancias | `nomina-docente-prod-constancias` |
 | Service account API | `nomina-api-sa@nomina-docente-prod.iam.gserviceaccount.com` |

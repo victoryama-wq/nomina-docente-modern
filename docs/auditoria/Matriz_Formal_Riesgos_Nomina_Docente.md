@@ -4,7 +4,7 @@ Actualizacion: 2026-11-10 (H24 cerrado operativo; riesgos residuales explicitos)
 
 ## Estado H24 posterior a los antecedentes
 
-[Release condicionado](H24_Release_Condicionado_20261110.md): API00058-baw,
+[Release condicionado inicial, antecedente](H24_Release_Condicionado_20261110.md): API00058-baw,
 Hosting1794347521818000/9aaf70a74e0005e7; H05 productivo20/0/0.
 IAM minimo, runtime GCS, revocacion/deshabilitacion y nuevo login aprobados;
 worker armado, Scheduler y alertas habilitados, ejecucion programada real con
@@ -17,16 +17,23 @@ descarga fuera del visor de Nomina; limite H24 de una instancia y presupuesto
 SQL acotado; restauracion del respaldo actual no ensayada. No declarar riesgo
 documental eliminado ni usar pruebas historicas AV para avalar esta candidata.
 
-### Candidata local de validacion fiscal y pago (posterior a da151b8)
+### Release de validacion fiscal y pago (posterior a da151b8)
 
 [Evidencia y plan de rollback](H24_Mejora_Validacion_Fiscal_Pago_Coordinador.md).
-Mensaje fiscal generico mitigado localmente con contrato por campo y foco.
+Mensaje fiscal generico mitigado con contrato por campo y foco.
 Riesgo de escritura paymentType por Coordinador con fiscal.manage accidental
 mitigado en la candidata mediante denegacion explicita y conservacion SQL del
 pago en ediciones operativas. No se afirma que ese permiso exista en produccion.
 API483/web194/PG175 PASS; visual local en tres resoluciones, sin ampliar alcance
-fiscal. Riesgo residual: despliegue y smoke autorizado pendientes. Produccion
-sigue en el release H24 anterior; no se declara aplicada aun esta mitigacion.
+fiscal. Fuente7511717 publicada: API00061-xin y Hosting1794355920347000/
+354df4645c244f3a. Smoke API autenticado aprobado antes/despues de transferir
+trafico: seis errores seguros, ocho403 manipulados, persistencia y ambito
+correctos. Smoke UI Admin/Coordinador y responsive aprobado; persistencia
+verificada. RELEASE COMPLETADO19:28:14 Cancun, fixtures retirados, cola vacia,
+logs ERROR0 y sin rollback. Worker, Scheduler, alertas y roles conservados.
+Observacion UX no bloqueante: eliminacion sin mensaje visible; ausencia de los
+tres fixtures y sus eventos de auditoria confirmados. Sin atribuir regresion
+a esta candidata ni ampliar el alcance para corregirla durante el release.
 
 ### Antecedentes de preparacion del 2026-11-09
 

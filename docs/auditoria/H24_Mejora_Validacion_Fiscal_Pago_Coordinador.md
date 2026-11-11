@@ -1,6 +1,8 @@
 # H24 - Candidata posterior: validacion fiscal y pago del Coordinador
 
-Fecha: 2026-11-10. Estado: implementada y validada localmente; **no desplegada**.
+Fecha: 2026-11-10. Estado actual: **RELEASE COMPLETADO** desde `7511717`;
+API/Hosting publicados, smoke API/UI aprobados y ventana cerrada19:28:14 Cancun.
+Las secciones locales siguientes conservan la evidencia anterior al release.
 Base publicada: `da151b8c35f39a43244b8733c309f8109fedf40d`, rama
 `feature/h02-h03-user-coordinations-permissions`, inicialmente limpia y sincronizada.
 No habia commits posteriores ni cambios ajenos al comenzar. No se encontro un
@@ -118,7 +120,7 @@ No se publican fixtures, credenciales ni capturas de datos reales.
 Al terminar se cerraron Brave/Vite de prueba y se retiro el contenedor PostgreSQL
 efimero, incluido su tmpfs. Se conservan solo las evidencias locales indicadas.
 
-## Despliegue y rollback propuestos, no ejecutados
+## Plan previo al release (antecedente historico)
 
 1. Obtener autorizacion para una ventana nueva. Verificar SHA publicado, pruebas,
    arbol limpio y metadatos vigentes; no asumir vigencia solo por este documento.
@@ -138,12 +140,197 @@ efimero, incluido su tmpfs. Se conservan solo las evidencias locales indicadas.
    worker. El rollback de API retiraria tambien la nueva prohibicion explicita;
    registrarlo y no declarar vigente esa defensa tras volver a la imagen previa.
 
-Pendiente: autorizacion de release y smoke real de la nueva candidata. No queda
+Pendiente al cerrar la fase local: autorizacion de release y smoke real. No queda
 ninguna migracion ni infraestructura nueva requerida por estas adecuaciones.
 
-## Confirmaciones
+## Confirmaciones de la fase local anterior
 
 Sin acceso ni cambios productivos, deploy, cambios de roles reales o IAM,
 modificaciones de buckets/worker/Scheduler/alertas, H01 o calculos de Nomina.
 Sin dependencias, analizadores ni GitHub Actions. Sin escrituras a expedientes
 reales. El cierre operativo H24 y su historial se conservan.
+
+## Release condicionado del 2026-11-10
+
+Autorizacion nueva y explicita para publicar exclusivamente
+`75117176be70cbd28dac7512ccad53c14970f069`, sin merge ni cambios funcionales
+adicionales. Rama limpia y sincronizada con origin antes de construir; contexto
+controlado de121 archivos del SHA aprobado, sin archivos locales secretos.
+No se modifican las conclusiones historicas del release H24 anterior.
+
+### Ventana y presupuesto
+
+- Inicio de primera consulta productiva: 2026-11-10 18:59:10 America/Cancun
+  (`2026-11-10T23:59:10.205Z`). Vencimiento unico: 20:59:10 del mismo dia
+  (`2026-11-11T01:59:10.205Z`), con20 minutos reservados para rollback.
+- Cloud SQL RUNNABLE en us-central1; encendido06:50/apagado22:00 confirmado.
+  Sin nueva ventana automatica, respaldo, H05 inspect ni migraciones.
+- Objetivo acumulado USD10. Estimacion conservadora previa hastaUSD6.50 mas
+  hastaUSD2 de esta intervencion: hastaUSD8.50 acumulados estimados, no cargos
+  facturados ni remanente exacto. Incluye build, imagen y ejecucion temporal API;
+  no se crea infraestructura persistente adicional al release autorizado.
+
+### Procedencia y resultado tecnico
+
+| Elemento | Resultado observado |
+|---|---|
+| Fuente API/frontend | `75117176be70cbd28dac7512ccad53c14970f069` |
+| Cloud Build | `3af23829-e7ad-4414-b6e0-cdf47a1c509f`, SUCCESS |
+| Imagen | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h24-fiscal-7511717-20261110` |
+| Digest inmutable | `sha256:227fdd167cc3aa6107199466694482ea4ec916ef59f08a7548924588bf3127f2` |
+| API anterior/rollback | `nomina-api-00058-baw` |
+| API nueva | `nomina-api-00061-xin` |
+| Validacion sin trafico general | Health200, anonimo401 y sesiones Admin/Coordinador200 |
+| Trafico general | 100% a00061-xin, confirmado19:11:36 Cancun |
+| Hosting live | Release `1794355920347000`, version `354df4645c244f3a` |
+| Hosting anterior/rollback | Release `1794347521818000`, version `9aaf70a74e0005e7` |
+| SHA-256 index.html publicado | `1cc4767d2e3577a9c9ba3bdd498b2b48a90e835f172e63830b45cffff3121ce4`, igual al artefacto local |
+| Publicacion Hosting | Confirmada19:12:03 Cancun, exclusivamente Hosting |
+| Capacidad conservada | CPU1, memoria1Gi, concurrencia8, timeout300s, min0, servicio max2, revision max1 |
+| Configuracion API | Identidad, variables, referencias de secretos, conexiones y conectividad conservadas |
+
+Comandos ejecutados con proyecto explicito, sin imprimir credenciales:
+
+```text
+gcloud builds submit <contexto-controlado> --config=<cloudbuild-local.yaml> --async --project=nomina-docente-prod
+gcloud run services update nomina-api --region=us-central1 --image=<digest-aprobado> --no-traffic --tag=fiscal-candidate --project=nomina-docente-prod
+gcloud run services update-traffic nomina-api --region=us-central1 --to-revisions=nomina-api-00061-xin=100 --project=nomina-docente-prod
+firebase deploy --only hosting --project nomina-docente-prod --non-interactive
+```
+
+API/web tests, typecheck y build repetidos desde el archivo Git exacto: exit0.
+La integracion PostgreSQL175/175 de la fase local corresponde a esta misma
+candidata; no se repitio sobre produccion ni equivale a H05 productivo nuevo.
+Cloud Build SUCCESS acredita la construccion, no sustituye el smoke. No se
+configuro GitHub Actions ni se atribuye una ejecucion CI adicional.
+
+### Smoke autenticado de API
+
+Ejecutado dos veces: en la revision etiquetada sin trafico y luego via Hosting
+productivo. Login personal Firebase; credenciales de sesion solo en memoria del
+puente loopback. Dos cuentas existentes, Admin y Coordinador, sin cambiar roles
+ni conceder fiscal.manage. Solo dos docentes ficticios propios identificados.
+
+| Prueba | Resultado en candidata y live |
+|---|---|
+| RFC, correo, C.P., CURP, pago y limite bancario invalidos | Seis400 con fieldErrors seguros, sin valor rechazado ni traza |
+| Contrato anterior | Conserva error/message/400; consumidor anterior compatible |
+| Gestor fiscal autorizado | Admin guarda pago y C.P.00123, ceros conservados |
+| Alta Coordinador sin paymentType | 201; persistencia Sin definir |
+| Edicion operativa Coordinador | 200; telefono/categoria permitidos, pago asignado por Admin conservado |
+| POST/PATCH manipulados | Ocho403: otro pago, mismo pago, vacio y null |
+| Rutas alternativas | Import preview/apply y fiscal rechazadas403 |
+| Propietario/ambito | Edicion de docente ajeno rechazada400, contrato historico conservado |
+| Ausencia de escritura ante ataques | SELECT readonly de los dos fixtures antes/despues identico |
+
+La prueba con permiso fiscal accidental permanece exclusivamente aislada; no
+se alteraron permisos productivos para repetirla. Los SELECT se limitaron a
+fixtures, roles de las dos cuentas autorizadas y conteos de la cola, sin leer
+expedientes reales. No se imprime informacion fiscal en la evidencia publicada.
+
+### Continuidad preliminar y limites
+
+Verificada19:13:36 Cancun: worker con spec e imagen anteriores intactos,
+Scheduler ENABLED sin cambio de configuracion, ambas politicas de alerta
+habilitadas e identicas. Cola:0 pendientes,0 fallos de ventana,0 constancias
+pendientes. Roles/estado de ambas cuentas sin cambios. Logs de la revision
+nueva severity>=ERROR:0. Health200 y anonimo401 directo/via Hosting.
+
+Incidencia del harness: la primera consulta CLI de logs rechazo el filtro por
+comillas de PowerShell (INVALID_ARGUMENT); se sustituyo por la API de lectura
+Logging y paso. No fue un error de la aplicacion ni se repitio una mutacion.
+
+Esta comprobacion preliminar precede al smoke manual y a la retirada final;
+no sustituye el cierre registrado mas abajo.
+
+### Smoke UI humano y persistencia
+
+Confirmado por el usuario con sus cuentas existentes, sin modificaciones de rol:
+
+- Admin: errores junto a RFC/correo/C.P./CURP, foco en el primer error, valores
+  conservados, correccion y guardado exitoso. Guardar fiscal conserva el telefono
+  pendiente y la advertencia al cerrar; al devolver ese telefono a su valor
+  original sin guardar, desaparece la advertencia. No existe Guardar todo.
+- C.P.00124 conservado al reabrir. Panel, errores y botones accesibles sin
+  desbordamiento general en1440x900,768x1024,390x844.
+- Coordinador: alta real de un tercer docente ficticio desde Directorio sin
+  selector de pago, con Categoria disponible. Guardado satisfactorio. Edicion
+  de telefono/categoria en el fixture propio anterior, sin selector de pago;
+  escritorio/movil accesibles y sin desbordamiento.
+- SELECT readonly a19:22:48 Cancun: tercer fixture creado por Coordinador,
+  pago Sin definir; cambio operativo del otro fixture persistido y pago Banorte
+  intacto. C.P.00124 con ceros, telefono pendiente del fixture Admin no persistido.
+- La omision de paymentType del payload normal esta cubierta por las pruebas
+  locales del cliente y corroborada por el alta/edicion UI exitosas frente a la
+  API que rechaza toda presencia explicita del campo. No se almacenaron HAR ni
+  tokens productivos. La validacion visual es confirmacion humana, no ejecucion
+  automatizada del navegador productivo.
+
+### Retirada de fixtures
+
+Tres registros sinteticos propios: dos creados por API y uno creado en UI.
+El tercero fue eliminado por Admin en la interfaz y su ausencia se confirmo por
+SELECT. La primera retirada automatica de los dos restantes devolvio400 y se
+detuvo, sin reintento ciego: ambos continuaban presentes. El harness enviaba
+Content-Type application/json sin cuerpo en DELETE; Fastify local reprodujo
+400/FST_ERR_CTP_EMPTY_JSON_BODY y200 al omitir ese header. La interfaz normal
+no envia ese header vacio. Ambos se retiraron por la interfaz Admin. El usuario
+observo que desaparecen de la tabla sin un mensaje visible de confirmacion;
+se registra como observacion UX, no como fallo de persistencia. SELECT readonly
+a19:27:22 Cancun confirmo cero filas para los tres UUID/identificadores propios
+y tres eventos TEACHER_DELETED conservados en auditoria. Sin SQL correctivo ni
+borrado directo de tablas. No se cambia codigo funcional ni se reconstruye la
+candidata por un defecto del harness local.
+
+### Rollback disponible
+
+Hosting anterior `9aaf70a74e0005e7` y trafico API a00058-baw. Digest de imagen
+de plataforma anterior verificado:
+`sha256:f84196bc16167db50abe438a261401751a3ebfcf2420e500df63d360bb68c784`.
+El indice OCI historico `sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303`
+es una referencia distinta del mismo release, no un avance productivo posterior.
+Ante regresion critica atribuible: restaurar Hosting y trafico API, verificar
+salud/sesion; sin down migration, restauracion BD ni cambio de worker. Volver a
+la API anterior retiraria la prohibicion explicita nueva por rol. No aplicado.
+
+### Dictamen y cierre efectivo
+
+**RELEASE COMPLETADO**: ambas mejoras publicadas y comprobadas. La evidencia
+manual corresponde a las confirmaciones del usuario durante esta ventana;
+los resultados de API y persistencia fueron comprobados directamente.
+
+- Continuidad final19:27:48 Cancun: configuracion/capacidad API intactas salvo
+  imagen y trafico; worker conserva spec/imagen57c565a, Scheduler ENABLED y
+  alertas habilitadas sin cambios. Ejecucion programada19:20:43 con
+  outcome=COMPLETED, cleanupSucceeded=true, exitCode=0; no se disparo el job
+  manualmente para esta adecuacion.
+- Cola final:0 operaciones pendientes,0 fallos desde inicio y0 constancias
+  pendientes. Logs ERROR de00061-xin durante la ventana:0. Health200 y sesion
+  anonima401 por API directa y Hosting, repetidos tras retirar el tag.
+- Tres fixtures retirados mediante interfaz Admin/API normal; auditoria
+  conservada. Ninguna cuenta cambio de rol/estado, por lo que no hubo ajustes
+  de cuenta que restituir. El puente local5186 fue cerrado; no se guardaron
+  tokens en evidencias ni se revocaron sesiones reales.
+- Tag fiscal-candidate retirado mediante update-traffic --remove-tags;
+  trafico100% a00061-xin y template sin cambios adicionales. Revision anterior
+  y version Hosting anterior disponibles para rollback; rollback no aplicado.
+- Fin de operaciones productivas: 2026-11-10 19:28:14 America/Cancun
+  (`2026-11-11T00:28:14.501Z`), duracion29.07 minutos, antes del vencimiento
+  20:59:10 y del corte SQL. Ventana cerrada, sin renovacion automatica.
+- Estimacion acumulada conservadora hastaUSD8.50, dentro del objetivoUSD10;
+  no equivale a factura ni a saldo exacto. No se crean servicios persistentes
+  adicionales; permanecen solamente los artefactos normales de release/rollback.
+
+Evidencia local separada por candidata/live/manual/continuidad en
+`C:\Users\Admin\AppData\Local\NominaDocente\H24-FiscalUX-Release-20261110`.
+Se publica solo el resumen sanitizado. Cambios posteriores al SHA funcional:
+unicamente documentacion propia (acta, SDD, matriz, H13 y README).
+
+Sin migraciones, respaldo nuevo, merge, IAM, cambios de secretos/roles/buckets,
+worker/Scheduler/alertas, H01 ni calculos de Nomina. Sin analizadores ni GitHub
+Actions. Hubo exclusivamente escrituras de smoke a los tres fixtures autorizados;
+no se modificaron expedientes reales, Nomina, corridas ni snapshots.
+
+Limite residual no bloqueante: mensaje visible de confirmacion de eliminacion
+no observado por el usuario. No se afirma una regresion atribuible a esta
+candidata ni se incorpora una correccion funcional ajena al release aprobado.

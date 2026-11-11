@@ -14,8 +14,12 @@ siete días y borrado definitivo de adicionales. API y Hosting publicados; worke
 Scheduler y alertas habilitados, ejecución programada real y smoke UI por rol/
 responsive aprobados. Sin rollback; fixture retirado y cuenta restituida.
 La advertencia de cierre correspondía a
-campos fiscales pendientes, no a archivos sin guardar; queda mejora futura del
-mensaje de validación genérico.
+campos fiscales pendientes, no a archivos sin guardar. La mejora posterior de
+validación por campo y restricción explícita de pago al Coordinador se publicó
+desde `7511717`: smoke API/UI y responsive aprobados, persistencia verificada,
+tres fixtures retirados y ventana cerrada19:28:14 Cancún. Sin rollback ni cambios
+de roles, buckets, worker, Scheduler, alertas o cálculos de Nómina.
+Ver [acta de la mejora](docs/auditoria/H24_Mejora_Validacion_Fiscal_Pago_Coordinador.md).
 Ver [acta del release](docs/auditoria/H24_Release_Condicionado_20261110.md).
 Ver [acta](docs/auditoria/H24_Retirada_Analizadores_20261109.md) y
 [plan vigente](docs/auditoria/H24_Plan_Infraestructura_Productiva_20261109.md).
@@ -55,11 +59,11 @@ Firebase Hosting sirve la Web App y reenvía `/api/**` al servicio `nomina-api` 
 
 Estado productivo consolidado posterior al release H24:
 
-- Cloud Run productivo: `nomina-api`, revision `nomina-api-00058-baw`; rollback `nomina-api-00057-c7d`.
-- Imagen API: repositorio `nomina/nomina-api`, candidata `57c565a`, sin reconstruir.
-- Digest OCI vigente: `sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303`.
+- Cloud Run productivo: `nomina-api`, revision `nomina-api-00061-xin`; rollback `nomina-api-00058-baw`.
+- Imagen API: repositorio `nomina/nomina-api`, candidata `7511717`, Cloud Build `3af23829-e7ad-4414-b6e0-cdf47a1c509f`.
+- Digest vigente: `sha256:227fdd167cc3aa6107199466694482ea4ec916ef59f08a7548924588bf3127f2`.
 - Capacidad: CPU `1`, memoria `1Gi`, concurrencia `8`, timeout `300 s`, mínimo `0`, servicio máximo `2` y revisión máxima `1`.
-- Firebase Hosting live: release `1794347521818000`, version `9aaf70a74e0005e7`.
+- Firebase Hosting live: release `1794355920347000`, version `354df4645c244f3a`.
 - Base aplicativa activa: `nomina_docente`.
 - Canal Firebase Hosting activo: `live`.
 - Recursos preview/dry-run H02/H03 eliminados.

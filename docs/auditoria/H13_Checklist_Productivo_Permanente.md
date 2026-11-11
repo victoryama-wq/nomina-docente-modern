@@ -10,6 +10,13 @@ responsive aprobado. H24 cerrado operativo, sin rollback; ventana cerrada17:18:5
 No repetir016/017 ni restaurar por rutina el estado desarmado de ensayos.
 Los requisitos locales previos siguientes se conservan como antecedentes.
 
+[Mejora fiscal/Coordinador posterior](H24_Mejora_Validacion_Fiscal_Pago_Coordinador.md):
+fuente7511717, API00061-xin y Hosting1794355920347000/354df4645c244f3a.
+Smoke API/UI Admin/Coordinador y responsive aprobado; RELEASE COMPLETADO.
+Ventana cerrada19:28:14 Cancun, tres fixtures retirados, sin rollback;
+health200, anonimo401, logs ERROR0 y cola vacia. Roles intactos.
+Sin migraciones, respaldo nuevo ni cambios de worker/Scheduler/alertas/IAM.
+
 Preparacion local H24 2026-11-09, sin cambio productivo:
 [acta PostgreSQL/worker](H24_Preparacion_Worker_Infraestructura_20261109.md) y
 [runbook de infraestructura revisable](../../ops/h24/README.md).
@@ -49,16 +56,16 @@ Alcance de H13:
 | Cloud Run API | Servicio `nomina-api` |
 | Region Cloud Run | `us-central1` |
 | URL Cloud Run directa | `https://nomina-api-443985127112.us-central1.run.app` |
-| Revision Cloud Run vigente documentada | `nomina-api-00058-baw` |
-| Revision anterior / rollback inmediato | `nomina-api-00057-c7d` |
-| Imagen API vigente | Repositorio `nomina/nomina-api`, fuente57c565a, fijada por digest |
-| Digest API vigente (indice OCI) | `sha256:f1aafc5cbc0d4f8a658c1bede3abb9af656ef3a48b3e1b584ab632f052958303` |
+| Revision Cloud Run vigente documentada | `nomina-api-00061-xin` |
+| Revision anterior / rollback inmediato | `nomina-api-00058-baw` |
+| Imagen API vigente | Repositorio `nomina/nomina-api`, fuente7511717, fijada por digest |
+| Digest API vigente | `sha256:227fdd167cc3aa6107199466694482ea4ec916ef59f08a7548924588bf3127f2` |
 | CPU / memoria | `1` / `1Gi` |
 | Concurrencia / timeout | `8` / `300 s` |
 | Instancias min / max | `0` / servicio `2`, revision H24 `1` |
 | Imagen API H11 documentada | `us-central1-docker.pkg.dev/nomina-docente-prod/nomina/nomina-api:h11-prod-4e0c214` |
-| Firebase Hosting release vigente | `1794347521818000` |
-| Firebase Hosting version vigente | `9aaf70a74e0005e7` |
+| Firebase Hosting release vigente | `1794355920347000` |
+| Firebase Hosting version vigente | `354df4645c244f3a` |
 | Instancia Cloud SQL | `nomina-docente-web` |
 | Base productiva | `nomina_docente` |
 | Usuario DB aplicativo | `app_nomina` |
@@ -70,7 +77,9 @@ Alcance de H13:
 La revision vigente debe confirmarse antes de cada deploy. El ajuste de Finanzas
 del2026-10-27 conserva su cierre en H03_Deploy_Finanzas_Comprobantes_Consolidados.md.
 El release H24 del10/11 reconfirma inspect20/0/0, sin repetir migraciones.
-Rollback Hosting conservado: release1793121624438000/version3f9ebc88c835a143.
+Rollback inmediato de la mejora: Hosting1794347521818000/9aaf70a74e0005e7,
+API00058-baw. El rollback inicial H24: release1793121624438000/version3f9ebc88c835a143 queda
+como antecedente historico, no destino inmediato de esta candidata.
 H05 y revisiones anteriores citadas mas abajo son evidencia historica.
 
 ## 3. Variables no secretas Cloud Run
